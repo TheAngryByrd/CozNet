@@ -11,6 +11,21 @@ public static partial class Workload
 {
     private static long probes;
 
+    private sealed class ProbeSettings
+    {
+        public int Interval { get; }
+        private ProbeSettings(int interval) => Interval = interval;
+        public static ProbeSettings Parse(string? value) => value switch
+        {
+            null or "1" => new(1),
+            "64" => new(64),
+            "256" => new(256),
+            "1024" => new(1024),
+            _ => throw new ArgumentException("Select probe interval 1, 64, 256, or 1024.")
+        };
+        public long ExpectedCalls(int iterations) => 1 + ((long)iterations + 1) / Interval;
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Probe()
     {
@@ -74,8 +89,11 @@ public static partial class Workload
         Require(args.Length == 2 && (args[0] == "baseline" || args[0] == "profiled" || args[0] == "sampled" || args[0] == "intervention" || args[0] == "sampling-unavailable"),
             "Expected baseline, profiled, sampled, intervention, or sampling-unavailable, followed by an evidence file path.");
         bool profiled = args[0] != "baseline";
+        var settings = ProbeSettings.Parse(Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL"));
         var observations = new List<object>();
-        foreach (int count in new[] { 0, 1, 1000000 })
+        int[] counts = settings.Interval == 1 ? [0, 1, 1000000] :
+            [0, 1, settings.Interval - 2, settings.Interval - 1, settings.Interval, 2 * settings.Interval - 1, 1000000];
+        foreach (int count in counts)
         {
             probes = 0;
             long result = Work(count);
@@ -83,10 +101,17 @@ public static partial class Workload
                 Require(Native.CozGetStatus() == 2, $"Profiler status after Work: {Native.CozGetStatus()}.");
             long expected = (long)count * (count - 1) / 2;
             Require(result == expected, $"Arithmetic changed for count {count}: expected {expected}, got {result}.");
-            Require(probes == (profiled ? (long)count + 2 : 0),
+            Require(probes == (profiled ? settings.ExpectedCalls(count) : 0),
                 $"Unexpected probe count {probes} in {args[0]} for count {count}.");
             observations.Add(new { count, result, probes });
         }
+
+        probes = 0;
+        for (int invocation = 0; invocation < 100; invocation++)
+            Require(Work(0) == 0, "A short invocation changed its result.");
+        long shortInvocationProbes = probes;
+        Require(shortInvocationProbes == (profiled ? 100 * settings.ExpectedCalls(0) : 0),
+            $"Repeated short invocations missed entry service: {shortInvocationProbes} calls.");
 
         var mapping = new List<object>();
         if (profiled)
@@ -184,13 +209,15 @@ public static partial class Workload
                 sourceSamples, busyCpu, blockedCpu, blockedAttempts, blockedFailures, lastFailure };
         }
         object? intervention = args[0] == "intervention"
-            ? new { zero = VerifyIntervention(0), delayed = VerifyIntervention(Stopwatch.Frequency / 50) }
+            ? new { zero = VerifyIntervention(0, settings), delayed = VerifyIntervention(Stopwatch.Frequency / 50, settings) }
             : null;
         File.WriteAllText(args[1], JsonSerializer.Serialize(new
         {
             mode = args[0],
             runtime = RuntimeInformation.FrameworkDescription,
             architecture = RuntimeInformation.ProcessArchitecture.ToString(),
+            interval = settings.Interval,
+            shortInvocationProbes,
             observations,
             mapping,
             sampling,

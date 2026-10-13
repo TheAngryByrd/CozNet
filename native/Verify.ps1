@@ -1,4 +1,7 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/native/evidence'))
+param(
+    [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/native/evidence'),
+    [ValidateSet(1, 64, 256, 1024)][int]$ProbeInterval = 1
+)
 
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -23,6 +26,7 @@ foreach ($mode in @('baseline', 'profiled', 'sampled', 'intervention')) {
     $start.Environment['DOTNET_TieredCompilation'] = '0'
     $start.Environment['DOTNET_ReadyToRun'] = '0'
     $start.Environment['COZNET_PROBE_TARGET'] = 'instrumentation'
+    $start.Environment['COZNET_PROBE_INTERVAL'] = "$ProbeInterval"
     if ($mode -ne 'baseline') {
         $start.Environment['CORECLR_ENABLE_PROFILING'] = '1'
         $start.Environment['CORECLR_PROFILER'] = '{6E51C528-23F1-49EA-9346-2A7A8D911B61}'

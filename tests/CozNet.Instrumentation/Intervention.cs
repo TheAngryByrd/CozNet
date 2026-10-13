@@ -18,8 +18,9 @@ public static partial class Workload
         long GlobalDelayTicks, long Result, long Probes, int ReachedProbe, long StopwatchFrequency,
         ulong SyntheticCpuNanoseconds, int SpeedupPercent);
 
-    private static InterventionObservation VerifyIntervention(long credit)
+    private static InterventionObservation VerifyIntervention(long credit, ProbeSettings settings)
     {
+        int trigger = settings.Interval == 1 ? 10000 : 10;
         var runtime = new CooperativeRuntime(DelayRuntimeTimingModule.real);
         var selected = Parsed(runtime.Register(null));
         int speedupPercent = credit == 0 ? 0 : 50;
@@ -40,7 +41,7 @@ public static partial class Workload
                 interventionProbe = () =>
                 {
                     visited++;
-                    if (visited != 10000) return;
+                    if (visited != trigger) return;
                     reached.Set();
                     Require(published.Wait(TimeSpan.FromSeconds(5)), "The controller did not publish credit.");
                     long start = Stopwatch.GetTimestamp();
@@ -50,8 +51,8 @@ public static partial class Workload
                 };
                 long result = Work(1000000);
                 Require(result == 499999500000, $"Intervention changed the arithmetic: {result}.");
-                Require(visited == 10000, $"Expected the loop intervention at probe 10000, got {visited}.");
-                Require(probes == 1000002, $"Intervention changed the probe count: {probes}.");
+                Require(visited == trigger, $"Expected the loop intervention at probe {trigger}, got {visited}.");
+                Require(probes == settings.ExpectedCalls(1000000), $"Intervention changed the probe count: {probes}.");
                 Require(measured >= credit, $"Probe paid {measured} ticks for a debt of {credit}.");
                 Parsed(runtime.Unregister(handle));
                 long global = DelayTicksModule.value(runtime.GlobalDelay);

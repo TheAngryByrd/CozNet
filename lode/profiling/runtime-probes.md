@@ -8,6 +8,20 @@ It inserts `Probe()` calls at entry and before backward branch instructions.
 It redirects branch targets when an inserted probe precedes the target instruction.
 Exception handlers and switch instructions are unsupported.
 
+`COZNET_PROBE_INTERVAL` accepts `1`, `64`, `256`, or `1024`. An absent value selects `1`.
+Interval `1` retains dense probes. Other values inject one `int32` local and a countdown at each backward branch.
+The positive-count path calls no helper. Expiration calls `Probe` and resets the counter.
+Method entry initializes the counter and always calls `Probe`. Original branches cannot reenter this initialization.
+This prevents repeated short calls from losing entry service. The interval bounds executed poll sites, not time.
+The countdown currently supports only the instrumentation target. Linux perf integration rejects it with `E_NOTIMPL`.
+The pinned local-signature helper returns zero for both failure and a valid first local.
+The prototype therefore rejects methods without existing locals rather than accepting an ambiguous result.
+`NativeCountdownVerify` and `NativeLinuxCountdownVerify` verify intervals 64, 256, and 1024 on Windows and Linux x64.
+They check exact counts before, at, and after expiration, 100 short calls, and intervention during a million-iteration call.
+Linux x64 disassembly at interval 256 contains a decrement and branch on the fast path.
+Overhead measurements remain pending. See [countdown evidence](../../reliability/features/runtime-probes/countdown.md).
+See [probe-overhead research](../../docsSrc/Research/probe-overhead-options.md) for the inline attribution limit.
+
 The CLR requires `ICorProfilerCallback2` during startup activation.
 The generated callback base implements the original 69 callbacks and eight callback2 methods.
 The profiler records a monotonic original-to-rewritten IL map through `SetILInstrumentedCodeMap`.
@@ -28,7 +42,8 @@ dotnet build tests/CozNet.Instrumentation -c Release
 
 The workload checks counts 0, 1, and 1,000,000 against the arithmetic-series formula.
 The original process executes zero probes.
-The instrumented process executes `count + 2` probes.
+The dense instrumented process executes `count + 2` probes.
+The countdown process executes `1 + floor((count + 1) / interval)` probes in this loop.
 The loop evaluates its backward conditional branch once more than its body runs.
 The entry probe accounts for the remaining call.
 Each child process has a 30-second limit.
@@ -52,7 +67,8 @@ These coarse observations do not supply per-snapshot CPU attribution or causal c
 Selected frames include callers of the currently executing method. They do not establish exclusive CPU attribution.
 Only one native code region is supported. Recompilation during sampling is rejected.
 The `intervention` workload connects the injected probe to the managed cooperative runtime.
-It verifies zero credit and a known 20-millisecond credit at probe 10,000 of a million-iteration loop.
+It verifies zero credit and a known 20-millisecond credit inside a million-iteration loop.
+The trigger is probe 10,000 for dense probes and probe 10 for countdown probes.
 The controller waits for that probe before publishing credit. Method entry alone cannot satisfy this reach check.
 The worker records actual wait time and Linux-style overshoot in the ledger.
 This is a known-credit intervention test. Sampled CPU observations do not generate credits.

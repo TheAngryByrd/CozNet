@@ -467,6 +467,24 @@ let nativeWorkload _ =
 
 let nativeVerify _ = nativeScript "Verify.ps1"
 
+let nativeCountdownVerify script _ =
+    for interval in
+        [
+            64
+            256
+            1024
+        ] do
+        nativeScriptWithArgs script [
+            "-ProbeInterval"
+            string interval
+            "-EvidenceDirectory"
+            rootDirectory
+            </> "artifacts"
+            </> "countdown"
+            </> script
+            </> string interval
+        ]
+
 let linuxPerfWorkload _ =
     DotNet.build
         (fun options -> {
@@ -788,6 +806,8 @@ let initTargets () =
     Target.create "NativeLinuxVerify" nativeLinuxVerify
     Target.create "NativeWorkload" nativeWorkload
     Target.create "NativeVerify" nativeVerify
+    Target.create "NativeCountdownVerify" (nativeCountdownVerify "Verify.ps1")
+    Target.create "NativeLinuxCountdownVerify" (nativeCountdownVerify "VerifyLinuxNative.ps1")
     Target.create "LinuxPerfWorkload" linuxPerfWorkload
     Target.create "LinuxPerfVerify" linuxPerfVerify
     Target.create "LinuxInjectedWorkload" linuxPerfWorkload
@@ -828,9 +848,17 @@ let initTargets () =
     ==> "NativeVerify"
     |> ignore
 
+    "NativeWorkload"
+    ==> "NativeCountdownVerify"
+    |> ignore
+
     "NativeLinuxBuild"
     ==> "NativeLinuxWorkload"
     ==> "NativeLinuxVerify"
+    |> ignore
+
+    "NativeLinuxWorkload"
+    ==> "NativeLinuxCountdownVerify"
     |> ignore
 
     "NativeLinuxBuild"

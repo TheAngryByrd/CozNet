@@ -55,6 +55,8 @@ The runtime checkout must match the pinned commit and contain no local changes.
 ```powershell
 dotnet run --project build/build.fsproj -- -t NativeVerify
 dotnet run --project build/build.fsproj -- -t NativeLinuxVerify
+dotnet run --project build/build.fsproj -- -t NativeCountdownVerify
+dotnet run --project build/build.fsproj -- -t NativeLinuxCountdownVerify
 ```
 
 The `sampled` workload runs for at least 500 milliseconds within a 30-second process limit.
@@ -66,7 +68,8 @@ General concurrent lifecycle use remains unverified.
 The workload restarts sampling for a 500-millisecond sleep phase.
 It requires unchanged CPU observations, less CPU time than the busy phase, and successful stack walks without `Work` frames.
 The separate `intervention` process connects an injected loop probe to the managed delay ledger.
-It checks known credits of zero and 20 milliseconds after probe 10,000.
+It checks known credits of zero and 20 milliseconds at probe 10,000 for dense probes.
+Countdown mode uses probe 10 inside the same long call.
 Both cases must preserve the checksum and exact probe count. The positive case must incur the requested wait.
 This verifies the intervention path. It does not turn sampled CPU observations into credits.
 

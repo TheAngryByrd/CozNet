@@ -44,6 +44,8 @@ public:
 class Profiler final : public CallbackBase {
     std::atomic<ULONG> references{1};
     ComOwner<ICorProfilerInfo> info;
+    enum class ProbeInterval : INT32 { Dense = 1, Small = 64, Medium = 256, Large = 1024 };
+    ProbeInterval probeInterval = ProbeInterval::Dense;
     const WCHAR* targetModule = COZ_TEXT("CozNet.Instrumentation.dll");
     const WCHAR* targetType = COZ_TEXT("CozNet.Instrumentation.Workload");
     const WCHAR* targetMethod = COZ_TEXT("Work");
@@ -58,6 +60,15 @@ class Profiler final : public CallbackBase {
         ILRewriter rewriter(info.get(), nullptr, module, method);
         hr = rewriter.Import();
         if (FAILED(hr)) return hr;
+
+        UINT countdown = 0;
+        if (probeInterval != ProbeInterval::Dense) {
+            hr = rewriter.Initialize();
+            if (FAILED(hr)) return hr;
+            countdown = rewriter.AddNewInt32Local();
+            // The pinned helper also returns zero on failure, so local-free methods are unsupported.
+            if (countdown == 0 || countdown >= 65535) return E_NOTIMPL;
+        }
         auto* sentinel = rewriter.GetILList();
         std::map<ILInstr*, ULONG> originalOffsets;
         for (ULONG offset = 0; offset < decoder.GetCodeSize(); ++offset) {
@@ -65,18 +76,39 @@ class Profiler final : public CallbackBase {
             if (instruction) originalOffsets.emplace(instruction, offset);
         }
 
+        auto insert = [&](ILInstr* before, unsigned opcode, INT32 argument = 0) {
+            auto* instruction = rewriter.NewILInstr();
+            if (!instruction) throw std::bad_alloc();
+            instruction->m_opcode = opcode;
+            instruction->m_Arg32 = argument;
+            rewriter.InsertBefore(before, instruction);
+            return instruction;
+        };
+        auto* entry = sentinel->m_pNext;
+        if (probeInterval != ProbeInterval::Dense) {
+            insert(entry, CEE_LDC_I4, static_cast<INT32>(probeInterval));
+            insert(entry, CEE_STLOC, countdown);
+            insert(entry, CEE_CALL, probe);
+        }
         std::map<ILInstr*, ILInstr*> probes;
-        for (auto* instruction = sentinel->m_pNext; instruction != sentinel; instruction = instruction->m_pNext) {
+        for (auto* instruction = entry; instruction != sentinel; instruction = instruction->m_pNext) {
             if (instruction->m_opcode == CEE_SWITCH || instruction->m_opcode == CEE_SWITCH_ARG) return E_NOTIMPL;
             bool backward = (s_OpCodeFlags[instruction->m_opcode] & OPCODEFLAGS_BranchTarget) != 0
                 && originalOffsets.at(instruction->m_pTarget) <= originalOffsets.at(instruction);
-            if (instruction == sentinel->m_pNext || backward) {
-                auto* call = rewriter.NewILInstr();
-                if (!call) return E_OUTOFMEMORY;
-                call->m_opcode = CEE_CALL;
-                call->m_Arg32 = probe;
-                rewriter.InsertBefore(instruction, call);
-                probes.emplace(instruction, call);
+            if (probeInterval == ProbeInterval::Dense && (instruction == entry || backward)) {
+                probes.emplace(instruction, insert(instruction, CEE_CALL, probe));
+            } else if (backward) {
+                auto* gate = insert(instruction, CEE_LDLOC, countdown);
+                insert(instruction, CEE_LDC_I4_1);
+                insert(instruction, CEE_SUB);
+                insert(instruction, CEE_DUP);
+                insert(instruction, CEE_STLOC, countdown);
+                auto* skip = insert(instruction, CEE_BRTRUE);
+                skip->m_pTarget = instruction;
+                insert(instruction, CEE_CALL, probe);
+                insert(instruction, CEE_LDC_I4, static_cast<INT32>(probeInterval));
+                insert(instruction, CEE_STLOC, countdown);
+                probes.emplace(instruction, gate);
             }
         }
         for (const auto& item : originalOffsets) {
@@ -116,8 +148,15 @@ public:
         return remaining;
     }
     HRESULT STDMETHODCALLTYPE Initialize(IUnknown* runtime) override {
+        const char* interval = std::getenv("COZNET_PROBE_INTERVAL");
+        if (!interval || std::string_view(interval) == "1") probeInterval = ProbeInterval::Dense;
+        else if (std::string_view(interval) == "64") probeInterval = ProbeInterval::Small;
+        else if (std::string_view(interval) == "256") probeInterval = ProbeInterval::Medium;
+        else if (std::string_view(interval) == "1024") probeInterval = ProbeInterval::Large;
+        else { status.store(E_INVALIDARG); return E_INVALIDARG; }
         const char* target = std::getenv("COZNET_PROBE_TARGET");
         if (target && std::string_view(target) == "linux-perf") {
+            if (probeInterval != ProbeInterval::Dense) { status.store(E_NOTIMPL); return E_NOTIMPL; }
             targetModule = COZ_TEXT("CozNet.LinuxPerf.dll");
             targetType = COZ_TEXT("CpuWorkload");
             targetMethod = COZ_TEXT("Run");

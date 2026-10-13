@@ -1,0 +1,44 @@
+[
+  {
+    "runner": "Verify.ps1",
+    "interval": 64,
+    "calls": 15626,
+    "shortInvocationProbes": 100,
+    "runtime": ".NET 10.0.12"
+  },
+  {
+    "runner": "Verify.ps1",
+    "interval": 256,
+    "calls": 3907,
+    "shortInvocationProbes": 100,
+    "runtime": ".NET 10.0.12"
+  },
+  {
+    "runner": "Verify.ps1",
+    "interval": 1024,
+    "calls": 977,
+    "shortInvocationProbes": 100,
+    "runtime": ".NET 10.0.12"
+  },
+  {
+    "runner": "VerifyLinuxNative.ps1",
+    "interval": 64,
+    "calls": 15626,
+    "shortInvocationProbes": 100,
+    "runtime": ".NET 10.0.0"
+  },
+  {
+    "runner": "VerifyLinuxNative.ps1",
+    "interval": 256,
+    "calls": 3907,
+    "shortInvocationProbes": 100,
+    "runtime": ".NET 10.0.0"
+  },
+  {
+    "runner": "VerifyLinuxNative.ps1",
+    "interval": 1024,
+    "calls": 977,
+    "shortInvocationProbes": 100,
+    "runtime": ".NET 10.0.0"
+  }
+]
