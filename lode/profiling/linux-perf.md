@@ -38,7 +38,13 @@ flowchart LR
 ```
 
 This is a capability workload, not a connected profiler backend.
-It drains events after disabling each phase. It does not yet deliver observations during an experiment.
+`LiveSampleCollector` drains events on a separate managed thread while the target runs.
+Only that collector accesses the ring reader. It publishes cumulative immutable snapshots with volatile writes.
+The target must observe a nonempty snapshot before it disables the busy-phase event.
+After disabling the event, completion requests a final drain and joins the collector before unmapping the buffer.
+Reader failures propagate through completion. Each phase starts from the prior phase's consumed ring position.
+The collector uses portable .NET APIs. Its completion and failure checks run on Windows and Linux.
+It currently publishes aggregate snapshots. Per-event delivery and causal credits remain unconnected.
 It resolves instruction addresses to managed method symbols, but not source lines or IL offsets.
 The fixed snapshot does not include code compiled after capture.
 Code unload, address reuse, JIT version changes, and profiler CPU exclusion remain unsupported.

@@ -4,7 +4,8 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
-
+CollectorChecks.Run();
+if (args is ["--verify-collector"]) return 0;
 if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
     throw new PlatformNotSupportedException("The syscall probe requires Linux x64.");
 if (args.Length != 1) throw new ArgumentException("Pass one JSON evidence file path.");
@@ -23,7 +24,12 @@ if (fd < 0)
 int page = Environment.SystemPageSize;
 nuint mappingLength = (nuint)(65 * page);
 IntPtr mapping = Native.Mmap(IntPtr.Zero, mappingLength, 3, 1, (int)fd, 0);
-if (mapping == new IntPtr(-1)) { Native.Close((int)fd); throw new Exception($"mmap failed: {Marshal.GetLastPInvokeError()}"); }
+if (mapping == new IntPtr(-1))
+{
+    int error = Marshal.GetLastPInvokeError();
+    Native.Close((int)fd);
+    throw new Exception($"mmap failed: {error}");
+}
 try
 {
     ulong offset = (ulong)Marshal.ReadInt64(mapping, 1040);
@@ -31,13 +37,15 @@ try
     if (offset != (ulong)page || size != (ulong)(64 * page)) throw new Exception("Unexpected perf ring layout.");
     IInstructionMap codeMap = PerfMapSnapshot.Read($"/tmp/perf-{Environment.ProcessId}.map");
     const string selectedSymbol = "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]";
-    var reader = new RingReader(mapping, offset, size, tid, codeMap, selectedSymbol);
+
     var observations = new List<PhaseObservation>();
     ulong previousCpu = 0;
     long checksum = 0;
     long completedBatches = 0;
     foreach (bool busy in new[] { true, false })
     {
+        var reader = new RingReader(mapping, offset, size, tid, codeMap, selectedSymbol);
+        using var collector = new LiveSampleCollector(reader.Drain);
         if (Native.Ioctl((int)fd, 0x2400, 0) != 0) throw new Exception($"Enable failed: {Marshal.GetLastPInvokeError()}");
         var elapsed = Stopwatch.StartNew();
         if (busy)
@@ -49,11 +57,12 @@ try
             }
         }
         else Thread.Sleep(500);
+        int liveSamples = collector.Latest?.Samples ?? 0;
         if (Native.Ioctl((int)fd, 0x2401, 0) != 0) throw new Exception($"Disable failed: {Marshal.GetLastPInvokeError()}");
         if (Native.Read((int)fd, out ulong cpu, 8) != 8) throw new Exception($"Read failed: {Marshal.GetLastPInvokeError()}");
-        var records = reader.Drain();
+        var records = collector.Complete();
         if (cpu < previousCpu) throw new Exception("The task CPU clock decreased.");
-        observations.Add(new PhaseObservation(busy, elapsed.Elapsed.TotalMilliseconds, cpu - previousCpu, records));
+        observations.Add(new PhaseObservation(busy, elapsed.Elapsed.TotalMilliseconds, cpu - previousCpu, liveSamples, records));
         previousCpu = cpu;
     }
     File.WriteAllText(args[0], JsonSerializer.Serialize(new { available = true, runtime = RuntimeInformation.FrameworkDescription,
@@ -65,6 +74,7 @@ try
     if (completedBatches == 0 || checksum != checked(completedBatches * 49995000L))
         throw new Exception("The arithmetic result does not match completed work.");
     if (active.CpuNanoseconds == 0 || active.Records.Samples == 0) throw new Exception("The busy phase produced no CPU samples.");
+    if (active.LiveSamples == 0) throw new Exception("No samples reached the target before collection stopped.");
     if (active.Records.SelectedMethodSamples == 0) throw new Exception("No CPU event resolved to the selected managed method.");
     if (blocked.CpuNanoseconds >= active.CpuNanoseconds || blocked.Records.Samples >= active.Records.Samples)
         throw new Exception("The blocked phase was not below the busy phase in both CPU time and sample count.");
@@ -77,7 +87,7 @@ finally { Native.Munmap(mapping, mappingLength); Native.Close((int)fd); }
 sealed record SampleBatch(int Samples, int DistinctInstructionPointers, ulong RepresentedCpuNanoseconds,
     int LostRecords, ulong LostSamples, int Throttles, int SelectedMethodSamples, int UnmappedSamples,
     IReadOnlyList<string> SelectedSymbols);
-sealed record PhaseObservation(bool Busy, double WallMilliseconds, ulong CpuNanoseconds, SampleBatch Records);
+sealed record PhaseObservation(bool Busy, double WallMilliseconds, ulong CpuNanoseconds, int LiveSamples, SampleBatch Records);
 
 static class CpuWorkload
 {
@@ -92,8 +102,15 @@ static class CpuWorkload
 
 sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid, IInstructionMap codeMap, string selectedSymbol)
 {
-    private ulong tail;
+    private ulong tail = (ulong)Marshal.ReadInt64(mapping, 1032);
     private ulong priorTime;
+    private int samples = 0, lostRecords = 0, throttles = 0;
+    private ulong lostSamples = 0, periods = 0;
+    private readonly HashSet<ulong> ips = new();
+
+    private readonly HashSet<string> selectedSymbols = new();
+    private int selected = 0, unmapped = 0;
+
     private byte[] Copy(ulong position, int length)
     {
         var bytes = new byte[length];
@@ -105,12 +122,6 @@ sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid, IIns
         ulong head = (ulong)Marshal.ReadInt64(mapping, 1024);
         Thread.MemoryBarrier();
         if (head < tail || head - tail > size) throw new Exception("Ring bounds are invalid.");
-        int samples = 0, lostRecords = 0, throttles = 0;
-        ulong lostSamples = 0, periods = 0;
-        var ips = new HashSet<ulong>();
-
-        var selectedSymbols = new HashSet<string>();
-        int selected = 0, unmapped = 0;
         while (tail < head)
         {
             if (head - tail < 8) throw new Exception("Truncated record header.");
