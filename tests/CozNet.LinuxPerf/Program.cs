@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 CollectorChecks.Run();
 TimingChecks.CadenceBoundaries();
 InjectedProbeChecks.Run();
+RawIlCandidateChecks.Run();
 if (args is ["--verify-collector"]) return 0;
 if (args.Length is 3 or 4 && args[0] == "--physical")
 {
@@ -20,6 +21,11 @@ var window = MeasurementWindow.Parse(args.Length == 5 ? args[4] : "500");
 var probePlan = ProbePlan.Parse(Environment.GetEnvironmentVariable("COZNET_PROBE_MODE"),
     Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL"));
 var probeMode = probePlan.Mode;
+var attributionMode = AttributionPlan.Parse(Environment.GetEnvironmentVariable("COZNET_ATTRIBUTION"), probePlan,
+    Environment.GetEnvironmentVariable("COZNET_IL_MAP_MODE"), Environment.GetEnvironmentVariable("COZNET_PROBE_PLACEMENT"));
+if (attributionMode != AttributionMode.Method && (Environment.GetEnvironmentVariable("DOTNET_TieredCompilation") != "0" ||
+    Environment.GetEnvironmentVariable("DOTNET_ReadyToRun") != "0"))
+    throw new ArgumentException("Raw attribution requires disabled tiered compilation and ReadyToRun.");
 int speedup = args.Length >= 2 ? int.Parse(args[1]) : 50;
 if (speedup is not (0 or 50)) throw new ArgumentException("The capability workload supports zero or 50 percent.");
 IWaitBackend waitBackend = (args.Length >= 3 ? args[2] : "managed") switch
@@ -63,6 +69,8 @@ try
     if (offset != (ulong)page || size != (ulong)(64 * page)) throw new Exception("Unexpected perf ring layout.");
     IInstructionMap codeMap = PerfMapSnapshot.Read($"/tmp/perf-{Environment.ProcessId}.map");
     const string selectedSymbol = "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]";
+    if (attributionMode != AttributionMode.Method)
+        codeMap = RawIlCandidateMap.Read(codeMap, selectedSymbol, attributionMode == AttributionMode.RawExcludeCandidates);
 
     var observations = new List<PhaseObservation>();
     ulong previousCpu = 0;
@@ -112,9 +120,12 @@ try
         requestedPeriodNanoseconds = attr.SamplePeriod, measurementMilliseconds = window.Milliseconds,
         checksum, completedBatches, probeMode = probeMode.ToString(), probeBackedgeInterval = probePlan.BackedgeInterval,
         injectedCalls = InjectedProbes.Calls - initialInjectedCalls,
+        attributionMode = attributionMode.ToString(), rawAttribution = (codeMap as RawIlCandidateMap)?.Evidence,
         observations }, new JsonSerializerOptions {
             WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     var active = observations[0];
+    if (attributionMode == AttributionMode.RawExcludeCandidates && !active.Delivered.Any(x => x.Method == RawIlCandidateMap.CandidateSymbol))
+        throw new Exception("The attribution diagnostic captured no excluded candidate sample.");
     if (InjectedProbes.Calls - initialInjectedCalls != checked(completedBatches * probePlan.CallsPerBatch))
         throw new Exception("Injected probe counts do not match completed work.");
     var blocked = observations[1];

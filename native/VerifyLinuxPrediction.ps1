@@ -2,11 +2,15 @@ param(
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-prediction'),
     [ValidateSet(500, 2000)][int]$MeasurementMilliseconds = 2000,
     [ValidateSet('manual', 'injected')][string]$ProbeMode = 'manual',
-    [ValidateSet(1, 64, 256, 1024)][int]$ProbeInterval = 1
+    [ValidateSet(1, 64, 256, 1024)][int]$ProbeInterval = 1,
+    [ValidateSet('method', 'raw-whole-method', 'raw-exclude-candidates')][string]$Attribution = 'method'
 )
 
 $ErrorActionPreference = 'Stop'
 if ($ProbeMode -eq 'manual' -and $ProbeInterval -ne 1) { throw 'Manual probes require interval 1.' }
+if ($Attribution -ne 'method' -and ($ProbeMode -ne 'injected' -or $ProbeInterval -ne 1024)) {
+    throw 'Raw attribution requires injected probes at interval 1024.'
+}
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $workload = Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0'
 $native = Join-Path $root 'artifacts/native-linux/integrated'
@@ -25,7 +29,7 @@ $order = [Collections.Generic.List[object]]::new()
 $rows = [Collections.Generic.List[object]]::new()
 @{ seed = $seed; blocks = 8; image = $image; imageId = $imageId; kernel = $kernel;
     measurementMilliseconds = $MeasurementMilliseconds; controllerRuntime = [Environment]::Version.ToString();
-    probeMode = $ProbeMode; probeInterval = $ProbeInterval } |
+    probeMode = $ProbeMode; probeInterval = $ProbeInterval; attribution = $Attribution } |
     ConvertTo-Json | Set-Content (Join-Path $run 'environment.json')
 
 for ($block = 0; $block -lt 8; $block++) {
@@ -47,6 +51,11 @@ for ($block = 0; $block -lt 8; $block++) {
         if ($case.StartsWith('profile-')) {
             $arguments += @('--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1')
             $arguments += @('--env', "COZNET_PROBE_MODE=$ProbeMode", '--env', "COZNET_PROBE_INTERVAL=$ProbeInterval")
+            $arguments += @('--env', "COZNET_ATTRIBUTION=$Attribution")
+            if ($Attribution -ne 'method') {
+                $arguments += @('--env', 'COZNET_IL_MAP_MODE=raw-diagnostic', '--env', 'COZNET_PROBE_PLACEMENT=empty-stack-diagnostic',
+                    '--env', 'DOTNET_JitDisasm=CpuWorkload:Run', '--env', "DOTNET_JitStdOutFile=/output/$file.asm")
+            }
             if ($ProbeMode -eq 'injected') {
                 $arguments += @('--mount', "type=bind,source=$native,target=/native,readonly",
                     '--env', 'CORECLR_ENABLE_PROFILING=1', '--env', 'CORECLR_PROFILER={6E51C528-23F1-49EA-9346-2A7A8D911B61}',
@@ -62,6 +71,10 @@ for ($block = 0; $block -lt 8; $block++) {
         $arguments += @($image, 'timeout', '30s', 'dotnet', '/work/CozNet.LinuxPerf.dll') + $application
         & docker @arguments
         if ($LASTEXITCODE -ne 0) { throw "Prediction workload $case failed in block $block. Evidence: $run" }
+        if ($case.StartsWith('profile-') -and $Attribution -ne 'method' -and
+            (-not (Test-Path (Join-Path $run "$file.asm")) -or (Get-Item (Join-Path $run "$file.asm")).Length -eq 0)) {
+            throw "Missing JIT disassembly for diagnostic $case in block $block."
+        }
         $results[$case] = Get-Content (Join-Path $run $file) -Raw | ConvertFrom-Json
     }
     $costs = @{}

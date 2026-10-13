@@ -87,6 +87,20 @@ The zero-percent case must produce zero credit, zero global delay, and zero meas
 This bridge uses cumulative emitted periods as an estimate of represented CPU time, not a direct CPU-clock measurement.
 Only the fixed synchronous method earns credit. Separate helper methods, waits, and unmapped addresses earn none.
 Inline countdown instructions remain inside the selected method and can earn credit. Exact profiler-CPU exclusion remains unresolved.
+`COZNET_ATTRIBUTION=raw-whole-method` captures raw CLR ranges while retaining whole-method credits.
+`raw-exclude-candidates` excludes ranges whose mapped rewritten IL is absent from the private original-instruction map.
+Both diagnostic modes require injected interval 1024, raw mapping, empty-stack placement, and disabled tiering and ReadyToRun.
+The shared `RawIlCandidateMap` requires a complete, nonoverlapping native partition and valid IL instruction offsets.
+It preserves special ranges and other method symbols. It rejects a changed selected-method range.
+Excluded samples keep a distinct candidate symbol. They do not become unmapped samples.
+Every diagnostic record includes native bytes, rewritten IL, raw ranges, and `nativeOwnershipEstablished=false`.
+This is a sensitivity test. Candidate exclusion does not establish general native ownership.
+`LinuxRawAttributionVerify` and `LinuxFilteredAttributionVerify` run the existing physical-prediction protocol with these respective modes.
+Their two-percentage-point gate remains unchanged. The runner also preserves JIT disassembly for every profile case.
+Both retained modes fail accuracy after all 64 workload cases pass their accounting checks.
+Whole-method attribution predicts 43.63% against 49.40% physical reduction. Candidate exclusion predicts 41.99% against 49.70%.
+Their gate values are 6.69 and 8.96 percentage points. These separate runs do not isolate the effect of exclusion.
+Candidate exclusion remains diagnostic. See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).
 The bridge uses a fixed eligibility epoch under this controlled method restriction.
 General lifecycle eligibility, GC transitions, and blocking inside selected methods remain unimplemented.
 The wrapper records requested duration, backend-call duration, and the ledger's timestamp interval separately.

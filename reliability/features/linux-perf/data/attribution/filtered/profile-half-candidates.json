@@ -1,0 +1,50 @@
+[
+  {
+    "File": "block-0-profile-half.json",
+    "Fraction": 0.0652297220646625,
+    "Candidates": 115000000,
+    "WholeMethod": 1763000000
+  },
+  {
+    "File": "block-1-profile-half.json",
+    "Fraction": 0.054635761589403975,
+    "Candidates": 99000000,
+    "WholeMethod": 1812000000
+  },
+  {
+    "File": "block-2-profile-half.json",
+    "Fraction": 0.03850446428571429,
+    "Candidates": 69000000,
+    "WholeMethod": 1792000000
+  },
+  {
+    "File": "block-3-profile-half.json",
+    "Fraction": 0.05474040632054176,
+    "Candidates": 97000000,
+    "WholeMethod": 1772000000
+  },
+  {
+    "File": "block-4-profile-half.json",
+    "Fraction": 0.03718309859154929,
+    "Candidates": 66000000,
+    "WholeMethod": 1775000000
+  },
+  {
+    "File": "block-5-profile-half.json",
+    "Fraction": 0.04111111111111111,
+    "Candidates": 74000000,
+    "WholeMethod": 1800000000
+  },
+  {
+    "File": "block-6-profile-half.json",
+    "Fraction": 0.04540295119182747,
+    "Candidates": 80000000,
+    "WholeMethod": 1762000000
+  },
+  {
+    "File": "block-7-profile-half.json",
+    "Fraction": 0.05537098560354374,
+    "Candidates": 100000000,
+    "WholeMethod": 1806000000
+  }
+]

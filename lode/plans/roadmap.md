@@ -15,7 +15,10 @@ Keep the serial model separate from the proposed sampled engine.
 IL rewriting supplies intervention points. It does not supply CPU sampling or synchronization semantics.
 The controlled Linux countdown comparison passes its accounting checks and substantially reduces dense-probe cost.
 Native-range attribution remains unresolved for inline countdown instructions.
-Investigate raw rewritten-IL boundaries in a process that never registers a debugger instrumentation map.
+Raw rewritten-IL diagnostics separate the inspected loop ranges with empty-stack gate placement on both controlled methods.
+Candidate exclusion and whole-method attribution both fail the physical-prediction gate in the controlled countdown loop.
+Separate probe, collection, and intervention costs before changing sampled accounting or the intervention mechanism.
+See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).
 Keep mixed boundaries and debugger limitations explicit. See [the attribution investigation](../../docsSrc/Research/injected-cpu-attribution.md).
 The hybrid design remains provisional until measured coverage and overhead support it.
 See [the port decision](../../docsSrc/Research/coz-port-and-il-rewriting.md) and [the implementation comparison](../../docsSrc/Research/managed-coz-implementations.md).

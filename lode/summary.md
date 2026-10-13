@@ -20,6 +20,8 @@ A separate [Linux task-clock workload](profiling/linux-perf.md) verifies per-thr
 Those events resolve against a fixed managed method map and drive credits at manual or injected probes in a controlled two-thread workload.
 Dense injected probes have excessive cost. Countdown probes reduce that cost in the controlled Linux comparison.
 Inline countdown instructions remain inside selected-method CPU attribution. Exact profiler-CPU exclusion remains unresolved.
+An optional raw-map sensitivity diagnostic excludes injected IL candidates. Both diagnostic modes still fail the physical-prediction gate.
+See [the retained comparison](../reliability/features/linux-perf/attribution-sensitivity.md).
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

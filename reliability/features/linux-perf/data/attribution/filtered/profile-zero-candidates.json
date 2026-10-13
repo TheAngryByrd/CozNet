@@ -1,0 +1,50 @@
+[
+  {
+    "File": "block-0-profile-zero.json",
+    "Fraction": 0.04985994397759104,
+    "Candidates": 89000000,
+    "WholeMethod": 1785000000
+  },
+  {
+    "File": "block-1-profile-zero.json",
+    "Fraction": 0.057126696832579184,
+    "Candidates": 101000000,
+    "WholeMethod": 1768000000
+  },
+  {
+    "File": "block-2-profile-zero.json",
+    "Fraction": 0.05509181969949917,
+    "Candidates": 99000000,
+    "WholeMethod": 1797000000
+  },
+  {
+    "File": "block-3-profile-zero.json",
+    "Fraction": 0.03651685393258427,
+    "Candidates": 65000000,
+    "WholeMethod": 1780000000
+  },
+  {
+    "File": "block-4-profile-zero.json",
+    "Fraction": 0.05271920088790233,
+    "Candidates": 95000000,
+    "WholeMethod": 1802000000
+  },
+  {
+    "File": "block-5-profile-zero.json",
+    "Fraction": 0.051094890510948905,
+    "Candidates": 91000000,
+    "WholeMethod": 1781000000
+  },
+  {
+    "File": "block-6-profile-zero.json",
+    "Fraction": 0.05283867341202923,
+    "Candidates": 94000000,
+    "WholeMethod": 1779000000
+  },
+  {
+    "File": "block-7-profile-zero.json",
+    "Fraction": 0.05405405405405406,
+    "Candidates": 96000000,
+    "WholeMethod": 1776000000
+  }
+]

@@ -9,4 +9,5 @@
   <ItemGroup>
     <ProjectReference Include="../../src/CozNet/CozNet.fsproj" />
   </ItemGroup>
+  <ItemGroup><Compile Include="../Shared/IL.cs" Link="IL.cs" /></ItemGroup>
 </Project>

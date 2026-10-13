@@ -10,4 +10,5 @@
     <ProjectReference Include="../CozNet.Instrumentation/CozNet.Instrumentation.csproj" />
     <ProjectReference Include="../CozNet.LinuxPerf/CozNet.LinuxPerf.csproj" />
   </ItemGroup>
+  <ItemGroup><Compile Include="../Shared/IL.cs" Link="IL.cs" /></ItemGroup>
 </Project>

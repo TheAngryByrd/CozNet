@@ -1,0 +1,162 @@
+[
+  {
+    "block": 0,
+    "case": "physical-baseline",
+    "file": "block-0-physical-baseline.json"
+  },
+  {
+    "block": 0,
+    "case": "profile-half",
+    "file": "block-0-profile-half.json"
+  },
+  {
+    "block": 0,
+    "case": "profile-zero",
+    "file": "block-0-profile-zero.json"
+  },
+  {
+    "block": 0,
+    "case": "physical-optimized",
+    "file": "block-0-physical-optimized.json"
+  },
+  {
+    "block": 1,
+    "case": "physical-optimized",
+    "file": "block-1-physical-optimized.json"
+  },
+  {
+    "block": 1,
+    "case": "profile-zero",
+    "file": "block-1-profile-zero.json"
+  },
+  {
+    "block": 1,
+    "case": "profile-half",
+    "file": "block-1-profile-half.json"
+  },
+  {
+    "block": 1,
+    "case": "physical-baseline",
+    "file": "block-1-physical-baseline.json"
+  },
+  {
+    "block": 2,
+    "case": "profile-zero",
+    "file": "block-2-profile-zero.json"
+  },
+  {
+    "block": 2,
+    "case": "physical-baseline",
+    "file": "block-2-physical-baseline.json"
+  },
+  {
+    "block": 2,
+    "case": "physical-optimized",
+    "file": "block-2-physical-optimized.json"
+  },
+  {
+    "block": 2,
+    "case": "profile-half",
+    "file": "block-2-profile-half.json"
+  },
+  {
+    "block": 3,
+    "case": "physical-baseline",
+    "file": "block-3-physical-baseline.json"
+  },
+  {
+    "block": 3,
+    "case": "profile-half",
+    "file": "block-3-profile-half.json"
+  },
+  {
+    "block": 3,
+    "case": "physical-optimized",
+    "file": "block-3-physical-optimized.json"
+  },
+  {
+    "block": 3,
+    "case": "profile-zero",
+    "file": "block-3-profile-zero.json"
+  },
+  {
+    "block": 4,
+    "case": "physical-optimized",
+    "file": "block-4-physical-optimized.json"
+  },
+  {
+    "block": 4,
+    "case": "physical-baseline",
+    "file": "block-4-physical-baseline.json"
+  },
+  {
+    "block": 4,
+    "case": "profile-zero",
+    "file": "block-4-profile-zero.json"
+  },
+  {
+    "block": 4,
+    "case": "profile-half",
+    "file": "block-4-profile-half.json"
+  },
+  {
+    "block": 5,
+    "case": "physical-baseline",
+    "file": "block-5-physical-baseline.json"
+  },
+  {
+    "block": 5,
+    "case": "physical-optimized",
+    "file": "block-5-physical-optimized.json"
+  },
+  {
+    "block": 5,
+    "case": "profile-half",
+    "file": "block-5-profile-half.json"
+  },
+  {
+    "block": 5,
+    "case": "profile-zero",
+    "file": "block-5-profile-zero.json"
+  },
+  {
+    "block": 6,
+    "case": "physical-optimized",
+    "file": "block-6-physical-optimized.json"
+  },
+  {
+    "block": 6,
+    "case": "physical-baseline",
+    "file": "block-6-physical-baseline.json"
+  },
+  {
+    "block": 6,
+    "case": "profile-half",
+    "file": "block-6-profile-half.json"
+  },
+  {
+    "block": 6,
+    "case": "profile-zero",
+    "file": "block-6-profile-zero.json"
+  },
+  {
+    "block": 7,
+    "case": "profile-half",
+    "file": "block-7-profile-half.json"
+  },
+  {
+    "block": 7,
+    "case": "profile-zero",
+    "file": "block-7-profile-zero.json"
+  },
+  {
+    "block": 7,
+    "case": "physical-baseline",
+    "file": "block-7-physical-baseline.json"
+  },
+  {
+    "block": 7,
+    "case": "physical-optimized",
+    "file": "block-7-physical-optimized.json"
+  }
+]

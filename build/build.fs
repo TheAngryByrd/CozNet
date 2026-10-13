@@ -532,6 +532,20 @@ let linuxCountdownPredictionVerify _ =
         </> "linux-countdown-prediction"
     ]
 
+let linuxAttributionVerify mode directory _ =
+    nativeScriptWithArgs "VerifyLinuxPrediction.ps1" [
+        "-ProbeMode"
+        "injected"
+        "-ProbeInterval"
+        "1024"
+        "-Attribution"
+        mode
+        "-EvidenceDirectory"
+        rootDirectory
+        </> "artifacts"
+        </> directory
+    ]
+
 let linuxWaitCompare _ =
     for backend in
         [
@@ -848,6 +862,15 @@ let initTargets () =
     Target.create "LinuxInjectedVerify" linuxInjectedVerify
     Target.create "LinuxCountdownVerify" linuxCountdownVerify
     Target.create "LinuxCountdownPredictionVerify" linuxCountdownPredictionVerify
+
+    Target.create
+        "LinuxRawAttributionVerify"
+        (linuxAttributionVerify "raw-whole-method" "linux-raw-attribution")
+
+    Target.create
+        "LinuxFilteredAttributionVerify"
+        (linuxAttributionVerify "raw-exclude-candidates" "linux-filtered-attribution")
+
     Target.create "LinuxWaitCompare" linuxWaitCompare
     Target.create "LinuxPredictionVerify" linuxPredictionVerify
     Target.create "FSharpAnalyzers" fsharpAnalyzers
@@ -918,6 +941,14 @@ let initTargets () =
 
     "LinuxInjectedWorkload"
     ==> "LinuxCountdownPredictionVerify"
+    |> ignore
+
+    "LinuxInjectedWorkload"
+    ==> "LinuxRawAttributionVerify"
+    |> ignore
+
+    "LinuxInjectedWorkload"
+    ==> "LinuxFilteredAttributionVerify"
     |> ignore
 
     //-----------------------------------------------------------------------------
