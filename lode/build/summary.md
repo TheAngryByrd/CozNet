@@ -28,7 +28,7 @@ The repository owner is `TheAngryByrd`. The release branch is `master`.
 Release and publish targets remain explicit actions. Default packaging does not publish packages or create Git tags.
 Keep build orchestration in this graph instead of duplicating it in scripts or CI.
 `NativeVerify` is an explicit Windows x64 prototype target.
-It runs `NativeBuild`, builds the instrumentation workload in Release, and executes three bounded child processes.
+It runs `NativeBuild`, builds the instrumentation workload in Release, and executes four bounded child processes.
 It is separate from default packaging because other native backends are incomplete.
 
 ```mermaid

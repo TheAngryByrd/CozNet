@@ -102,27 +102,42 @@
     }
   ],
   "sampling": {
-    "completed": 495,
-    "attempts": 32,
+    "completed": 359,
+    "attempts": 33,
     "failures": 0,
-    "selected": 32,
-    "mapped": 32,
+    "selected": 33,
+    "mapped": 33,
     "lastIL": 18,
-    "loopSamples": 32,
+    "loopSamples": 33,
     "sourceSamples": [
       {
         "il": 18,
-        "count": 32,
+        "count": 33,
         "source": {
           "Document": "Program.cs",
-          "StartLine": 21,
+          "StartLine": 25,
           "StartColumn": 25,
-          "EndLine": 21,
+          "EndLine": 25,
           "EndColumn": 34,
           "InLoop": true
         }
       }
     ],
+    "busyCpu": {
+      "Nanoseconds": 484375000,
+      "MaxDeltaNanoseconds": 15625000,
+      "Reads": 33,
+      "ZeroDeltas": 2
+    },
+    "blockedCpu": {
+      "Nanoseconds": 0,
+      "MaxDeltaNanoseconds": 0,
+      "Reads": 33,
+      "ZeroDeltas": 33
+    },
+    "blockedAttempts": 33,
+    "blockedFailures": 0,
     "lastFailure": 0
-  }
+  },
+  "intervention": null
 }

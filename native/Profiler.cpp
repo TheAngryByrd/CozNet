@@ -220,6 +220,11 @@ COZ_EXPORT ULONG __stdcall CozGetSelectedStacks() { return sampler.SelectedStack
 COZ_EXPORT LONG __stdcall CozGetLastSampleFailure() { return sampler.LastFailure(); }
 COZ_EXPORT ULONG __stdcall CozGetMappedStacks() { return sampler.MappedStacks(); }
 COZ_EXPORT ULONG __stdcall CozGetLastSampleIL() { return sampler.LastIL(); }
+COZ_EXPORT std::uint64_t __stdcall CozGetObservedCpuNanoseconds() { return sampler.ObservedCpu(); }
+COZ_EXPORT std::uint64_t __stdcall CozGetMaxCpuDeltaNanoseconds() { return sampler.MaxCpuDelta(); }
+COZ_EXPORT ULONG __stdcall CozGetClockReads() { return sampler.ClockReads(); }
+COZ_EXPORT ULONG __stdcall CozGetZeroCpuDeltas() { return sampler.ZeroCpuDeltas(); }
+COZ_EXPORT LONG __stdcall CozGetClockFailure() { return sampler.ClockFailure(); }
 COZ_EXPORT ULONG __stdcall CozGetSampleLocationCount() { return sampler.LocationCount(); }
 COZ_EXPORT BOOL __stdcall CozGetSampleLocation(ULONG index, ULONG* il, ULONG* count) {
     return sampler.Location(index, il, count);

@@ -40,9 +40,21 @@ The Windows backend uses `DoStackSnapshot` from a native worker thread.
 The controlled workload verifies selected-method frames during a 500-millisecond run.
 It records failed walks separately. Stack callbacks do not allocate or acquire application locks.
 These are wall-clock samples. CPU-time attribution remains unverified.
+The backend also exposes cumulative target-thread CPU time in nanoseconds.
+The factory must run on the target thread before the sampler worker starts.
+The Windows backend owns a duplicate thread handle and reads kernel plus user time with `GetThreadTimes`.
+CPU values must be monotonic. Read errors remain separate from stack-walk errors.
+The workload compares a busy phase with a sleep phase and verifies sampler restart.
+The retained runs have a maximum CPU delta of 15.625 milliseconds despite the API's 100-nanosecond units.
+These coarse observations do not supply per-snapshot CPU attribution or causal credits.
 Selected frames include callers of the currently executing method. They do not establish exclusive CPU attribution.
 Only one native code region is supported. Recompilation during sampling is rejected.
-It does not apply delay credits or measure probe overhead.
+The `intervention` workload connects the injected probe to the managed cooperative runtime.
+It verifies zero credit and a known 20-millisecond credit at probe 10,000 of a million-iteration loop.
+The controller waits for that probe before publishing credit. Method entry alone cannot satisfy this reach check.
+The worker records actual wait time and Linux-style overshoot in the ledger.
+This is a known-credit intervention test. Sampled CPU observations do not generate credits.
+Probe overhead remains unmeasured.
 Linux and macOS need backend, build, and launch adapters. See [native platform boundaries](../../native/README.md).
 The [delay ledger](delay-ledger.md) remains separate.
 

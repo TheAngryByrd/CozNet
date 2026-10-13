@@ -3,6 +3,7 @@
 `src/CozNet/DelayLedger.fs` defines an internal, immutable accounting model for a sampled experiment.
 It does not sample threads, wait, rewrite IL, or connect to the public serial engine.
 The runtime adapter must serialize transitions and keep the current ledger state.
+The internal [cooperative runtime](cooperative-runtime.md) provides that lock and performs measured waits outside it.
 This model is not a lock-free implementation for a profiler callback.
 
 Each ledger represents one experiment with zero initial global delay.

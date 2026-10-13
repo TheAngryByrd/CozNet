@@ -27,6 +27,13 @@ class Sampler final {
     std::vector<ULONG> locationCounts;
     std::atomic<ULONG> mappedStacks{0};
     std::atomic<ULONG> lastIL{static_cast<ULONG>(-1)};
+    std::uint64_t initialCpu = 0;
+    std::uint64_t previousCpu = 0;
+    std::atomic<std::uint64_t> observedCpu{0};
+    std::atomic<std::uint64_t> maxCpuDelta{0};
+    std::atomic<ULONG> clockReads{0};
+    std::atomic<ULONG> zeroCpuDeltas{0};
+    std::atomic<LONG> clockFailure{S_OK};
 
     static HRESULT __stdcall Frame(FunctionID function, UINT_PTR address, COR_PRF_FRAME_INFO,
         ULONG32, BYTE[], void* context) {
@@ -42,6 +49,19 @@ class Sampler final {
         std::unique_lock<std::mutex> lock(wakeMutex);
         while (!wake.wait_for(lock, std::chrono::milliseconds(1), [this] { return stopping; })) {
             lock.unlock();
+            std::uint64_t cpu;
+            auto clockResult = backend->ReadCpuNanoseconds(&cpu);
+            if (SUCCEEDED(clockResult) && cpu < previousCpu) clockResult = E_FAIL;
+            if (FAILED(clockResult)) {
+                clockFailure.store(clockResult);
+            } else {
+                ++clockReads;
+                auto delta = cpu - previousCpu;
+                if (delta == 0) ++zeroCpuDeltas;
+                if (delta > maxCpuDelta.load()) maxCpuDelta.store(delta);
+                previousCpu = cpu;
+                observedCpu.store(cpu - initialCpu);
+            }
             found = false;
             auto hr = backend->Capture(target, Frame, this);
             ++attempts;
@@ -109,6 +129,14 @@ public:
         try {
             backend = CreateSnapshotBackend(runtime);
             if (!backend) return E_NOTIMPL;
+            hr = backend->ReadCpuNanoseconds(&initialCpu);
+            if (FAILED(hr)) { backend.reset(); return hr; }
+            previousCpu = initialCpu;
+            observedCpu.store(0);
+            maxCpuDelta.store(0);
+            clockReads.store(0);
+            zeroCpuDeltas.store(0);
+            clockFailure.store(S_OK);
             selected = function;
             locationCounts.assign(locations.size(), 0);
             stopping = false;
@@ -142,6 +170,11 @@ public:
     LONG LastFailure() const { return lastFailure.load(); }
     ULONG MappedStacks() const { return mappedStacks.load(); }
     ULONG LastIL() const { return lastIL.load(); }
+    std::uint64_t ObservedCpu() const { return observedCpu.load(); }
+    std::uint64_t MaxCpuDelta() const { return maxCpuDelta.load(); }
+    ULONG ClockReads() const { return clockReads.load(); }
+    ULONG ZeroCpuDeltas() const { return zeroCpuDeltas.load(); }
+    LONG ClockFailure() const { return clockFailure.load(); }
     ULONG LocationCount() {
         std::lock_guard<std::mutex> lock(control);
         return worker.joinable() ? 0 : static_cast<ULONG>(locationCounts.size());

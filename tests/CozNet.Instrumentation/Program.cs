@@ -7,12 +7,16 @@ using System.Reflection.Metadata.Ecma335;
 
 namespace CozNet.Instrumentation;
 
-public static class Workload
+public static partial class Workload
 {
     private static long probes;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static void Probe() => probes++;
+    public static void Probe()
+    {
+        probes++;
+        interventionProbe?.Invoke();
+    }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static long Work(int count)
@@ -30,6 +34,19 @@ public static class Workload
     }
 
     private sealed record SourceLocation(string Document, int StartLine, int StartColumn, int EndLine, int EndColumn, bool InLoop);
+    private sealed record CpuObservation(ulong Nanoseconds, ulong MaxDeltaNanoseconds, uint Reads, uint ZeroDeltas);
+
+    private static CpuObservation ReadCpuObservation()
+    {
+        int failure = Native.CozGetClockFailure();
+        Require(failure == 0, $"CPU clock failed: {failure:X8}.");
+        var observation = new CpuObservation(Native.CozGetObservedCpuNanoseconds(),
+            Native.CozGetMaxCpuDeltaNanoseconds(), Native.CozGetClockReads(), Native.CozGetZeroCpuDeltas());
+        Require(observation.Reads > 0, "CPU clock was not observed.");
+        Require(observation.ZeroDeltas <= observation.Reads, "Zero CPU deltas exceed clock reads.");
+        Require(observation.MaxDeltaNanoseconds <= observation.Nanoseconds, "CPU delta exceeds cumulative CPU time.");
+        return observation;
+    }
 
     private static SourceLocation? ResolveSource(uint ilOffset, [CallerFilePath] string sourcePath = "")
     {
@@ -54,8 +71,8 @@ public static class Workload
 
     public static int Main(string[] args)
     {
-        Require(args.Length == 2 && (args[0] == "baseline" || args[0] == "profiled" || args[0] == "sampled"),
-            "Expected baseline, profiled, or sampled, followed by an evidence file path.");
+        Require(args.Length == 2 && (args[0] == "baseline" || args[0] == "profiled" || args[0] == "sampled" || args[0] == "intervention"),
+            "Expected baseline, profiled, sampled, or intervention, followed by an evidence file path.");
         bool profiled = args[0] != "baseline";
         var observations = new List<object>();
         foreach (int count in new[] { 0, 1, 1000000 })
@@ -137,8 +154,30 @@ public static class Workload
             Require(accounted == mapped, $"Location counts {accounted} differ from mapped samples {mapped}.");
             Require(loopSamples > 0, "No mapped sample reached the loop source span.");
             Require(!Native.CozGetSampleLocation(locationCount, out _, out _), "Out-of-range sample location succeeded.");
-            sampling = new { completed, attempts, failures, selected, mapped, lastIL, loopSamples, sourceSamples, lastFailure };
+            CpuObservation busyCpu = ReadCpuObservation();
+            Require(busyCpu.Reads == attempts, "Busy clock reads differ from snapshot attempts.");
+            Require(busyCpu.Nanoseconds > 0, "The busy workload consumed no observed CPU time.");
+            Thread.Sleep(1);
+            startResult = Native.CozStartSampling();
+            Require(startResult == 0, $"Blocked sampler start failed: {startResult:X8}.");
+            try { Thread.Sleep(500); }
+            finally { Native.CozStopSampling(); }
+            CpuObservation blockedCpu = ReadCpuObservation();
+            uint blockedAttempts = Native.CozGetSampleAttempts();
+            uint blockedFailures = Native.CozGetSampleFailures();
+            Require(blockedAttempts > blockedFailures, "No stack snapshot succeeded during the blocked phase.");
+            Require(blockedCpu.Reads == blockedAttempts, "Blocked clock reads differ from snapshot attempts.");
+            Require(blockedCpu.ZeroDeltas > 0, "No unchanged CPU-clock observation occurred while blocked.");
+            Require(blockedCpu.Nanoseconds < busyCpu.Nanoseconds,
+                $"Blocked CPU time {blockedCpu.Nanoseconds} was not below busy CPU time {busyCpu.Nanoseconds}.");
+            Require(Native.CozGetSelectedStacks() == 0 && Native.CozGetMappedStacks() == 0,
+                "The blocked phase attributed a sample to Work after Work returned.");
+            sampling = new { completed, attempts, failures, selected, mapped, lastIL, loopSamples,
+                sourceSamples, busyCpu, blockedCpu, blockedAttempts, blockedFailures, lastFailure };
         }
+        object? intervention = args[0] == "intervention"
+            ? new { zero = VerifyIntervention(0), delayed = VerifyIntervention(Stopwatch.Frequency / 50) }
+            : null;
         File.WriteAllText(args[1], JsonSerializer.Serialize(new
         {
             mode = args[0],
@@ -146,7 +185,8 @@ public static class Workload
             architecture = RuntimeInformation.ProcessArchitecture.ToString(),
             observations,
             mapping,
-            sampling
+            sampling,
+            intervention
         }, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
@@ -154,6 +194,21 @@ public static class Workload
 
 internal static class Native
 {
+    [DllImport("CozNet.Profiler")]
+    internal static extern ulong CozGetObservedCpuNanoseconds();
+
+    [DllImport("CozNet.Profiler")]
+    internal static extern ulong CozGetMaxCpuDeltaNanoseconds();
+
+    [DllImport("CozNet.Profiler")]
+    internal static extern uint CozGetClockReads();
+
+    [DllImport("CozNet.Profiler")]
+    internal static extern uint CozGetZeroCpuDeltas();
+
+    [DllImport("CozNet.Profiler")]
+    internal static extern int CozGetClockFailure();
+
     [DllImport("CozNet.Profiler")]
     internal static extern uint CozGetSampleLocationCount();
 

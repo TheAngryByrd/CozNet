@@ -9,7 +9,7 @@ foreach ($required in @($profiler, $workload)) {
     if (-not (Test-Path -LiteralPath $required)) { throw "Missing build output: $required" }
 }
 New-Item -ItemType Directory -Force $evidence | Out-Null
-foreach ($mode in @('baseline', 'profiled', 'sampled')) {
+foreach ($mode in @('baseline', 'profiled', 'sampled', 'intervention')) {
     $start = [Diagnostics.ProcessStartInfo]::new((Get-Command dotnet).Source)
     $start.UseShellExecute = $false
     $start.ArgumentList.Add($workload)

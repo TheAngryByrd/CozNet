@@ -7,6 +7,12 @@
         "requested": "[10.0.102, )",
         "resolved": "10.0.102",
         "contentHash": "umz5pbtOvL/F9U5sibhREzZT2ewAs//nRTMwj8XcOOjMdOP828tipLpEhb2fZNijhiyikJ6Nr/dsMc/lj58W9w=="
+      },
+      "coznet": {
+        "type": "Project",
+        "dependencies": {
+          "FSharp.Core": "[10.0.102, )"
+        }
       }
     }
   }
