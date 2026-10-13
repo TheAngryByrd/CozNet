@@ -57,12 +57,19 @@ The native profiler selects `CpuWorkload.Run` through `COZNET_PROBE_TARGET=linux
 It inserts calls to `CpuWorkload.Probe` at entry and backward branches.
 Thread-local bindings route these calls to selected-thread or worker-thread checks.
 The injected mode omits the manual probes after each batch.
-Both threads must execute exactly 10,002 injected calls per completed batch.
+`COZNET_PROBE_INTERVAL` selects dense calls at `1`, or countdown intervals `64`, `256`, and `1024`.
+`ProbePlan` parses mode and interval together. Manual mode accepts only interval `1`.
+Both threads must execute exactly 10,002, 157, 40, or 10 injected calls per batch, respectively.
 Warmup checks native profiler status, one rewritten method, and the exact probe count before sampling starts.
 This connection still uses a fixed method map and controlled lifecycle. Probe overhead remains a separate limit.
 The retained injected control costs 101.5 times as much per batch as the manual control.
-Only four of its 500 samples resolve to the work method. This path is not ready for useful prediction.
+Only four of its 500 samples resolve to the work method. Dense probes are not ready for useful prediction.
 See [automatic-probe evidence](../../reliability/features/linux-perf/injected-probes.md).
+`LinuxCountdownVerify` compares manual, dense, and countdown probes in three shuffled blocks with seed `20261014`.
+Each case uses the same sample, credit, wait, checksum, and exact-count gates. All 15 retained cases pass.
+The interval-1024 mean cost ratio is 1.237 against manual probes, compared with 100.782 for dense probes.
+The comparison retains failures and reports the actual order. It does not establish prediction accuracy.
+See [countdown comparison](../../reliability/features/linux-perf/countdown-probes.md).
 The default cadence checks the ledger after 10 milliseconds of thread CPU time, matching native Coz's processing interval.
 `IThreadCpuClock` supplies that clock. The current implementation uses Linux x64 `clock_gettime`.
 `ProbeCadence` uses an injectable `TimeProvider` to skip CPU reads before enough elapsed time passes.
@@ -78,7 +85,8 @@ Final settlement alone cannot satisfy this check. An isolated missing-probe muta
 The zero-percent case must produce zero credit, zero global delay, and zero measured worker waits.
 
 This bridge uses cumulative emitted periods as an estimate of represented CPU time, not a direct CPU-clock measurement.
-Only the fixed synchronous method earns credit. Probe code, waits, and unmapped addresses earn none.
+Only the fixed synchronous method earns credit. Separate helper methods, waits, and unmapped addresses earn none.
+Inline countdown instructions remain inside the selected method and can earn credit. Exact profiler-CPU exclusion remains unresolved.
 The bridge uses a fixed eligibility epoch under this controlled method restriction.
 General lifecycle eligibility, GC transitions, and blocking inside selected methods remain unimplemented.
 The wrapper records requested duration, backend-call duration, and the ledger's timestamp interval separately.
@@ -96,6 +104,12 @@ Acceptance requires the complete 95-percent paired-error interval to fit within 
 Failed runs remain evidence. Successful accounting checks do not imply accurate predictions.
 The physical modes and portable checks run before the Linux platform guard.
 See [prediction evidence](../../reliability/features/linux-perf/prediction.md).
+`LinuxCountdownPredictionVerify` uses interval 1024 with the same two-second, eight-block protocol and unchanged accuracy gate.
+The retained run predicts 44.99% against a physical reduction of 49.87%.
+Its mean error is -4.87 percentage points with a 2.07-point interval half-width. The gate fails at 6.95 points.
+Zero-speedup overhead against the physical baseline is 26.36%.
+These results do not isolate overhead, mapping, and scheduling effects.
+See [countdown prediction evidence](../../reliability/features/linux-perf/countdown-prediction.md).
 See [wait comparison](../../reliability/features/linux-perf/wait-comparison.md) for raw records and remaining timing limits.
 It resolves instruction addresses to managed method symbols, but not source lines or IL offsets.
 The fixed snapshot does not include code compiled after capture.

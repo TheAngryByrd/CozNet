@@ -2,10 +2,12 @@ param(
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-perf'),
     [ValidateSet('managed', 'linux-nanosleep')][string]$WaitBackend = 'managed',
     [ValidateSet(0, 10)][int]$ProbeCpuMilliseconds = 10,
-    [ValidateSet('manual', 'injected')][string]$ProbeMode = 'manual'
+    [ValidateSet('manual', 'injected')][string]$ProbeMode = 'manual',
+    [ValidateSet(1, 64, 256, 1024)][int]$ProbeInterval = 1
 )
 
 $ErrorActionPreference = 'Stop'
+if ($ProbeMode -eq 'manual' -and $ProbeInterval -ne 1) { throw 'Manual probes require interval 1.' }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $workload = Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0'
 if (-not (Test-Path -LiteralPath (Join-Path $workload 'CozNet.LinuxPerf.dll'))) {
@@ -27,7 +29,7 @@ foreach ($policy in @('default', 'unfiltered', 'control')) {
         '--mount', "type=bind,source=$workload,target=/work,readonly",
         '--mount', "type=bind,source=$evidence,target=/output")
     if ($policy -ne 'default') { $arguments += @('--security-opt', 'seccomp=unconfined') }
-    $arguments += @('--env', "COZNET_PROBE_MODE=$ProbeMode")
+    $arguments += @('--env', "COZNET_PROBE_MODE=$ProbeMode", '--env', "COZNET_PROBE_INTERVAL=$ProbeInterval")
     if ($ProbeMode -eq 'injected') {
         $native = Join-Path $root 'artifacts/native-linux/integrated'
         $arguments += @('--mount', "type=bind,source=$native,target=/native,readonly",
@@ -49,5 +51,5 @@ foreach ($policy in @('default', 'unfiltered', 'control')) {
         throw "Linux perf verification failed under $policy policy with exit code $code."
     }
 }
-@{ image = $image; imageId = $identity; kernel = $kernel; capabilities = 'none'; network = 'none'; probeMode = $ProbeMode } |
+@{ image = $image; imageId = $identity; kernel = $kernel; capabilities = 'none'; network = 'none'; probeMode = $ProbeMode; probeInterval = $ProbeInterval } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'environment.json')

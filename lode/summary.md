@@ -18,7 +18,8 @@ The CLR prototype also verifies asynchronous stack snapshots through a Windows b
 It does not extend the public engine's supported workload model.
 A separate [Linux task-clock workload](profiling/linux-perf.md) verifies per-thread CPU events in a container with the required syscall access.
 Those events resolve against a fixed managed method map and drive credits at manual or injected probes in a controlled two-thread workload.
-The injected path passes connection checks but has excessive probe overhead in the retained comparison.
+Dense injected probes have excessive cost. Countdown probes reduce that cost in the controlled Linux comparison.
+Inline countdown instructions remain inside selected-method CPU attribution. Exact profiler-CPU exclusion remains unresolved.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

@@ -40,12 +40,17 @@ It verifies injected probes and known-credit intervention. Linux stack-snapshot 
 `LinuxPerfVerify` builds the Linux capability workload and runs its Docker checks.
 `LinuxInjectedVerify` builds the native profiler and compares manual and injected probes with the same wait backend.
 It retains unique evidence directories under `artifacts/linux-injected/` and reports the zero-speedup cost ratio.
+`LinuxCountdownVerify` uses the same native build and Linux workload chain.
+It compares five probe configurations in three shuffled blocks and retains every result under `artifacts/linux-countdown/`.
+Any failed case fails the target after the comparison records have been written.
 Its default uses managed waits with 10-millisecond thread-CPU batching.
 `LinuxWaitCompare` compares managed and native waits with per-probe and CPU-batched checks.
 Both targets use the same bounded runner. Comparison records go under `artifacts/linux-wait-comparison/`.
 `LinuxPredictionVerify` compares sampled predictions with a physical CPU optimization in eight randomized blocks.
 It uses two-second measurement windows and writes unique directories under `artifacts/linux-prediction/`.
 Accuracy failures produce `summary.json` before the target fails. The two-percentage-point gate remains mandatory.
+`LinuxCountdownPredictionVerify` uses injected probes with interval 1024 and the same accuracy gate.
+Its physical cases run without the profiler. Records go under `artifacts/linux-countdown-prediction/`.
 It requires a local `mcr.microsoft.com/dotnet/sdk:10.0.100` image and a Linux Docker engine.
 See [Linux perf feasibility](../profiling/linux-perf.md) for the isolated container settings and support limits.
 

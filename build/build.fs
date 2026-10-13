@@ -499,8 +499,22 @@ let linuxPerfVerify _ = nativeScript "VerifyLinuxPerf.ps1"
 
 let linuxInjectedVerify _ = nativeScript "VerifyLinuxInjected.ps1"
 
+let linuxCountdownVerify _ = nativeScript "VerifyLinuxCountdown.ps1"
+
 let linuxPredictionVerify _ =
     nativeScript "VerifyLinuxPrediction.ps1"
+
+let linuxCountdownPredictionVerify _ =
+    nativeScriptWithArgs "VerifyLinuxPrediction.ps1" [
+        "-ProbeMode"
+        "injected"
+        "-ProbeInterval"
+        "1024"
+        "-EvidenceDirectory"
+        rootDirectory
+        </> "artifacts"
+        </> "linux-countdown-prediction"
+    ]
 
 let linuxWaitCompare _ =
     for backend in
@@ -812,6 +826,8 @@ let initTargets () =
     Target.create "LinuxPerfVerify" linuxPerfVerify
     Target.create "LinuxInjectedWorkload" linuxPerfWorkload
     Target.create "LinuxInjectedVerify" linuxInjectedVerify
+    Target.create "LinuxCountdownVerify" linuxCountdownVerify
+    Target.create "LinuxCountdownPredictionVerify" linuxCountdownPredictionVerify
     Target.create "LinuxWaitCompare" linuxWaitCompare
     Target.create "LinuxPredictionVerify" linuxPredictionVerify
     Target.create "FSharpAnalyzers" fsharpAnalyzers
@@ -864,6 +880,14 @@ let initTargets () =
     "NativeLinuxBuild"
     ==> "LinuxInjectedWorkload"
     ==> "LinuxInjectedVerify"
+    |> ignore
+
+    "LinuxInjectedWorkload"
+    ==> "LinuxCountdownVerify"
+    |> ignore
+
+    "LinuxInjectedWorkload"
+    ==> "LinuxCountdownPredictionVerify"
     |> ignore
 
     //-----------------------------------------------------------------------------

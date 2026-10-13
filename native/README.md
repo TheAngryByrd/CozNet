@@ -4,7 +4,9 @@ The build supports Windows x64 and Linux x64 startup instrumentation.
 Stack snapshots remain Windows x64 only. macOS support remains incomplete.
 The default target is the instrumentation workload. `COZNET_PROBE_TARGET=linux-perf` selects the Linux CPU workload instead.
 `LinuxInjectedVerify` connects that workload's CPU samples to injected callbacks on two threads.
-Its current probe cost is excessive. See [the measured comparison](../reliability/features/linux-perf/injected-probes.md).
+Dense probe cost is excessive. See [the measured comparison](../reliability/features/linux-perf/injected-probes.md).
+`LinuxCountdownVerify` compares conditional probes at intervals 64, 256, and 1024.
+See [countdown results](../reliability/features/linux-perf/countdown-probes.md) for cost and attribution limits.
 
 `Sampler.h` uses standard C++ threads, mutexes, and a condition variable.
 `SnapshotBackend.h` defines the platform boundary for stack capture.

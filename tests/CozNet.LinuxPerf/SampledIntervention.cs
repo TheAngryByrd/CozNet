@@ -66,8 +66,9 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
         ? result.ResultValue : throw new InvalidOperationException(result.ErrorValue);
 
     public SampledIntervention(string selectedMethod, int percent, IWaitBackend backend,
-        IThreadCpuClock cpuClock, long probeIntervalNanoseconds, ProbeMode probeMode = ProbeMode.Manual)
+        IThreadCpuClock cpuClock, long probeIntervalNanoseconds, ProbePlan probePlan)
     {
+        var probeMode = probePlan.Mode;
         probeInterval = probeIntervalNanoseconds;
         selectedCadence = new ProbeCadence(cpuClock, probeInterval);
         waitBackend = backend.Name;
@@ -118,7 +119,7 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
                 batches++;
                 if (probeMode == ProbeMode.Manual) CheckWorker();
             } while (!stop.IsSet);
-            if (InjectedProbes.Calls - initialCalls != (probeMode == ProbeMode.Injected ? checked(batches * 10002L) : 0L))
+            if (InjectedProbes.Calls - initialCalls != checked(batches * probePlan.CallsPerBatch))
                 throw new InvalidOperationException("Worker injected probe counts do not match completed work.");
             Parsed(runtime.Check(handle, deadline.Token));
             Parsed(runtime.Unregister(handle));

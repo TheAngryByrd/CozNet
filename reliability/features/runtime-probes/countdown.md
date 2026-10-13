@@ -1,6 +1,6 @@
 # Conditional loop probes
 
-Source baseline: `85e1bbe`, plus the countdown changes in this commit.
+Source snapshot: `f06ad20`.
 The shared native rewriter passes controlled checks on Windows x64 and Linux x64.
 This result establishes probe coverage and delay settlement. It does not establish useful profiling overhead or prediction accuracy.
 
@@ -12,8 +12,9 @@ Each method entry initializes the countdown and calls the helper.
 Original branch targets bypass entry initialization. Targets at a backward branch pass through its countdown.
 
 The interval counts executed poll sites. It does not bound CPU time or elapsed time between service points.
-The current countdown supports only `CozNet.Instrumentation.Workload.Work`.
-The native profiler rejects countdown selection with the Linux perf target through `E_NOTIMPL`.
+This initial version supports only `CozNet.Instrumentation.Workload.Work`.
+Its Linux perf target rejects countdown selection through `E_NOTIMPL`.
+The later [Linux connection](../linux-perf/countdown-probes.md) enables countdown probes in the sampled workload.
 The local-signature helper cannot distinguish failure from the first local index. The prototype rejects that ambiguous result.
 
 ## Checks

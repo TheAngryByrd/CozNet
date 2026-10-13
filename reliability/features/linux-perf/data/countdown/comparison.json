@@ -1,0 +1,327 @@
+{
+  "blockCount": 3,
+  "seed": 20261014,
+  "costs": [
+    {
+      "label": "countdown-256",
+      "cpuNanosecondsPerBatch": 5205.3730994400585,
+      "unmappedSamples": 90,
+      "selectedSamples": 349,
+      "completedBatches": 94117,
+      "block": 1,
+      "totalSamples": 487,
+      "millisecondsPerBatch": 0.0053184291892006755
+    },
+    {
+      "label": "countdown-1024",
+      "cpuNanosecondsPerBatch": 3977.459306721853,
+      "unmappedSamples": 64,
+      "selectedSamples": 418,
+      "completedBatches": 125635,
+      "block": 1,
+      "totalSamples": 499,
+      "millisecondsPerBatch": 0.003984249611971186
+    },
+    {
+      "label": "manual",
+      "cpuNanosecondsPerBatch": 3224.725023357711,
+      "unmappedSamples": 14,
+      "selectedSamples": 482,
+      "completedBatches": 155195,
+      "block": 1,
+      "totalSamples": 499,
+      "millisecondsPerBatch": 0.003225326846870067
+    },
+    {
+      "label": "countdown-64",
+      "cpuNanosecondsPerBatch": 9597.31957972237,
+      "unmappedSamples": 194,
+      "selectedSamples": 192,
+      "completedBatches": 52156,
+      "block": 1,
+      "totalSamples": 497,
+      "millisecondsPerBatch": 0.00959733300099701
+    },
+    {
+      "label": "dense",
+      "cpuNanosecondsPerBatch": 332410.81619110814,
+      "unmappedSamples": 358,
+      "selectedSamples": 7,
+      "completedBatches": 1507,
+      "block": 1,
+      "totalSamples": 499,
+      "millisecondsPerBatch": 0.33243536828135367
+    },
+    {
+      "label": "countdown-256",
+      "cpuNanosecondsPerBatch": 5112.633535551607,
+      "unmappedSamples": 102,
+      "selectedSamples": 338,
+      "completedBatches": 97914,
+      "block": 2,
+      "totalSamples": 499,
+      "millisecondsPerBatch": 0.005112417019016689
+    },
+    {
+      "label": "countdown-1024",
+      "cpuNanosecondsPerBatch": 4143.0696472498075,
+      "unmappedSamples": 42,
+      "selectedSamples": 444,
+      "completedBatches": 120737,
+      "block": 2,
+      "totalSamples": 500,
+      "millisecondsPerBatch": 0.004146125048659483
+    },
+    {
+      "label": "countdown-64",
+      "cpuNanosecondsPerBatch": 10915.898039728745,
+      "unmappedSamples": 189,
+      "selectedSamples": 203,
+      "completedBatches": 45861,
+      "block": 2,
+      "totalSamples": 498,
+      "millisecondsPerBatch": 0.010915573144937966
+    },
+    {
+      "label": "dense",
+      "cpuNanosecondsPerBatch": 329282.5115055884,
+      "unmappedSamples": 379,
+      "selectedSamples": 3,
+      "completedBatches": 1521,
+      "block": 2,
+      "totalSamples": 498,
+      "millisecondsPerBatch": 0.3292560157790927
+    },
+    {
+      "label": "manual",
+      "cpuNanosecondsPerBatch": 3275.287021712252,
+      "unmappedSamples": 25,
+      "selectedSamples": 470,
+      "completedBatches": 152863,
+      "block": 2,
+      "totalSamples": 500,
+      "millisecondsPerBatch": 0.0032747231180861296
+    },
+    {
+      "label": "manual",
+      "cpuNanosecondsPerBatch": 3335.441435197526,
+      "unmappedSamples": 13,
+      "selectedSamples": 486,
+      "completedBatches": 150056,
+      "block": 3,
+      "totalSamples": 500,
+      "millisecondsPerBatch": 0.003335788638908141
+    },
+    {
+      "label": "countdown-1024",
+      "cpuNanosecondsPerBatch": 4033.0862685701395,
+      "unmappedSamples": 41,
+      "selectedSamples": 441,
+      "completedBatches": 124124,
+      "block": 3,
+      "totalSamples": 500,
+      "millisecondsPerBatch": 0.004033100770197544
+    },
+    {
+      "label": "countdown-64",
+      "cpuNanosecondsPerBatch": 9791.983171900989,
+      "unmappedSamples": 218,
+      "selectedSamples": 181,
+      "completedBatches": 51105,
+      "block": 3,
+      "totalSamples": 500,
+      "millisecondsPerBatch": 0.009794945700029352
+    },
+    {
+      "label": "dense",
+      "cpuNanosecondsPerBatch": 329390.27595269383,
+      "unmappedSamples": 356,
+      "selectedSamples": 6,
+      "completedBatches": 1522,
+      "block": 3,
+      "totalSamples": 501,
+      "millisecondsPerBatch": 0.32934434954007885
+    },
+    {
+      "label": "countdown-256",
+      "cpuNanosecondsPerBatch": 5139.456285162827,
+      "unmappedSamples": 99,
+      "selectedSamples": 358,
+      "completedBatches": 97404,
+      "block": 3,
+      "totalSamples": 499,
+      "millisecondsPerBatch": 0.005138910106361135
+    }
+  ],
+  "predictionAccuracyEstablished": false,
+  "ratios": [
+    {
+      "label": "countdown-256",
+      "costRatio": 1.6489582115877044,
+      "block": 1
+    },
+    {
+      "label": "countdown-1024",
+      "costRatio": 1.2353010411448984,
+      "block": 1
+    },
+    {
+      "label": "countdown-64",
+      "costRatio": 2.975615637314552,
+      "block": 1
+    },
+    {
+      "label": "dense",
+      "costRatio": 103.07028839695946,
+      "block": 1
+    },
+    {
+      "label": "countdown-256",
+      "costRatio": 1.5611753527438912,
+      "block": 2
+    },
+    {
+      "label": "countdown-1024",
+      "costRatio": 1.2660994225009878,
+      "block": 2
+    },
+    {
+      "label": "countdown-64",
+      "costRatio": 3.333281242817693,
+      "block": 2
+    },
+    {
+      "label": "dense",
+      "costRatio": 100.54468848392966,
+      "block": 2
+    },
+    {
+      "label": "countdown-1024",
+      "costRatio": 1.2090396625122044,
+      "block": 3
+    },
+    {
+      "label": "countdown-64",
+      "costRatio": 2.9363208405300525,
+      "block": 3
+    },
+    {
+      "label": "dense",
+      "costRatio": 98.73058073843633,
+      "block": 3
+    },
+    {
+      "label": "countdown-256",
+      "costRatio": 1.540538284237093,
+      "block": 3
+    }
+  ],
+  "profilerCpuExclusionEstablished": false,
+  "outcomes": [
+    {
+      "label": "countdown-256",
+      "failure": null,
+      "block": 1,
+      "succeeded": true,
+      "directory": "block-1/countdown-256"
+    },
+    {
+      "label": "countdown-1024",
+      "failure": null,
+      "block": 1,
+      "succeeded": true,
+      "directory": "block-1/countdown-1024"
+    },
+    {
+      "label": "manual",
+      "failure": null,
+      "block": 1,
+      "succeeded": true,
+      "directory": "block-1/manual"
+    },
+    {
+      "label": "countdown-64",
+      "failure": null,
+      "block": 1,
+      "succeeded": true,
+      "directory": "block-1/countdown-64"
+    },
+    {
+      "label": "dense",
+      "failure": null,
+      "block": 1,
+      "succeeded": true,
+      "directory": "block-1/dense"
+    },
+    {
+      "label": "countdown-256",
+      "failure": null,
+      "block": 2,
+      "succeeded": true,
+      "directory": "block-2/countdown-256"
+    },
+    {
+      "label": "countdown-1024",
+      "failure": null,
+      "block": 2,
+      "succeeded": true,
+      "directory": "block-2/countdown-1024"
+    },
+    {
+      "label": "countdown-64",
+      "failure": null,
+      "block": 2,
+      "succeeded": true,
+      "directory": "block-2/countdown-64"
+    },
+    {
+      "label": "dense",
+      "failure": null,
+      "block": 2,
+      "succeeded": true,
+      "directory": "block-2/dense"
+    },
+    {
+      "label": "manual",
+      "failure": null,
+      "block": 2,
+      "succeeded": true,
+      "directory": "block-2/manual"
+    },
+    {
+      "label": "manual",
+      "failure": null,
+      "block": 3,
+      "succeeded": true,
+      "directory": "block-3/manual"
+    },
+    {
+      "label": "countdown-1024",
+      "failure": null,
+      "block": 3,
+      "succeeded": true,
+      "directory": "block-3/countdown-1024"
+    },
+    {
+      "label": "countdown-64",
+      "failure": null,
+      "block": 3,
+      "succeeded": true,
+      "directory": "block-3/countdown-64"
+    },
+    {
+      "label": "dense",
+      "failure": null,
+      "block": 3,
+      "succeeded": true,
+      "directory": "block-3/dense"
+    },
+    {
+      "label": "countdown-256",
+      "failure": null,
+      "block": 3,
+      "succeeded": true,
+      "directory": "block-3/countdown-256"
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "confidence": 0.95,
+  "seed": 20261013,
+  "studentTCritical": 2.364624251,
+  "blocks": [
+    {
+      "profilingOverhead": 0.24045508938362414,
+      "block": 0,
+      "actualReduction": 0.4876076251056777,
+      "costs": {
+        "profile-half": 0.0021866717991605635,
+        "profile-zero": 0.0038913941871909683,
+        "physical-optimized": 0.001607410640086543,
+        "physical-baseline": 0.0031370697903497515
+      },
+      "error": -0.0495326560774253,
+      "predictedReduction": 0.4380749690282524
+    },
+    {
+      "profilingOverhead": 0.22670279567834695,
+      "block": 1,
+      "actualReduction": 0.5027253263879716,
+      "costs": {
+        "profile-zero": 0.003938224733257214,
+        "profile-half": 0.002197765559837097,
+        "physical-optimized": 0.0015964579405383572,
+        "physical-baseline": 0.0032104147370752827
+      },
+      "error": -0.06078529215822781,
+      "predictedReduction": 0.4419400342297438
+    },
+    {
+      "profilingOverhead": 0.42087268696648206,
+      "block": 2,
+      "actualReduction": 0.5016278920411863,
+      "costs": {
+        "profile-zero": 0.0045415373648999904,
+        "profile-half": 0.0022296645566732593,
+        "physical-optimized": 0.0015929474686089992,
+        "physical-baseline": 0.0031963014044530816
+      },
+      "error": 0.007422815345791478,
+      "predictedReduction": 0.5090507073869778
+    },
+    {
+      "profilingOverhead": 0.2377602316216454,
+      "block": 3,
+      "actualReduction": 0.502675842189455,
+      "costs": {
+        "profile-half": 0.0021939628406487965,
+        "profile-zero": 0.003941844097398733,
+        "physical-optimized": 0.0015838077891635915,
+        "physical-baseline": 0.00318465886744022
+      },
+      "error": -0.05925869692402386,
+      "predictedReduction": 0.4434171452654312
+    },
+    {
+      "profilingOverhead": 0.24058926297377026,
+      "block": 4,
+      "actualReduction": 0.49590820052295115,
+      "costs": {
+        "profile-zero": 0.003920438137865082,
+        "profile-half": 0.0022082973765106834,
+        "physical-optimized": 0.0015930016280470128,
+        "physical-baseline": 0.0031601419219666194
+      },
+      "error": -0.059186410471504525,
+      "predictedReduction": 0.4367217900514466
+    },
+    {
+      "profilingOverhead": 0.26531483150306956,
+      "block": 5,
+      "actualReduction": 0.49561415903373207,
+      "costs": {
+        "profile-half": 0.002189554044733471,
+        "profile-zero": 0.004006553647424023,
+        "physical-optimized": 0.0015971115492512357,
+        "physical-baseline": 0.0031664480235836885
+      },
+      "error": -0.04210728939309338,
+      "predictedReduction": 0.4535068696406387
+    },
+    {
+      "profilingOverhead": 0.1987533510474604,
+      "block": 6,
+      "actualReduction": 0.5089644789288097,
+      "costs": {
+        "profile-half": 0.0022448722834176836,
+        "profile-zero": 0.00395936891436171,
+        "physical-optimized": 0.0016218438732854077,
+        "physical-baseline": 0.0033029053982639943
+      },
+      "error": -0.07594177555679504,
+      "predictedReduction": 0.43302270337201465
+    },
+    {
+      "profilingOverhead": 0.27801313498704805,
+      "block": 7,
+      "actualReduction": 0.4942105356624851,
+      "costs": {
+        "profile-zero": 0.004009027748553657,
+        "profile-half": 0.002230134288420981,
+        "physical-optimized": 0.0015866221887271428,
+        "physical-baseline": 0.0031369221792812685
+      },
+      "error": -0.05048862309292257,
+      "predictedReduction": 0.4437219125695625
+    }
+  ],
+  "meanProfilingOverhead": 0.26355767302018085,
+  "passed": false,
+  "meanError": -0.048734741041025126,
+  "errorIntervalHalfWidth": 0.0207368258358108,
+  "meanActual": 0.49866675748403355,
+  "errorLimit": 0.02,
+  "meanPrediction": 0.44993201644300845
+}

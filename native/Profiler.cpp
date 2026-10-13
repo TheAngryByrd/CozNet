@@ -156,7 +156,6 @@ public:
         else { status.store(E_INVALIDARG); return E_INVALIDARG; }
         const char* target = std::getenv("COZNET_PROBE_TARGET");
         if (target && std::string_view(target) == "linux-perf") {
-            if (probeInterval != ProbeInterval::Dense) { status.store(E_NOTIMPL); return E_NOTIMPL; }
             targetModule = COZ_TEXT("CozNet.LinuxPerf.dll");
             targetType = COZ_TEXT("CpuWorkload");
             targetMethod = COZ_TEXT("Run");

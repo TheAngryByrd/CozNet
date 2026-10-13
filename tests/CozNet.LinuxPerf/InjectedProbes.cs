@@ -2,18 +2,41 @@ using System.Runtime.InteropServices;
 
 enum ProbeMode { Manual, Injected }
 
+sealed class ProbePlan
+{
+    public ProbeMode Mode { get; }
+    public int BackedgeInterval { get; }
+    public long CallsPerBatch => Mode == ProbeMode.Manual ? 0 : 1 + (CpuWorkload.Iterations + 1) / BackedgeInterval;
+
+    private ProbePlan(ProbeMode mode, int interval) => (Mode, BackedgeInterval) = (mode, interval);
+
+    public static ProbePlan Parse(string? mode, string? interval)
+    {
+        ProbeMode parsedMode = mode switch
+        {
+            null or "manual" => ProbeMode.Manual,
+            "injected" => ProbeMode.Injected,
+            _ => throw new ArgumentException("Select manual or injected probes.")
+        };
+        int parsedInterval = interval switch
+        {
+            null or "1" => 1,
+            "64" => 64,
+            "256" => 256,
+            "1024" => 1024,
+            _ => throw new ArgumentException("Select probe interval 1, 64, 256, or 1024.")
+        };
+        if (parsedMode == ProbeMode.Manual && parsedInterval != 1)
+            throw new ArgumentException("Manual probes require interval 1.");
+        return new ProbePlan(parsedMode, parsedInterval);
+    }
+}
+
 static class InjectedProbes
 {
     [ThreadStatic] private static Action? callback;
     [ThreadStatic] private static long calls;
     public static long Calls => calls;
-
-    public static ProbeMode ParseMode(string? value) => value switch
-    {
-        null or "manual" => ProbeMode.Manual,
-        "injected" => ProbeMode.Injected,
-        _ => throw new ArgumentException("Select manual or injected probes.")
-    };
 
     public static void Hit()
     {
@@ -42,9 +65,9 @@ static class InjectedProbes
         }
     }
 
-    public static void VerifyRewrite(long warmupCalls)
+    public static void VerifyRewrite(ProbePlan plan, long warmupCalls)
     {
-        if (CozGetStatus() != 2 || CozGetInstrumentedMethods() != 1 || warmupCalls != 10002)
+        if (CozGetStatus() != 2 || CozGetInstrumentedMethods() != 1 || warmupCalls != plan.CallsPerBatch)
             throw new InvalidOperationException($"The native profiler did not inject the expected loop probes: status={CozGetStatus()}, methods={CozGetInstrumentedMethods()}, calls={warmupCalls}.");
     }
     [DllImport("CozNet.Profiler")]

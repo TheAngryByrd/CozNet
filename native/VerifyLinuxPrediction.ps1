@@ -1,11 +1,15 @@
 param(
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-prediction'),
-    [ValidateSet(500, 2000)][int]$MeasurementMilliseconds = 2000
+    [ValidateSet(500, 2000)][int]$MeasurementMilliseconds = 2000,
+    [ValidateSet('manual', 'injected')][string]$ProbeMode = 'manual',
+    [ValidateSet(1, 64, 256, 1024)][int]$ProbeInterval = 1
 )
 
 $ErrorActionPreference = 'Stop'
+if ($ProbeMode -eq 'manual' -and $ProbeInterval -ne 1) { throw 'Manual probes require interval 1.' }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $workload = Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0'
+$native = Join-Path $root 'artifacts/native-linux/integrated'
 $evidence = [IO.Path]::GetFullPath($EvidenceDirectory)
 $run = Join-Path $evidence ('run-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Force $run | Out-Null
@@ -20,7 +24,8 @@ $random = [Random]::new($seed)
 $order = [Collections.Generic.List[object]]::new()
 $rows = [Collections.Generic.List[object]]::new()
 @{ seed = $seed; blocks = 8; image = $image; imageId = $imageId; kernel = $kernel;
-    measurementMilliseconds = $MeasurementMilliseconds; controllerRuntime = [Environment]::Version.ToString() } |
+    measurementMilliseconds = $MeasurementMilliseconds; controllerRuntime = [Environment]::Version.ToString();
+    probeMode = $ProbeMode; probeInterval = $ProbeInterval } |
     ConvertTo-Json | Set-Content (Join-Path $run 'environment.json')
 
 for ($block = 0; $block -lt 8; $block++) {
@@ -41,6 +46,13 @@ for ($block = 0; $block -lt 8; $block++) {
             '--mount', "type=bind,source=$run,target=/output")
         if ($case.StartsWith('profile-')) {
             $arguments += @('--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1')
+            $arguments += @('--env', "COZNET_PROBE_MODE=$ProbeMode", '--env', "COZNET_PROBE_INTERVAL=$ProbeInterval")
+            if ($ProbeMode -eq 'injected') {
+                $arguments += @('--mount', "type=bind,source=$native,target=/native,readonly",
+                    '--env', 'CORECLR_ENABLE_PROFILING=1', '--env', 'CORECLR_PROFILER={6E51C528-23F1-49EA-9346-2A7A8D911B61}',
+                    '--env', 'CORECLR_PROFILER_PATH=/native/libCozNet.Profiler.so', '--env', 'LD_LIBRARY_PATH=/native',
+                    '--env', 'COZNET_PROBE_TARGET=linux-perf')
+            }
             $speedup = if ($case -eq 'profile-zero') { '0' } else { '50' }
             $application = @("/output/$file", $speedup, 'linux-nanosleep', '10', "$MeasurementMilliseconds")
         } else {

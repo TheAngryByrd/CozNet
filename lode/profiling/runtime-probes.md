@@ -4,7 +4,7 @@ The Windows x64 and Linux x64 startup profiler rewrites one controlled method be
 The target is `CozNet.Instrumentation.Workload.Work` in `CozNet.Instrumentation.dll`.
 `COZNET_PROBE_TARGET=linux-perf` selects `CpuWorkload.Run` in `CozNet.LinuxPerf.dll` instead.
 An absent value or `instrumentation` selects the original target. Other values fail initialization with `E_INVALIDARG`.
-It inserts `Probe()` calls at entry and before backward branch instructions.
+It inserts `Probe()` calls at entry and either calls or conditional countdown gates before backward branches.
 It redirects branch targets when an inserted probe precedes the target instruction.
 Exception handlers and switch instructions are unsupported.
 
@@ -13,13 +13,14 @@ Interval `1` retains dense probes. Other values inject one `int32` local and a c
 The positive-count path calls no helper. Expiration calls `Probe` and resets the counter.
 Method entry initializes the counter and always calls `Probe`. Original branches cannot reenter this initialization.
 This prevents repeated short calls from losing entry service. The interval bounds executed poll sites, not time.
-The countdown currently supports only the instrumentation target. Linux perf integration rejects it with `E_NOTIMPL`.
+Both controlled targets accept countdown probes. The Linux perf workload checks each thread's exact helper count.
 The pinned local-signature helper returns zero for both failure and a valid first local.
 The prototype therefore rejects methods without existing locals rather than accepting an ambiguous result.
 `NativeCountdownVerify` and `NativeLinuxCountdownVerify` verify intervals 64, 256, and 1024 on Windows and Linux x64.
 They check exact counts before, at, and after expiration, 100 short calls, and intervention during a million-iteration call.
 Linux x64 disassembly at interval 256 contains a decrement and branch on the fast path.
-Overhead measurements remain pending. See [countdown evidence](../../reliability/features/runtime-probes/countdown.md).
+The [Linux comparison](../../reliability/features/linux-perf/countdown-probes.md) measures countdown cost in the sampled workload.
+See [countdown evidence](../../reliability/features/runtime-probes/countdown.md) for native coverage checks.
 See [probe-overhead research](../../docsSrc/Research/probe-overhead-options.md) for the inline attribution limit.
 
 The CLR requires `ICorProfilerCallback2` during startup activation.
@@ -33,6 +34,11 @@ The workload resolves observed IL offsets through its portable PDB and requires 
 It checks that all location counts sum to the mapped sample count.
 Valid entry and return samples do not erase earlier loop observations.
 Debugger output remains unverified.
+The registered instrumentation map can collapse injected and original IL boundaries into one original-offset range.
+It does not establish exact ownership of inline countdown instructions.
+The next diagnostic will omit registration for the whole process and inspect rewritten-IL/native ranges.
+It must keep mixed ranges explicit and make no debugger-stepping claim.
+See [injected CPU attribution research](../../docsSrc/Research/injected-cpu-attribution.md).
 
 ```powershell
 ./native/Build.ps1
@@ -72,7 +78,7 @@ The trigger is probe 10,000 for dense probes and probe 10 for countdown probes.
 The controller waits for that probe before publishing credit. Method entry alone cannot satisfy this reach check.
 The worker records actual wait time and Linux-style overshoot in the ledger.
 This is a known-credit intervention test. Sampled CPU observations do not generate credits.
-Probe overhead remains unmeasured.
+This known-credit test does not measure probe overhead.
 `NativeLinuxVerify` builds the shared profiler and verifies startup activation, exact loop-probe counts, IL maps, and known-credit intervention.
 It uses UTF-16 comparisons, PAL compatibility headers, and `minipal` from the pinned .NET 10 runtime sources.
 Standard C++ headers precede PAL headers to avoid annotation-macro conflicts with libstdc++.

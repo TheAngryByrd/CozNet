@@ -17,7 +17,9 @@ if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Arch
     throw new PlatformNotSupportedException("The syscall probe requires Linux x64.");
 if (args.Length is < 1 or > 5) throw new ArgumentException("Pass a JSON evidence path, speedup percentage, wait backend, probe CPU milliseconds, and optional measurement milliseconds.");
 var window = MeasurementWindow.Parse(args.Length == 5 ? args[4] : "500");
-var probeMode = InjectedProbes.ParseMode(Environment.GetEnvironmentVariable("COZNET_PROBE_MODE"));
+var probePlan = ProbePlan.Parse(Environment.GetEnvironmentVariable("COZNET_PROBE_MODE"),
+    Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL"));
+var probeMode = probePlan.Mode;
 int speedup = args.Length >= 2 ? int.Parse(args[1]) : 50;
 if (speedup is not (0 or 50)) throw new ArgumentException("The capability workload supports zero or 50 percent.");
 IWaitBackend waitBackend = (args.Length >= 3 ? args[2] : "managed") switch
@@ -34,7 +36,7 @@ if (Marshal.SizeOf<PerfAttribute>() != 64) throw new Exception("Unexpected perf 
 Thread.Sleep(1);
 long beforeWarmupCalls = InjectedProbes.Calls;
 if (CpuWorkload.Run() != 49995000L) throw new Exception("The workload warmup returned an invalid checksum.");
-if (probeMode == ProbeMode.Injected) InjectedProbes.VerifyRewrite(InjectedProbes.Calls - beforeWarmupCalls);
+if (probeMode == ProbeMode.Injected) InjectedProbes.VerifyRewrite(probePlan, InjectedProbes.Calls - beforeWarmupCalls);
 long initialInjectedCalls = InjectedProbes.Calls;
 long tid = Native.GetTid(186);
 var attr = new PerfAttribute { Type = 1, Size = 64, Config = 1, SamplePeriod = 1000000,
@@ -69,7 +71,7 @@ try
     foreach (bool busy in new[] { true, false })
     {
         using var intervention = busy ? new SampledIntervention(selectedSymbol, speedup, waitBackend,
-            cpuClock, probeCpuMilliseconds * 1000000L, probeMode) : null;
+            cpuClock, probeCpuMilliseconds * 1000000L, probePlan) : null;
         using var injectedBinding = busy && probeMode == ProbeMode.Injected ? InjectedProbes.Bind(intervention!.Probe) : null;
         intervention?.WaitUntilReady();
         var capture = new SampleCapture(intervention);
@@ -108,11 +110,12 @@ try
     File.WriteAllText(args[0], JsonSerializer.Serialize(new { available = true, runtime = RuntimeInformation.FrameworkDescription,
         os = RuntimeInformation.OSDescription, architecture = RuntimeInformation.ProcessArchitecture.ToString(),
         requestedPeriodNanoseconds = attr.SamplePeriod, measurementMilliseconds = window.Milliseconds,
-        checksum, completedBatches, probeMode = probeMode.ToString(), injectedCalls = InjectedProbes.Calls - initialInjectedCalls,
+        checksum, completedBatches, probeMode = probeMode.ToString(), probeBackedgeInterval = probePlan.BackedgeInterval,
+        injectedCalls = InjectedProbes.Calls - initialInjectedCalls,
         observations }, new JsonSerializerOptions {
             WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     var active = observations[0];
-    if (InjectedProbes.Calls - initialInjectedCalls != (probeMode == ProbeMode.Injected ? checked(completedBatches * 10002L) : 0L))
+    if (InjectedProbes.Calls - initialInjectedCalls != checked(completedBatches * probePlan.CallsPerBatch))
         throw new Exception("Injected probe counts do not match completed work.");
     var blocked = observations[1];
     if (completedBatches == 0 || checksum != checked(completedBatches * 49995000L))
@@ -138,6 +141,7 @@ sealed record PhaseObservation(bool Busy, double ExperimentMilliseconds, double 
 
 static class CpuWorkload
 {
+    public const int Iterations = 10000;
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Probe() => InjectedProbes.Hit();
 
@@ -145,7 +149,7 @@ static class CpuWorkload
     public static long Run()
     {
         long sum = 0;
-        for (int i = 0; i < 10000; i++) sum += i;
+        for (int i = 0; i < Iterations; i++) sum += i;
         return sum;
     }
 
