@@ -1,6 +1,6 @@
 # CLR probe prototype
 
-The Windows x64 startup profiler rewrites one controlled method before its first JIT compilation.
+The Windows x64 and Linux x64 startup profiler rewrites one controlled method before its first JIT compilation.
 The target is `CozNet.Instrumentation.Workload.Work` in `CozNet.Instrumentation.dll`.
 It inserts `Probe()` calls at entry and before backward branch instructions.
 It redirects branch targets when an inserted probe precedes the target instruction.
@@ -55,7 +55,12 @@ The controller waits for that probe before publishing credit. Method entry alone
 The worker records actual wait time and Linux-style overshoot in the ledger.
 This is a known-credit intervention test. Sampled CPU observations do not generate credits.
 Probe overhead remains unmeasured.
-Linux and macOS need backend, build, and launch adapters. See [native platform boundaries](../../native/README.md).
+`NativeLinuxVerify` builds the shared profiler and verifies startup activation, exact loop-probe counts, IL maps, and known-credit intervention.
+It uses UTF-16 comparisons, PAL compatibility headers, and `minipal` from the pinned .NET 10 runtime sources.
+Standard C++ headers precede PAL headers to avoid annotation-macro conflicts with libstdc++.
+Its snapshot adapter explicitly returns `E_NOTIMPL`. The runner checks this result with `sampling-unavailable` mode.
+It does not join CPU samples to automatic probes. macOS still needs build, backend, and launch adapters.
+See [native platform boundaries](../../native/README.md) and [Linux build research](../../docsSrc/Research/linux-profiler-build.md).
 The [delay ledger](delay-ledger.md) remains separate.
 
 ```mermaid

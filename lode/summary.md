@@ -12,7 +12,7 @@ flowchart LR
     Settings --> Regions --> Observations --> Estimates
 ```
 
-A separate Windows x64 [CLR probe prototype](profiling/runtime-probes.md) verifies selective IL rewriting in a controlled loop.
+A separate Windows and Linux x64 [CLR probe prototype](profiling/runtime-probes.md) verifies selective IL rewriting in a controlled loop.
 An internal [cooperative runtime](profiling/cooperative-runtime.md) connects the ledger to measured managed waits and cancellation recovery.
 It also verifies asynchronous stack snapshots through a Windows backend behind a shared sampler interface.
 It does not extend the public engine's supported workload model.

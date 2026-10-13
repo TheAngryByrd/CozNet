@@ -1,7 +1,7 @@
 # Native profiler prototype
 
-The current build and runtime checks support Windows x64.
-Linux and macOS support remain incomplete.
+The build supports Windows x64 and Linux x64 startup instrumentation.
+Stack snapshots remain Windows x64 only. macOS support remains incomplete.
 
 `Sampler.h` uses standard C++ threads, mutexes, and a condition variable.
 `SnapshotBackend.h` defines the platform boundary for stack capture.
@@ -33,14 +33,25 @@ Selected stack frames can be callers. They do not establish exclusive CPU attrib
 
 `Exports.h` selects DLL exports or ELF/Mach-O symbol visibility.
 Module selection accepts both path separators.
-`Build.ps1` currently downloads Windows CLR headers and uses MSVC.
-A Linux or macOS build needs the matching CLR/PAL headers, compiler configuration, and backend.
+`Build.ps1` downloads Windows CLR headers and uses MSVC.
+`BuildLinux.ps1` uses pinned runtime sources, PAL compatibility headers, Clang, CMake, and `minipal` in a Linux container.
+Both scripts use `GenerateCallbacks.ps1` to check and generate the CLR callback base.
+Shared source uses platform-correct UTF-16 literals and comparisons.
+Standard C++ headers precede PAL headers because PAL annotation macros conflict with libstdc++ declarations.
+`SnapshotBackend.Unsupported.cpp` returns `E_NOTIMPL` on Linux. It does not simulate stack capture.
 The Windows `.def` file belongs only to the Windows build.
-The verification runner currently uses a Windows DLL path and loader search path.
-These build and launch adapters must change before another platform can pass verification.
+`Verify.ps1` uses the Windows DLL path and loader search path.
+`VerifyLinuxNative.ps1` uses the ELF library path and `LD_LIBRARY_PATH` inside bounded Linux containers.
+The Linux runner verifies baseline, profiled, known-credit intervention, and explicit sampling rejection.
+These containers have no network or capabilities and have read-only source mounts.
+The host-side scripts require PowerShell 7, Git, and Docker. Only a Windows host has been verified.
+The Linux toolchain image build requires network access for Ubuntu compiler packages on its first run.
+The build obtains the verification SDK image when Docker does not have it locally.
+The runtime checkout must match the pinned commit and contain no local changes.
 
 ```powershell
 dotnet run --project build/build.fsproj -- -t NativeVerify
+dotnet run --project build/build.fsproj -- -t NativeLinuxVerify
 ```
 
 The `sampled` workload runs for at least 500 milliseconds within a 30-second process limit.

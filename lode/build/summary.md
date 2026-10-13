@@ -30,6 +30,10 @@ Keep build orchestration in this graph instead of duplicating it in scripts or C
 `NativeVerify` is an explicit Windows x64 prototype target.
 It runs `NativeBuild`, builds the instrumentation workload in Release, and executes four bounded child processes.
 It is separate from default packaging because other native backends are incomplete.
+`NativeLinuxVerify` runs `NativeLinuxBuild`, `NativeLinuxWorkload`, and the bounded Linux native runner.
+Its graph is separate from `NativeVerify`. Either target can run without the other platform's compiler.
+The Linux build uses the pinned runtime source checkout and an isolated Clang/CMake Docker image.
+It verifies injected probes and known-credit intervention. Linux stack-snapshot requests fail explicitly with `E_NOTIMPL`.
 `LinuxPerfVerify` builds the Linux capability workload and runs its Docker checks.
 Its default uses managed waits with 10-millisecond thread-CPU batching.
 `LinuxWaitCompare` compares managed and native waits with per-probe and CPU-batched checks.

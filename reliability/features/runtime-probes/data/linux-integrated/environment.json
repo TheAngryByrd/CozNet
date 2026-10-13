@@ -1,0 +1,6 @@
+{
+  "image": "mcr.microsoft.com/dotnet/sdk:10.0.100",
+  "kernel": "5.15.153.1-microsoft-standard-WSL2",
+  "imageId": "sha256:3db72bd242b5f26a45d74c2d49a7654740e75c732654658177e52aa498645c14",
+  "profilerSha256": "95D3C619FE796F8E99CD64491B694F4CDE54BF02178373D238DADC087A27EDC2"
+}

@@ -1,0 +1,10 @@
+{
+  "architecture": "X64",
+  "runtime": ".NET 10.0.0",
+  "runtimeRevision": "60629d14374c56f1cb51819049ad1fa529307f8d",
+  "buildImage": "sha256:27c0150fe6833447a1522707e618b961c9f26065b28d436e70b44a25a39a6113",
+  "kernel": "5.15.153.1-microsoft-standard-WSL2",
+  "compiler": "Clang 18.1.3",
+  "profilerSha256": "95D3C619FE796F8E99CD64491B694F4CDE54BF02178373D238DADC087A27EDC2",
+  "sourceBase": "8407ad8"
+}

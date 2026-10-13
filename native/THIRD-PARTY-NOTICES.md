@@ -8,4 +8,6 @@ The sources use the MIT license. See [the complete license](dotnet-runtime-LICEN
 The build preserves the downloaded files under `artifacts/native/runtime-<revision>/`.
 It compiles a local IL rewriter copy with two `ULONG` variables changed to `uint32_t` for MSVC type compatibility.
 It generates the callback base from the pinned `corprof.h` interface declarations.
+`BuildLinux.ps1` uses PAL compatibility headers, runtime test-profiler GUID definitions, and the `minipal` library from the same revision.
+The Linux build compiles the upstream IL rewriter without the MSVC type adjustment.
 Include this notice and the license when distributing the native binary.

@@ -71,8 +71,8 @@ public static partial class Workload
 
     public static int Main(string[] args)
     {
-        Require(args.Length == 2 && (args[0] == "baseline" || args[0] == "profiled" || args[0] == "sampled" || args[0] == "intervention"),
-            "Expected baseline, profiled, sampled, or intervention, followed by an evidence file path.");
+        Require(args.Length == 2 && (args[0] == "baseline" || args[0] == "profiled" || args[0] == "sampled" || args[0] == "intervention" || args[0] == "sampling-unavailable"),
+            "Expected baseline, profiled, sampled, intervention, or sampling-unavailable, followed by an evidence file path.");
         bool profiled = args[0] != "baseline";
         var observations = new List<object>();
         foreach (int count in new[] { 0, 1, 1000000 })
@@ -107,6 +107,14 @@ public static partial class Workload
                 previousRewritten = rewritten;
             }
             Require(!Native.CozGetMapEntry(size, out _, out _), "Out-of-range map entry succeeded.");
+        }
+        int? unsupportedSampling = null;
+        if (args[0] == "sampling-unavailable")
+        {
+            try { unsupportedSampling = Native.CozStartSampling(); }
+            finally { Native.CozStopSampling(); }
+            Require(unsupportedSampling == unchecked((int)0x80004001),
+                $"Unsupported sampling returned {unsupportedSampling:X8}, expected E_NOTIMPL.");
         }
         object? sampling = null;
         if (args[0] == "sampled")
@@ -186,6 +194,7 @@ public static partial class Workload
             observations,
             mapping,
             sampling,
+            unsupportedSampling,
             intervention
         }, new JsonSerializerOptions { WriteIndented = true }));
         return 0;

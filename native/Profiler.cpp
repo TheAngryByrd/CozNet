@@ -1,13 +1,27 @@
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <string_view>
+#include <thread>
+#include <vector>
+
+// PAL annotation macros conflict with libstdc++ declarations.
+#ifdef _WIN32
 #include <initguid.h>
+#define COZ_TEXT(value) L##value
+#else
+#define INITGUID
+#include <guiddef.h>
+#define COZ_TEXT(value) u##value
+#endif
 #include "CallbackBase.h"
 #include "ilrewriter.h"
 #include "Sampler.h"
 #include "Exports.h"
-#include <atomic>
-#include <cwchar>
-#include <map>
-#include <new>
-#include <vector>
 
 static const GUID ProfilerId = {0x6e51c528, 0x23f1, 0x49ea, {0x93, 0x46, 0x2a, 0x7a, 0x8d, 0x91, 0x1b, 0x61}};
 static std::atomic<LONG> status{0};
@@ -141,22 +155,22 @@ public:
             const WCHAR* file = path;
             for (const WCHAR* cursor = path; *cursor; ++cursor)
                 if (*cursor == L'\\' || *cursor == L'/') file = cursor + 1;
-            if (wcscmp(file, L"CozNet.Instrumentation.dll") != 0) return S_OK;
+            if (std::basic_string_view<WCHAR>(file) != COZ_TEXT("CozNet.Instrumentation.dll")) return S_OK;
             ComOwner<IMetaDataImport> metadata;
             hr = info->GetModuleMetaData(module, ofRead, IID_IMetaDataImport, reinterpret_cast<IUnknown**>(metadata.address()));
             if (FAILED(hr)) { status.store(hr); return S_OK; }
             WCHAR name[256];
             mdTypeDef type;
             hr = metadata->GetMethodProps(token, &type, name, 256, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
-            if (FAILED(hr) || wcscmp(name, L"Work") != 0) return S_OK;
+            if (FAILED(hr) || std::basic_string_view<WCHAR>(name) != COZ_TEXT("Work")) return S_OK;
             hr = metadata->GetTypeDefProps(type, name, 256, nullptr, nullptr, nullptr);
-            if (FAILED(hr) || wcscmp(name, L"CozNet.Instrumentation.Workload") != 0) return S_OK;
+            if (FAILED(hr) || std::basic_string_view<WCHAR>(name) != COZ_TEXT("CozNet.Instrumentation.Workload")) return S_OK;
             LONG expected = 1;
             if (!status.compare_exchange_strong(expected, 3)) return S_OK;
             if (!safeToBlock) { status.store(E_FAIL); return S_OK; }
             BYTE signature[] = {IMAGE_CEE_CS_CALLCONV_DEFAULT, 0, ELEMENT_TYPE_VOID};
             mdMethodDef probe;
-            hr = metadata->FindMethod(type, L"Probe", signature, sizeof(signature), &probe);
+            hr = metadata->FindMethod(type, COZ_TEXT("Probe"), signature, sizeof(signature), &probe);
             if (SUCCEEDED(hr)) hr = Rewrite(function, module, token, probe);
             if (SUCCEEDED(hr)) selectedFunction = function;
             status.store(FAILED(hr) ? hr : 2);

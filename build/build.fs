@@ -451,6 +451,10 @@ let nativeScript script = nativeScriptWithArgs script []
 
 let nativeBuild _ = nativeScript "Build.ps1"
 
+let nativeLinuxBuild _ = nativeScript "BuildLinux.ps1"
+
+let nativeLinuxVerify _ = nativeScript "VerifyLinuxNative.ps1"
+
 let nativeWorkload _ =
     DotNet.build
         (fun options -> {
@@ -777,6 +781,9 @@ let initTargets () =
     Target.createFinal "DeleteChangelogBackupFile" deleteChangelogBackupFile // Do NOT put this in the dependency chain
     Target.create "DotnetBuild" dotnetBuild
     Target.create "NativeBuild" nativeBuild
+    Target.create "NativeLinuxBuild" nativeLinuxBuild
+    Target.create "NativeLinuxWorkload" nativeWorkload
+    Target.create "NativeLinuxVerify" nativeLinuxVerify
     Target.create "NativeWorkload" nativeWorkload
     Target.create "NativeVerify" nativeVerify
     Target.create "LinuxPerfWorkload" linuxPerfWorkload
@@ -815,6 +822,11 @@ let initTargets () =
     "NativeBuild"
     ==> "NativeWorkload"
     ==> "NativeVerify"
+    |> ignore
+
+    "NativeLinuxBuild"
+    ==> "NativeLinuxWorkload"
+    ==> "NativeLinuxVerify"
     |> ignore
 
     //-----------------------------------------------------------------------------

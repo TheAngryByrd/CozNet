@@ -1,5 +1,7 @@
 # Runtime probe evidence
 
+See [Linux native instrumentation](linux-port.md) for the shared Windows/Linux build and its regression evidence.
+
 The Windows x64 prototype preserves arithmetic results and reaches probes inside a long managed loop.
 This check does not establish causal prediction accuracy or acceptable probe overhead.
 

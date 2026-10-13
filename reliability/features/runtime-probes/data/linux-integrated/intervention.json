@@ -1,0 +1,130 @@
+{
+  "mode": "intervention",
+  "runtime": ".NET 10.0.0",
+  "architecture": "X64",
+  "observations": [
+    {
+      "count": 0,
+      "result": 0,
+      "probes": 2
+    },
+    {
+      "count": 1,
+      "result": 0,
+      "probes": 3
+    },
+    {
+      "count": 1000000,
+      "result": 499999500000,
+      "probes": 1000002
+    }
+  ],
+  "mapping": [
+    {
+      "original": 0,
+      "rewritten": 5
+    },
+    {
+      "original": 1,
+      "rewritten": 6
+    },
+    {
+      "original": 2,
+      "rewritten": 7
+    },
+    {
+      "original": 3,
+      "rewritten": 8
+    },
+    {
+      "original": 4,
+      "rewritten": 9
+    },
+    {
+      "original": 5,
+      "rewritten": 10
+    },
+    {
+      "original": 7,
+      "rewritten": 12
+    },
+    {
+      "original": 8,
+      "rewritten": 13
+    },
+    {
+      "original": 9,
+      "rewritten": 14
+    },
+    {
+      "original": 10,
+      "rewritten": 15
+    },
+    {
+      "original": 11,
+      "rewritten": 16
+    },
+    {
+      "original": 12,
+      "rewritten": 17
+    },
+    {
+      "original": 13,
+      "rewritten": 18
+    },
+    {
+      "original": 14,
+      "rewritten": 19
+    },
+    {
+      "original": 15,
+      "rewritten": 20
+    },
+    {
+      "original": 16,
+      "rewritten": 21
+    },
+    {
+      "original": 17,
+      "rewritten": 22
+    },
+    {
+      "original": 18,
+      "rewritten": 28
+    },
+    {
+      "original": 20,
+      "rewritten": 30
+    },
+    {
+      "original": 21,
+      "rewritten": 31
+    }
+  ],
+  "sampling": null,
+  "unsupportedSampling": null,
+  "intervention": {
+    "zero": {
+      "RequestedTicks": 0,
+      "MeasuredWaitTicks": 2774,
+      "GlobalDelayTicks": 0,
+      "Result": 499999500000,
+      "Probes": 1000002,
+      "ReachedProbe": 10000,
+      "StopwatchFrequency": 1000000000,
+      "SyntheticCpuNanoseconds": 40000000,
+      "SpeedupPercent": 0
+    },
+    "delayed": {
+      "RequestedTicks": 20000000,
+      "MeasuredWaitTicks": 22005133,
+      "GlobalDelayTicks": 20478854,
+      "Result": 499999500000,
+      "Probes": 1000002,
+      "ReachedProbe": 10000,
+      "StopwatchFrequency": 1000000000,
+      "SyntheticCpuNanoseconds": 40000000,
+      "SpeedupPercent": 50
+    }
+  }
+}
