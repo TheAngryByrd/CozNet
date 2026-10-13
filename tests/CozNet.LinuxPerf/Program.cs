@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 
 CollectorChecks.Run();
 TimingChecks.CadenceBoundaries();
+InjectedProbeChecks.Run();
 if (args is ["--verify-collector"]) return 0;
 if (args.Length is 3 or 4 && args[0] == "--physical")
 {
@@ -16,6 +17,7 @@ if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Arch
     throw new PlatformNotSupportedException("The syscall probe requires Linux x64.");
 if (args.Length is < 1 or > 5) throw new ArgumentException("Pass a JSON evidence path, speedup percentage, wait backend, probe CPU milliseconds, and optional measurement milliseconds.");
 var window = MeasurementWindow.Parse(args.Length == 5 ? args[4] : "500");
+var probeMode = InjectedProbes.ParseMode(Environment.GetEnvironmentVariable("COZNET_PROBE_MODE"));
 int speedup = args.Length >= 2 ? int.Parse(args[1]) : 50;
 if (speedup is not (0 or 50)) throw new ArgumentException("The capability workload supports zero or 50 percent.");
 IWaitBackend waitBackend = (args.Length >= 3 ? args[2] : "managed") switch
@@ -30,7 +32,10 @@ IThreadCpuClock cpuClock = new LinuxThreadCpuClock();
 TimingChecks.WaitDurationAndCancellation(waitBackend);
 if (Marshal.SizeOf<PerfAttribute>() != 64) throw new Exception("Unexpected perf attribute layout.");
 Thread.Sleep(1);
+long beforeWarmupCalls = InjectedProbes.Calls;
 if (CpuWorkload.Run() != 49995000L) throw new Exception("The workload warmup returned an invalid checksum.");
+if (probeMode == ProbeMode.Injected) InjectedProbes.VerifyRewrite(InjectedProbes.Calls - beforeWarmupCalls);
+long initialInjectedCalls = InjectedProbes.Calls;
 long tid = Native.GetTid(186);
 var attr = new PerfAttribute { Type = 1, Size = 64, Config = 1, SamplePeriod = 1000000,
     SampleType = 1 | 2 | 4 | 256, Flags = 1UL | (1UL << 5) | (1UL << 6), WakeupEvents = 1 };
@@ -64,7 +69,8 @@ try
     foreach (bool busy in new[] { true, false })
     {
         using var intervention = busy ? new SampledIntervention(selectedSymbol, speedup, waitBackend,
-            cpuClock, probeCpuMilliseconds * 1000000L) : null;
+            cpuClock, probeCpuMilliseconds * 1000000L, probeMode) : null;
+        using var injectedBinding = busy && probeMode == ProbeMode.Injected ? InjectedProbes.Bind(intervention!.Probe) : null;
         intervention?.WaitUntilReady();
         var capture = new SampleCapture(intervention);
         var reader = new RingReader(mapping, offset, size, tid, codeMap, selectedSymbol, capture);
@@ -77,7 +83,7 @@ try
             {
                 checksum += CpuWorkload.Run();
                 completedBatches++;
-                intervention?.Probe();
+                if (probeMode == ProbeMode.Manual) intervention?.Probe();
             }
         }
         else Thread.Sleep(500);
@@ -102,9 +108,12 @@ try
     File.WriteAllText(args[0], JsonSerializer.Serialize(new { available = true, runtime = RuntimeInformation.FrameworkDescription,
         os = RuntimeInformation.OSDescription, architecture = RuntimeInformation.ProcessArchitecture.ToString(),
         requestedPeriodNanoseconds = attr.SamplePeriod, measurementMilliseconds = window.Milliseconds,
-        checksum, completedBatches, observations }, new JsonSerializerOptions {
+        checksum, completedBatches, probeMode = probeMode.ToString(), injectedCalls = InjectedProbes.Calls - initialInjectedCalls,
+        observations }, new JsonSerializerOptions {
             WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     var active = observations[0];
+    if (InjectedProbes.Calls - initialInjectedCalls != (probeMode == ProbeMode.Injected ? checked(completedBatches * 10002L) : 0L))
+        throw new Exception("Injected probe counts do not match completed work.");
     var blocked = observations[1];
     if (completedBatches == 0 || checksum != checked(completedBatches * 49995000L))
         throw new Exception("The arithmetic result does not match completed work.");
@@ -129,6 +138,9 @@ sealed record PhaseObservation(bool Busy, double ExperimentMilliseconds, double 
 
 static class CpuWorkload
 {
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void Probe() => InjectedProbes.Hit();
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static long Run()
     {

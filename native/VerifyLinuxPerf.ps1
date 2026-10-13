@@ -1,7 +1,8 @@
 param(
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-perf'),
     [ValidateSet('managed', 'linux-nanosleep')][string]$WaitBackend = 'managed',
-    [ValidateSet(0, 10)][int]$ProbeCpuMilliseconds = 10
+    [ValidateSet(0, 10)][int]$ProbeCpuMilliseconds = 10,
+    [ValidateSet('manual', 'injected')][string]$ProbeMode = 'manual'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +27,15 @@ foreach ($policy in @('default', 'unfiltered', 'control')) {
         '--mount', "type=bind,source=$workload,target=/work,readonly",
         '--mount', "type=bind,source=$evidence,target=/output")
     if ($policy -ne 'default') { $arguments += @('--security-opt', 'seccomp=unconfined') }
+    $arguments += @('--env', "COZNET_PROBE_MODE=$ProbeMode")
+    if ($ProbeMode -eq 'injected') {
+        $native = Join-Path $root 'artifacts/native-linux/integrated'
+        $arguments += @('--mount', "type=bind,source=$native,target=/native,readonly",
+            '--env', 'CORECLR_ENABLE_PROFILING=1',
+            '--env', 'CORECLR_PROFILER={6E51C528-23F1-49EA-9346-2A7A8D911B61}',
+            '--env', 'CORECLR_PROFILER_PATH=/native/libCozNet.Profiler.so',
+            '--env', 'LD_LIBRARY_PATH=/native', '--env', 'COZNET_PROBE_TARGET=linux-perf')
+    }
     $speedup = if ($policy -eq 'control') { '0' } else { '50' }
     $arguments += @($image, 'timeout', '30s', 'dotnet', '/work/CozNet.LinuxPerf.dll', "/output/$policy.json", $speedup, $WaitBackend, "$ProbeCpuMilliseconds")
     & docker @arguments
@@ -39,5 +49,5 @@ foreach ($policy in @('default', 'unfiltered', 'control')) {
         throw "Linux perf verification failed under $policy policy with exit code $code."
     }
 }
-@{ image = $image; imageId = $identity; kernel = $kernel; capabilities = 'none'; network = 'none' } |
+@{ image = $image; imageId = $identity; kernel = $kernel; capabilities = 'none'; network = 'none'; probeMode = $ProbeMode } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'environment.json')

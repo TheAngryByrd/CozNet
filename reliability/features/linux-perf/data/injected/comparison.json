@@ -1,0 +1,11 @@
+{
+  "costRatio": 101.50398549479193,
+  "predictionAccuracyEstablished": false,
+  "manualMillisecondsPerBatch": 0.003245498696684001,
+  "trialCount": 1,
+  "order": [
+    "manual",
+    "injected"
+  ],
+  "injectedMillisecondsPerBatch": 0.32943105263157896
+}

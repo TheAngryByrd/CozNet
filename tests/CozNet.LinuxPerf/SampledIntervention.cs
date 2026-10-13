@@ -10,7 +10,7 @@ sealed record WaitObservation(bool Worker, long RequestedTicks, long ActualTicks
 sealed record InterventionResult(int SpeedupPercent, string WaitBackend, long ProbeCpuIntervalNanoseconds,
     InterventionProgress Live, ulong SelectedPeriodNanoseconds,
     long CreditedTicks, long WorkerWaitTicks, long WorkerAccountedWaitTicks, long WorkerCheckTicks, long WorkerChecks, long WorkerBatches,
-    long GlobalDelayTicks, long ClockFrequency, long SelectedCpuClockReads, IReadOnlyList<WaitObservation> Waits);
+    long GlobalDelayTicks, long ClockFrequency, long SelectedCpuClockReads, long WorkerInjectedCalls, IReadOnlyList<WaitObservation> Waits);
 
 sealed class SampledIntervention : ICpuSampleSink, IDisposable
 {
@@ -25,7 +25,7 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
     private readonly ManualResetEventSlim ready = new();
     private readonly ManualResetEventSlim stop = new();
     private readonly CancellationTokenSource deadline = new(TimeSpan.FromSeconds(10));
-    private readonly Task<(long Ticks, long Checks, long Batches)> worker;
+    private readonly Task<(long Ticks, long Checks, long Batches, long InjectedCalls)> worker;
     private readonly ConcurrentQueue<CpuSample> pending = new();
     private readonly ConcurrentQueue<WaitObservation> waits = new();
     private readonly ThreadLocal<WaitState> waitState = new(() => new WaitState());
@@ -66,7 +66,7 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
         ? result.ResultValue : throw new InvalidOperationException(result.ErrorValue);
 
     public SampledIntervention(string selectedMethod, int percent, IWaitBackend backend,
-        IThreadCpuClock cpuClock, long probeIntervalNanoseconds)
+        IThreadCpuClock cpuClock, long probeIntervalNanoseconds, ProbeMode probeMode = ProbeMode.Manual)
     {
         probeInterval = probeIntervalNanoseconds;
         selectedCadence = new ProbeCadence(cpuClock, probeInterval);
@@ -99,22 +99,30 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
             Volatile.Write(ref workerId, Environment.CurrentManagedThreadId);
             var handle = Parsed(runtime.Register(null));
             var cadence = new ProbeCadence(cpuClock, probeInterval);
-            ready.Set();
             long ticks = 0, checks = 0, batches = 0;
+            long initialCalls = InjectedProbes.Calls;
+            void CheckWorker()
+            {
+                if (!cadence.IsDue()) return;
+                long start = Stopwatch.GetTimestamp();
+                Parsed(runtime.Check(handle, deadline.Token));
+                ticks = checked(ticks + Stopwatch.GetTimestamp() - start);
+                checks++;
+            }
+            using var injectedBinding = probeMode == ProbeMode.Injected ? InjectedProbes.Bind(CheckWorker) : null;
+            ready.Set();
             do
             {
                 if (CpuWorkload.Run() != 49995000L)
                     throw new InvalidOperationException("The intervention worker changed the workload checksum.");
                 batches++;
-                if (!cadence.IsDue()) continue;
-                long start = Stopwatch.GetTimestamp();
-                Parsed(runtime.Check(handle, deadline.Token));
-                ticks = checked(ticks + Stopwatch.GetTimestamp() - start);
-                checks++;
+                if (probeMode == ProbeMode.Manual) CheckWorker();
             } while (!stop.IsSet);
+            if (InjectedProbes.Calls - initialCalls != (probeMode == ProbeMode.Injected ? checked(batches * 10002L) : 0L))
+                throw new InvalidOperationException("Worker injected probe counts do not match completed work.");
             Parsed(runtime.Check(handle, deadline.Token));
             Parsed(runtime.Unregister(handle));
-            return (ticks, checks, batches);
+            return (ticks, checks, batches, InjectedProbes.Calls - initialCalls);
         }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     }
 
@@ -176,7 +184,7 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
         if (live.AppliedSamples == 0 || (percent > 0 && (live.CreditedTicks == 0 || live.WorkerWaitTicks == 0)))
             throw new InvalidOperationException("No sampled credit and worker wait were observed before sampling stopped.");
         return new InterventionResult(percent, waitBackend, probeInterval, live, selectedPeriods, credited, workerWaitTicks, workerAccountedWaitTicks, result.Ticks,
-            result.Checks, result.Batches, global, Stopwatch.Frequency, selectedCadence.CpuClockReads, waits.ToArray());
+            result.Checks, result.Batches, global, Stopwatch.Frequency, selectedCadence.CpuClockReads, result.InjectedCalls, waits.ToArray());
     }
 
     public void Dispose()

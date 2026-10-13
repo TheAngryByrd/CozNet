@@ -22,6 +22,7 @@ foreach ($mode in @('baseline', 'profiled', 'sampled', 'intervention')) {
     }
     $start.Environment['DOTNET_TieredCompilation'] = '0'
     $start.Environment['DOTNET_ReadyToRun'] = '0'
+    $start.Environment['COZNET_PROBE_TARGET'] = 'instrumentation'
     if ($mode -ne 'baseline') {
         $start.Environment['CORECLR_ENABLE_PROFILING'] = '1'
         $start.Environment['CORECLR_PROFILER'] = '{6E51C528-23F1-49EA-9346-2A7A8D911B61}'

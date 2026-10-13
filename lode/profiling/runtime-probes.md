@@ -2,6 +2,8 @@
 
 The Windows x64 and Linux x64 startup profiler rewrites one controlled method before its first JIT compilation.
 The target is `CozNet.Instrumentation.Workload.Work` in `CozNet.Instrumentation.dll`.
+`COZNET_PROBE_TARGET=linux-perf` selects `CpuWorkload.Run` in `CozNet.LinuxPerf.dll` instead.
+An absent value or `instrumentation` selects the original target. Other values fail initialization with `E_INVALIDARG`.
 It inserts `Probe()` calls at entry and before backward branch instructions.
 It redirects branch targets when an inserted probe precedes the target instruction.
 Exception handlers and switch instructions are unsupported.
@@ -59,7 +61,8 @@ Probe overhead remains unmeasured.
 It uses UTF-16 comparisons, PAL compatibility headers, and `minipal` from the pinned .NET 10 runtime sources.
 Standard C++ headers precede PAL headers to avoid annotation-macro conflicts with libstdc++.
 Its snapshot adapter explicitly returns `E_NOTIMPL`. The runner checks this result with `sampling-unavailable` mode.
-It does not join CPU samples to automatic probes. macOS still needs build, backend, and launch adapters.
+`LinuxInjectedVerify` joins Linux CPU events to injected probes in a separate controlled workload.
+The retained comparison shows excessive probe cost. macOS still needs build, backend, and launch adapters.
 See [native platform boundaries](../../native/README.md) and [Linux build research](../../docsSrc/Research/linux-profiler-build.md).
 The [delay ledger](delay-ledger.md) remains separate.
 

@@ -1,0 +1,6 @@
+{
+  "probeMode": "injected",
+  "error": "Unhandled exception. System.InvalidOperationException: The native profiler did not inject the expected loop probes: status=1, methods=0, calls=0.",
+  "exitCode": 134,
+  "probeTarget": "instrumentation"
+}

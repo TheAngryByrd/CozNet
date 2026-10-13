@@ -37,5 +37,5 @@ The earlier isolated build and its source archive remain under [linux-build-expe
 The [research report](../../../docsSrc/Research/linux-profiler-build.md) records its source constraints and results.
 
 Linux CPU events still use the separate managed `perf_event_open` workload.
-Joining those events to automatically injected probes remains incomplete.
+The [controlled connection](../linux-perf/injected-probes.md) now joins those events to injected probes, with excessive measured overhead.
 macOS, ARM64, and non-Windows build hosts remain unverified.

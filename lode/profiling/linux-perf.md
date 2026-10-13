@@ -52,6 +52,17 @@ Sink failures terminate collection and propagate through completion.
 The controlled `SampledIntervention` queues events for a selected-thread probe.
 That probe converts nominal selected sample periods to credits and publishes local delay through `CooperativeRuntime.Check`.
 A second registered thread performs work and pays delay at manual cooperative probes.
+`LinuxInjectedVerify` selects the optional `injected` mode through `COZNET_PROBE_MODE`.
+The native profiler selects `CpuWorkload.Run` through `COZNET_PROBE_TARGET=linux-perf`.
+It inserts calls to `CpuWorkload.Probe` at entry and backward branches.
+Thread-local bindings route these calls to selected-thread or worker-thread checks.
+The injected mode omits the manual probes after each batch.
+Both threads must execute exactly 10,002 injected calls per completed batch.
+Warmup checks native profiler status, one rewritten method, and the exact probe count before sampling starts.
+This connection still uses a fixed method map and controlled lifecycle. Probe overhead remains a separate limit.
+The retained injected control costs 101.5 times as much per batch as the manual control.
+Only four of its 500 samples resolve to the work method. This path is not ready for useful prediction.
+See [automatic-probe evidence](../../reliability/features/linux-perf/injected-probes.md).
 The default cadence checks the ledger after 10 milliseconds of thread CPU time, matching native Coz's processing interval.
 `IThreadCpuClock` supplies that clock. The current implementation uses Linux x64 `clock_gettime`.
 `ProbeCadence` uses an injectable `TimeProvider` to skip CPU reads before enough elapsed time passes.

@@ -14,10 +14,11 @@ flowchart LR
 
 A separate Windows and Linux x64 [CLR probe prototype](profiling/runtime-probes.md) verifies selective IL rewriting in a controlled loop.
 An internal [cooperative runtime](profiling/cooperative-runtime.md) connects the ledger to measured managed waits and cancellation recovery.
-It also verifies asynchronous stack snapshots through a Windows backend behind a shared sampler interface.
+The CLR prototype also verifies asynchronous stack snapshots through a Windows backend behind a shared sampler interface.
 It does not extend the public engine's supported workload model.
 A separate [Linux task-clock workload](profiling/linux-perf.md) verifies per-thread CPU events in a container with the required syscall access.
-Those events resolve against a fixed managed method map and drive credits at manual probes in a controlled two-thread workload.
+Those events resolve against a fixed managed method map and drive credits at manual or injected probes in a controlled two-thread workload.
+The injected path passes connection checks but has excessive probe overhead in the retained comparison.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

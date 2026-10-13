@@ -1,6 +1,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstdlib>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -43,6 +44,9 @@ public:
 class Profiler final : public CallbackBase {
     std::atomic<ULONG> references{1};
     ComOwner<ICorProfilerInfo> info;
+    const WCHAR* targetModule = COZ_TEXT("CozNet.Instrumentation.dll");
+    const WCHAR* targetType = COZ_TEXT("CozNet.Instrumentation.Workload");
+    const WCHAR* targetMethod = COZ_TEXT("Work");
 
     HRESULT Rewrite(FunctionID function, ModuleID module, mdMethodDef method, mdMethodDef probe) {
         LPCBYTE body = nullptr;
@@ -112,6 +116,15 @@ public:
         return remaining;
     }
     HRESULT STDMETHODCALLTYPE Initialize(IUnknown* runtime) override {
+        const char* target = std::getenv("COZNET_PROBE_TARGET");
+        if (target && std::string_view(target) == "linux-perf") {
+            targetModule = COZ_TEXT("CozNet.LinuxPerf.dll");
+            targetType = COZ_TEXT("CpuWorkload");
+            targetMethod = COZ_TEXT("Run");
+        } else if (target && std::string_view(target) != "instrumentation") {
+            status.store(E_INVALIDARG);
+            return E_INVALIDARG;
+        }
         HRESULT hr = runtime->QueryInterface(__uuidof(ICorProfilerInfo), reinterpret_cast<void**>(info.address()));
         if (SUCCEEDED(hr)) hr = runtime->QueryInterface(__uuidof(ICorProfilerInfo2), reinterpret_cast<void**>(&samplingInfo));
         if (SUCCEEDED(hr)) hr = info->SetEventMask(COR_PRF_MONITOR_JIT_COMPILATION | COR_PRF_ENABLE_STACK_SNAPSHOT | COR_PRF_MONITOR_THREADS);
@@ -155,16 +168,16 @@ public:
             const WCHAR* file = path;
             for (const WCHAR* cursor = path; *cursor; ++cursor)
                 if (*cursor == L'\\' || *cursor == L'/') file = cursor + 1;
-            if (std::basic_string_view<WCHAR>(file) != COZ_TEXT("CozNet.Instrumentation.dll")) return S_OK;
+            if (std::basic_string_view<WCHAR>(file) != targetModule) return S_OK;
             ComOwner<IMetaDataImport> metadata;
             hr = info->GetModuleMetaData(module, ofRead, IID_IMetaDataImport, reinterpret_cast<IUnknown**>(metadata.address()));
             if (FAILED(hr)) { status.store(hr); return S_OK; }
             WCHAR name[256];
             mdTypeDef type;
             hr = metadata->GetMethodProps(token, &type, name, 256, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
-            if (FAILED(hr) || std::basic_string_view<WCHAR>(name) != COZ_TEXT("Work")) return S_OK;
+            if (FAILED(hr) || std::basic_string_view<WCHAR>(name) != targetMethod) return S_OK;
             hr = metadata->GetTypeDefProps(type, name, 256, nullptr, nullptr, nullptr);
-            if (FAILED(hr) || std::basic_string_view<WCHAR>(name) != COZ_TEXT("CozNet.Instrumentation.Workload")) return S_OK;
+            if (FAILED(hr) || std::basic_string_view<WCHAR>(name) != targetType) return S_OK;
             LONG expected = 1;
             if (!status.compare_exchange_strong(expected, 3)) return S_OK;
             if (!safeToBlock) { status.store(E_FAIL); return S_OK; }

@@ -479,6 +479,8 @@ let linuxPerfWorkload _ =
 
 let linuxPerfVerify _ = nativeScript "VerifyLinuxPerf.ps1"
 
+let linuxInjectedVerify _ = nativeScript "VerifyLinuxInjected.ps1"
+
 let linuxPredictionVerify _ =
     nativeScript "VerifyLinuxPrediction.ps1"
 
@@ -788,6 +790,8 @@ let initTargets () =
     Target.create "NativeVerify" nativeVerify
     Target.create "LinuxPerfWorkload" linuxPerfWorkload
     Target.create "LinuxPerfVerify" linuxPerfVerify
+    Target.create "LinuxInjectedWorkload" linuxPerfWorkload
+    Target.create "LinuxInjectedVerify" linuxInjectedVerify
     Target.create "LinuxWaitCompare" linuxWaitCompare
     Target.create "LinuxPredictionVerify" linuxPredictionVerify
     Target.create "FSharpAnalyzers" fsharpAnalyzers
@@ -827,6 +831,11 @@ let initTargets () =
     "NativeLinuxBuild"
     ==> "NativeLinuxWorkload"
     ==> "NativeLinuxVerify"
+    |> ignore
+
+    "NativeLinuxBuild"
+    ==> "LinuxInjectedWorkload"
+    ==> "LinuxInjectedVerify"
     |> ignore
 
     //-----------------------------------------------------------------------------

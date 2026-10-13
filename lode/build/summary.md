@@ -35,6 +35,8 @@ Its graph is separate from `NativeVerify`. Either target can run without the oth
 The Linux build uses the pinned runtime source checkout and an isolated Clang/CMake Docker image.
 It verifies injected probes and known-credit intervention. Linux stack-snapshot requests fail explicitly with `E_NOTIMPL`.
 `LinuxPerfVerify` builds the Linux capability workload and runs its Docker checks.
+`LinuxInjectedVerify` builds the native profiler and compares manual and injected probes with the same wait backend.
+It retains unique evidence directories under `artifacts/linux-injected/` and reports the zero-speedup cost ratio.
 Its default uses managed waits with 10-millisecond thread-CPU batching.
 `LinuxWaitCompare` compares managed and native waits with per-probe and CPU-batched checks.
 Both targets use the same bounded runner. Comparison records go under `artifacts/linux-wait-comparison/`.

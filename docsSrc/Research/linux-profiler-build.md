@@ -120,7 +120,8 @@ The source archive contains the isolated CMake configuration, Dockerfile, adjust
 The shared-library SHA-256 is `95D3C619FE796F8E99CD64491B694F4CDE54BF02178373D238DADC087A27EDC2`.
 The shared native source now contains the verified portability changes.
 The integrated target also verifies that the Linux snapshot adapter returns `E_NOTIMPL`.
-Joining Linux CPU samples to automatic probes remains the next integration step.
+The [controlled connection](../../reliability/features/linux-perf/injected-probes.md) now joins Linux CPU samples to automatic probes.
+Its measured overhead remains a limit on useful profiling.
 
 ## Sources
 
