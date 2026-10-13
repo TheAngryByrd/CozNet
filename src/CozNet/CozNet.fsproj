@@ -18,5 +18,6 @@
     <Compile Include="Experiment.fs" />
     <InternalsVisibleTo Include="CozNet.Tests" />
     <InternalsVisibleTo Include="CozNet.Instrumentation" />
+    <InternalsVisibleTo Include="CozNet.LinuxPerf" />
   </ItemGroup>
 </Project>

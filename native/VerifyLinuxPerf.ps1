@@ -14,15 +14,16 @@ if ($LASTEXITCODE -ne 0) { throw "The local container image is unavailable: $ima
 $kernel = & docker run --rm --pull never --network none --cap-drop ALL --read-only $image uname -r
 if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the Linux container kernel.' }
 
-foreach ($policy in @('default', 'unfiltered')) {
+foreach ($policy in @('default', 'unfiltered', 'control')) {
     $arguments = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL',
         '--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m',
         '--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1',
         '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0',
         '--mount', "type=bind,source=$workload,target=/work,readonly",
         '--mount', "type=bind,source=$evidence,target=/output")
-    if ($policy -eq 'unfiltered') { $arguments += @('--security-opt', 'seccomp=unconfined') }
-    $arguments += @($image, 'timeout', '30s', 'dotnet', '/work/CozNet.LinuxPerf.dll', "/output/$policy.json")
+    if ($policy -ne 'default') { $arguments += @('--security-opt', 'seccomp=unconfined') }
+    $speedup = if ($policy -eq 'control') { '0' } else { '50' }
+    $arguments += @($image, 'timeout', '30s', 'dotnet', '/work/CozNet.LinuxPerf.dll', "/output/$policy.json", $speedup)
     & docker @arguments
     $code = $LASTEXITCODE
     if ($policy -eq 'default' -and $code -eq 2) {

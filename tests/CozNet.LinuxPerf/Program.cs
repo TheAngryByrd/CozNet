@@ -8,7 +8,9 @@ CollectorChecks.Run();
 if (args is ["--verify-collector"]) return 0;
 if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
     throw new PlatformNotSupportedException("The syscall probe requires Linux x64.");
-if (args.Length != 1) throw new ArgumentException("Pass one JSON evidence file path.");
+if (args.Length is < 1 or > 2) throw new ArgumentException("Pass a JSON evidence file path and optional speedup percentage.");
+int speedup = args.Length == 2 ? int.Parse(args[1]) : 50;
+if (speedup is not (0 or 50)) throw new ArgumentException("The capability workload supports zero or 50 percent.");
 if (Marshal.SizeOf<PerfAttribute>() != 64) throw new Exception("Unexpected perf attribute layout.");
 Thread.Sleep(1);
 if (CpuWorkload.Run() != 49995000L) throw new Exception("The workload warmup returned an invalid checksum.");
@@ -44,7 +46,10 @@ try
     long completedBatches = 0;
     foreach (bool busy in new[] { true, false })
     {
-        var reader = new RingReader(mapping, offset, size, tid, codeMap, selectedSymbol);
+        using var intervention = busy ? new SampledIntervention(selectedSymbol, speedup) : null;
+        intervention?.WaitUntilReady();
+        var capture = new SampleCapture(intervention);
+        var reader = new RingReader(mapping, offset, size, tid, codeMap, selectedSymbol, capture);
         using var collector = new LiveSampleCollector(reader.Drain);
         if (Native.Ioctl((int)fd, 0x2400, 0) != 0) throw new Exception($"Enable failed: {Marshal.GetLastPInvokeError()}");
         var elapsed = Stopwatch.StartNew();
@@ -54,15 +59,25 @@ try
             {
                 checksum += CpuWorkload.Run();
                 completedBatches++;
+                intervention?.Probe();
             }
         }
         else Thread.Sleep(500);
         int liveSamples = collector.Latest?.Samples ?? 0;
+        int liveDeliveredSamples = capture.Published;
+        var liveIntervention = intervention?.ObserveLive();
         if (Native.Ioctl((int)fd, 0x2401, 0) != 0) throw new Exception($"Disable failed: {Marshal.GetLastPInvokeError()}");
         if (Native.Read((int)fd, out ulong cpu, 8) != 8) throw new Exception($"Read failed: {Marshal.GetLastPInvokeError()}");
         var records = collector.Complete();
+        var delivered = capture.AfterCollectorJoin();
+        var interventionResult = intervention?.Complete(liveIntervention!);
+        if (delivered.Length != records.Samples
+            || delivered.Count(sample => sample.Method == selectedSymbol) != records.SelectedMethodSamples
+            || delivered.Aggregate(0UL, (total, sample) => checked(total + sample.PeriodNanoseconds)) != records.RepresentedCpuNanoseconds)
+            throw new Exception("Delivered sample records do not match the ring totals.");
         if (cpu < previousCpu) throw new Exception("The task CPU clock decreased.");
-        observations.Add(new PhaseObservation(busy, elapsed.Elapsed.TotalMilliseconds, cpu - previousCpu, liveSamples, records));
+        observations.Add(new PhaseObservation(busy, elapsed.Elapsed.TotalMilliseconds, cpu - previousCpu,
+            liveSamples, liveDeliveredSamples, records, delivered, interventionResult));
         previousCpu = cpu;
     }
     File.WriteAllText(args[0], JsonSerializer.Serialize(new { available = true, runtime = RuntimeInformation.FrameworkDescription,
@@ -75,6 +90,7 @@ try
         throw new Exception("The arithmetic result does not match completed work.");
     if (active.CpuNanoseconds == 0 || active.Records.Samples == 0) throw new Exception("The busy phase produced no CPU samples.");
     if (active.LiveSamples == 0) throw new Exception("No samples reached the target before collection stopped.");
+    if (active.LiveDeliveredSamples == 0) throw new Exception("No individual samples reached the sink before collection stopped.");
     if (active.Records.SelectedMethodSamples == 0) throw new Exception("No CPU event resolved to the selected managed method.");
     if (blocked.CpuNanoseconds >= active.CpuNanoseconds || blocked.Records.Samples >= active.Records.Samples)
         throw new Exception("The blocked phase was not below the busy phase in both CPU time and sample count.");
@@ -87,7 +103,9 @@ finally { Native.Munmap(mapping, mappingLength); Native.Close((int)fd); }
 sealed record SampleBatch(int Samples, int DistinctInstructionPointers, ulong RepresentedCpuNanoseconds,
     int LostRecords, ulong LostSamples, int Throttles, int SelectedMethodSamples, int UnmappedSamples,
     IReadOnlyList<string> SelectedSymbols);
-sealed record PhaseObservation(bool Busy, double WallMilliseconds, ulong CpuNanoseconds, int LiveSamples, SampleBatch Records);
+sealed record PhaseObservation(bool Busy, double WallMilliseconds, ulong CpuNanoseconds,
+    int LiveSamples, int LiveDeliveredSamples, SampleBatch Records, IReadOnlyList<CpuSample> Delivered,
+    InterventionResult? Intervention);
 
 static class CpuWorkload
 {
@@ -100,7 +118,8 @@ static class CpuWorkload
     }
 }
 
-sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid, IInstructionMap codeMap, string selectedSymbol)
+sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid,
+    IInstructionMap codeMap, string selectedSymbol, ICpuSampleSink sink)
 {
     private ulong tail = (ulong)Marshal.ReadInt64(mapping, 1032);
     private ulong priorTime;
@@ -143,6 +162,7 @@ sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid, IIns
                     throw new Exception("Invalid sample attribution metadata.");
                 ips.Add(ip); priorTime = timestamp; periods += period; samples++;
                 string? symbol = codeMap.Resolve(ip);
+                sink.Publish(CpuSample.Create(recordedPid, recordedTid, timestamp, period, ip, symbol));
 
                 if (symbol is null) unmapped++;
                 else if (string.Equals(symbol, selectedSymbol, StringComparison.Ordinal)) { selected++; selectedSymbols.Add(symbol); }

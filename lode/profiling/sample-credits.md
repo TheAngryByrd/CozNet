@@ -43,5 +43,7 @@ flowchart LR
 
 The controlled intervention workload supplies a synthetic 40-millisecond observation at zero or 50 percent.
 The resulting zero or 20-millisecond credit reaches the injected probe and its real wait.
-The native sampler does not yet emit qualified observations for this interface.
+The Linux capability workload now feeds nominal selected event periods through this interface at manual probes.
+Its fixed-method eligibility assumption does not provide general lifecycle qualification.
+See [Linux sampling](linux-perf.md) for its measured wait overshoot and support limits.
 See [cooperative runtime](cooperative-runtime.md), [delay ledger](delay-ledger.md), and [runtime probes](runtime-probes.md).

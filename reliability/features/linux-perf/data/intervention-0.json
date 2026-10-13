@@ -1,0 +1,3973 @@
+{
+  "available": true,
+  "runtime": ".NET 10.0.0",
+  "os": "Ubuntu 24.04.3 LTS",
+  "architecture": "X64",
+  "requestedPeriodNanoseconds": 1000000,
+  "checksum": 6790720860000,
+  "completedBatches": 135828,
+  "observations": [
+    {
+      "busy": true,
+      "wallMilliseconds": 505.7345,
+      "cpuNanoseconds": 491236200,
+      "liveSamples": 487,
+      "liveDeliveredSamples": 487,
+      "records": {
+        "samples": 488,
+        "distinctInstructionPointers": 48,
+        "representedCpuNanoseconds": 488000000,
+        "lostRecords": 0,
+        "lostSamples": 0,
+        "throttles": 0,
+        "selectedMethodSamples": 433,
+        "unmappedSamples": 51,
+        "selectedSymbols": [
+          "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        ]
+      },
+      "delivered": [
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677700447630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677701511230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677702511730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677703557030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691781434579,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677704901130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691782522816,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677705900830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691782511644,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677706900830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691851184352,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677709370330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850185138,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677710369030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691779959680,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677711369430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691781071193,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677712368630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850504762,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677713368330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850167025,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677714367830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691782513452,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677715368530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691781434273,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677716370730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691857090656,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677717371330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691780058010,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677718372330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691780118784,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677719366530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677720364730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677721398430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677722404030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677723398630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677724404630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677725398230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677726398130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677727398330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677728398130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677729397930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677730412930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734204244,
+          "method": "int32 [CozNet.LinuxPerf] Program::\u003CMain\u003E$(string[])[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677731412830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677732413530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677733415930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677734412730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677736413030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677737412630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677738413230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677739412930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677740418630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677741418130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677742418030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677743418430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677744418030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677745440830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677746440730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677747439330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677748439130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677749439330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677750439230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677751439430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691851612194,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677752439430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677753439230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677754462230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677755462530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677756462930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677757462430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677758462430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691853364676,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677759462430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677760461830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677761484530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677762484630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677763492330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677764493130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850351764,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677765492130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734333704,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677766492130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677767492230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850351777,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677768491830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677769492130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734327967,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677770492030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677771491930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677772492230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677773492430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677774491530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677776492930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677777491730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677778491430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250512,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677779491830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677780491130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677781491330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677782491430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677783491130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677784491130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677785491230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677786491130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677787491030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677788490830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677789490830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677790501430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677791505530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677792499830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677793507930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677795499830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677796499930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734333704,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677797499730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677798499830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677799499730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250512,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677800499930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677801499630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677802499530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677803499430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677804500030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677805500030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677806499330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677812610830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677813607930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677814608030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734329399,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677815607830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677816607830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677817607930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 140735464031784,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677818607630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677819607730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677820607730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677821607830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677822608230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677823607830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677824607830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677825607430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734327157,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677826608130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677827607330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677828608830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677829608330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677830607030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677831608130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734234934,
+          "method": "object [System.Private.CoreLib] System.Runtime.CompilerServices.CastHelpers::IsInstanceOfInterface(void*,object)[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677832607930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677833607430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677834607530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677835607430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677836631230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677837659330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677838658930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677839658930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677840663730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677841663530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677842664030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677843664130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734204155,
+          "method": "int32 [CozNet.LinuxPerf] Program::\u003CMain\u003E$(string[])[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677844663630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677845663930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677846664430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677847663630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677848663330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677849663130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734335140,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677850663330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677851662830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677852663830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677853662930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677854662930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677855663030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677856662830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734328086,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677857662730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677858663030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734333062,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677859662430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677860662230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677861662330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677862662330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677863662330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677864662230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677865662330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677866663130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677867662730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677868662530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677869662030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677870661930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677871661830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677872662030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850351764,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677873662030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677874661730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677875662230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677876662630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677877662030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677878662030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677879662230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677880661830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677881661930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677882661430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677883664030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677884665030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677885661730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734327808,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677886661730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677887661930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677888661230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677889661430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734335140,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677890661430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677891661130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677892660830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250512,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677893661130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677894661030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677895660930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677896661030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677897660930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677898664230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677899662630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677900888630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677901887830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677902887830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677903888330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734329552,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677904891430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677905887630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677906887330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677907887230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677908887330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677909887430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677910887630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677911887130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677912887230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677913888630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734332567,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677914888230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677915890930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677916890030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677917886930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677918886930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677919886830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677920886930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677921886630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677922887030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677923886730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677924886430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677925886530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677926886630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734204244,
+          "method": "int32 [CozNet.LinuxPerf] Program::\u003CMain\u003E$(string[])[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677927886430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677928887630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677929886730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677930886630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677931886230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850353472,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677932889630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677933886430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677934886130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677935886230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677936886530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677937886830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677938886530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677939886930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677940886130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734333152,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677941885830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677942885630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677943885830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677944886030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677945886230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677946886030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677947886030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677948885830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677949886030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677950885230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677951885430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677952885330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677953885030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677954885330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677955885230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677956884830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677957885030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677958885130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677959885430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677960885030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691852130045,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677961885930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677962885730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677963885030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677964884930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677965884830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734293761,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677966884830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677967884830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677968884530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677969884730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677970884530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677971884330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677972884430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677973885330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677974890130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677975884730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677976884530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677977884230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677978884530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677979884030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677980883930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677981884230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677982885030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677983884030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677984883830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677985883830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677986883830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677987883930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734333306,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677988884030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677989883730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677990939530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677991939830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734293810,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677992938630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677993944630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677994938630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677995938230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677996937830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734327967,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677997937830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677998938230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273677999938230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678000937830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678001938030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734327963,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678002937430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678003937330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734335199,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678004937030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678005937830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678006937230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678007937130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678008936930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678009937130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678010937230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678011937130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678012943830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678013936930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678014936930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678015936830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678016936630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678017936530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678018936430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678019936330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678020936830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678021936930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678022936630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678023936430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678024936430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250512,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678025936930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678026937730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850353656,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678027938330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678028936130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678029936030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678030936230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678031936530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678032935930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678033935930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678034935830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678035935830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678036936730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678037936430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678038936030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678039936330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678040936030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678041936030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678042936430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678043936330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678044936230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734329297,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678045937130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678046936330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678047936330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678048935830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678049935830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678050935230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678051936230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678052935030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678053934930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678054934830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678055935030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678056934630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678057934830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678058934730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250512,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678059934630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678060934530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678061934830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678062934830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678063935230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850351764,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678064934730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678065934630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678066934830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678067934430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678068934130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678069934430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678070934030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678071934130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678072934430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678073935330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691851612194,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678074934930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678075934430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678076934130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734333152,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678077933930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678078934030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678079933730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678080933630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678081933630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678082934730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678083936630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678084933530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678085933330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678086933230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678087933330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678088933230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678089933030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678090933130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678091933130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678092933230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678093933130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678094933330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678095933130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678096932930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678097932930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678098939230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678099936830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678100932830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678101932530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678102932730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678103932830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678104932930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850351764,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678105933730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678106933530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250512,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678107933230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139691850351764,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678108933130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678109933830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678110932530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678111932430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678112932930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678113934630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678114932430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678115934430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678116935030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678117932530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678118932430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678119936330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678120932430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678121934430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678122935030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678123932130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678124932430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678125931930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678126931530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678127932230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734328691,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678128931530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678129931630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678130931530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678131931530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678132934530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678133935330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678134931730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678135931630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678136931530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678137931630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678138931430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678139931230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678140931730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678141930830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678142930930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678143930730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678144930730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678145931030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678146930730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678147931430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678148930830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250512,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678149932830,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678150930630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678151939330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678152939530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678153939430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678154939730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678155939930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678156976630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678157976030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678158975730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678159975330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678160975230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678161975230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678162975530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678163975630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678164975230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678165990530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678166981330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678167975430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678168976930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678169977330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678170974930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678171975130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678172975030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678173975330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678174976030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678175974730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678176975130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678177976130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678178974630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678179975230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678180974630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678181974630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678182974330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678183974230,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678184974330,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678185974030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678186974630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734333094,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678187977430,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250507,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678188974630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678189974530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678190974930,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250512,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678191974730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678192978630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678193974130,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734335199,
+          "method": null
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678194974630,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678195974030,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678196973730,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250510,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        {
+          "processId": 7,
+          "threadId": 7,
+          "timestamp": 273678197973530,
+          "periodNanoseconds": 1000000,
+          "instructionPointer": 139689734250504,
+          "method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        }
+      ],
+      "intervention": {
+        "speedupPercent": 0,
+        "live": {
+          "appliedSamples": 487,
+          "creditedTicks": 0,
+          "workerWaitTicks": 0
+        },
+        "selectedPeriodNanoseconds": 433000000,
+        "creditedTicks": 0,
+        "workerWaitTicks": 0,
+        "workerCheckTicks": 58756963,
+        "workerChecks": 139100,
+        "workerBatches": 139100,
+        "globalDelayTicks": 0,
+        "clockFrequency": 1000000000
+      }
+    },
+    {
+      "busy": false,
+      "wallMilliseconds": 500.2495,
+      "cpuNanoseconds": 19800,
+      "liveSamples": 0,
+      "liveDeliveredSamples": 0,
+      "records": {
+        "samples": 0,
+        "distinctInstructionPointers": 0,
+        "representedCpuNanoseconds": 0,
+        "lostRecords": 0,
+        "lostSamples": 0,
+        "throttles": 0,
+        "selectedMethodSamples": 0,
+        "unmappedSamples": 0,
+        "selectedSymbols": []
+      },
+      "delivered": [],
+      "intervention": null
+    }
+  ]
+}

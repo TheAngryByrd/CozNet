@@ -17,11 +17,12 @@ Tiered compilation and ReadyToRun are disabled. `DOTNET_PerfMapEnabled=3` enable
 dotnet run --project build/build.fsproj -- -t LinuxPerfVerify
 ```
 
-The FAKE target builds the workload and runs two disposable Linux containers from an existing .NET SDK image.
-Both containers have no network, no capabilities, a read-only root filesystem, and a read-only workload mount.
+The FAKE target builds the workload and runs three disposable Linux containers from an existing .NET SDK image.
+All containers have no network, no capabilities, a read-only root filesystem, and a read-only workload mount.
 The default-policy result records whether Docker permits the syscall.
-The second run disables the container syscall filter. It does not change the host kernel policy.
-Both workload processes have a 30-second limit. Each phase lasts approximately 500 milliseconds.
+The other runs disable the container syscall filter for 50-percent and zero-percent interventions.
+They do not change the host kernel policy. Each process has a 30-second limit.
+Each phase lasts approximately 500 milliseconds, plus final delay settlement.
 Missing image, unsupported platform, invalid records, lost samples, throttling, and nonzero verification exits fail explicitly.
 
 The current default Docker policy denies the syscall with `EPERM`.
@@ -33,8 +34,8 @@ The Windows clock experiment cannot provide equivalent per-sample timing from it
 flowchart LR
     ThreadCPU --> KernelPerfEvent --> RingBuffer --> CheckedRecords
     CheckedRecords --> InstructionMap[Fixed managed method map]
-    InstructionMap --> FutureEligibility[Future lifecycle eligibility]
-    FutureEligibility --> CreditStream
+    InstructionMap --> SampleSink --> SelectedThreadProbe --> CreditStream
+    CreditStream --> WorkerProbe --> MeasuredWait
 ```
 
 This is a capability workload, not a connected profiler backend.
@@ -44,7 +45,24 @@ The target must observe a nonempty snapshot before it disables the busy-phase ev
 After disabling the event, completion requests a final drain and joins the collector before unmapping the buffer.
 Reader failures propagate through completion. Each phase starts from the prior phase's consumed ring position.
 The collector uses portable .NET APIs. Its completion and failure checks run on Windows and Linux.
-It currently publishes aggregate snapshots. Per-event delivery and causal credits remain unconnected.
+`ICpuSampleSink` receives each checked event on the collector thread.
+Events retain process/thread IDs, kernel timestamps, periods, instruction addresses, and optional method symbols.
+The bounded capture stores at most 10,000 events per phase. Reading its records requires collector completion.
+Sink failures terminate collection and propagate through completion.
+The controlled `SampledIntervention` queues events for a selected-thread probe.
+That probe converts nominal selected sample periods to credits and publishes local delay through `CooperativeRuntime.Check`.
+A second registered thread performs work and pays delay at manual cooperative probes.
+Both threads settle before unregistering. The runner checks 50-percent and zero-percent cases.
+The treatment must apply samples, create credit, and complete worker waits before sampling stops.
+Final settlement alone cannot satisfy this check. An isolated missing-probe mutation fails the assertion.
+The zero-percent case must produce zero credit, zero global delay, and zero measured worker waits.
+
+This bridge uses cumulative emitted periods as an estimate of represented CPU time, not a direct CPU-clock measurement.
+Only the fixed synchronous method earns credit. Probe code, waits, and unmapped addresses earn none.
+The bridge uses a fixed eligibility epoch under this controlled method restriction.
+General lifecycle eligibility, GC transitions, and blocking inside selected methods remain unimplemented.
+The wrapper measures real wait calls separately from total probe execution time.
+Observed wait overshoot substantially exceeds nominal credit. The workload does not establish prediction accuracy.
 It resolves instruction addresses to managed method symbols, but not source lines or IL offsets.
 The fixed snapshot does not include code compiled after capture.
 Code unload, address reuse, JIT version changes, and profiler CPU exclusion remain unsupported.
