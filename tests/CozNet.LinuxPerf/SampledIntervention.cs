@@ -4,13 +4,13 @@ using System.Collections.Concurrent;
 using CozNet;
 using Microsoft.FSharp.Core;
 
-sealed record InterventionProgress(ulong AppliedSamples, long CreditedTicks, long WorkerWaitTicks);
+sealed record InterventionProgress(ulong AppliedSamples, long CreditedTicks, long WorkerWaitTicks, long GlobalDelayTicks);
 sealed record WaitObservation(bool Worker, long RequestedTicks, long ActualTicks, long AccountedTicks);
 
 sealed record InterventionResult(int SpeedupPercent, string WaitBackend, long ProbeCpuIntervalNanoseconds,
     InterventionProgress Live, ulong SelectedPeriodNanoseconds,
     long CreditedTicks, long WorkerWaitTicks, long WorkerAccountedWaitTicks, long WorkerCheckTicks, long WorkerChecks, long WorkerBatches,
-    long GlobalDelayTicks, long ClockFrequency, IReadOnlyList<WaitObservation> Waits);
+    long GlobalDelayTicks, long ClockFrequency, long SelectedCpuClockReads, IReadOnlyList<WaitObservation> Waits);
 
 sealed class SampledIntervention : ICpuSampleSink, IDisposable
 {
@@ -154,7 +154,8 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
         credited = checked(credited + DelayTicksModule.value(Parsed(runtime.CreditObservation(selected, observation))));
     }
 
-    public InterventionProgress ObserveLive() => new(sequence, credited, Interlocked.Read(ref workerWaitTicks));
+    public InterventionProgress ObserveLive() => new(sequence, credited, Interlocked.Read(ref workerWaitTicks),
+        DelayTicksModule.value(runtime.GlobalDelay));
 
     public InterventionResult Complete(InterventionProgress live)
     {
@@ -175,7 +176,7 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
         if (live.AppliedSamples == 0 || (percent > 0 && (live.CreditedTicks == 0 || live.WorkerWaitTicks == 0)))
             throw new InvalidOperationException("No sampled credit and worker wait were observed before sampling stopped.");
         return new InterventionResult(percent, waitBackend, probeInterval, live, selectedPeriods, credited, workerWaitTicks, workerAccountedWaitTicks, result.Ticks,
-            result.Checks, result.Batches, global, Stopwatch.Frequency, waits.ToArray());
+            result.Checks, result.Batches, global, Stopwatch.Frequency, selectedCadence.CpuClockReads, waits.ToArray());
     }
 
     public void Dispose()

@@ -475,6 +475,9 @@ let linuxPerfWorkload _ =
 
 let linuxPerfVerify _ = nativeScript "VerifyLinuxPerf.ps1"
 
+let linuxPredictionVerify _ =
+    nativeScript "VerifyLinuxPrediction.ps1"
+
 let linuxWaitCompare _ =
     for backend in
         [
@@ -779,6 +782,7 @@ let initTargets () =
     Target.create "LinuxPerfWorkload" linuxPerfWorkload
     Target.create "LinuxPerfVerify" linuxPerfVerify
     Target.create "LinuxWaitCompare" linuxWaitCompare
+    Target.create "LinuxPredictionVerify" linuxPredictionVerify
     Target.create "FSharpAnalyzers" fsharpAnalyzers
     Target.create "DotnetTest" dotnetTest
     Target.create "GenerateCoverageReport" generateCoverageReport
@@ -802,6 +806,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxWaitCompare"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxPredictionVerify"
     |> ignore
 
     "NativeBuild"

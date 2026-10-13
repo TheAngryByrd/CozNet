@@ -34,6 +34,9 @@ It is separate from default packaging because other native backends are incomple
 Its default uses managed waits with 10-millisecond thread-CPU batching.
 `LinuxWaitCompare` compares managed and native waits with per-probe and CPU-batched checks.
 Both targets use the same bounded runner. Comparison records go under `artifacts/linux-wait-comparison/`.
+`LinuxPredictionVerify` compares sampled predictions with a physical CPU optimization in eight randomized blocks.
+It uses two-second measurement windows and writes unique directories under `artifacts/linux-prediction/`.
+Accuracy failures produce `summary.json` before the target fails. The two-percentage-point gate remains mandatory.
 It requires a local `mcr.microsoft.com/dotnet/sdk:10.0.100` image and a Linux Docker engine.
 See [Linux perf feasibility](../profiling/linux-perf.md) for the isolated container settings and support limits.
 

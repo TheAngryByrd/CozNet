@@ -7,9 +7,15 @@ using System.Runtime.CompilerServices;
 CollectorChecks.Run();
 TimingChecks.CadenceBoundaries();
 if (args is ["--verify-collector"]) return 0;
+if (args.Length is 3 or 4 && args[0] == "--physical")
+{
+    PhysicalWorkload.Run(args[1], args[2], MeasurementWindow.Parse(args.Length == 4 ? args[3] : "500"));
+    return 0;
+}
 if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
     throw new PlatformNotSupportedException("The syscall probe requires Linux x64.");
-if (args.Length is < 1 or > 4) throw new ArgumentException("Pass a JSON evidence path, speedup percentage, wait backend, and probe CPU milliseconds.");
+if (args.Length is < 1 or > 5) throw new ArgumentException("Pass a JSON evidence path, speedup percentage, wait backend, probe CPU milliseconds, and optional measurement milliseconds.");
+var window = MeasurementWindow.Parse(args.Length == 5 ? args[4] : "500");
 int speedup = args.Length >= 2 ? int.Parse(args[1]) : 50;
 if (speedup is not (0 or 50)) throw new ArgumentException("The capability workload supports zero or 50 percent.");
 IWaitBackend waitBackend = (args.Length >= 3 ? args[2] : "managed") switch
@@ -18,7 +24,7 @@ IWaitBackend waitBackend = (args.Length >= 3 ? args[2] : "managed") switch
     "linux-nanosleep" => new LinuxNanoSleepBackend(),
     _ => throw new ArgumentException("Select managed or linux-nanosleep waits.")
 };
-int probeCpuMilliseconds = args.Length == 4 ? int.Parse(args[3]) : 10;
+int probeCpuMilliseconds = args.Length >= 4 ? int.Parse(args[3]) : 10;
 if (probeCpuMilliseconds is not (0 or 10)) throw new ArgumentException("Select zero or 10 CPU milliseconds between probes.");
 IThreadCpuClock cpuClock = new LinuxThreadCpuClock();
 TimingChecks.WaitDurationAndCancellation(waitBackend);
@@ -67,7 +73,7 @@ try
         var elapsed = Stopwatch.StartNew();
         if (busy)
         {
-            while (elapsed.ElapsedMilliseconds < 500)
+            while (elapsed.ElapsedMilliseconds < window.Milliseconds)
             {
                 checksum += CpuWorkload.Run();
                 completedBatches++;
@@ -78,6 +84,7 @@ try
         int liveSamples = collector.Latest?.Samples ?? 0;
         int liveDeliveredSamples = capture.Published;
         var liveIntervention = intervention?.ObserveLive();
+        double experimentMilliseconds = elapsed.Elapsed.TotalMilliseconds;
         if (Native.Ioctl((int)fd, 0x2401, 0) != 0) throw new Exception($"Disable failed: {Marshal.GetLastPInvokeError()}");
         if (Native.Read((int)fd, out ulong cpu, 8) != 8) throw new Exception($"Read failed: {Marshal.GetLastPInvokeError()}");
         var records = collector.Complete();
@@ -88,13 +95,14 @@ try
             || delivered.Aggregate(0UL, (total, sample) => checked(total + sample.PeriodNanoseconds)) != records.RepresentedCpuNanoseconds)
             throw new Exception("Delivered sample records do not match the ring totals.");
         if (cpu < previousCpu) throw new Exception("The task CPU clock decreased.");
-        observations.Add(new PhaseObservation(busy, elapsed.Elapsed.TotalMilliseconds, cpu - previousCpu,
+        observations.Add(new PhaseObservation(busy, experimentMilliseconds, elapsed.Elapsed.TotalMilliseconds, cpu - previousCpu,
             liveSamples, liveDeliveredSamples, records, delivered, interventionResult));
         previousCpu = cpu;
     }
     File.WriteAllText(args[0], JsonSerializer.Serialize(new { available = true, runtime = RuntimeInformation.FrameworkDescription,
         os = RuntimeInformation.OSDescription, architecture = RuntimeInformation.ProcessArchitecture.ToString(),
-        requestedPeriodNanoseconds = attr.SamplePeriod, checksum, completedBatches, observations }, new JsonSerializerOptions {
+        requestedPeriodNanoseconds = attr.SamplePeriod, measurementMilliseconds = window.Milliseconds,
+        checksum, completedBatches, observations }, new JsonSerializerOptions {
             WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     var active = observations[0];
     var blocked = observations[1];
@@ -115,7 +123,7 @@ finally { Native.Munmap(mapping, mappingLength); Native.Close((int)fd); }
 sealed record SampleBatch(int Samples, int DistinctInstructionPointers, ulong RepresentedCpuNanoseconds,
     int LostRecords, ulong LostSamples, int Throttles, int SelectedMethodSamples, int UnmappedSamples,
     IReadOnlyList<string> SelectedSymbols);
-sealed record PhaseObservation(bool Busy, double WallMilliseconds, ulong CpuNanoseconds,
+sealed record PhaseObservation(bool Busy, double ExperimentMilliseconds, double WallMilliseconds, ulong CpuNanoseconds,
     int LiveSamples, int LiveDeliveredSamples, SampleBatch Records, IReadOnlyList<CpuSample> Delivered,
     InterventionResult? Intervention);
 
@@ -126,6 +134,14 @@ static class CpuWorkload
     {
         long sum = 0;
         for (int i = 0; i < 10000; i++) sum += i;
+        return sum;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static long RunOptimized()
+    {
+        long sum = 37497500;
+        for (int i = 0; i < 5000; i++) sum += i;
         return sum;
     }
 }

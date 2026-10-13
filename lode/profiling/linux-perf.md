@@ -54,6 +54,9 @@ That probe converts nominal selected sample periods to credits and publishes loc
 A second registered thread performs work and pays delay at manual cooperative probes.
 The default cadence checks the ledger after 10 milliseconds of thread CPU time, matching native Coz's processing interval.
 `IThreadCpuClock` supplies that clock. The current implementation uses Linux x64 `clock_gettime`.
+`ProbeCadence` uses an injectable `TimeProvider` to skip CPU reads before enough elapsed time passes.
+CPU time remains authoritative. The elapsed threshold rounds down and is cached after each CPU read.
+The fast path uses a timestamp comparison. Deterministic checks use fake CPU and elapsed clocks.
 `IWaitBackend` selects managed waits or Linux x64 `nanosleep`. Managed waits remain the default.
 The native backend uses at most one-millisecond sleep requests and checks cancellation between calls.
 It retries interrupted calls against the remaining monotonic duration. Other native errors fail the run.
@@ -72,6 +75,16 @@ The ledger interval includes time outside the backend call. Only that interval d
 A one-millisecond warmup precedes registration and is excluded from experiment records.
 `LinuxWaitCompare` compares both wait backends at zero and 10-millisecond CPU cadence.
 CPU batching sharply reduces overshoot propagation. The workload does not establish prediction accuracy.
+`LinuxPredictionVerify` compares zero and 50-percent profiles with unprofiled baseline and optimized work.
+Eight randomized blocks use seed `20261013`. Each case runs in a separate container.
+The physical optimization replaces half the additions with an equivalent constant sum.
+`MeasurementWindow` parses 500 or 2000 milliseconds before measurement starts. The prediction target defaults to 2000.
+The experiment boundary precedes sampler shutdown. Prediction subtracts live global delay from that interval.
+Final settlement delay remains diagnostic and does not enter the prediction formula.
+Acceptance requires the complete 95-percent paired-error interval to fit within two percentage points.
+Failed runs remain evidence. Successful accounting checks do not imply accurate predictions.
+The physical modes and portable checks run before the Linux platform guard.
+See [prediction evidence](../../reliability/features/linux-perf/prediction.md).
 See [wait comparison](../../reliability/features/linux-perf/wait-comparison.md) for raw records and remaining timing limits.
 It resolves instruction addresses to managed method symbols, but not source lines or IL offsets.
 The fixed snapshot does not include code compiled after capture.
