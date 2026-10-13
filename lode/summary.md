@@ -12,4 +12,8 @@ flowchart LR
     Settings --> Regions --> Observations --> Estimates
 ```
 
+A separate Windows x64 [CLR probe prototype](profiling/runtime-probes.md) verifies selective IL rewriting in a controlled loop.
+It also verifies asynchronous stack snapshots through a Windows backend behind a shared sampler interface.
+It does not extend the public engine's supported workload model.
+
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

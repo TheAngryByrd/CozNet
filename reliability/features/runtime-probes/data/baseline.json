@@ -1,0 +1,24 @@
+{
+  "mode": "baseline",
+  "runtime": ".NET 10.0.12",
+  "architecture": "X64",
+  "observations": [
+    {
+      "count": 0,
+      "result": 0,
+      "probes": 0
+    },
+    {
+      "count": 1,
+      "result": 0,
+      "probes": 0
+    },
+    {
+      "count": 1000000,
+      "result": 499999500000,
+      "probes": 0
+    }
+  ],
+  "mapping": [],
+  "sampling": null
+}

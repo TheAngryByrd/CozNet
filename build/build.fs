@@ -427,6 +427,37 @@ let dotnetBuild ctx =
         })
         sln
 
+let nativeScript script =
+    CreateProcess.fromRawCommand "pwsh" [
+        "-NoProfile"
+        "-File"
+        rootDirectory
+        </> "native"
+        </> script
+    ]
+    |> CreateProcess.withWorkingDirectory rootDirectory
+    |> Proc.run
+    |> fun result ->
+        if
+            result.ExitCode
+            <> 0
+        then
+            failwithf "%s failed with exit code %d" script result.ExitCode
+
+let nativeBuild _ = nativeScript "Build.ps1"
+
+let nativeWorkload _ =
+    DotNet.build
+        (fun options -> {
+            options with
+                Configuration = DotNet.BuildConfiguration.Release
+                MSBuildParams = disableBinLog options.MSBuildParams
+        })
+        (rootDirectory
+         </> "tests/CozNet.Instrumentation/CozNet.Instrumentation.csproj")
+
+let nativeVerify _ = nativeScript "Verify.ps1"
+
 let fsharpAnalyzers _ =
     let argParser =
         ArgumentParser.Create<FSharpAnalyzers.Arguments>(programName = "fsharp-analyzers")
@@ -701,6 +732,9 @@ let initTargets () =
     Target.createBuildFailure "RevertChangelog" revertChangelog // Do NOT put this in the dependency chain
     Target.createFinal "DeleteChangelogBackupFile" deleteChangelogBackupFile // Do NOT put this in the dependency chain
     Target.create "DotnetBuild" dotnetBuild
+    Target.create "NativeBuild" nativeBuild
+    Target.create "NativeWorkload" nativeWorkload
+    Target.create "NativeVerify" nativeVerify
     Target.create "FSharpAnalyzers" fsharpAnalyzers
     Target.create "DotnetTest" dotnetTest
     Target.create "GenerateCoverageReport" generateCoverageReport
@@ -717,6 +751,11 @@ let initTargets () =
     Target.create "CleanDocsCache" cleanDocsCache
     Target.create "BuildDocs" buildDocs
     Target.create "WatchDocs" watchDocs
+
+    "NativeBuild"
+    ==> "NativeWorkload"
+    ==> "NativeVerify"
+    |> ignore
 
     //-----------------------------------------------------------------------------
     // Target Dependencies

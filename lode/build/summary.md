@@ -12,6 +12,7 @@ CI invokes the same `DotnetPack` target with `CONFIGURATION=Release`.
 ./build.cmd DotnetPack
 ./build.cmd BuildDocs
 ./build.cmd GenerateCoverageReport
+./build.cmd NativeVerify
 dotnet run --project build/build.fsproj -- --list
 ```
 
@@ -26,6 +27,9 @@ AltCover supplies coverage collection. `ENABLE_COVERAGE=true` enables the templa
 The repository owner is `TheAngryByrd`. The release branch is `master`.
 Release and publish targets remain explicit actions. Default packaging does not publish packages or create Git tags.
 Keep build orchestration in this graph instead of duplicating it in scripts or CI.
+`NativeVerify` is an explicit Windows x64 prototype target.
+It runs `NativeBuild`, builds the instrumentation workload in Release, and executes three bounded child processes.
+It is separate from default packaging because other native backends are incomplete.
 
 ```mermaid
 flowchart LR
