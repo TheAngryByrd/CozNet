@@ -1,0 +1,23 @@
+{
+  "stage": "Probes",
+  "measurementMilliseconds": 2000,
+  "experimentMilliseconds": 2000.0028,
+  "completedBatches": 548657,
+  "checksum": 27430106715000,
+  "calls": 5486570,
+  "warmupCalls": 10,
+  "workerBatches": 552494,
+  "workerCalls": 5524940,
+  "profiler": {
+    "status": 2,
+    "instrumentedMethods": 1
+  },
+  "cpuNanoseconds": null,
+  "liveSamples": 0,
+  "records": null,
+  "delivered": [],
+  "intervention": null,
+  "runtime": ".NET 10.0.0",
+  "os": "Ubuntu 24.04.3 LTS",
+  "architecture": "X64"
+}

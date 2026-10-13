@@ -17,7 +17,10 @@ The controlled Linux countdown comparison passes its accounting checks and subst
 Native-range attribution remains unresolved for inline countdown instructions.
 Raw rewritten-IL diagnostics separate the inspected loop ranges with empty-stack gate placement on both controlled methods.
 Candidate exclusion and whole-method attribution both fail the physical-prediction gate in the controlled countdown loop.
-Separate probe, collection, and intervention costs before changing sampled accounting or the intervention mechanism.
+The stage comparison identifies injected probes as the largest measured cost in the controlled loop.
+Investigate a lower-cost intervention mechanism before changing sampled accounting.
+A native signal experiment must measure GC effects and bound handler work before any claim of CLR safety.
+See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal research](../../docsSrc/Research/native-signal-intervention.md).
 See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).
 Keep mixed boundaries and debugger limitations explicit. See [the attribution investigation](../../docsSrc/Research/injected-cpu-attribution.md).
 The hybrid design remains provisional until measured coverage and overhead support it.

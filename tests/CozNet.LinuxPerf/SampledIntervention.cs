@@ -167,8 +167,19 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
         DelayTicksModule.value(runtime.GlobalDelay));
 
     public InterventionResult Complete(InterventionProgress live)
+        => CompleteCore(live, true);
+
+    public InterventionResult CompleteWithoutSamples()
+    {
+        if (percent != 0) throw new InvalidOperationException("Completion without samples requires zero speedup.");
+        return CompleteCore(ObserveLive(), false);
+    }
+
+    private InterventionResult CompleteCore(InterventionProgress live, bool requireSamples)
     {
         FlushAndCheck();
+        if (!requireSamples && sequence != 0)
+            throw new InvalidOperationException("Completion without samples received a CPU event.");
         stop.Set();
         var result = worker.GetAwaiter().GetResult();
         Parsed(runtime.Check(selected, deadline.Token));
@@ -182,7 +193,7 @@ sealed class SampledIntervention : ICpuSampleSink, IDisposable
             throw new InvalidOperationException("The sampled intervention did not reach work, probes, and credits.");
         if (workerAccountedWaitTicks < credited || (percent == 0 && (workerWaitTicks != 0 || workerAccountedWaitTicks != 0)))
             throw new InvalidOperationException($"The worker probes did not settle sampled credit: accounted={workerAccountedWaitTicks}, backend={workerWaitTicks}, credit={credited}.");
-        if (live.AppliedSamples == 0 || (percent > 0 && (live.CreditedTicks == 0 || live.WorkerWaitTicks == 0)))
+        if ((requireSamples && live.AppliedSamples == 0) || (percent > 0 && (live.CreditedTicks == 0 || live.WorkerWaitTicks == 0)))
             throw new InvalidOperationException("No sampled credit and worker wait were observed before sampling stopped.");
         return new InterventionResult(percent, waitBackend, probeInterval, live, selectedPeriods, credited, workerWaitTicks, workerAccountedWaitTicks, result.Ticks,
             result.Checks, result.Batches, global, Stopwatch.Frequency, selectedCadence.CpuClockReads, result.InjectedCalls, waits.ToArray());

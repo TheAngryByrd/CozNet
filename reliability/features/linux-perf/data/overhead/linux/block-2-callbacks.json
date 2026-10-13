@@ -1,0 +1,45 @@
+{
+  "stage": "Callbacks",
+  "measurementMilliseconds": 2000,
+  "experimentMilliseconds": 2000.6632,
+  "completedBatches": 519369,
+  "checksum": 25965853155000,
+  "calls": 5193690,
+  "warmupCalls": 10,
+  "workerBatches": 526616,
+  "workerCalls": 5266160,
+  "profiler": {
+    "status": 2,
+    "instrumentedMethods": 1
+  },
+  "cpuNanoseconds": null,
+  "liveSamples": 0,
+  "records": null,
+  "delivered": [],
+  "intervention": {
+    "speedupPercent": 0,
+    "waitBackend": "managed",
+    "probeCpuIntervalNanoseconds": 10000000,
+    "live": {
+      "appliedSamples": 0,
+      "creditedTicks": 0,
+      "workerWaitTicks": 0,
+      "globalDelayTicks": 0
+    },
+    "selectedPeriodNanoseconds": 0,
+    "creditedTicks": 0,
+    "workerWaitTicks": 0,
+    "workerAccountedWaitTicks": 0,
+    "workerCheckTicks": 1368279,
+    "workerChecks": 200,
+    "workerBatches": 526616,
+    "globalDelayTicks": 0,
+    "clockFrequency": 1000000000,
+    "selectedCpuClockReads": 326,
+    "workerInjectedCalls": 5266160,
+    "waits": []
+  },
+  "runtime": ".NET 10.0.0",
+  "os": "Ubuntu 24.04.3 LTS",
+  "architecture": "X64"
+}

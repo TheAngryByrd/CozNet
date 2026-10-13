@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 
 enum ProbeMode { Manual, Injected }
+sealed record ProfilerState(int Status, int InstrumentedMethods);
 
 sealed class ProbePlan
 {
@@ -37,6 +38,7 @@ static class InjectedProbes
     [ThreadStatic] private static Action? callback;
     [ThreadStatic] private static long calls;
     public static long Calls => calls;
+    public static ProfilerState ReadProfilerState() => new(CozGetStatus(), CozGetInstrumentedMethods());
 
     public static void Hit()
     {

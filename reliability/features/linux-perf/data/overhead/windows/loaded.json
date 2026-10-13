@@ -1,0 +1,23 @@
+{
+  "stage": "Loaded",
+  "measurementMilliseconds": 500,
+  "experimentMilliseconds": 500.0009,
+  "completedBatches": 161329,
+  "checksum": 8065643355000,
+  "calls": 0,
+  "warmupCalls": 0,
+  "workerBatches": 160665,
+  "workerCalls": 0,
+  "profiler": {
+    "status": 1,
+    "instrumentedMethods": 0
+  },
+  "cpuNanoseconds": null,
+  "liveSamples": 0,
+  "records": null,
+  "delivered": [],
+  "intervention": null,
+  "runtime": ".NET 10.0.12",
+  "os": "Microsoft Windows 10.0.26200",
+  "architecture": "X64"
+}

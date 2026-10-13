@@ -1,0 +1,20 @@
+{
+  "stage": "Baseline",
+  "measurementMilliseconds": 2000,
+  "experimentMilliseconds": 2000.0003,
+  "completedBatches": 642593,
+  "checksum": 32126437035000,
+  "calls": 0,
+  "warmupCalls": 0,
+  "workerBatches": 648353,
+  "workerCalls": 0,
+  "profiler": null,
+  "cpuNanoseconds": null,
+  "liveSamples": 0,
+  "records": null,
+  "delivered": [],
+  "intervention": null,
+  "runtime": ".NET 10.0.0",
+  "os": "Ubuntu 24.04.3 LTS",
+  "architecture": "X64"
+}

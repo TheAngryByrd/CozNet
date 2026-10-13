@@ -58,6 +58,11 @@ Its physical cases run without the profiler. Records go under `artifacts/linux-c
 Both require empty-stack placement and raw CLR maps at interval 1024.
 The first retains whole-method credit. The second excludes raw IL candidates without claiming verified native ownership.
 Records go under `artifacts/linux-raw-attribution/` and `artifacts/linux-filtered-attribution/`.
+`LinuxOverheadVerify` uses the same Linux build chain and runs five component stages in eight shuffled blocks.
+It retains every case, subprocess log, outcome, binary hash, and paired stage ratio under `artifacts/linux-overhead/`.
+Its success gate checks workload and accounting behavior. It does not check prediction accuracy.
+`WindowsOverheadVerify` has its own Windows native build chain and shared managed workload build.
+It verifies three bounded stages and writes records under `artifacts/windows-overhead/`. It does not run Linux-only event or clock adapters.
 It requires a local `mcr.microsoft.com/dotnet/sdk:10.0.100` image and a Linux Docker engine.
 See [Linux perf feasibility](../profiling/linux-perf.md) for the isolated container settings and support limits.
 

@@ -9,6 +9,20 @@ TimingChecks.CadenceBoundaries();
 InjectedProbeChecks.Run();
 RawIlCandidateChecks.Run();
 if (args is ["--verify-collector"]) return 0;
+if (args is ["--verify-overhead"])
+{
+    OverheadChecks.Run();
+    return 0;
+}
+if (args is ["--overhead", var overheadPath, var overheadStage, var overheadDuration])
+{
+    var plan = OverheadPlan.Parse(overheadStage);
+    if (plan.Callbacks && (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64))
+        throw new PlatformNotSupportedException("The current overhead CPU clock requires Linux x64.");
+    OverheadWorkload.Run(overheadPath, plan, MeasurementWindow.Parse(overheadDuration),
+        plan.Callbacks ? new LinuxThreadCpuClock() : null, plan.Collect ? sink => new LinuxCpuEventSession(sink) : null);
+    return 0;
+}
 if (args.Length is 3 or 4 && args[0] == "--physical")
 {
     PhysicalWorkload.Run(args[1], args[2], MeasurementWindow.Parse(args.Length == 4 ? args[3] : "500"));

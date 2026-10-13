@@ -22,6 +22,8 @@ Dense injected probes have excessive cost. Countdown probes reduce that cost in 
 Inline countdown instructions remain inside selected-method CPU attribution. Exact profiler-CPU exclusion remains unresolved.
 An optional raw-map sensitivity diagnostic excludes injected IL candidates. Both diagnostic modes still fail the physical-prediction gate.
 See [the retained comparison](../reliability/features/linux-perf/attribution-sensitivity.md).
+The [component comparison](../reliability/features/linux-perf/component-overhead.md) identifies injected probes as the largest measured overhead stage in the tiny loop.
+Native signal intervention remains a proposed experiment with unresolved CLR safety constraints.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

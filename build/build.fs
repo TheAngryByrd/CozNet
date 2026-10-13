@@ -517,6 +517,11 @@ let linuxInjectedVerify _ = nativeScript "VerifyLinuxInjected.ps1"
 
 let linuxCountdownVerify _ = nativeScript "VerifyLinuxCountdown.ps1"
 
+let linuxOverheadVerify _ = nativeScript "VerifyLinuxOverhead.ps1"
+
+let windowsOverheadVerify _ =
+    nativeScript "VerifyWindowsOverhead.ps1"
+
 let linuxPredictionVerify _ =
     nativeScript "VerifyLinuxPrediction.ps1"
 
@@ -861,6 +866,9 @@ let initTargets () =
     Target.create "LinuxInjectedWorkload" linuxPerfWorkload
     Target.create "LinuxInjectedVerify" linuxInjectedVerify
     Target.create "LinuxCountdownVerify" linuxCountdownVerify
+    Target.create "LinuxOverheadVerify" linuxOverheadVerify
+    Target.create "WindowsOverheadWorkload" linuxPerfWorkload
+    Target.create "WindowsOverheadVerify" windowsOverheadVerify
     Target.create "LinuxCountdownPredictionVerify" linuxCountdownPredictionVerify
 
     Target.create
@@ -937,6 +945,15 @@ let initTargets () =
 
     "LinuxInjectedWorkload"
     ==> "LinuxCountdownVerify"
+    |> ignore
+
+    "LinuxInjectedWorkload"
+    ==> "LinuxOverheadVerify"
+    |> ignore
+
+    "NativeBuild"
+    ==> "WindowsOverheadWorkload"
+    ==> "WindowsOverheadVerify"
     |> ignore
 
     "LinuxInjectedWorkload"

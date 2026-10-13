@@ -1,0 +1,23 @@
+{
+  "stage": "Loaded",
+  "measurementMilliseconds": 2000,
+  "experimentMilliseconds": 2000.003,
+  "completedBatches": 640304,
+  "checksum": 32011998480000,
+  "calls": 0,
+  "warmupCalls": 0,
+  "workerBatches": 646716,
+  "workerCalls": 0,
+  "profiler": {
+    "status": 1,
+    "instrumentedMethods": 0
+  },
+  "cpuNanoseconds": null,
+  "liveSamples": 0,
+  "records": null,
+  "delivered": [],
+  "intervention": null,
+  "runtime": ".NET 10.0.0",
+  "os": "Ubuntu 24.04.3 LTS",
+  "architecture": "X64"
+}

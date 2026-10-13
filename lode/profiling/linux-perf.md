@@ -101,6 +101,19 @@ Both retained modes fail accuracy after all 64 workload cases pass their account
 Whole-method attribution predicts 43.63% against 49.40% physical reduction. Candidate exclusion predicts 41.99% against 49.70%.
 Their gate values are 6.69 and 8.96 percentage points. These separate runs do not isolate the effect of exclusion.
 Candidate exclusion remains diagnostic. See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).
+`LinuxOverheadVerify` compares baseline, loaded profiler, injected probes, cooperative callbacks, and collection in eight shuffled blocks.
+All stages use the same selected-thread measurement loop and two-second window. Runtime perf maps remain enabled in every stage.
+Loaded-only runs select the absent instrumentation assembly and require profiler status 1 with zero rewritten methods.
+Injected stages require status 2, one rewritten method, and exactly ten helper calls per batch on each workload thread.
+Callback-only runs use the normal zero-speedup adapter without an event source.
+`CompleteWithoutSamples` rejects nonzero speedup and any applied event. Ordinary completion still requires live samples.
+`ICpuEventSession` separates the shared harness from Linux task-clock syscalls and ring ownership.
+The collector must complete before the session releases the mapped ring. Collection cases require live samples and zero causal delay.
+The report preserves stage costs and paired incremental ratios. These ratios do not establish additive profiler CPU costs or prediction accuracy.
+The retained 40-case Linux run passes. Probe-only cost is 16.59% above baseline, callbacks 23.86%, and collection 25.49%.
+The incremental collection interval includes zero. Probe overhead is the largest measured stage in this loop.
+`WindowsOverheadVerify` checks baseline, loaded-only, and probe-only behavior. Windows callback and collection adapters remain unimplemented.
+See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal intervention constraints](../../docsSrc/Research/native-signal-intervention.md).
 The bridge uses a fixed eligibility epoch under this controlled method restriction.
 General lifecycle eligibility, GC transitions, and blocking inside selected methods remain unimplemented.
 The wrapper records requested duration, backend-call duration, and the ledger's timestamp interval separately.

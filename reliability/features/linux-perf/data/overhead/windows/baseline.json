@@ -1,0 +1,20 @@
+{
+  "stage": "Baseline",
+  "measurementMilliseconds": 500,
+  "experimentMilliseconds": 500.0029,
+  "completedBatches": 161535,
+  "checksum": 8075942325000,
+  "calls": 0,
+  "warmupCalls": 0,
+  "workerBatches": 161522,
+  "workerCalls": 0,
+  "profiler": null,
+  "cpuNanoseconds": null,
+  "liveSamples": 0,
+  "records": null,
+  "delivered": [],
+  "intervention": null,
+  "runtime": ".NET 10.0.12",
+  "os": "Microsoft Windows 10.0.26200",
+  "architecture": "X64"
+}

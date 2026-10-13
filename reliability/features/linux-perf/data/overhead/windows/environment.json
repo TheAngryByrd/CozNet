@@ -1,0 +1,12 @@
+{
+  "performanceComparisonEstablished": false,
+  "platform": "windows-x64",
+  "measurementMilliseconds": 500,
+  "profilerSha256": "0396A8B472D7AAFBB9A86709770037737EC5916DD6FA487CFCE462B6B62854B3",
+  "workloadSha256": "802E22D4AE5196484BBAF30DB8743D19B75250216D0579A26F1DFA7C9BB78F43",
+  "stages": [
+    "baseline",
+    "loaded",
+    "probes"
+  ]
+}

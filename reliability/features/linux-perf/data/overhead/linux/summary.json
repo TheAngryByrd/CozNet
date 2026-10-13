@@ -1,0 +1,563 @@
+{
+  "blocks": [
+    {
+      "incrementalIncrease": 0.0,
+      "baselineIncrease": 0.0,
+      "millisecondsPerBatch": 0.0031181123268279147,
+      "block": 0,
+      "stage": "baseline"
+    },
+    {
+      "incrementalIncrease": 0.0037044547691416074,
+      "baselineIncrease": 0.0037044547691416074,
+      "millisecondsPerBatch": 0.0031296632329077517,
+      "block": 0,
+      "stage": "loaded"
+    },
+    {
+      "incrementalIncrease": 0.1834563233073474,
+      "baselineIncrease": 0.18784038372829426,
+      "millisecondsPerBatch": 0.0037038197428071943,
+      "block": 0,
+      "stage": "probes"
+    },
+    {
+      "incrementalIncrease": 0.044667531279960926,
+      "baselineIncrease": 0.24089828122407853,
+      "millisecondsPerBatch": 0.0038692602270243718,
+      "block": 0,
+      "stage": "callbacks"
+    },
+    {
+      "incrementalIncrease": 0.013598152687338994,
+      "baselineIncrease": 0.2577722055216203,
+      "millisecondsPerBatch": 0.0039218750183784975,
+      "block": 0,
+      "stage": "collection"
+    },
+    {
+      "incrementalIncrease": 0.0,
+      "baselineIncrease": 0.0,
+      "millisecondsPerBatch": 0.0031293461865838854,
+      "block": 1,
+      "stage": "baseline"
+    },
+    {
+      "incrementalIncrease": 0.012965944823313036,
+      "baselineIncrease": 0.012965944823313036,
+      "millisecondsPerBatch": 0.003169921116572177,
+      "block": 1,
+      "stage": "loaded"
+    },
+    {
+      "incrementalIncrease": 0.13181303798599475,
+      "baselineIncrease": 0.1464880633868273,
+      "millisecondsPerBatch": 0.003587758049123512,
+      "block": 1,
+      "stage": "probes"
+    },
+    {
+      "incrementalIncrease": 0.07013246167442677,
+      "baselineIncrease": 0.2268940935524919,
+      "millisecondsPerBatch": 0.003839376353000783,
+      "block": 1,
+      "stage": "callbacks"
+    },
+    {
+      "incrementalIncrease": 0.04437040546215787,
+      "baselineIncrease": 0.28133188194254233,
+      "millisecondsPerBatch": 0.004009731038505248,
+      "block": 1,
+      "stage": "collection"
+    },
+    {
+      "incrementalIncrease": 0.0,
+      "baselineIncrease": 0.0,
+      "millisecondsPerBatch": 0.003125959512600734,
+      "block": 2,
+      "stage": "baseline"
+    },
+    {
+      "incrementalIncrease": 0.0005723275905129555,
+      "baselineIncrease": 0.0005723275905129555,
+      "millisecondsPerBatch": 0.0031277485854766217,
+      "block": 2,
+      "stage": "loaded"
+    },
+    {
+      "incrementalIncrease": 0.19450531680115057,
+      "baselineIncrease": 0.19518896515097017,
+      "millisecondsPerBatch": 0.0037361123149691026,
+      "block": 2,
+      "stage": "probes"
+    },
+    {
+      "incrementalIncrease": 0.031045987270970743,
+      "baselineIncrease": 0.2322947865494518,
+      "millisecondsPerBatch": 0.0038521036103425503,
+      "block": 2,
+      "stage": "callbacks"
+    },
+    {
+      "incrementalIncrease": 0.012361462969530557,
+      "baselineIncrease": 0.24752775292092832,
+      "millisecondsPerBatch": 0.0038997212464765944,
+      "block": 2,
+      "stage": "collection"
+    },
+    {
+      "incrementalIncrease": 0.0,
+      "baselineIncrease": 0.0,
+      "millisecondsPerBatch": 0.003129847310444767,
+      "block": 3,
+      "stage": "baseline"
+    },
+    {
+      "incrementalIncrease": -0.0022126396343066235,
+      "baselineIncrease": -0.0022126396343066235,
+      "millisecondsPerBatch": 0.003122922086236349,
+      "block": 3,
+      "stage": "loaded"
+    },
+    {
+      "incrementalIncrease": 0.19322784884219257,
+      "baselineIncrease": 0.19058766561108587,
+      "millisecondsPerBatch": 0.0037263576030615708,
+      "block": 3,
+      "stage": "probes"
+    },
+    {
+      "incrementalIncrease": 0.03813400864496597,
+      "baselineIncrease": 0.23598954594408883,
+      "millisecondsPerBatch": 0.0038684585561109554,
+      "block": 3,
+      "stage": "callbacks"
+    },
+    {
+      "incrementalIncrease": 0.015908599590406247,
+      "baselineIncrease": 0.2556524087284415,
+      "millisecondsPerBatch": 0.003930000314312206,
+      "block": 3,
+      "stage": "collection"
+    },
+    {
+      "incrementalIncrease": 0.0,
+      "baselineIncrease": 0.0,
+      "millisecondsPerBatch": 0.0031153314630981625,
+      "block": 4,
+      "stage": "baseline"
+    },
+    {
+      "incrementalIncrease": 0.0035381285530837747,
+      "baselineIncrease": 0.0035381285530837747,
+      "millisecondsPerBatch": 0.0031263539063000707,
+      "block": 4,
+      "stage": "loaded"
+    },
+    {
+      "incrementalIncrease": 0.14145438412338374,
+      "baselineIncrease": 0.14549299647189362,
+      "millisecondsPerBatch": 0.0035685903726674823,
+      "block": 4,
+      "stage": "probes"
+    },
+    {
+      "incrementalIncrease": 0.07502507504542644,
+      "baselineIncrease": 0.23143369449620765,
+      "millisecondsPerBatch": 0.0038363241331832464,
+      "block": 4,
+      "stage": "callbacks"
+    },
+    {
+      "incrementalIncrease": 0.03140270099891351,
+      "baselineIncrease": 0.27010403860445953,
+      "millisecondsPerBatch": 0.003956795072872516,
+      "block": 4,
+      "stage": "collection"
+    },
+    {
+      "incrementalIncrease": 0.0,
+      "baselineIncrease": 0.0,
+      "millisecondsPerBatch": 0.0031348141135459882,
+      "block": 5,
+      "stage": "baseline"
+    },
+    {
+      "incrementalIncrease": -0.0036024778883451125,
+      "baselineIncrease": -0.0036024778883451125,
+      "millisecondsPerBatch": 0.0031235210150178665,
+      "block": 5,
+      "stage": "loaded"
+    },
+    {
+      "incrementalIncrease": 0.1437726251560072,
+      "baselineIncrease": 0.13965220956458801,
+      "millisecondsPerBatch": 0.003572597831076941,
+      "block": 5,
+      "stage": "probes"
+    },
+    {
+      "incrementalIncrease": 0.0874271256696626,
+      "baselineIncrease": 0.23928872650989996,
+      "millisecondsPerBatch": 0.0038849397906216684,
+      "block": 5,
+      "stage": "callbacks"
+    },
+    {
+      "incrementalIncrease": -0.0005336101269007854,
+      "baselineIncrease": 0.23862742949528037,
+      "millisecondsPerBatch": 0.003882866747406993,
+      "block": 5,
+      "stage": "collection"
+    },
+    {
+      "incrementalIncrease": 0.0,
+      "baselineIncrease": 0.0,
+      "millisecondsPerBatch": 0.0031196393698330995,
+      "block": 6,
+      "stage": "baseline"
+    },
+    {
+      "incrementalIncrease": -0.002066608857554497,
+      "baselineIncrease": -0.002066608857554497,
+      "millisecondsPerBatch": 0.0031131922954790265,
+      "block": 6,
+      "stage": "loaded"
+    },
+    {
+      "incrementalIncrease": 0.153123603423857,
+      "baselineIncrease": 0.1507405479711661,
+      "millisecondsPerBatch": 0.003589895517914164,
+      "block": 6,
+      "stage": "probes"
+    },
+    {
+      "incrementalIncrease": 0.07920535659654182,
+      "baselineIncrease": 0.24188536342332223,
+      "millisecondsPerBatch": 0.0038742344725548826,
+      "block": 6,
+      "stage": "callbacks"
+    },
+    {
+      "incrementalIncrease": 0.003358939743495215,
+      "baselineIncrease": 0.24605678152738997,
+      "millisecondsPerBatch": 0.0038872477927003666,
+      "block": 6,
+      "stage": "collection"
+    },
+    {
+      "incrementalIncrease": 0.0,
+      "baselineIncrease": 0.0,
+      "millisecondsPerBatch": 0.0031123904244210565,
+      "block": 7,
+      "stage": "baseline"
+    },
+    {
+      "incrementalIncrease": 0.013557027811729183,
+      "baselineIncrease": 0.013557027811729183,
+      "millisecondsPerBatch": 0.0031545851879658925,
+      "block": 7,
+      "stage": "loaded"
+    },
+    {
+      "incrementalIncrease": 0.15554648113059155,
+      "baselineIncrease": 0.171212256913025,
+      "millisecondsPerBatch": 0.003645269813380673,
+      "block": 7,
+      "stage": "probes"
+    },
+    {
+      "incrementalIncrease": 0.0760891234074248,
+      "baselineIncrease": 0.2603287708655686,
+      "millisecondsPerBatch": 0.0039226351980643556,
+      "block": 7,
+      "stage": "callbacks"
+    },
+    {
+      "incrementalIncrease": -0.01473916819536114,
+      "baselineIncrease": 0.24175257313032805,
+      "millisecondsPerBatch": 0.003864818818111041,
+      "block": 7,
+      "stage": "collection"
+    }
+  ],
+  "predictionAccuracyEstablished": false,
+  "stages": [
+    {
+      "meanBaselineIncrease": 0.0,
+      "meanIncrementalIncrease": 0.0,
+      "incrementalIntervalHalfWidth": 0.0,
+      "stage": "baseline"
+    },
+    {
+      "meanBaselineIncrease": 0.0033070196459467904,
+      "meanIncrementalIncrease": 0.0033070196459467904,
+      "incrementalIntervalHalfWidth": 0.005591537206198566,
+      "stage": "loaded"
+    },
+    {
+      "meanBaselineIncrease": 0.1659003860997313,
+      "meanIncrementalIncrease": 0.1621124525963156,
+      "incrementalIntervalHalfWidth": 0.020667762216338703,
+      "stage": "probes"
+    },
+    {
+      "meanBaselineIncrease": 0.2386266578206387,
+      "meanIncrementalIncrease": 0.06271583369867251,
+      "incrementalIntervalHalfWidth": 0.017877413608300072,
+      "stage": "callbacks"
+    },
+    {
+      "meanBaselineIncrease": 0.25485313398387377,
+      "meanIncrementalIncrease": 0.013215935391197559,
+      "incrementalIntervalHalfWidth": 0.015406342588964237,
+      "stage": "collection"
+    }
+  ],
+  "studentTCritical": 2.364624251,
+  "confidence": 0.95,
+  "allCasesPassed": true,
+  "binariesUnchanged": true,
+  "outcomes": [
+    {
+      "exitCode": 0,
+      "file": "block-0-baseline.json",
+      "block": 0,
+      "stage": "baseline"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-0-loaded.json",
+      "block": 0,
+      "stage": "loaded"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-0-probes.json",
+      "block": 0,
+      "stage": "probes"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-0-callbacks.json",
+      "block": 0,
+      "stage": "callbacks"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-0-collection.json",
+      "block": 0,
+      "stage": "collection"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-1-callbacks.json",
+      "block": 1,
+      "stage": "callbacks"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-1-collection.json",
+      "block": 1,
+      "stage": "collection"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-1-loaded.json",
+      "block": 1,
+      "stage": "loaded"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-1-baseline.json",
+      "block": 1,
+      "stage": "baseline"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-1-probes.json",
+      "block": 1,
+      "stage": "probes"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-2-baseline.json",
+      "block": 2,
+      "stage": "baseline"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-2-probes.json",
+      "block": 2,
+      "stage": "probes"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-2-loaded.json",
+      "block": 2,
+      "stage": "loaded"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-2-callbacks.json",
+      "block": 2,
+      "stage": "callbacks"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-2-collection.json",
+      "block": 2,
+      "stage": "collection"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-3-probes.json",
+      "block": 3,
+      "stage": "probes"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-3-baseline.json",
+      "block": 3,
+      "stage": "baseline"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-3-callbacks.json",
+      "block": 3,
+      "stage": "callbacks"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-3-loaded.json",
+      "block": 3,
+      "stage": "loaded"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-3-collection.json",
+      "block": 3,
+      "stage": "collection"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-4-collection.json",
+      "block": 4,
+      "stage": "collection"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-4-callbacks.json",
+      "block": 4,
+      "stage": "callbacks"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-4-baseline.json",
+      "block": 4,
+      "stage": "baseline"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-4-probes.json",
+      "block": 4,
+      "stage": "probes"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-4-loaded.json",
+      "block": 4,
+      "stage": "loaded"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-5-collection.json",
+      "block": 5,
+      "stage": "collection"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-5-probes.json",
+      "block": 5,
+      "stage": "probes"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-5-baseline.json",
+      "block": 5,
+      "stage": "baseline"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-5-loaded.json",
+      "block": 5,
+      "stage": "loaded"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-5-callbacks.json",
+      "block": 5,
+      "stage": "callbacks"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-6-callbacks.json",
+      "block": 6,
+      "stage": "callbacks"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-6-loaded.json",
+      "block": 6,
+      "stage": "loaded"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-6-probes.json",
+      "block": 6,
+      "stage": "probes"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-6-baseline.json",
+      "block": 6,
+      "stage": "baseline"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-6-collection.json",
+      "block": 6,
+      "stage": "collection"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-7-collection.json",
+      "block": 7,
+      "stage": "collection"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-7-baseline.json",
+      "block": 7,
+      "stage": "baseline"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-7-probes.json",
+      "block": 7,
+      "stage": "probes"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-7-callbacks.json",
+      "block": 7,
+      "stage": "callbacks"
+    },
+    {
+      "exitCode": 0,
+      "file": "block-7-loaded.json",
+      "block": 7,
+      "stage": "loaded"
+    }
+  ]
+}
