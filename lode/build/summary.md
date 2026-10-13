@@ -32,6 +32,9 @@ It runs `NativeBuild`, builds the instrumentation workload in Release, and execu
 It is separate from default packaging because other native backends are incomplete.
 `NativeLinuxVerify` runs `NativeLinuxBuild`, `NativeLinuxWorkload`, and the bounded Linux native runner.
 Its graph is separate from `NativeVerify`. Either target can run without the other platform's compiler.
+`NativeMapVerify` and `NativeLinuxMapVerify` also have separate platform build chains.
+They run eight mapping cases per platform and retain JSON records and disassembly under `artifacts/native-map/`.
+Each case compares one controlled method, mapping mode, and probe placement at interval 1024.
 `NativeCountdownVerify` and `NativeLinuxCountdownVerify` use their corresponding platform build chains.
 They repeat the native checks at probe intervals 64, 256, and 1024.
 Evidence goes under `artifacts/countdown/`, separated by platform runner and interval.

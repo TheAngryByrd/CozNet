@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "FSharp.Core": {
+        "type": "Direct",
+        "requested": "[10.0.102, )",
+        "resolved": "10.0.102",
+        "contentHash": "umz5pbtOvL/F9U5sibhREzZT2ewAs//nRTMwj8XcOOjMdOP828tipLpEhb2fZNijhiyikJ6Nr/dsMc/lj58W9w=="
+      },
+      "coznet": {
+        "type": "Project",
+        "dependencies": {
+          "FSharp.Core": "[10.0.102, )"
+        }
+      },
+      "coznet.instrumentation": {
+        "type": "Project",
+        "dependencies": {
+          "CozNet": "[0.1.0-alpha.1, )",
+          "FSharp.Core": "[10.0.102, )"
+        }
+      },
+      "coznet.linuxperf": {
+        "type": "Project",
+        "dependencies": {
+          "CozNet": "[0.1.0-alpha.1, )",
+          "FSharp.Core": "[10.0.102, )"
+        }
+      }
+    }
+  }
+}

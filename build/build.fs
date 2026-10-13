@@ -467,6 +467,22 @@ let nativeWorkload _ =
 
 let nativeVerify _ = nativeScript "Verify.ps1"
 
+let nativeMapWorkload _ =
+    DotNet.build
+        (fun options -> {
+            options with
+                Configuration = DotNet.BuildConfiguration.Release
+                MSBuildParams = disableBinLog options.MSBuildParams
+        })
+        (rootDirectory
+         </> "tests/CozNet.NativeMap/CozNet.NativeMap.csproj")
+
+let nativeMapVerify platform _ =
+    nativeScriptWithArgs "VerifyNativeMap.ps1" [
+        "-Platform"
+        platform
+    ]
+
 let nativeCountdownVerify script _ =
     for interval in
         [
@@ -820,6 +836,10 @@ let initTargets () =
     Target.create "NativeLinuxVerify" nativeLinuxVerify
     Target.create "NativeWorkload" nativeWorkload
     Target.create "NativeVerify" nativeVerify
+    Target.create "NativeMapWorkload" nativeMapWorkload
+    Target.create "NativeLinuxMapWorkload" nativeMapWorkload
+    Target.create "NativeMapVerify" (nativeMapVerify "windows")
+    Target.create "NativeLinuxMapVerify" (nativeMapVerify "linux")
     Target.create "NativeCountdownVerify" (nativeCountdownVerify "Verify.ps1")
     Target.create "NativeLinuxCountdownVerify" (nativeCountdownVerify "VerifyLinuxNative.ps1")
     Target.create "LinuxPerfWorkload" linuxPerfWorkload
@@ -862,6 +882,16 @@ let initTargets () =
     "NativeBuild"
     ==> "NativeWorkload"
     ==> "NativeVerify"
+    |> ignore
+
+    "NativeBuild"
+    ==> "NativeMapWorkload"
+    ==> "NativeMapVerify"
+    |> ignore
+
+    "NativeLinuxBuild"
+    ==> "NativeLinuxMapWorkload"
+    ==> "NativeLinuxMapVerify"
     |> ignore
 
     "NativeWorkload"

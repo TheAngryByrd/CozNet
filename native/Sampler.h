@@ -155,6 +155,27 @@ public:
         }
     }
 
+    ULONG NativeMapSize() {
+        std::lock_guard<std::mutex> lock(control);
+        return static_cast<ULONG>(locations.size());
+    }
+    BOOL NativeMapEntry(ULONG index, ULONG* il, ULONG* start, ULONG* end) {
+        std::lock_guard<std::mutex> lock(control);
+        if (index >= locations.size() || !il || !start || !end) return FALSE;
+        const auto& location = locations[index];
+        *il = location.ilOffset;
+        *start = location.nativeStartOffset;
+        *end = location.nativeEndOffset;
+        return TRUE;
+    }
+    BOOL NativeCodeInfo(UINT_PTR* address, SIZE_T* size) {
+        std::lock_guard<std::mutex> lock(control);
+        if (!address || !size || code.size == 0) return FALSE;
+        *address = code.startAddress;
+        *size = code.size;
+        return TRUE;
+    }
+
     void Stop() {
         std::lock_guard<std::mutex> lock(control);
         StopLocked();

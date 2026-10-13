@@ -2,6 +2,14 @@
 
 The build supports Windows x64 and Linux x64 startup instrumentation.
 Stack snapshots remain Windows x64 only. macOS support remains incomplete.
+
+`NativeMapVerify` and `NativeLinuxMapVerify` inspect CLR mapping boundaries on their respective platforms.
+They use one shared managed diagnostic and a PowerShell 7 runner with separate launch adapters.
+`COZNET_IL_MAP_MODE=raw-diagnostic` omits instrumentation-map registration and rejects sampling.
+`COZNET_PROBE_PLACEMENT=empty-stack-diagnostic` moves countdown gates to a checked empty-stack boundary.
+The default placement remains `branch`. Empty-stack placement rejects dense probes.
+These settings apply only to the controlled methods. They do not establish general native instruction ownership.
+See [mapping evidence](../reliability/features/runtime-probes/native-mapping.md).
 The default target is the instrumentation workload. `COZNET_PROBE_TARGET=linux-perf` selects the Linux CPU workload instead.
 `LinuxInjectedVerify` connects that workload's CPU samples to injected callbacks on two threads.
 Dense probe cost is excessive. See [the measured comparison](../reliability/features/linux-perf/injected-probes.md).

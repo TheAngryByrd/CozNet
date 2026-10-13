@@ -1,0 +1,6 @@
+{
+  "profilerSha256": "A2390669A13FBC0AB3608A3F4F94FEB7472EAD967D4F6A4480863E5290EEEFBA",
+  "imageId": "sha256:3db72bd242b5f26a45d74c2d49a7654740e75c732654658177e52aa498645c14",
+  "image": "mcr.microsoft.com/dotnet/sdk:10.0.100",
+  "platform": "linux"
+}

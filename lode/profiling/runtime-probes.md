@@ -36,8 +36,19 @@ Valid entry and return samples do not erase earlier loop observations.
 Debugger output remains unverified.
 The registered instrumentation map can collapse injected and original IL boundaries into one original-offset range.
 It does not establish exact ownership of inline countdown instructions.
-The next diagnostic will omit registration for the whole process and inspect rewritten-IL/native ranges.
-It must keep mixed ranges explicit and make no debugger-stepping claim.
+`COZNET_IL_MAP_MODE=raw-diagnostic` omits registration for the whole process and exposes rewritten-IL/native ranges.
+It rejects sampling with `E_NOTIMPL`. The normal sampler requires original IL offsets.
+`NativeMapVerify` and `NativeLinuxMapVerify` compare both modes for both controlled methods at interval 1024.
+The diagnostic records IL bytes, the private map, native bytes, CLR ranges, and JIT disassembly.
+Every native range remains `unverified`. A mapped IL origin is not a native ownership guarantee.
+`COZNET_PROBE_PLACEMENT=empty-stack-diagnostic` moves countdown gates before the loop-comparison operands.
+Its restricted stack analysis rejects unsupported opcodes, inconsistent joins, and incoming branches inside the moved span.
+It rejects interval 1. The default placement remains `branch`.
+Both placements preserve the checksum and exact helper count on Windows and Linux x64.
+The default placement mixes original and injected instructions in CLR ranges.
+Empty-stack placement separates the inspected loop ranges on these two methods and runtimes.
+This is diagnostic evidence, not a general ownership rule or debugger-stepping claim.
+See [mapping evidence](../../reliability/features/runtime-probes/native-mapping.md).
 See [injected CPU attribution research](../../docsSrc/Research/injected-cpu-attribution.md).
 
 ```powershell

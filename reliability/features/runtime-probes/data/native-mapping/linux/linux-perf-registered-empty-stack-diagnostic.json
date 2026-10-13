@@ -1,0 +1,493 @@
+{
+  "target": "linux-perf",
+  "mode": "registered",
+  "placement": "empty-stack-diagnostic",
+  "interval": 1024,
+  "result": 49995000,
+  "calls": 10,
+  "runtime": ".NET 10.0.0",
+  "architecture": "X64",
+  "moduleVersionId": "6b4dec41-69ce-4ee9-81e9-dda2cc87e2bc",
+  "metadataToken": 100663457,
+  "originalIlHex": "166A0A160B2B0906076A580A0717580B07201027000032EF062A",
+  "rewrittenIlHex": "2000040000FE0E020028A0000006166A0A160B2B0906076A580A0717580BFE0C0200175925FE0E02003A0E00000028A00000062000040000FE0E020007201027000032D1062A",
+  "nativeCodeHex": "55415741565350488D6C2420BB00040000FF15A9C07A004533FF4533F6EB094963C64C03F841FFC6FFCB750BFF158EC07A00BB000400004181FE102700007CDF498BC74883C4085B415E415F5DC3",
+  "nativeCodeSize": 78,
+  "originalInstructions": [
+    {
+      "offset": 0,
+      "opCode": "ldc.i4.0",
+      "size": 1
+    },
+    {
+      "offset": 1,
+      "opCode": "conv.i8",
+      "size": 1
+    },
+    {
+      "offset": 2,
+      "opCode": "stloc.0",
+      "size": 1
+    },
+    {
+      "offset": 3,
+      "opCode": "ldc.i4.0",
+      "size": 1
+    },
+    {
+      "offset": 4,
+      "opCode": "stloc.1",
+      "size": 1
+    },
+    {
+      "offset": 5,
+      "opCode": "br.s",
+      "size": 2
+    },
+    {
+      "offset": 7,
+      "opCode": "ldloc.0",
+      "size": 1
+    },
+    {
+      "offset": 8,
+      "opCode": "ldloc.1",
+      "size": 1
+    },
+    {
+      "offset": 9,
+      "opCode": "conv.i8",
+      "size": 1
+    },
+    {
+      "offset": 10,
+      "opCode": "add",
+      "size": 1
+    },
+    {
+      "offset": 11,
+      "opCode": "stloc.0",
+      "size": 1
+    },
+    {
+      "offset": 12,
+      "opCode": "ldloc.1",
+      "size": 1
+    },
+    {
+      "offset": 13,
+      "opCode": "ldc.i4.1",
+      "size": 1
+    },
+    {
+      "offset": 14,
+      "opCode": "add",
+      "size": 1
+    },
+    {
+      "offset": 15,
+      "opCode": "stloc.1",
+      "size": 1
+    },
+    {
+      "offset": 16,
+      "opCode": "ldloc.1",
+      "size": 1
+    },
+    {
+      "offset": 17,
+      "opCode": "ldc.i4",
+      "size": 5
+    },
+    {
+      "offset": 22,
+      "opCode": "blt.s",
+      "size": 2
+    },
+    {
+      "offset": 24,
+      "opCode": "ldloc.0",
+      "size": 1
+    },
+    {
+      "offset": 25,
+      "opCode": "ret",
+      "size": 1
+    }
+  ],
+  "rewrittenInstructions": [
+    {
+      "offset": 0,
+      "opCode": "ldc.i4",
+      "size": 5,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 5,
+      "opCode": "stloc",
+      "size": 4,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 9,
+      "opCode": "call",
+      "size": 5,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 14,
+      "opCode": "ldc.i4.0",
+      "size": 1,
+      "originalOffset": 0,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 15,
+      "opCode": "conv.i8",
+      "size": 1,
+      "originalOffset": 1,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 16,
+      "opCode": "stloc.0",
+      "size": 1,
+      "originalOffset": 2,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 17,
+      "opCode": "ldc.i4.0",
+      "size": 1,
+      "originalOffset": 3,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 18,
+      "opCode": "stloc.1",
+      "size": 1,
+      "originalOffset": 4,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 19,
+      "opCode": "br.s",
+      "size": 2,
+      "originalOffset": 5,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 21,
+      "opCode": "ldloc.0",
+      "size": 1,
+      "originalOffset": 7,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 22,
+      "opCode": "ldloc.1",
+      "size": 1,
+      "originalOffset": 8,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 23,
+      "opCode": "conv.i8",
+      "size": 1,
+      "originalOffset": 9,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 24,
+      "opCode": "add",
+      "size": 1,
+      "originalOffset": 10,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 25,
+      "opCode": "stloc.0",
+      "size": 1,
+      "originalOffset": 11,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 26,
+      "opCode": "ldloc.1",
+      "size": 1,
+      "originalOffset": 12,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 27,
+      "opCode": "ldc.i4.1",
+      "size": 1,
+      "originalOffset": 13,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 28,
+      "opCode": "add",
+      "size": 1,
+      "originalOffset": 14,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 29,
+      "opCode": "stloc.1",
+      "size": 1,
+      "originalOffset": 15,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 30,
+      "opCode": "ldloc",
+      "size": 4,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 34,
+      "opCode": "ldc.i4.1",
+      "size": 1,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 35,
+      "opCode": "sub",
+      "size": 1,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 36,
+      "opCode": "dup",
+      "size": 1,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 37,
+      "opCode": "stloc",
+      "size": 4,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 41,
+      "opCode": "brtrue",
+      "size": 5,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 46,
+      "opCode": "call",
+      "size": 5,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 51,
+      "opCode": "ldc.i4",
+      "size": 5,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 56,
+      "opCode": "stloc",
+      "size": 4,
+      "originalOffset": null,
+      "ilOrigin": "injected"
+    },
+    {
+      "offset": 60,
+      "opCode": "ldloc.1",
+      "size": 1,
+      "originalOffset": 16,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 61,
+      "opCode": "ldc.i4",
+      "size": 5,
+      "originalOffset": 17,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 66,
+      "opCode": "blt.s",
+      "size": 2,
+      "originalOffset": 22,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 68,
+      "opCode": "ldloc.0",
+      "size": 1,
+      "originalOffset": 24,
+      "ilOrigin": "original"
+    },
+    {
+      "offset": 69,
+      "opCode": "ret",
+      "size": 1,
+      "originalOffset": 25,
+      "ilOrigin": "original"
+    }
+  ],
+  "ilMap": [
+    {
+      "original": 0,
+      "rewritten": 14
+    },
+    {
+      "original": 1,
+      "rewritten": 15
+    },
+    {
+      "original": 2,
+      "rewritten": 16
+    },
+    {
+      "original": 3,
+      "rewritten": 17
+    },
+    {
+      "original": 4,
+      "rewritten": 18
+    },
+    {
+      "original": 5,
+      "rewritten": 19
+    },
+    {
+      "original": 7,
+      "rewritten": 21
+    },
+    {
+      "original": 8,
+      "rewritten": 22
+    },
+    {
+      "original": 9,
+      "rewritten": 23
+    },
+    {
+      "original": 10,
+      "rewritten": 24
+    },
+    {
+      "original": 11,
+      "rewritten": 25
+    },
+    {
+      "original": 12,
+      "rewritten": 26
+    },
+    {
+      "original": 13,
+      "rewritten": 27
+    },
+    {
+      "original": 14,
+      "rewritten": 28
+    },
+    {
+      "original": 15,
+      "rewritten": 29
+    },
+    {
+      "original": 16,
+      "rewritten": 60
+    },
+    {
+      "original": 17,
+      "rewritten": 61
+    },
+    {
+      "original": 22,
+      "rewritten": 66
+    },
+    {
+      "original": 24,
+      "rewritten": 68
+    },
+    {
+      "original": 25,
+      "rewritten": 69
+    }
+  ],
+  "nativeMap": [
+    {
+      "ilOffset": -2,
+      "start": 0,
+      "end": 23,
+      "mappedILOrigin": "special",
+      "nativeOwnership": "unverified"
+    },
+    {
+      "ilOffset": 0,
+      "start": 23,
+      "end": 26,
+      "mappedILOrigin": "original",
+      "nativeOwnership": "unverified"
+    },
+    {
+      "ilOffset": 3,
+      "start": 26,
+      "end": 31,
+      "mappedILOrigin": "original",
+      "nativeOwnership": "unverified"
+    },
+    {
+      "ilOffset": 7,
+      "start": 31,
+      "end": 37,
+      "mappedILOrigin": "original",
+      "nativeOwnership": "unverified"
+    },
+    {
+      "ilOffset": 12,
+      "start": 37,
+      "end": 40,
+      "mappedILOrigin": "original",
+      "nativeOwnership": "unverified"
+    },
+    {
+      "ilOffset": 15,
+      "start": 40,
+      "end": 55,
+      "mappedILOrigin": "original",
+      "nativeOwnership": "unverified"
+    },
+    {
+      "ilOffset": 16,
+      "start": 55,
+      "end": 64,
+      "mappedILOrigin": "original",
+      "nativeOwnership": "unverified"
+    },
+    {
+      "ilOffset": 24,
+      "start": 64,
+      "end": 67,
+      "mappedILOrigin": "original",
+      "nativeOwnership": "unverified"
+    },
+    {
+      "ilOffset": -3,
+      "start": 67,
+      "end": 78,
+      "mappedILOrigin": "special",
+      "nativeOwnership": "unverified"
+    }
+  ],
+  "nativeOwnershipEstablished": false,
+  "debuggerSteppingEstablished": false
+}

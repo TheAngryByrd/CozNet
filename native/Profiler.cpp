@@ -28,6 +28,11 @@ static const GUID ProfilerId = {0x6e51c528, 0x23f1, 0x49ea, {0x93, 0x46, 0x2a, 0
 static std::atomic<LONG> status{0};
 static std::atomic<LONG> instrumented{0};
 static std::vector<COR_IL_MAP> codeMap;
+static std::vector<BYTE> rewrittenIL;
+enum class IlMapMode : LONG { Registered = 0, RawDiagnostic = 1 };
+static IlMapMode ilMapMode = IlMapMode::Registered;
+enum class ProbePlacement : LONG { Branch = 0, EmptyStackDiagnostic = 1 };
+static ProbePlacement probePlacement = ProbePlacement::Branch;
 static Sampler sampler;
 static ICorProfilerInfo2* samplingInfo = nullptr;
 static FunctionID selectedFunction = 0;
@@ -49,6 +54,41 @@ class Profiler final : public CallbackBase {
     const WCHAR* targetModule = COZ_TEXT("CozNet.Instrumentation.dll");
     const WCHAR* targetType = COZ_TEXT("CozNet.Instrumentation.Workload");
     const WCHAR* targetMethod = COZ_TEXT("Work");
+
+    HRESULT DiagnosticStackDepths(ILInstr* sentinel, std::map<ILInstr*, unsigned>& depths) {
+        std::vector<ILInstr*> pending{sentinel->m_pNext};
+        depths.emplace(sentinel->m_pNext, 0);
+        auto visit = [&](ILInstr* target, unsigned depth) {
+            if (target == sentinel) return false;
+            auto entry = depths.emplace(target, depth);
+            if (entry.second) pending.push_back(target);
+            return entry.first->second == depth;
+        };
+        while (!pending.empty()) {
+            auto* instruction = pending.back();
+            pending.pop_back();
+            unsigned pop = 0, push = 0;
+            bool branch = false, fallthrough = true;
+            switch (instruction->m_opcode) {
+                case CEE_LDC_I4_0: case CEE_LDC_I4_1: case CEE_LDC_I4:
+                case CEE_LDLOC_0: case CEE_LDLOC_1: case CEE_LDARG_0: push = 1; break;
+                case CEE_STLOC_0: case CEE_STLOC_1: pop = 1; break;
+                case CEE_CONV_I8: pop = 1; push = 1; break;
+                case CEE_ADD: pop = 2; push = 1; break;
+                case CEE_BR: case CEE_BR_S: branch = true; fallthrough = false; break;
+                case CEE_BLT: case CEE_BLT_S: pop = 2; branch = true; break;
+                case CEE_RET: pop = 1; fallthrough = false; break;
+                default: return E_NOTIMPL;
+            }
+            unsigned depth = depths.at(instruction);
+            if (depth < pop) return E_INVALIDARG;
+            depth = depth - pop + push;
+            if (instruction->m_opcode == CEE_RET && depth != 0) return E_INVALIDARG;
+            if (branch && !visit(instruction->m_pTarget, depth)) return E_INVALIDARG;
+            if (fallthrough && !visit(instruction->m_pNext, depth)) return E_INVALIDARG;
+        }
+        return S_OK;
+    }
 
     HRESULT Rewrite(FunctionID function, ModuleID module, mdMethodDef method, mdMethodDef probe) {
         LPCBYTE body = nullptr;
@@ -76,6 +116,12 @@ class Profiler final : public CallbackBase {
             if (instruction) originalOffsets.emplace(instruction, offset);
         }
 
+        std::map<ILInstr*, unsigned> stackDepths;
+        if (probePlacement == ProbePlacement::EmptyStackDiagnostic) {
+            hr = DiagnosticStackDepths(sentinel, stackDepths);
+            if (FAILED(hr)) return hr;
+        }
+
         auto insert = [&](ILInstr* before, unsigned opcode, INT32 argument = 0) {
             auto* instruction = rewriter.NewILInstr();
             if (!instruction) throw std::bad_alloc();
@@ -98,17 +144,30 @@ class Profiler final : public CallbackBase {
             if (probeInterval == ProbeInterval::Dense && (instruction == entry || backward)) {
                 probes.emplace(instruction, insert(instruction, CEE_CALL, probe));
             } else if (backward) {
-                auto* gate = insert(instruction, CEE_LDLOC, countdown);
-                insert(instruction, CEE_LDC_I4_1);
-                insert(instruction, CEE_SUB);
-                insert(instruction, CEE_DUP);
-                insert(instruction, CEE_STLOC, countdown);
-                auto* skip = insert(instruction, CEE_BRTRUE);
-                skip->m_pTarget = instruction;
-                insert(instruction, CEE_CALL, probe);
-                insert(instruction, CEE_LDC_I4, static_cast<INT32>(probeInterval));
-                insert(instruction, CEE_STLOC, countdown);
-                probes.emplace(instruction, gate);
+                auto* anchor = instruction;
+                if (probePlacement == ProbePlacement::EmptyStackDiagnostic) {
+                    while (stackDepths.at(anchor) != 0) {
+                        anchor = anchor->m_pPrev;
+                        if (anchor == sentinel || stackDepths.find(anchor) == stackDepths.end()) return E_NOTIMPL;
+                        if ((s_OpCodeFlags[anchor->m_opcode] & OPCODEFLAGS_BranchTarget) != 0) return E_NOTIMPL;
+                    }
+                    for (auto* middle = anchor->m_pNext; middle != instruction->m_pNext; middle = middle->m_pNext)
+                        for (const auto& item : originalOffsets)
+                            if ((s_OpCodeFlags[item.first->m_opcode] & OPCODEFLAGS_BranchTarget) != 0
+                                && item.first->m_pTarget == middle) return E_NOTIMPL;
+                }
+                if (probes.find(anchor) != probes.end()) return E_NOTIMPL;
+                auto* gate = insert(anchor, CEE_LDLOC, countdown);
+                insert(anchor, CEE_LDC_I4_1);
+                insert(anchor, CEE_SUB);
+                insert(anchor, CEE_DUP);
+                insert(anchor, CEE_STLOC, countdown);
+                auto* skip = insert(anchor, CEE_BRTRUE);
+                skip->m_pTarget = anchor;
+                insert(anchor, CEE_CALL, probe);
+                insert(anchor, CEE_LDC_I4, static_cast<INT32>(probeInterval));
+                insert(anchor, CEE_STLOC, countdown);
+                probes.emplace(anchor, gate);
             }
         }
         for (const auto& item : originalOffsets) {
@@ -120,12 +179,19 @@ class Profiler final : public CallbackBase {
         }
         hr = rewriter.Export();
         if (FAILED(hr)) return hr;
+        LPCBYTE rewrittenBody = nullptr;
+        hr = info->GetILFunctionBody(module, method, &rewrittenBody, nullptr);
+        if (FAILED(hr)) return hr;
+        COR_ILMETHOD_DECODER rewrittenDecoder(reinterpret_cast<COR_ILMETHOD*>(const_cast<BYTE*>(rewrittenBody)));
+        rewrittenIL.assign(rewrittenDecoder.Code, rewrittenDecoder.Code + rewrittenDecoder.GetCodeSize());
         std::map<ULONG, ULONG> sorted;
         for (const auto& item : originalOffsets) sorted.emplace(item.second, item.first->m_offset);
         codeMap.clear();
         for (const auto& item : sorted) codeMap.push_back({item.first, item.second, TRUE});
-        hr = info->SetILInstrumentedCodeMap(function, TRUE, static_cast<ULONG>(codeMap.size()), codeMap.data());
-        if (FAILED(hr)) return hr;
+        if (ilMapMode == IlMapMode::Registered) {
+            hr = info->SetILInstrumentedCodeMap(function, TRUE, static_cast<ULONG>(codeMap.size()), codeMap.data());
+            if (FAILED(hr)) return hr;
+        }
         ++instrumented;
         return S_OK;
     }
@@ -148,12 +214,24 @@ public:
         return remaining;
     }
     HRESULT STDMETHODCALLTYPE Initialize(IUnknown* runtime) override {
+        const char* mapMode = std::getenv("COZNET_IL_MAP_MODE");
+        if (!mapMode || std::string_view(mapMode) == "registered") ilMapMode = IlMapMode::Registered;
+        else if (std::string_view(mapMode) == "raw-diagnostic") ilMapMode = IlMapMode::RawDiagnostic;
+        else { status.store(E_INVALIDARG); return E_INVALIDARG; }
         const char* interval = std::getenv("COZNET_PROBE_INTERVAL");
         if (!interval || std::string_view(interval) == "1") probeInterval = ProbeInterval::Dense;
         else if (std::string_view(interval) == "64") probeInterval = ProbeInterval::Small;
         else if (std::string_view(interval) == "256") probeInterval = ProbeInterval::Medium;
         else if (std::string_view(interval) == "1024") probeInterval = ProbeInterval::Large;
         else { status.store(E_INVALIDARG); return E_INVALIDARG; }
+        const char* placement = std::getenv("COZNET_PROBE_PLACEMENT");
+        if (!placement || std::string_view(placement) == "branch") probePlacement = ProbePlacement::Branch;
+        else if (std::string_view(placement) == "empty-stack-diagnostic") probePlacement = ProbePlacement::EmptyStackDiagnostic;
+        else { status.store(E_INVALIDARG); return E_INVALIDARG; }
+        if (probePlacement == ProbePlacement::EmptyStackDiagnostic && probeInterval == ProbeInterval::Dense) {
+            status.store(E_INVALIDARG);
+            return E_INVALIDARG;
+        }
         const char* target = std::getenv("COZNET_PROBE_TARGET");
         if (target && std::string_view(target) == "linux-perf") {
             targetModule = COZ_TEXT("CozNet.LinuxPerf.dll");
@@ -276,6 +354,7 @@ COZ_CLASS_EXPORT HRESULT __stdcall DllGetClassObject(REFCLSID clsid, REFIID id, 
 COZ_EXPORT LONG __stdcall CozGetStatus() { return status.load(); }
 COZ_EXPORT HRESULT __stdcall CozStartSampling() {
     if (status.load() != 2 || !samplingInfo) return E_UNEXPECTED;
+    if (ilMapMode == IlMapMode::RawDiagnostic) return E_NOTIMPL;
     return sampler.Start(samplingInfo, selectedFunction);
 }
 COZ_EXPORT void __stdcall CozStopSampling() { sampler.Stop(); }
@@ -295,6 +374,19 @@ COZ_EXPORT BOOL __stdcall CozGetSampleLocation(ULONG index, ULONG* il, ULONG* co
     return sampler.Location(index, il, count);
 }
 COZ_EXPORT LONG __stdcall CozGetInstrumentedMethods() { return instrumented.load(); }
+COZ_EXPORT LONG __stdcall CozGetILMapMode() { return status.load() == 2 ? static_cast<LONG>(ilMapMode) : -1; }
+COZ_EXPORT LONG __stdcall CozGetProbePlacement() { return status.load() == 2 ? static_cast<LONG>(probePlacement) : -1; }
+COZ_EXPORT ULONG __stdcall CozGetRewrittenILSize() { return status.load() == 2 ? static_cast<ULONG>(rewrittenIL.size()) : 0; }
+COZ_EXPORT LONG __stdcall CozGetRewrittenILByte(ULONG index) {
+    return status.load() == 2 && index < rewrittenIL.size() ? rewrittenIL[index] : -1;
+}
+COZ_EXPORT ULONG __stdcall CozGetNativeMapSize() { return status.load() == 2 ? sampler.NativeMapSize() : 0; }
+COZ_EXPORT BOOL __stdcall CozGetNativeMapEntry(ULONG index, ULONG* il, ULONG* start, ULONG* end) {
+    return status.load() == 2 && sampler.NativeMapEntry(index, il, start, end);
+}
+COZ_EXPORT BOOL __stdcall CozGetNativeCodeInfo(UINT_PTR* address, SIZE_T* size) {
+    return status.load() == 2 && sampler.NativeCodeInfo(address, size);
+}
 COZ_EXPORT ULONG __stdcall CozGetMapSize() {
     return status.load() == 2 ? static_cast<ULONG>(codeMap.size()) : 0;
 }
