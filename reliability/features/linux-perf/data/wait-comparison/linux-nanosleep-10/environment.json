@@ -1,0 +1,1 @@
+{"kernel":"5.15.153.1-microsoft-standard-WSL2","image":"mcr.microsoft.com/dotnet/sdk:10.0.100","imageId":"sha256:3db72bd242b5f26a45d74c2d49a7654740e75c732654658177e52aa498645c14","network":"none","capabilities":"none"}

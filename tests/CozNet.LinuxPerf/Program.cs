@@ -5,12 +5,23 @@ using System.Text.Json;
 using System.Runtime.CompilerServices;
 
 CollectorChecks.Run();
+TimingChecks.CadenceBoundaries();
 if (args is ["--verify-collector"]) return 0;
 if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
     throw new PlatformNotSupportedException("The syscall probe requires Linux x64.");
-if (args.Length is < 1 or > 2) throw new ArgumentException("Pass a JSON evidence file path and optional speedup percentage.");
-int speedup = args.Length == 2 ? int.Parse(args[1]) : 50;
+if (args.Length is < 1 or > 4) throw new ArgumentException("Pass a JSON evidence path, speedup percentage, wait backend, and probe CPU milliseconds.");
+int speedup = args.Length >= 2 ? int.Parse(args[1]) : 50;
 if (speedup is not (0 or 50)) throw new ArgumentException("The capability workload supports zero or 50 percent.");
+IWaitBackend waitBackend = (args.Length >= 3 ? args[2] : "managed") switch
+{
+    "managed" => new ManagedWaitBackend(),
+    "linux-nanosleep" => new LinuxNanoSleepBackend(),
+    _ => throw new ArgumentException("Select managed or linux-nanosleep waits.")
+};
+int probeCpuMilliseconds = args.Length == 4 ? int.Parse(args[3]) : 10;
+if (probeCpuMilliseconds is not (0 or 10)) throw new ArgumentException("Select zero or 10 CPU milliseconds between probes.");
+IThreadCpuClock cpuClock = new LinuxThreadCpuClock();
+TimingChecks.WaitDurationAndCancellation(waitBackend);
 if (Marshal.SizeOf<PerfAttribute>() != 64) throw new Exception("Unexpected perf attribute layout.");
 Thread.Sleep(1);
 if (CpuWorkload.Run() != 49995000L) throw new Exception("The workload warmup returned an invalid checksum.");
@@ -46,7 +57,8 @@ try
     long completedBatches = 0;
     foreach (bool busy in new[] { true, false })
     {
-        using var intervention = busy ? new SampledIntervention(selectedSymbol, speedup) : null;
+        using var intervention = busy ? new SampledIntervention(selectedSymbol, speedup, waitBackend,
+            cpuClock, probeCpuMilliseconds * 1000000L) : null;
         intervention?.WaitUntilReady();
         var capture = new SampleCapture(intervention);
         var reader = new RingReader(mapping, offset, size, tid, codeMap, selectedSymbol, capture);

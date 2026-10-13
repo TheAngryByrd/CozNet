@@ -41,7 +41,9 @@ The controlled instrumentation workload connects this adapter to an injected loo
 It converts a synthetic 40-millisecond CPU observation at zero or 50 percent after probe 10,000.
 This produces zero credit or a known 20-millisecond credit.
 The worker checks the ledger inside that probe, preserves its result, and settles before exit.
-This adapter is not connected to the native sampler or the public serial API.
+The controlled [Linux workload](linux-perf.md) connects real samples to this adapter through manual probes.
+It records the adapter's timestamp interval separately from the inner wait-call duration.
+The adapter remains separate from the public serial API.
 It does not establish sampling accuracy, synchronization interception, or async support.
 Managed allocation and lock overhead must be measured before this adapter can serve production probes.
 

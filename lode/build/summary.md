@@ -31,6 +31,9 @@ Keep build orchestration in this graph instead of duplicating it in scripts or C
 It runs `NativeBuild`, builds the instrumentation workload in Release, and executes four bounded child processes.
 It is separate from default packaging because other native backends are incomplete.
 `LinuxPerfVerify` builds the Linux capability workload and runs its Docker checks.
+Its default uses managed waits with 10-millisecond thread-CPU batching.
+`LinuxWaitCompare` compares managed and native waits with per-probe and CPU-batched checks.
+Both targets use the same bounded runner. Comparison records go under `artifacts/linux-wait-comparison/`.
 It requires a local `mcr.microsoft.com/dotnet/sdk:10.0.100` image and a Linux Docker engine.
 See [Linux perf feasibility](../profiling/linux-perf.md) for the isolated container settings and support limits.
 

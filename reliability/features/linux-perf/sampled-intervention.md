@@ -1,7 +1,8 @@
 # Linux sampled intervention
 
 The controlled workload connects real Linux CPU events to the existing cooperative delay runtime.
-Its source baseline is `a67e68a` plus the sample sink, selected-thread probe, and intervention checks.
+This report records source commit `74bbd8c`.
+See [wait comparison](wait-comparison.md) for the later CPU cadence and separate accounting measurements.
 The runner uses the same .NET 10.0.0 Linux x64 container and kernel recorded in `data/environment.json`.
 Each process has a 30-second limit. Each busy phase runs for approximately 500 milliseconds before final settlement.
 

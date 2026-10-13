@@ -4,6 +4,7 @@ The Linux x64 capability workload obtains per-thread CPU events with instruction
 It uses the same Linux event type as native Coz: `PERF_COUNT_SW_TASK_CLOCK`.
 It maps addresses to a fixed managed method snapshot. It does not map source lines.
 The [sampled intervention](sampled-intervention.md) connects these events to credits and measured waits in a controlled workload.
+The [wait comparison](wait-comparison.md) records the current CPU cadence and wait backends.
 The earlier collection-only evidence follows below.
 
 Source baseline: `ea33664`, plus the live collector and workload checks.

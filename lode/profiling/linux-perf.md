@@ -52,6 +52,12 @@ Sink failures terminate collection and propagate through completion.
 The controlled `SampledIntervention` queues events for a selected-thread probe.
 That probe converts nominal selected sample periods to credits and publishes local delay through `CooperativeRuntime.Check`.
 A second registered thread performs work and pays delay at manual cooperative probes.
+The default cadence checks the ledger after 10 milliseconds of thread CPU time, matching native Coz's processing interval.
+`IThreadCpuClock` supplies that clock. The current implementation uses Linux x64 `clock_gettime`.
+`IWaitBackend` selects managed waits or Linux x64 `nanosleep`. Managed waits remain the default.
+The native backend uses at most one-millisecond sleep requests and checks cancellation between calls.
+It retries interrupted calls against the remaining monotonic duration. Other native errors fail the run.
+The final queue flush and thread settlement bypass the cadence.
 Both threads settle before unregistering. The runner checks 50-percent and zero-percent cases.
 The treatment must apply samples, create credit, and complete worker waits before sampling stops.
 Final settlement alone cannot satisfy this check. An isolated missing-probe mutation fails the assertion.
@@ -61,8 +67,12 @@ This bridge uses cumulative emitted periods as an estimate of represented CPU ti
 Only the fixed synchronous method earns credit. Probe code, waits, and unmapped addresses earn none.
 The bridge uses a fixed eligibility epoch under this controlled method restriction.
 General lifecycle eligibility, GC transitions, and blocking inside selected methods remain unimplemented.
-The wrapper measures real wait calls separately from total probe execution time.
-Observed wait overshoot substantially exceeds nominal credit. The workload does not establish prediction accuracy.
+The wrapper records requested duration, backend-call duration, and the ledger's timestamp interval separately.
+The ledger interval includes time outside the backend call. Only that interval determines settled delay.
+A one-millisecond warmup precedes registration and is excluded from experiment records.
+`LinuxWaitCompare` compares both wait backends at zero and 10-millisecond CPU cadence.
+CPU batching sharply reduces overshoot propagation. The workload does not establish prediction accuracy.
+See [wait comparison](../../reliability/features/linux-perf/wait-comparison.md) for raw records and remaining timing limits.
 It resolves instruction addresses to managed method symbols, but not source lines or IL offsets.
 The fixed snapshot does not include code compiled after capture.
 Code unload, address reuse, JIT version changes, and profiler CPU exclusion remain unsupported.

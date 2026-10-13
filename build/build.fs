@@ -427,14 +427,17 @@ let dotnetBuild ctx =
         })
         sln
 
-let nativeScript script =
-    CreateProcess.fromRawCommand "pwsh" [
-        "-NoProfile"
-        "-File"
-        rootDirectory
-        </> "native"
-        </> script
-    ]
+let nativeScriptWithArgs script args =
+    CreateProcess.fromRawCommand
+        "pwsh"
+        ([
+            "-NoProfile"
+            "-File"
+            rootDirectory
+            </> "native"
+            </> script
+         ]
+         @ args)
     |> CreateProcess.withWorkingDirectory rootDirectory
     |> Proc.run
     |> fun result ->
@@ -443,6 +446,8 @@ let nativeScript script =
             <> 0
         then
             failwithf "%s failed with exit code %d" script result.ExitCode
+
+let nativeScript script = nativeScriptWithArgs script []
 
 let nativeBuild _ = nativeScript "Build.ps1"
 
@@ -469,6 +474,30 @@ let linuxPerfWorkload _ =
          </> "tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj")
 
 let linuxPerfVerify _ = nativeScript "VerifyLinuxPerf.ps1"
+
+let linuxWaitCompare _ =
+    for backend in
+        [
+            "managed"
+            "linux-nanosleep"
+        ] do
+        for interval in
+            [
+                "0"
+                "10"
+            ] do
+            nativeScriptWithArgs "VerifyLinuxPerf.ps1" [
+                "-WaitBackend"
+                backend
+                "-ProbeCpuMilliseconds"
+                interval
+                "-EvidenceDirectory"
+                rootDirectory
+                </> "artifacts/linux-wait-comparison"
+                </> (backend
+                     + "-"
+                     + interval)
+            ]
 
 let fsharpAnalyzers _ =
     let argParser =
@@ -749,6 +778,7 @@ let initTargets () =
     Target.create "NativeVerify" nativeVerify
     Target.create "LinuxPerfWorkload" linuxPerfWorkload
     Target.create "LinuxPerfVerify" linuxPerfVerify
+    Target.create "LinuxWaitCompare" linuxWaitCompare
     Target.create "FSharpAnalyzers" fsharpAnalyzers
     Target.create "DotnetTest" dotnetTest
     Target.create "GenerateCoverageReport" generateCoverageReport
@@ -768,6 +798,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxPerfVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxWaitCompare"
     |> ignore
 
     "NativeBuild"

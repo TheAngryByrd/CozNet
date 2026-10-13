@@ -1,4 +1,8 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-perf'))
+param(
+    [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-perf'),
+    [ValidateSet('managed', 'linux-nanosleep')][string]$WaitBackend = 'managed',
+    [ValidateSet(0, 10)][int]$ProbeCpuMilliseconds = 10
+)
 
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -23,7 +27,7 @@ foreach ($policy in @('default', 'unfiltered', 'control')) {
         '--mount', "type=bind,source=$evidence,target=/output")
     if ($policy -ne 'default') { $arguments += @('--security-opt', 'seccomp=unconfined') }
     $speedup = if ($policy -eq 'control') { '0' } else { '50' }
-    $arguments += @($image, 'timeout', '30s', 'dotnet', '/work/CozNet.LinuxPerf.dll', "/output/$policy.json", $speedup)
+    $arguments += @($image, 'timeout', '30s', 'dotnet', '/work/CozNet.LinuxPerf.dll', "/output/$policy.json", $speedup, $WaitBackend, "$ProbeCpuMilliseconds")
     & docker @arguments
     $code = $LASTEXITCODE
     if ($policy -eq 'default' -and $code -eq 2) {
