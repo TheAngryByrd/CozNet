@@ -16,6 +16,7 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Tests.fs" />
+        <Compile Include="DelayLedgerTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>

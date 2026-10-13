@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Domain.fs" />
+    <Compile Include="DelayLedger.fs" />
     <Compile Include="Experiment.fs" />
     <InternalsVisibleTo Include="CozNet.Tests" />
   </ItemGroup>
