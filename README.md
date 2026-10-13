@@ -59,11 +59,14 @@ See [the model](docsSrc/Explanations/Background.md) and [the research](docsSrc/R
 
 ```sh
 dotnet tool restore
-dotnet fantomas --check src tests samples
-dotnet test CozNet.slnx -c Release
+dotnet run --project build/build.fsproj -- -t DotnetPack
 ```
 
-`build.cmd` and `build.sh` run these checks and build the sample.
+The FAKE build in `build/build.fs` uses MiniScaffold `v0.40.0-beta001` as its baseline.
+`build.cmd` and `build.sh` forward target arguments to that build.
+The default `DotnetPack` target restores, builds, tests, and creates the package in `dist/`.
+CI also checks formatting. Set `CONFIGURATION=Release` to select Release builds.
+Use `-t BuildDocs` for documentation or `--list` to list targets with the direct command above.
 Deterministic tests use a controlled clock. The sample exercises real timing separately.
 The CI workflow defines deterministic checks for Windows and Linux.
 

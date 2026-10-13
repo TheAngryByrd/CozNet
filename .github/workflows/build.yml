@@ -6,6 +6,8 @@ on:
     branches: [master]
 permissions:
   contents: read
+env:
+  CONFIGURATION: Release
 jobs:
   build:
     strategy:
@@ -19,7 +21,4 @@ jobs:
         with:
           global-json-file: global.json
       - run: dotnet tool restore
-      - run: dotnet fantomas --check src tests samples
-      - run: dotnet restore CozNet.slnx --locked-mode
-      - run: dotnet test CozNet.slnx -c Release --no-restore
-      - run: dotnet build samples/CozNet.Serial/CozNet.Serial.fsproj -c Release --no-restore
+      - run: dotnet run --project build/build.fsproj -- -t DotnetPack

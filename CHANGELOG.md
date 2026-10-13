@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## [Unreleased]
+
+### Added
 
 - Experimental serial profiling with explicit CPU regions.
 - Randomized paired experiments, raw observations, and bounded settings.

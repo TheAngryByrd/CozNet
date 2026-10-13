@@ -12,6 +12,7 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="Expecto" />
         <PackageReference Include="YoloDev.Expecto.TestSdk" />
+        <PackageReference Include="altcover" PrivateAssets="All" />
 
     </ItemGroup>
     <ItemGroup>
