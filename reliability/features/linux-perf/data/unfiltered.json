@@ -1,0 +1,45 @@
+{
+  "available": true,
+  "runtime": ".NET 10.0.0",
+  "os": "Ubuntu 24.04.3 LTS",
+  "architecture": "X64",
+  "requestedPeriodNanoseconds": 1000000,
+  "checksum": 7862813640000,
+  "completedBatches": 157272,
+  "observations": [
+    {
+      "busy": true,
+      "wallMilliseconds": 512.5808,
+      "cpuNanoseconds": 499798100,
+      "records": {
+        "samples": 499,
+        "distinctInstructionPointers": 9,
+        "representedCpuNanoseconds": 499000000,
+        "lostRecords": 0,
+        "lostSamples": 0,
+        "throttles": 0,
+        "selectedMethodSamples": 495,
+        "unmappedSamples": 1,
+        "selectedSymbols": [
+          "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        ]
+      }
+    },
+    {
+      "busy": false,
+      "wallMilliseconds": 500.3977,
+      "cpuNanoseconds": 44100,
+      "records": {
+        "samples": 0,
+        "distinctInstructionPointers": 0,
+        "representedCpuNanoseconds": 0,
+        "lostRecords": 0,
+        "lostSamples": 0,
+        "throttles": 0,
+        "selectedMethodSamples": 0,
+        "unmappedSamples": 0,
+        "selectedSymbols": []
+      }
+    }
+  ]
+}

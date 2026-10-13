@@ -30,6 +30,9 @@ Keep build orchestration in this graph instead of duplicating it in scripts or C
 `NativeVerify` is an explicit Windows x64 prototype target.
 It runs `NativeBuild`, builds the instrumentation workload in Release, and executes four bounded child processes.
 It is separate from default packaging because other native backends are incomplete.
+`LinuxPerfVerify` builds the Linux capability workload and runs its Docker checks.
+It requires a local `mcr.microsoft.com/dotnet/sdk:10.0.100` image and a Linux Docker engine.
+See [Linux perf feasibility](../profiling/linux-perf.md) for the isolated container settings and support limits.
 
 ```mermaid
 flowchart LR

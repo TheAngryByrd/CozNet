@@ -16,5 +16,7 @@ A separate Windows x64 [CLR probe prototype](profiling/runtime-probes.md) verifi
 An internal [cooperative runtime](profiling/cooperative-runtime.md) connects the ledger to measured managed waits and cancellation recovery.
 It also verifies asynchronous stack snapshots through a Windows backend behind a shared sampler interface.
 It does not extend the public engine's supported workload model.
+A separate [Linux task-clock workload](profiling/linux-perf.md) verifies per-thread CPU events in a container with the required syscall access.
+Those events resolve against a fixed managed method map. Source-line mapping and causal credits remain unconnected.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

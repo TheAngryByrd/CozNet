@@ -458,6 +458,18 @@ let nativeWorkload _ =
 
 let nativeVerify _ = nativeScript "Verify.ps1"
 
+let linuxPerfWorkload _ =
+    DotNet.build
+        (fun options -> {
+            options with
+                Configuration = DotNet.BuildConfiguration.Release
+                MSBuildParams = disableBinLog options.MSBuildParams
+        })
+        (rootDirectory
+         </> "tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj")
+
+let linuxPerfVerify _ = nativeScript "VerifyLinuxPerf.ps1"
+
 let fsharpAnalyzers _ =
     let argParser =
         ArgumentParser.Create<FSharpAnalyzers.Arguments>(programName = "fsharp-analyzers")
@@ -735,6 +747,8 @@ let initTargets () =
     Target.create "NativeBuild" nativeBuild
     Target.create "NativeWorkload" nativeWorkload
     Target.create "NativeVerify" nativeVerify
+    Target.create "LinuxPerfWorkload" linuxPerfWorkload
+    Target.create "LinuxPerfVerify" linuxPerfVerify
     Target.create "FSharpAnalyzers" fsharpAnalyzers
     Target.create "DotnetTest" dotnetTest
     Target.create "GenerateCoverageReport" generateCoverageReport
@@ -751,6 +765,10 @@ let initTargets () =
     Target.create "CleanDocsCache" cleanDocsCache
     Target.create "BuildDocs" buildDocs
     Target.create "WatchDocs" watchDocs
+
+    "LinuxPerfWorkload"
+    ==> "LinuxPerfVerify"
+    |> ignore
 
     "NativeBuild"
     ==> "NativeWorkload"
