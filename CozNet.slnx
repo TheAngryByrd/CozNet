@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CozNet/CozNet.fsproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CozNet.Tests/CozNet.Tests.fsproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/CozNet.Serial/CozNet.Serial.fsproj" />
+  </Folder>
+</Solution>
