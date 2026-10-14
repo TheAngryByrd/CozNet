@@ -31,6 +31,8 @@ Sample-driven selected checks recover credit in the cold experiment but retain i
 The first 250 ms warmup experiment fails the handler-duration bound. Keep this failure and investigate wait overshoot.
 The three-block warm comparison passes all protocol checks but fails capacity in two of three 50-percent cases.
 Measure wait overshoot, service gaps, and debt age before selecting another intervention actuator.
+The [service timing run](../../reliability/features/native-signal/service-timing.md) exposes both wait overshoot and long pending requests that perform no wait.
+Add native handler timestamps before choosing between delivery and actuator changes.
 The original signal and transition experiments generate no causal credits.
 See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal research](../../docsSrc/Research/native-signal-intervention.md).
 See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).

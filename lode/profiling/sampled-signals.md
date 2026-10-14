@@ -32,6 +32,15 @@ The first measurement sample establishes a fresh epoch baseline because perf ena
 Raw records label warmup, warmup settlement, measurement, and final settlement separately.
 Measurement batch counters subtract their warmup baselines.
 
+Request records include start and completion timestamps from `Stopwatch`, plus both stage labels.
+Samples and boundary snapshots also record `Stopwatch` timestamps. The output records its frequency.
+These timestamps share one process clock. Perf sample timestamps use a separate clock contract.
+Each phase retains its longest interval between completed controller service iterations and one peak-debt snapshot per thread.
+Peak snapshots include pending request sequences, request start times, and the last acknowledged sequence for each thread.
+Sample indices identify observations consumed during the associated service iteration.
+The first interval starts before worker release. Later intervals include diagnostics from the preceding iteration.
+These observations add controller overhead. They do not measure native handler entry time or prove scheduler causation.
+
 Before a selected-thread request, the controller disables sampling and discards records that remain after reservation.
 It resumes sampling only after the matching acknowledgment.
 The first observation in the new epoch earns no credit.
@@ -51,7 +60,11 @@ The three-block warm comparison passes all protocol checks and all zero-percent 
 One 50-percent case passes capacity. The other two exceed the unchanged 2 ms observed debt limit.
 Their peak peer debts are 0.933666, 2.020031, and 2.748001 ms.
 These mixed results do not establish stable capacity or prediction accuracy.
-Investigate native wait overshoot and service stability before prediction tests.
+The [service timing run](../../reliability/features/native-signal/service-timing.md) links one selected debt peak to a 3.743108 ms peer wait.
+Another peer peak occurs while a request remains pending for 6.980643 ms and later completes with zero wait.
+The long pending request performs no native sleep. The effect of another actuator remains untested.
+Measure native handler entry and completion times to separate delivery delay from delayed controller observation.
+Keep wait overshoot and service stability unresolved before prediction tests.
 See [the retained failed runs](../../reliability/features/native-signal/sampled.md).
 See [the primary-source cadence comparison](../../docsSrc/Research/signal-sample-cadence.md).
 

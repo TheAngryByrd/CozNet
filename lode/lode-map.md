@@ -11,6 +11,7 @@ For the bounded native signal experiment, read [signal intervention](profiling/s
 For signal delivery during runtime transitions, read [signal transitions](profiling/signal-transitions.md).
 For sample credit and bounded request ownership, read [signal accounting](profiling/signal-accounting.md).
 For the live sampled signal controller and capacity limit, read [sampled signals](profiling/sampled-signals.md).
+For request timing and peak-debt evidence, read [service timing](../reliability/features/native-signal/service-timing.md).
 For native Coz's check ordering and perf boundary behavior, read [signal sample cadence](../docsSrc/Research/signal-sample-cadence.md).
 For build targets and CI, read [the MiniScaffold build](build/summary.md).
 For scope expansion, read [the roadmap](plans/roadmap.md).

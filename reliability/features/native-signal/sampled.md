@@ -131,6 +131,7 @@ A small final debt does not erase the earlier capacity failure or establish vali
 Qualified sample cadence recovers credit. Warmup reduces the startup backlog, but the three-block comparison still fails capacity.
 Keep all failed runs and the existing limits.
 Measure steady-state debt, controller service gaps, and wait overshoot separately before selecting another wait actuator.
+The [service timing experiment](service-timing.md) adds request timestamps and peak snapshots. It identifies wait overshoot and long pending requests without native waits.
 Do not subtract aggregate controller cost or final settlement from the earlier measurement window.
 Forced-GC cases, matched baseline and zero-delay controls, debt-age analysis, and physical-change prediction checks remain incomplete.
 
