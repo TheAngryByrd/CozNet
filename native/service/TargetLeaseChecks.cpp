@@ -286,6 +286,51 @@ static void concurrentSnapshots() {
     writer.join();
     second_reader.join();
 }
+static void rejectedInitialArm() {
+    std::array<TargetLeaseChild, 4> journal{}, copy{};
+    TargetLease lease(plan(), journal);
+    require(!lease.rejectInitialArm(22) && lease.phase() == TargetLeasePhase::unarmed, 100);
+    require(lease.start(TimerArmResult::accepted(1000)), 101);
+    require(!lease.rejectInitialArm(0) && !lease.rejectInitialArm(-1)
+        && lease.phase() == TargetLeasePhase::waiting && lease.deliveryPending()
+        && lease.error() == TargetLeaseError::none && lease.transportError() == 0
+        && lease.measured() == 0 && lease.journal().empty(), 102);
+    require(lease.rejectInitialArm(22), 103);
+    std::size_t required = 99;
+    const auto failed = lease.snapshot(copy, required);
+    require(failed && required == 0 && failed->children == 0 && failed->measured == 0
+        && failed->visibility == TargetLeaseVisibility::terminal && failed->stop == TargetLeaseStop::failed
+        && failed->error == TargetLeaseError::arm_failed && failed->transport_error == 22
+        && failed->may_have_delivery, 104);
+    require(!lease.rejectInitialArm(23) && lease.transportError() == 22
+        && !lease.arrive(1, 100, 2000, false) && !lease.retire(), 105);
+    require(lease.quiesced() && lease.retire() && !lease.rejectInitialArm(22), 106);
+    const auto retired = lease.snapshot(copy, required);
+    require(retired && retired->visibility == TargetLeaseVisibility::retired && !retired->may_have_delivery
+        && retired->transport_error == 22 && required == 0, 107);
+
+    TargetLease delivered(plan(), journal);
+    require(delivered.start(TimerArmResult::accepted(1000)), 108);
+    auto admission = delivered.arrive(1, 100, 2000, false);
+    require(admission && !delivered.rejectInitialArm(22) && delivered.phase() == TargetLeasePhase::executing, 109);
+    auto completion = delivered.prepare(*admission, 10000, TargetWaitStatus::completed, false);
+    require(completion && !delivered.rejectInitialArm(22) && delivered.phase() == TargetLeasePhase::prepared, 110);
+    require(delivered.publish(*completion, 12000, TimerArmResult::accepted(11900), false), 111);
+    require(!delivered.rejectInitialArm(22) && delivered.phase() == TargetLeasePhase::waiting
+        && delivered.measured() == 10000 && delivered.journal().size() == 1 && delivered.transportError() == 0
+        && delivered.error() == TargetLeaseError::none, 112);
+    require(delivered.cancelPending() && !delivered.rejectInitialArm(22)
+        && delivered.stop() == TargetLeaseStop::cancelled && delivered.deliveryPending(), 113);
+    require(delivered.quiesced() && delivered.retire(), 114);
+    for (const auto error : {1, std::numeric_limits<int>::max()}) {
+        TargetLease boundary(plan(), journal);
+        require(boundary.start(TimerArmResult::accepted(1000)) && boundary.rejectInitialArm(error), 115);
+        require(boundary.error() == TargetLeaseError::arm_failed && boundary.transportError() == error
+            && boundary.measured() == 0 && boundary.journal().empty(), 116);
+        require(boundary.quiesced() && boundary.retire(), 117);
+    }
+}
+
 int main() {
     boundaries();
     settlement();
@@ -295,4 +340,5 @@ int main() {
     terminalEvidence();
     snapshotBoundaries();
     concurrentSnapshots();
+    rejectedInitialArm();
 }

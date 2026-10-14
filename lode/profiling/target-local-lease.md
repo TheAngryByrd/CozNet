@@ -104,6 +104,16 @@ Those generations must retain cancellation through native delivery and retire wi
 Even generations must complete normally, proving the previous cancellation does not cross the generation boundary.
 The mode does not exercise cancellation during an active handler.
 Core retirement does not release storage or the target registration. Mailbox quiescence and reader release still gate storage reuse.
+`LeaseMailbox::recover` atomically competes with target execution and returns a private controller recovery token.
+The recovering phase excludes claim, cancellation, new readers, begin, close, and duplicate recovery.
+Existing readers still prevent reuse after `quiesce(Recovery)`.
+`TargetLease::rejectInitialArm` accepts only a positive transport error while waiting before any child admission.
+It seals failed stop, arm_failed error, zero children, and zero wait. Possible delivery stays owned until backend quiescence.
+The caller must own mailbox recovery and prove rejection before mutating the published core.
+Core failure, cleanup, retirement, and final old-storage access precede recovery quiescence publication.
+The direct `abandonUndelivered` operation does not authorize published-core mutation.
+Portable checks cover exclusive recovery, 100 claim races, state/error boundaries, stale/foreign tokens, and reader retention.
+The native fixture does not yet consume recovery tokens.
 Target-side deletion and drain outside the handler still gate registration retirement.
 
 The Linux fixture's `cancel-rearm` case injects cancellation after successful rearm in the first handler.

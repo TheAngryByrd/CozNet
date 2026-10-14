@@ -6,7 +6,7 @@
 #include <utility>
 
 namespace coz::service {
-enum class LeaseMailboxPhase : uint64_t { idle, configuring, ready, active, quiescent, closed };
+enum class LeaseMailboxPhase : uint64_t { idle, configuring, ready, active, quiescent, closed, recovering };
 
 class LeaseMailbox {
 public:
@@ -25,6 +25,15 @@ public:
     private:
         friend class LeaseMailbox;
         Execution(LeaseMailbox* owner, uint32_t generation) noexcept : owner_(owner), generation_(generation) {}
+        LeaseMailbox* owner_;
+        uint32_t generation_;
+    };
+    class Recovery {
+    public:
+        uint32_t generation() const noexcept { return generation_; }
+    private:
+        friend class LeaseMailbox;
+        Recovery(LeaseMailbox* owner, uint32_t generation) noexcept : owner_(owner), generation_(generation) {}
         LeaseMailbox* owner_;
         uint32_t generation_;
     };
@@ -67,6 +76,14 @@ public:
     }
     bool abandonUndelivered(const Submission& submission) noexcept {
         return submission.owner_ == this && transition(submission.generation_, LeaseMailboxPhase::ready, LeaseMailboxPhase::quiescent);
+    }
+    std::optional<Recovery> recover(const Submission& submission) noexcept {
+        if (submission.owner_ != this
+            || !transition(submission.generation_, LeaseMailboxPhase::ready, LeaseMailboxPhase::recovering)) return std::nullopt;
+        return Recovery(this, submission.generation_);
+    }
+    bool quiesce(const Recovery& recovery) noexcept {
+        return recovery.owner_ == this && transition(recovery.generation_, LeaseMailboxPhase::recovering, LeaseMailboxPhase::quiescent);
     }
     std::optional<Execution> claim(uint32_t generation) noexcept {
         if (!transition(generation, LeaseMailboxPhase::ready, LeaseMailboxPhase::active)) return std::nullopt;

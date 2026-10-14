@@ -86,6 +86,7 @@ public:
     TargetLease(const TargetLease&) = delete;
     TargetLease& operator=(const TargetLease&) = delete;
     bool start(TimerArmResult result) noexcept;
+    bool rejectInitialArm(int error) noexcept;
     std::optional<Admission> arrive(uint64_t generation, uint64_t ip, uint64_t timestamp, bool cancelled) noexcept;
     std::optional<Completion> prepare(const Admission& admission, uint64_t waited, TargetWaitStatus status, bool cancelled) noexcept;
     bool publish(const Completion& completion, uint64_t finished, TimerArmResult next, bool cancelled) noexcept;

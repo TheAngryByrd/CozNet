@@ -34,6 +34,12 @@ bool TargetLease::start(TimerArmResult result) noexcept {
     publishVisibility();
     return true;
 }
+bool TargetLease::rejectInitialArm(int error) noexcept {
+    if (error <= 0 || phase_ != TargetLeasePhase::waiting || count_ != 0) return false;
+    fail(TargetLeaseError::arm_failed, error);
+    publishVisibility();
+    return true;
+}
 std::optional<TargetLease::Admission> TargetLease::arrive(uint64_t generation, uint64_t ip,
     uint64_t timestamp, bool cancelled) noexcept {
     if (generation != plan_.generation() || phase_ != TargetLeasePhase::waiting) return std::nullopt;

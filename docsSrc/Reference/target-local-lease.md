@@ -15,6 +15,7 @@ It allocates no memory and calls no OS functions.
 The caller must keep the lease and journal alive until retirement.
 The lease cannot be copied, moved, or restarted.
 A controller can initialize an unpublished lease. After publication, one target owns all state transitions.
+An exclusive mailbox recovery token can transfer a never-executed lease to the controller after a definitively rejected initial arm.
 `snapshot` supports concurrent readers with separate destination buffers.
 Other accessors remain restricted to the owner or a synchronized caller.
 
@@ -23,6 +24,7 @@ Other accessors remain restricted to the owner or a synchronized caller.
 | Operation | Required phase | Result |
 | --- | --- | --- |
 | `start` | Unarmed | Retains arm ownership, including an accepted arm with invalid timing. |
+| `rejectInitialArm` | Waiting, no child admitted | Requires a positive transport error and seals an arm-failed terminal snapshot without wait credit. |
 | `arrive` | Waiting | Checks generation and fresh instruction eligibility. Creates one admission. |
 | `prepare` | Executing | Records wait evidence and decides whether another timer can be armed. |
 | `publish` | Prepared | Validates final timing and publishes the child after timer rearming. |
@@ -51,6 +53,8 @@ It excludes the final timestamp store, terminal publication, epilogue, and signa
 An accepted rearm remains owned even if publication then fails or observes cancellation.
 Terminal accounting does not prove timer quiescence.
 `quiesced` is a backend notification, not an OS check performed by this portable class.
+`rejectInitialArm` retains possible delivery ownership until the backend provides that proof.
+It rejects zero or negative errors, later-child waits, and executing, prepared, terminal, or retired phases without mutation.
 The backend must exclude producers, block delivery, disarm the timer, and drain pending signals before calling it.
 Deleting the timer followed by a complete drain also establishes this proof.
 Core retirement ends the lease lifecycle. It does not free journal storage or retire the target registration.
@@ -92,10 +96,12 @@ One lock-free 64-bit atomic holds the generation, phase, cancellation flag, and 
 | `publish` | Configuring, matching submission | Publishes configuration and preserves cancellation. |
 | `abandonConfiguration` | Configuring, matching submission | Ends configuration without delivery. |
 | `claim` | Ready, matching generation | Grants one execution token to the target. |
+| `recover` | Ready, matching submission | Grants the controller an exclusive recovery token instead of target execution. |
 | `cancel` | Configuring, ready, or active | Sets cancellation for that generation. |
 | `cancelled` | Matching execution token | Reads the generation's cancellation flag. |
 | `read` | Ready, active, or quiescent | Returns a reader guard that prevents storage reuse. |
 | `quiesce` | Active, matching execution | Publishes the backend's delivery-quiescence proof. |
+| `quiesce` | Recovering, matching recovery | Publishes completed controller recovery and the backend's delivery-quiescence proof. |
 | `abandonUndelivered` | Ready, matching submission | Resolves a submission for which the backend proves no delivery can occur. |
 | `close` | Idle or quiescent, without readers | Permanently closes the mailbox. |
 
@@ -115,6 +121,14 @@ The target must make no old storage access after successful quiescence publicati
 Before `abandonUndelivered`, the backend must prove that no delivery is armed, pending, or executing.
 Mailbox closure does not establish handler return or authorize registration destruction.
 Atomic retry loops have no fixed latency bound. A backend must include their cost in its handler measurement.
+
+`recover` competes atomically with target `claim`. Exactly one can succeed for a ready generation.
+While recovering, the mailbox rejects new execution, cancellation, readers, reuse, closure, and duplicate recovery.
+Existing reader guards remain valid and still prevent reuse after recovery quiescence.
+The controller must finish core failure publication, delivery cleanup, core retirement, and every old storage access before recovery quiescence.
+`abandonUndelivered` does not grant a recovery token. It cannot authorize controller mutation of a published core.
+The recovery token controls writer ownership. It does not prove that the operating system rejected or drained delivery.
+Portable recovery checks pass on Windows and Linux. No live timer backend uses this recovery path yet.
 
 The portable checks exercise cancellation, stale identities, reader exclusion, generation exhaustion, and read-versus-reuse races.
 The [native reuse fixture](../How_Tos/run-target-lease-reuse.md) connects the mailbox to one Linux timer across 16 generations.

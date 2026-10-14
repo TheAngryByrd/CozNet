@@ -132,11 +132,63 @@ static void racingReadAndReuse() {
     }
 }
 
+static void exclusiveRecovery() {
+    LeaseMailbox mailbox, other;
+    auto submission = mailbox.begin();
+    require(submission && !mailbox.recover(*submission) && !other.recover(*submission), 60);
+    require(mailbox.publish(*submission), 61);
+    auto reader = mailbox.read(1);
+    auto recovery = mailbox.recover(*submission);
+    require(reader && recovery && recovery->generation() == 1, 62);
+    require(!mailbox.begin() && !mailbox.close() && !mailbox.claim(1) && !mailbox.cancel(1)
+        && !mailbox.read(1) && !mailbox.publish(*submission) && !mailbox.abandonUndelivered(*submission)
+        && !mailbox.recover(*submission), 63);
+    auto foreign_submission = other.begin();
+    require(foreign_submission && other.publish(*foreign_submission), 64);
+    auto foreign_recovery = other.recover(*foreign_submission);
+    require(foreign_recovery && !other.quiesce(*recovery) && !mailbox.quiesce(*foreign_recovery), 65);
+    require(mailbox.quiesce(*recovery) && !mailbox.quiesce(*recovery) && !mailbox.recover(*submission)
+        && !mailbox.begin() && !mailbox.close(), 66);
+    reader.reset();
+    auto next = mailbox.begin();
+    require(next && next->generation() == 2 && mailbox.publish(*next), 67);
+    auto execution = mailbox.claim(2);
+    require(execution && !mailbox.recover(*next) && mailbox.quiesce(*execution), 68);
+    auto third = mailbox.begin();
+    require(third && mailbox.publish(*third) && !mailbox.recover(*submission), 69);
+    auto current = mailbox.recover(*third);
+    require(current && !mailbox.quiesce(*recovery) && mailbox.quiesce(*current) && mailbox.close(), 70);
+    require(other.quiesce(*foreign_recovery) && other.close(), 71);
+}
+
+static void racingClaimAndRecovery() {
+    for (unsigned iteration = 0; iteration < 100; ++iteration) {
+        LeaseMailbox mailbox;
+        auto submission = mailbox.begin();
+        require(submission && mailbox.publish(*submission), 72);
+        std::atomic<bool> start{};
+        std::optional<LeaseMailbox::Execution> execution;
+        std::thread target([&] {
+            while (!start.load(std::memory_order_acquire)) std::this_thread::yield();
+            execution = mailbox.claim(1);
+        });
+        start.store(true, std::memory_order_release);
+        auto recovery = mailbox.recover(*submission);
+        target.join();
+        require(execution.has_value() != recovery.has_value(), 73);
+        if (execution) require(mailbox.quiesce(*execution), 74);
+        else require(mailbox.quiesce(*recovery), 75);
+        require(mailbox.close(), 76);
+    }
+}
+
 int main() {
     cancellationAndIdentity();
     readersExcludeReuse();
     readerReleaseAndFailures();
     concurrentReaderLifetime();
     racingReadAndReuse();
+    exclusiveRecovery();
+    racingClaimAndRecovery();
     return 0;
 }
