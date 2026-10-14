@@ -19,6 +19,7 @@ foreach ($file in @('src/CozNet/SignalAccounting.fs', 'src/CozNet/DelayLedger.fs
     'tests/CozNet.LinuxPerf/SampledSignalWorkload.cs', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs',
     'tests/CozNet.LinuxPerf/SignalPhaseTiming.cs', 'tests/CozNet.LinuxPerf/SignalPhaseTimingChecks.cs',
     'tests/CozNet.LinuxPerf/SelectedSignalCadence.cs', 'tests/CozNet.LinuxPerf/SelectedSignalCadenceChecks.cs',
+    'tests/CozNet.LinuxPerf/RingReaderChecks.cs',
     'tests/CozNet.LinuxPerf/SignalTargetLifetime.cs', 'tests/CozNet.LinuxPerf/LinuxCpuEventSession.cs',
     'tests/CozNet.LinuxPerf/InstructionMap.cs', 'tests/CozNet.LinuxPerf/CpuSample.cs',
     'tests/CozNet.LinuxPerf/ProbeCadence.cs', 'tests/CozNet.LinuxPerf/Program.cs',
@@ -41,6 +42,9 @@ $outcomes.Add(@{ case = 'cadence-checks'; exitCode = $LASTEXITCODE; recordExists
 & docker run --rm --pull never --network none --cap-drop ALL --read-only `
     --mount "type=bind,source=$workload,target=/work,readonly" $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --verify-signal-timing *> (Join-Path $run 'phase-timing.log')
 $outcomes.Add(@{ case = 'phase-timing'; exitCode = $LASTEXITCODE; recordExists = $true })
+& docker run --rm --pull never --network none --cap-drop ALL --read-only `
+    --mount "type=bind,source=$workload,target=/work,readonly" $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --verify-ring-reader *> (Join-Path $run 'ring-reader.log')
+$outcomes.Add(@{ case = 'ring-reader'; exitCode = $LASTEXITCODE; recordExists = $true })
 foreach ($case in $cases) {
     $percent = $case.percent
     $file = if ($Repetitions -eq 1) { "speedup-$percent.json" } else { "block-$($case.iteration)-speedup-$percent.json" }

@@ -37,13 +37,16 @@ static class SampledSignalWorkload
     private sealed record SampleRecord(CpuSample Sample, ulong Epoch, bool Accepted, long CreditNanoseconds,
         double ConsumedMilliseconds, string Stage, long ConsumedTimestamp);
     private sealed record PendingRecord(int Slot, ulong Sequence, long RequestedNanoseconds, long StartedTimestamp, string StartedStage);
+    private readonly record struct RuntimeCounters(string Stage, long StartedTimestamp, long FinishedTimestamp,
+        long ControllerAllocatedBytes, int Gen0Collections, int Gen1Collections, int Gen2Collections, long GcPauseTicks);
     private sealed record Boundary(string Stage, double Milliseconds, long GlobalNanoseconds, long CreditNanoseconds,
         long[] WaitNanoseconds, long[] DebtNanoseconds, bool[] Registered, int Pending, long[] Batches,
-        long Timestamp, PendingRecord[] PendingRequests);
+        long Timestamp, PendingRecord[] PendingRequests, RuntimeCounters RuntimeCounters);
     private readonly record struct ServiceInterval(long StartedTimestamp, long FinishedTimestamp, int SamplesBefore, int SamplesAfter);
     private sealed record DebtPeak(int Slot, Boundary Boundary, ServiceInterval Interval, ulong[] LastAcknowledgedSequences);
     private sealed record StageResult(Boundary Measurement, Boundary Settled, long ControllerCpuNanoseconds,
-        int SamplingPauses, long SelectedChecks, long[] MaxDebtNanoseconds, ServiceInterval? LongestServiceInterval, DebtPeak?[] PeakDebt);
+        int SamplingPauses, long SelectedChecks, long[] MaxDebtNanoseconds, ServiceInterval? LongestServiceInterval, DebtPeak?[] PeakDebt,
+        RuntimeCounters? RuntimeCountersStart);
     private sealed class Sink(Action<CpuSample> publish) : ICpuSampleSink
     {
         public void Publish(CpuSample sample) => publish(sample);
@@ -84,6 +87,7 @@ static class SampledSignalWorkload
         Boundary? measurement = null, settled = null, failureBoundary = null;
         StageResult? warmup = null;
         SampleBatch? measurementStartRecords = null;
+        RuntimeCounters? runtimeCountersStart = null;
         var timer = new Stopwatch();
         var cadence = new SelectedSignalCadence(plan.Cadence);
         long selectedChecks = 0;
@@ -94,6 +98,15 @@ static class SampledSignalWorkload
         state = peer.Item2;
         LedgerThread[] handles = [selected.Item1, peer.Item1];
         Guid stream = Parsed(SignalAccountingModule.sampleIdentity(handles[0], state));
+
+        RuntimeCounters ReadRuntimeCounters()
+        {
+            long started = Stopwatch.GetTimestamp();
+            long allocated = GC.GetAllocatedBytesForCurrentThread();
+            int gen0 = GC.CollectionCount(0), gen1 = GC.CollectionCount(1), gen2 = GC.CollectionCount(2);
+            long paused = GC.GetTotalPauseDuration().Ticks;
+            return new(stage, started, Stopwatch.GetTimestamp(), allocated, gen0, gen1, gen2, paused);
+        }
 
         Boundary Snapshot()
         {
@@ -108,7 +121,7 @@ static class SampledSignalWorkload
                     var operation = pending[slot]!;
                     return new PendingRecord(slot, operation.Sequence, SignalDelayRequestModule.nanoseconds(operation.Request),
                         operation.Started, operation.Stage);
-                }).ToArray());
+                }).ToArray(), ReadRuntimeCounters());
         }
         void Publish(CpuSample sample)
         {
@@ -197,6 +210,7 @@ static class SampledSignalWorkload
         Boundary RunStage(string name, int milliseconds)
         {
             stage = name;
+            runtimeCountersStart = ReadRuntimeCounters();
             measuring = name == "measurement";
             accept = runningStage = true;
             session!.Enable();
@@ -311,7 +325,7 @@ static class SampledSignalWorkload
                 var warmBoundary = RunStage("warmup", plan.WarmupMilliseconds);
                 var warmSettled = SettleStage("warmup-settlement");
                 warmup = new(warmBoundary, warmSettled, controllerCpu, pauses, selectedChecks, (long[])maxDebt.Clone(),
-                    longestServiceInterval, peakDebt);
+                    longestServiceInterval, peakDebt, runtimeCountersStart);
                 state = SignalAccountingModule.create();
                 selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(plan.Percent), state));
                 peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
@@ -377,6 +391,8 @@ static class SampledSignalWorkload
         {
             backend = backend?.Name, backendDetails = backend?.Describe(), percent = plan.Percent, selectedCadence = plan.Cadence.ToString(), selectedChecks,
             runtime = Environment.Version.ToString(),
+            runtimeCountersStart, runtimeSettings = new { serverGc = System.Runtime.GCSettings.IsServerGC,
+                latencyMode = System.Runtime.GCSettings.LatencyMode.ToString(), processorCount = Environment.ProcessorCount },
             warmupMilliseconds = plan.WarmupMilliseconds, warmup, measurement, settled, failureBoundary, measurementStartRecords,
             boundaries, maxDebtNanoseconds = maxDebt, debtBoundNanoseconds = 2000000,
             stopwatchFrequency = Stopwatch.Frequency, longestServiceInterval, peakDebt,

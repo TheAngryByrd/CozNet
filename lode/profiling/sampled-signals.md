@@ -15,6 +15,9 @@ The runner compares zero and 50 percent in separate isolated processes.
 Each process measures two arithmetic workers for two seconds.
 Only one worker supplies CPU samples.
 The controller continuously drains events and services both signal slots.
+The ring reader reuses an immutable counter snapshot when no new records are available.
+It still reads and validates the ring head on every drain. New sample, lost, or throttle records replace the snapshot.
+Empty drains perform no managed allocation after the first snapshot.
 It records raw samples, requests, acknowledgments, periodic boundaries, and controller CPU time.
 `continuous` preserves the original selected-thread check on each controller iteration.
 `qualified-sample` checks the selected thread once after a drained batch contains a complete interval in the current eligibility epoch.
@@ -45,6 +48,15 @@ The native phases separate time before the first handler clock observation, the 
 The first phase includes queue submission and scheduling. The last includes result publication and controller polling.
 Queue syscall duration can overlap handler execution. It is a separate diagnostic, not an additional phase to sum.
 The records do not equate native time with process `Stopwatch` timestamps or perf timestamps.
+
+Each phase records initial runtime counters before enabling samples.
+Periodic, peak-debt, measurement, settlement, and failure boundaries also record runtime counters.
+`ControllerAllocatedBytes` measures cumulative managed allocation on the controller thread. It excludes native allocation and worker allocation.
+Generation collection counts and `GcPauseTicks` are cumulative process values. Pause ticks use `TimeSpan` units of 100 ns.
+Each counter snapshot has a `Stopwatch` interval because its fields are read sequentially, not atomically.
+Warmup and measurement retain separate starting counters. Counter windows include sample enablement and boundary diagnostics.
+The output records server-GC mode, latency mode, and available processor count after teardown.
+Counter changes can show GC activity between observations. They cannot assign a GC pause to a specific signal request.
 
 Before a selected-thread request, the controller disables sampling and discards records that remain after reservation.
 It resumes sampling only after the matching acknowledgment.

@@ -4,6 +4,12 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-ring-reader"])
+{
+    RingReaderChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-signal-timing"])
 {
     SignalPhaseTimingChecks.Run();
@@ -243,6 +249,7 @@ static class CpuWorkload
 sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid,
     IInstructionMap codeMap, string selectedSymbol, ICpuSampleSink sink)
 {
+    private SampleBatch? snapshot;
     private ulong tail = (ulong)Marshal.ReadInt64(mapping, 1032);
     private ulong priorTime;
     private int samples = 0, lostRecords = 0, throttles = 0;
@@ -263,6 +270,8 @@ sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid,
         ulong head = (ulong)Marshal.ReadInt64(mapping, 1024);
         Thread.MemoryBarrier();
         if (head < tail || head - tail > size) throw new Exception("Ring bounds are invalid.");
+        if (head == tail && snapshot is not null) return snapshot;
+        snapshot = null;
         while (tail < head)
         {
             if (head - tail < 8) throw new Exception("Truncated record header.");
@@ -300,8 +309,9 @@ sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid,
         }
         Thread.MemoryBarrier();
         Marshal.WriteInt64(mapping, 1032, (long)tail);
-        return new SampleBatch(samples, ips.Count, periods, lostRecords, lostSamples, throttles,
-            selected, unmapped, selectedSymbols.Order().ToArray());
+        snapshot = new SampleBatch(samples, ips.Count, periods, lostRecords, lostSamples, throttles,
+            selected, unmapped, Array.AsReadOnly(selectedSymbols.Order().ToArray()));
+        return snapshot;
     }
 }
 

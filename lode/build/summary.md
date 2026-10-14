@@ -54,6 +54,7 @@ Its observed debt limit is 2 ms per thread in a two-second window. Capacity fail
 `LinuxSampleCadenceVerify` checks selected debt after qualified samples while continuing peer service.
 `LinuxWarmSampleCadenceVerify` adds 250 ms of warmup and resets accounting before the measurement window.
 Both targets also execute the five portable cadence checks in the Linux workload.
+The sampled runner also executes six synthetic-ring checks, including the empty-drain allocation check.
 `LinuxInjectedVerify` builds the native profiler and compares manual and injected probes with the same wait backend.
 It retains unique evidence directories under `artifacts/linux-injected/` and reports the zero-speedup cost ratio.
 `LinuxCountdownVerify` uses the same native build and Linux workload chain.

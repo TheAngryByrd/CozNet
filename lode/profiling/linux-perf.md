@@ -7,6 +7,10 @@ This clock includes user and kernel execution. Ticks in kernel mode produce no s
 The ring records contain user instruction pointers, process/thread IDs, timestamps, and sample periods.
 The reader checks record bounds, CPU mode, IDs, timestamp order, lost records, and throttling.
 It supports records that cross the ring boundary and applies the documented memory barriers.
+The reader reuses its immutable `SampleBatch` snapshot when the validated ring head has not advanced.
+New records invalidate that snapshot before decoding. Lost and throttle records also update it.
+The selected-symbol collection rejects caller mutation. Earlier snapshots retain their counters after later drains.
+Six synthetic-ring checks run on Windows and Linux, including zero managed allocation across 10,000 warmed empty drains.
 `IInstructionMap` separates address resolution from Linux record decoding.
 `PerfMapSnapshot` reads the runtime perf map after workload warmup and before sampling starts.
 The snapshot rejects incomplete entries and ambiguous address matches.

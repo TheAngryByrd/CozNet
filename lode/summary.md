@@ -33,6 +33,7 @@ The native phase comparison passes two of three 50-percent capacity cases and al
 Wait overshoot and service stability remain unresolved.
 The [service timing records](../reliability/features/native-signal/service-timing.md) expose long pending requests that perform no native wait.
 The [native phase records](../reliability/features/native-signal/phase-timing.md) place most of one long request before the first handler clock reading.
+The [allocation comparison](../reliability/features/native-signal/gc-and-ring-cache.md) removes empty-drain allocation but still exposes gigabytes of controller allocation and a capacity failure.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).
