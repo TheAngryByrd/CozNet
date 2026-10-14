@@ -45,6 +45,12 @@ type internal SignalAccounting = private {
     Services: Map<LedgerThread, PendingService>
 }
 
+type internal SignalServiceProgress = {
+    Count: int64
+    LastSequence: uint64
+    MeasuredNanoseconds: int64
+}
+
 [<RequireQualifiedAccess>]
 module internal SignalAccounting =
     let create () = {
@@ -320,6 +326,18 @@ module internal SignalAccounting =
     let confirmedServiceNanoseconds lease state =
         findService lease state
         |> Result.map (fun service -> service.Measured)
+
+    let serviceProgress lease state =
+        findService lease state
+        |> Result.map (fun service -> {
+            Count = service.Count
+            LastSequence =
+                if service.Count = 0L then
+                    0UL
+                else
+                    state.Threads[SignalServiceLease.thread lease].LastNativeSequence
+            MeasuredNanoseconds = service.Measured
+        })
 
     let acceptServiceChild lease child state =
         findService lease state

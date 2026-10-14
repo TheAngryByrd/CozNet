@@ -5,7 +5,8 @@
 `NativeServiceClient.cs` consumes it through source-generated `LibraryImport` calls.
 The [retained runs](../../reliability/features/native-signal/service-interop/README.md) pass native ABI and controlled managed receipt checks on Linux x64.
 The receipt parser also passes on Windows.
-The sampled workload and ledger adapter do not use this path yet.
+The [ledger adapter](service-accounting-adapter.md) passes pure checks and controlled live journal checks.
+The sampled workload does not use this path yet.
 
 ## Memory and controller ownership
 

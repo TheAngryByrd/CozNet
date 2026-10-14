@@ -1,0 +1,55 @@
+{
+  "expectedReceiptRejection": false,
+  "receiptRejected": false,
+  "joined": true,
+  "closed": true,
+  "failure": null,
+  "observation": {
+    "Header": {
+      "IdentityFirst": 5349497516994854047,
+      "IdentitySecond": 7259522937588064431,
+      "Command": 1,
+      "Budget": 110000,
+      "Measured": 0,
+      "Phase": 2,
+      "Error": 0,
+      "TransportError": 0,
+      "Cancellation": 0,
+      "Outstanding": 0,
+      "Children": 1,
+      "Rejected": 0,
+      "Captured": 339348400676618
+    },
+    "Children": [
+      {
+        "Native": {
+          "Ordinal": 1,
+          "Requested": 50000,
+          "Acknowledgment": {
+            "Sequence": 1,
+            "Outcome": 1,
+            "Ip": 140680381603185,
+            "Handler": 371,
+            "Wait": 0,
+            "WaitResult": 0,
+            "Started": 339348399656690,
+            "Queued": 339348399682088,
+            "HandlerStarted": 339348399702089,
+            "HandlerFinished": 339348399702460,
+            "Observed": 339348399702712
+          }
+        },
+        "FirstSnapshotCaptured": 339348400676618,
+        "FirstManagedReceiptUpper": 339348400733432,
+        "ClockStatus": 0
+      }
+    ],
+    "Rejected": []
+  },
+  "accountingRejected": false,
+  "accountingSettled": true,
+  "accountingPending": 0,
+  "managedReceiptBoundNanoseconds": 100000000,
+  "generalClrSafetyEstablished": false,
+  "predictionAccuracyEstablished": false
+}

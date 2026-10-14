@@ -66,6 +66,7 @@ static unsafe partial class ServiceNativeMethods
 sealed class NativeServiceClient
 {
     private readonly ServiceSessionHandle session;
+    private readonly ulong begin, size;
     private readonly ServiceNativeChild[] children;
     private readonly ServiceNativeAcknowledgment[] rejected;
     private readonly List<ReceivedServiceChild>[] received = [[], []];
@@ -83,12 +84,22 @@ sealed class NativeServiceClient
         children = new ServiceNativeChild[capacity];
         rejected = new ServiceNativeAcknowledgment[capacity];
         Check(ServiceNativeMethods.Open(begin, size, mode.NativeValue, (ulong)capacity, out session), "open");
+        this.begin = begin;
+        this.size = size;
     }
 
     public void RegisterCurrentThread(int slot) => Check(ServiceNativeMethods.Register(session, slot), "register");
     public void RetireCurrentThread(int slot) => Check(ServiceNativeMethods.Retire(session, slot), "retire");
 
-    private static (ulong First, ulong Second) Parts(Guid identity)
+    public bool IsEligibleAddress(ulong address) => address >= begin && address - begin < size;
+    public bool IsValidOutcome(ulong outcome, long result) => outcome switch
+    {
+        1 or 2 => result == 0,
+        3 => result == -4,
+        _ => false
+    };
+
+    internal static (ulong First, ulong Second) Parts(Guid identity)
     {
         if (identity == Guid.Empty) throw new ArgumentException("The service identity is empty.");
         Span<byte> bytes = stackalloc byte[16];

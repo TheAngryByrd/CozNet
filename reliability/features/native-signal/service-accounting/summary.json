@@ -1,0 +1,35 @@
+{
+  "predictionAccuracyEstablished": false,
+  "generalClrSafetyEstablished": false,
+  "sampledCapacityEstablished": false,
+  "binariesUnchanged": true,
+  "outcomes": [
+    {
+      "exitCode": 0,
+      "name": "native",
+      "recordExists": true
+    },
+    {
+      "exitCode": 0,
+      "name": "receipt-parser",
+      "recordExists": true
+    },
+    {
+      "exitCode": 0,
+      "name": "accounting-adapter",
+      "recordExists": true
+    },
+    {
+      "exitCode": 0,
+      "name": "receipt",
+      "recordExists": true
+    },
+    {
+      "exitCode": 0,
+      "name": "late",
+      "recordExists": true
+    }
+  ],
+  "sourcesUnchanged": true,
+  "passed": true
+}

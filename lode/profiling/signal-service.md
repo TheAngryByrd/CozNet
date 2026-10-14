@@ -5,7 +5,8 @@
 The [native service owner](native-service-owner.md) has portable fake-transport checks.
 Its [Linux transport](linux-service-transport.md) passes controlled native delivery and lifetime checks.
 Its [C ABI and managed client](service-interop.md) pass controlled receipt and lifetime checks.
-Its ledger and sampled workload adapters are not implemented.
+Its [ledger adapter](service-accounting-adapter.md) passes pure and controlled live journal checks.
+Its sampled workload integration is not implemented.
 The current sampled workload still uses individual requests.
 
 ## Reservation and submission
@@ -54,6 +55,8 @@ A deferred or interrupted child terminates the journal.
 A measured child terminates it when the cumulative wait reaches the original debt snapshot.
 A terminal journal cannot accept another child.
 `confirmedServiceNanoseconds` reports only the accepted prefix for debt diagnostics.
+`serviceProgress` returns the accepted count, final native sequence, and measured wait together.
+The adapter uses all three fields to reject stale accounting states, including zero-wait prefixes.
 
 ```mermaid
 stateDiagram-v2

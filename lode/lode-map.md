@@ -16,6 +16,7 @@ For finite peer lease ownership and journal parsing, read [service accounting](p
 For the portable native coordinator and shutdown contract, read [native service ownership](profiling/native-service-owner.md).
 For the Linux signal adapter and target lifetime, read [Linux service transport](profiling/linux-service-transport.md).
 For the C ABI and first managed receipt bounds, read [service interop](profiling/service-interop.md).
+For native journal settlement in the managed ledger, read [the service accounting adapter](profiling/service-accounting-adapter.md).
 For the live sampled signal controller and capacity limit, read [sampled signals](profiling/sampled-signals.md).
 For request timing and peak-debt evidence, read [service timing](../reliability/features/native-signal/service-timing.md).
 For native queue, handler, and observation phases, read [native phase timing](../reliability/features/native-signal/phase-timing.md).

@@ -471,6 +471,17 @@ let linuxSignalServiceVerify _ =
 let linuxServiceInteropVerify _ =
     nativeScript "VerifyServiceInterop.ps1"
 
+let serviceAccountingVerify _ =
+    CreateProcess.fromRawCommand "dotnet" [
+        rootDirectory
+        </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
+        "--verify-service-accounting"
+    ]
+    |> Proc.run
+    |> fun result ->
+        if result.ExitCode <> 0 then
+            failwith "Service accounting checks failed."
+
 let nativeWorkload _ =
     DotNet.build
         (fun options -> {
@@ -909,6 +920,7 @@ let initTargets () =
     Target.create "LinuxServiceOwnerVerify" (serviceOwnerVerify "LinuxContainer")
     Target.create "LinuxSignalServiceVerify" linuxSignalServiceVerify
     Target.create "LinuxServiceInteropVerify" linuxServiceInteropVerify
+    Target.create "ServiceAccountingVerify" serviceAccountingVerify
     Target.create "NativeWorkload" nativeWorkload
     Target.create "NativeVerify" nativeVerify
     Target.create "NativeMapWorkload" nativeMapWorkload
@@ -977,6 +989,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxServiceInteropVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "ServiceAccountingVerify"
     |> ignore
 
     "LinuxPerfWorkload"

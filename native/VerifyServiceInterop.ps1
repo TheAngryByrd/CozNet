@@ -16,6 +16,7 @@ $sources = @('native/service/ServiceApi.h', 'native/service/ServiceApi.Linux.cpp
     'native/service/SignalTransport.Linux.h', 'native/service/CMakeLists.txt', 'native/signal/Signal.LinuxX64.cpp',
     'tests/CozNet.LinuxPerf/NativeServiceClient.cs', 'tests/CozNet.LinuxPerf/ServiceReceiptTiming.cs',
     'tests/CozNet.LinuxPerf/ServiceReceiptTimingChecks.cs', 'tests/CozNet.LinuxPerf/ServiceInteropChecks.cs',
+    'tests/CozNet.LinuxPerf/ServiceAccountingAdapter.cs', 'tests/CozNet.LinuxPerf/ServiceAccountingAdapterChecks.cs',
     'tests/CozNet.LinuxPerf/Program.cs', 'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/VerifyServiceInterop.ps1')
 $hashes = @{}
 foreach ($source in $sources) { $hashes[$source] = (Get-FileHash -LiteralPath (Join-Path $root $source) -Algorithm SHA256).Hash }
@@ -43,6 +44,8 @@ $runtime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop'
     '--mount', "type=bind,source=$run,target=/output", $runtimeImage, 'timeout', '-k', '2s', '30s', 'dotnet', '/work/CozNet.LinuxPerf.dll')
 & docker @runtime --verify-service-receipt *> (Join-Path $run 'receipt-parser.log')
 $outcomes.Add(@{ name = 'receipt-parser'; exitCode = $LASTEXITCODE; recordExists = $true })
+& docker @runtime --verify-service-accounting *> (Join-Path $run 'accounting-adapter.log')
+$outcomes.Add(@{ name = 'accounting-adapter'; exitCode = $LASTEXITCODE; recordExists = $true })
 foreach ($mode in @('receipt', 'late')) {
     & docker @runtime --verify-service-interop "/output/$mode.json" $mode *> (Join-Path $run "$mode.log")
     $outcomes.Add(@{ name = $mode; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "$mode.json") })

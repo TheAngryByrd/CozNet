@@ -4,6 +4,12 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-service-accounting"])
+{
+    ServiceAccountingAdapterChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-service-interop", var servicePath, var receiptMode])
 {
     bool delayed = receiptMode switch
