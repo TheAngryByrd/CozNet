@@ -20,6 +20,7 @@
         <Compile Include="DelayLedgerTests.fs" />
         <Compile Include="CooperativeRuntimeTests.fs" />
         <Compile Include="SampleCreditTests.fs" />
+        <Compile Include="SignalAccountingTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>

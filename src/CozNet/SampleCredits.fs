@@ -26,6 +26,8 @@ type internal CpuSampleObservation = private {
 
 [<RequireQualifiedAccess>]
 module internal CpuSampleObservation =
+    let eligibilityEpoch sample = sample.EligibilityEpoch
+
     let tryCreate stream sequence cpuNanoseconds eligibilityEpoch state location =
         if sequence = 0UL then
             Error "Sample sequence numbers must start at one."

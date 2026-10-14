@@ -25,6 +25,8 @@ See [the retained comparison](../reliability/features/linux-perf/attribution-sen
 The [component comparison](../reliability/features/linux-perf/component-overhead.md) identifies injected probes as the largest measured overhead stage in the tiny loop.
 A separate [signal experiment](profiling/signal-intervention.md) passes bounded arithmetic and forced-GC cases on Linux x64.
 General CLR safety and sampled signal-driven prediction remain unverified.
+An internal [signal accounting model](profiling/signal-accounting.md) connects sample credit to bounded requests and matched acknowledgments.
+Its deterministic replay checks cover debt settlement and sampling epochs. The live sampler and signal controller are not yet connected through it.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).
