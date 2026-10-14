@@ -67,9 +67,15 @@ static class SampledSignalWorkload
     public static int Run(string path, SampledSignalPlan plan,
         Func<IBoundedInterventionBackend> backendFactory,
         Func<ICpuSampleSink, ICpuEventSession> sessionFactory, IThreadCpuClock controllerClock,
-        SampledSignalTrace? trace = null, bool captureTargetCpu = false)
+        SampledSignalTrace? trace = null, bool captureTargetCpu = false,
+        Func<ISchedulerEventSession>? schedulerFactory = null)
     {
         var failures = new List<string>();
+        var schedulerGate = new object();
+        bool schedulerAccepting = true;
+        bool schedulerStopped = true;
+        var schedulerSessions = new ISchedulerEventSession?[3];
+        var schedulerCaptures = new SchedulerCapture?[3];
         var requests = new List<RequestRecord>();
         var samples = new List<SampleRecord>();
         var boundaries = new List<Boundary>();
@@ -85,7 +91,7 @@ static class SampledSignalWorkload
         using var ready = new CountdownEvent(2);
         using var start = new ManualResetEventSlim();
         using var stop = new ManualResetEventSlim();
-        using var deliveryStopped = new ManualResetEventSlim();
+        var deliveryStopped = new ManualResetEventSlim();
         IBoundedInterventionBackend? backend = null;
         ICpuEventSession? session = null;
         Thread[] workers = [];
@@ -338,6 +344,7 @@ static class SampledSignalWorkload
                 throw new InvalidOperationException("Sampled signals require disabled tiering, ReadyToRun, and startup profiling.");
             if (CpuWorkload.Run() != 49995000L) throw new InvalidOperationException("The sampled signal warmup checksum differs.");
             backend = backendFactory();
+            if (schedulerFactory is not null) schedulerSessions[0] = schedulerFactory();
             if (captureTargetCpu && backend is not ITargetCpuObservationBackend)
                 throw new PlatformNotSupportedException("The intervention backend does not support target CPU observations.");
             workers = Enumerable.Range(0, 2).Select(slot => new Thread(() =>
@@ -345,6 +352,14 @@ static class SampledSignalWorkload
                 bool announced = false;
                 SignalTargetLifetime.Run(backend, slot, deliveryStopped, () => !nativeOutstanding.Any(value => value), () =>
                 {
+                    if (schedulerFactory is not null)
+                    {
+                        lock (schedulerGate)
+                        {
+                            if (!schedulerAccepting) throw new InvalidOperationException("Scheduler registration has stopped.");
+                            schedulerSessions[slot + 1] = schedulerFactory();
+                        }
+                    }
                     if (slot == 0) session = sessionFactory(new Sink(Publish));
                     announced = true;
                     ready.Signal();
@@ -415,11 +430,32 @@ static class SampledSignalWorkload
                 try { session.Dispose(); }
                 catch (Exception error) { failures.Add(error.ToString()); }
             }
-            deliveryStopped.Set();
+            lock (schedulerGate)
+            {
+                schedulerAccepting = false;
+                for (int index = 0; index < schedulerSessions.Length; index++)
+                {
+                    var scheduler = schedulerSessions[index];
+                    if (scheduler is null) continue;
+                    try
+                    {
+                        schedulerCaptures[index] = scheduler.Finish();
+                        failures.AddRange(schedulerCaptures[index]!.Failures);
+                        scheduler.Dispose();
+                    }
+                    catch (Exception error)
+                    {
+                        schedulerStopped = false;
+                        failures.Add(error.ToString());
+                    }
+                }
+            }
+            if (schedulerStopped) deliveryStopped.Set();
             stop.Set();
             start.Set();
             joined = true;
             foreach (var worker in workers) if (!worker.Join(TimeSpan.FromSeconds(1))) joined = false;
+            if (joined) deliveryStopped.Dispose();
             if (gcStress is not null)
             {
                 gcJoined = gcStress.StopAndJoin(TimeSpan.FromSeconds(1));
@@ -474,6 +510,9 @@ static class SampledSignalWorkload
             traceAbort = trace?.AbortBoundary,
             controllerCpuTiming = trace is not null,
             targetCpuTiming = captureTargetCpu,
+            schedulerTiming = schedulerFactory is not null,
+            schedulerStopped,
+            schedulerCaptures,
             controllerCpuNanoseconds = controllerCpu, samplingPauses = pauses, records, samples, requests,
             failures, capacityViolations, joined, restored, protocolPassed, capacityPassed, passed = protocolPassed && capacityPassed,
             forcedGc = plan.ForceGc, gcObservations, gcJoined, measurementStartedTimestamp, gcCallBoundMilliseconds = 250,

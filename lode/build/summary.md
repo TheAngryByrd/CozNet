@@ -49,6 +49,13 @@ The basic and sampled suites both run even when one fails. Their outcomes remain
 `LinuxSpinReliabilityVerify` runs spin transition cases and three sampled blocks with and without forced GC.
 It preserves both suite outcomes and continues to sampled cases after a transition failure.
 `LinuxRuntimeTraceCollect` uses the signal build chain and collects three seeded diagnostic blocks.
+`LinuxSchedulerVerify` runs portable record-decoder and capture-shutdown fixtures in Linux.
+`LinuxSchedulerCollect` retains four sampled workload cases with optional controller and target switch records.
+Scheduler runners retain every outcome, verify source and executable snapshot hashes, and run the snapshot's analyzer.
+Any failed child, missing record, changed snapshot, or analyzer failure fails the target after evidence is written.
+`LinuxSchedulerCost` measures eight fixed-work enabled/disabled pairs without signals or forced GC.
+The scheduler targets use `LinuxSignalWorkload` and keep evidence under `artifacts/`.
+See [scheduler contracts](../profiling/scheduler-records.md) for interpretation limits.
 Each block contains zero and 50 percent with and without forced GC. Every case uses spin and bracketed EventPipe markers.
 It retains every child exit code, trace, workload record, collection command, and source/binary snapshot.
 Failed workloads fail the target after all cases finish. Correlation runs separately and has its own validity result.

@@ -4,6 +4,34 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-scheduler-cost-startup", var schedulerCostCheckPath])
+{
+    SchedulerCostWorkloadChecks.FailedStartsRetainEvidence(schedulerCostCheckPath);
+    return 0;
+}
+
+if (args is ["--scheduler-cost", var schedulerCostPath, var schedulerCostMode])
+    return SchedulerCostWorkload.Run(schedulerCostPath, schedulerCostMode);
+
+if (args is ["--verify-scheduler-records"])
+{
+    SchedulerRecordChecks.Run();
+    return 0;
+}
+
+if (args is ["--verify-scheduler-shutdown", var schedulerCheckPath, var schedulerCheckMode])
+    return SampledSignalAbortChecks.SchedulerShutdown(schedulerCheckPath, schedulerCheckMode);
+
+if (args is ["--sampled-signal-scheduler", var schedulerPath, var schedulerPercent, var schedulerCadence,
+    var schedulerStartup, var schedulerWait, var schedulerGc])
+{
+    var wait = SignalWaitMode.Parse(schedulerWait);
+    var plan = SampledSignalPlan.Parse(schedulerPercent, schedulerCadence, schedulerStartup, schedulerGc);
+    return SampledSignalWorkload.Run(schedulerPath, plan, () => new LinuxSignalBackend(wait),
+        sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(),
+        schedulerFactory: () => new LinuxSchedulerEventSession());
+}
+
 if (args is ["--verify-signal-trace-abort", var abortPath, var abortStartup])
     return SampledSignalAbortChecks.Run(abortPath, abortStartup);
 
