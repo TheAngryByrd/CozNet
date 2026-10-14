@@ -1,5 +1,10 @@
 # Managed timer payment workload
 
+`TimerManagedWorkload` accepts a parsed initial timer interval without changing its scenario plan.
+`LinuxFastTimerTransitions` selects 10 µs for the same eight scenarios and retains the interval in each record and the manifest.
+The [short-interval matrix](../../reliability/features/native-signal/timer-fast-transitions.md) passes all eight cases with unchanged bounds.
+Transition cases record 56 selected payments without GC and 57 with GC. Every forced-GC case reaches a complete collection inside a command.
+
 `TimerManagedWorkload` connects the timer C ABI and accounting adapter to the selected `CpuWorkload.Run` native code range.
 It requires Linux x64, disabled tiering and ReadyToRun, no startup profiler, and a unique optimized perf-map entry.
 The workload preserves the exact initial and final perf-map bytes and requires the selected range to remain unchanged.

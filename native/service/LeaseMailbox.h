@@ -45,6 +45,11 @@ public:
         Reader& operator=(Reader&&) = delete;
         ~Reader() { if (owner_) owner_->state_.fetch_sub(reader_unit, std::memory_order_release); }
         uint32_t generation() const noexcept { return generation_; }
+        bool quiescent() const noexcept {
+            if (!owner_) return false;
+            const auto current = owner_->state_.load(std::memory_order_acquire);
+            return generationOf(current) == generation_ && phaseOf(current) == LeaseMailboxPhase::quiescent;
+        }
     private:
         friend class LeaseMailbox;
         Reader(LeaseMailbox* owner, uint32_t generation) noexcept : owner_(owner), generation_(generation) {}

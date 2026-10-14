@@ -15,11 +15,19 @@ The session permits one controller and up to 64 registered targets.
 Each target owns registration and retirement. The controller owns submit, cancel, snapshot, release, clock, and close.
 One process can open only one session, including after close.
 The backend reserves `SIGRTMIN + 7` with a prior default disposition.
+`coz_timer_configure_initial_interval` accepts 10,000 or 1,000,000 ns before any target has registered.
+The default remains 1,000,000 ns. Registration permanently seals the interval for that session.
+The managed boundary consumes a parsed `TimerInitialInterval`. Unsupported text never reaches native configuration.
 
 The child ABI size is 72 bytes, with `valid` at offset 64.
 The snapshot size is 96 bytes, with `backend_error` at offset 88.
 Statuses are positive Linux errno values. `ENOBUFS` returns a header without child copying or release authorization.
+The insufficient-buffer header includes a nonzero capture timestamp taken after the core snapshot.
+This lets controller probes compare unchanged headers without treating an absent timestamp as clock regression.
 Release requires a complete retired snapshot with no possible delivery.
+`captureTimerJournal` also requires the mailbox reader to observe quiescence before exposing retired visibility.
+Core retirement published before mailbox quiescence remains visible as quiesced, so a full copy cannot authorize early reuse.
+The portable snapshot checks hold that exact intermediate state and reject generation-mismatched readers.
 
 The signal handler acquires the announced generation before reading timer registration metadata.
 Generation zero returns before those metadata reads.

@@ -1,5 +1,17 @@
 # MiniScaffold build
 
+`LinuxSampledTimer` uses `LinuxPerfWorkload` and `VerifyTimerInterop.ps1 -SampledTimer`.
+It retains cold zero and 50-percent CPU-sampled timer cases under `artifacts/timer-sampled/`.
+The sampled containers permit perf syscalls with `seccomp=unconfined`.
+`LinuxSampledTimerPhases` adds `-ControllerPhases` to capture bounded startup phase intervals.
+`LinuxInitializedTimer` also adds `-InitializeManagedPaths` and retains synthetic preparation separately from live measurements.
+`LinuxPreparedTimer` adds `-InitializeNativeTransport` and requires dedicated setup slot 2 to retire and release before measurement.
+`LinuxFastTimer` adds `-ShortInitialInterval` and requests 10 µs initial delivery with the same bounds and setup path.
+`LinuxFastTimerCapacity` uses the same preparation and 10 µs interval without controller phase capture.
+`LinuxFastTimerTransitions` runs all eight runtime-transition cases with 10 µs initial delivery and the existing reach and timing checks.
+`LinuxFastTimerGc` runs prepared, phase-free sampled zero and 50-percent cases with forced GC, measurement reach, worker join, and 250 ms collection-call checks.
+See [the procedure](../../docsSrc/How_Tos/run-sampled-timer.md).
+
 `LinuxTimerApi` checks the target-local timer C ABI in deferred and chained-wait modes.
 `TimerLayoutVerify` checks managed ABI sizes and offsets on the host without loading the Linux library.
 `LinuxTimerInterop` checks first managed receipt preservation, late receipt rejection, and wrong-thread clock rejection on Linux x64.
@@ -33,6 +45,9 @@ It retains each run under `artifacts/service-interop/` and uses a 30-second proc
 `LinuxServiceInteropVerify` also runs the `ServiceAccountingVerify` checks in Linux and verifies live journal settlement or rejection.
 
 `build/build.fs` owns the FAKE target graph. Its baseline is MiniScaffold's `v0.40.0-beta001` library template.
+`LinuxFastTimerScheduler` adds controller and target scheduler capture to the sampled timer forced-GC comparison.
+It retains all outcomes under `artifacts/timer-sampled/` and fails after writing evidence when any case fails.
+`LinuxTimerSchedulerCost` uses the same runner for eight seeded pairs at zero percent with capture enabled or disabled.
 The [release package](https://github.com/TheAngryByrd/MiniScaffold/releases/tag/v0.40.0-beta001) matches commit `bb58c5acb91c6bc34648ec8829d7866ffaa049e2` for these build files.
 The release still contains `SourceLinkTest`. CozNet removes that target and its CLI helper at the user's request.
 `build/Changelog.fs` supplies release-note handling. `build/FsDocs.fs` supplies documentation commands.

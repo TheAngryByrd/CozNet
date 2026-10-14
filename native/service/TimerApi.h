@@ -23,6 +23,7 @@ typedef struct {
     int64_t backend_error;
 } CozTimerSnapshot;
 COZ_TIMER_EXPORT int32_t coz_timer_open(uint64_t begin, uint64_t size, uint32_t targets, uint32_t capacity, CozTimerSession** session);
+COZ_TIMER_EXPORT int32_t coz_timer_configure_initial_interval(CozTimerSession* session, uint64_t nanoseconds);
 COZ_TIMER_EXPORT int32_t coz_timer_register(CozTimerSession* session, uint32_t slot);
 COZ_TIMER_EXPORT int32_t coz_timer_retire(CozTimerSession* session, uint32_t slot);
 COZ_TIMER_EXPORT int32_t coz_timer_submit(CozTimerSession* session, uint32_t slot, uint64_t command, uint64_t budget, uint64_t* generation);

@@ -1,9 +1,18 @@
-param([string]$EvidenceDirectory, [switch]$ManagedWorkload, [switch]$ForceGc, [switch]$TransitionMatrix)
+param([string]$EvidenceDirectory, [switch]$ManagedWorkload, [switch]$ForceGc, [switch]$TransitionMatrix, [switch]$SampledTimer, [switch]$ControllerPhases, [switch]$InitializeManagedPaths, [switch]$InitializeNativeTransport, [switch]$ShortInitialInterval, [switch]$SampledGc, [switch]$SchedulerCapture, [switch]$SchedulerCost)
 $ErrorActionPreference = 'Stop'
+if ($SchedulerCost -and (-not $SampledTimer -or -not $SampledGc -or $SchedulerCapture)) { throw 'SchedulerCost requires sampled GC capacity mode without SchedulerCapture.' }
+if ($SchedulerCapture -and (-not $SampledTimer -or -not $SampledGc)) { throw 'SchedulerCapture requires SampledTimer and SampledGc.' }
+if ($SampledGc -and (-not $InitializeNativeTransport -or $ControllerPhases -or -not $ShortInitialInterval)) { throw 'SampledGc requires prepared short-interval capacity mode.' }
+if ($ControllerPhases -and -not $SampledTimer) { throw 'ControllerPhases requires SampledTimer.' }
+if ($InitializeManagedPaths -and (-not $SampledTimer -or (-not $ControllerPhases -and -not $InitializeNativeTransport))) { throw 'InitializeManagedPaths requires SampledTimer and either ControllerPhases or InitializeNativeTransport.' }
+if ($InitializeNativeTransport -and -not $ControllerPhases -and -not $ShortInitialInterval) { throw 'Capacity mode currently requires ShortInitialInterval.' }
+if ($InitializeNativeTransport -and -not $InitializeManagedPaths) { throw 'InitializeNativeTransport requires InitializeManagedPaths.' }
+if ($ShortInitialInterval -and -not ($InitializeNativeTransport -or $TransitionMatrix)) { throw 'ShortInitialInterval requires InitializeNativeTransport or TransitionMatrix.' }
+if ($SampledTimer -and ($ManagedWorkload -or $ForceGc -or $TransitionMatrix)) { throw 'SampledTimer requires its own run.' }
 if ($TransitionMatrix -and ($ManagedWorkload -or $ForceGc)) { throw 'TransitionMatrix cannot combine with ManagedWorkload or ForceGc.' }
 if ($ForceGc -and -not $ManagedWorkload) { throw 'ForceGc requires ManagedWorkload.' }
 if (-not $EvidenceDirectory) {
-    $directoryName = if ($TransitionMatrix) { 'timer-transitions' } elseif ($ForceGc) { 'timer-managed-gc' } elseif ($ManagedWorkload) { 'timer-managed' } else { 'timer-interop' }
+    $directoryName = if ($SampledTimer) { 'timer-sampled' } elseif ($TransitionMatrix) { 'timer-transitions' } elseif ($ForceGc) { 'timer-managed-gc' } elseif ($ManagedWorkload) { 'timer-managed' } else { 'timer-interop' }
     $EvidenceDirectory = Join-Path $PSScriptRoot "../artifacts/$directoryName"
 }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -32,7 +41,20 @@ $sources = @('native/service/TimerApi.h', 'native/service/TimerApi.Linux.cpp', '
     'tests/CozNet.LinuxPerf/TargetLeaseReceipts.cs', 'tests/CozNet.LinuxPerf/TargetLeaseReceiptsChecks.cs',
     'tests/CozNet.LinuxPerf/ServiceReceiptTiming.cs', 'tests/CozNet.LinuxPerf/Program.cs',
     'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/VerifyTimerInterop.ps1', 'build/build.fs')
+$sources += @('tests/CozNet.LinuxPerf/SchedulerEventSession.cs', 'tests/CozNet.LinuxPerf/LinuxSchedulerEventSession.cs', 'tests/CozNet.LinuxPerf/SchedulerRecordParser.cs')
+$sources += @('tests/CozNet.LinuxPerf/TimerSchedulerCaptureGroup.cs', 'tests/CozNet.LinuxPerf/TimerSchedulerCaptureGroupChecks.cs')
+$sources += 'tests/CozNet.LinuxPerf/TimerDebtLimit.cs'
+$sources += @('tests/CozNet.LinuxPerf/TimerSessionCleanup.cs', 'tests/CozNet.LinuxPerf/TimerSessionCleanupChecks.cs')
 $hashes = @{}
+$sources += 'native/service/TimerJournalSnapshot.h'
+$sources += @('tests/CozNet.LinuxPerf/ITimerTransport.cs', 'tests/CozNet.LinuxPerf/TimerServiceController.cs',
+    'tests/CozNet.LinuxPerf/TimerServiceControllerChecks.cs', 'tests/CozNet.LinuxPerf/SampledTimerWorkload.cs',
+    'tests/CozNet.LinuxPerf/LinuxCpuEventSession.cs', 'tests/CozNet.LinuxPerf/CpuSample.cs',
+    'tests/CozNet.LinuxPerf/SelectedSignalCadence.cs', 'tests/CozNet.LinuxPerf/ControllerPhaseCapture.cs',
+    'tests/CozNet.LinuxPerf/ControllerCpuSnapshot.cs', 'tests/CozNet.LinuxPerf/TimerPathPreparation.cs',
+    'tests/CozNet.LinuxPerf/ServicePathPreparation.cs', 'tests/CozNet.LinuxPerf/TimerTransportPreparation.cs',
+    'tests/CozNet.LinuxPerf/ControllerPhaseCaptureChecks.cs', 'tests/CozNet.LinuxPerf/TimerInitialInterval.cs',
+    'tests/CozNet.LinuxPerf/TimerInitialIntervalChecks.cs')
 if ($TransitionMatrix) {
     $sources += @('tests/CozNet.LinuxPerf/SignalTransitionWorkload.cs', 'tests/CozNet.LinuxPerf/SignalTransitionOperations.cs',
         'native/signal/CMakeLists.txt', 'native/signal/Workload.LinuxX64.cpp')
@@ -55,7 +77,9 @@ foreach ($path in $binaryPaths) { $binaries[[IO.Path]::GetFileName($path)] = (Ge
     managedWorkload = [bool]$ManagedWorkload; forceGc = [bool]$ForceGc; gcCallBoundMilliseconds = 250;
     transitionMatrix = [bool]$TransitionMatrix;
     fixedCreditSteps = $(if ($TransitionMatrix) { 128 } else { 16 }); requestedChildBoundNanoseconds = 50000;
-    handlerBoundNanoseconds = 5000000; leaseBudgetBoundNanoseconds = 2000000
+    handlerBoundNanoseconds = 5000000; leaseBudgetBoundNanoseconds = 2000000; sampledTimer = [bool]$SampledTimer; observedDebtBoundNanoseconds = 2000000;
+    controllerPhases = [bool]$ControllerPhases; initializeManagedPaths = [bool]$InitializeManagedPaths;
+    initializeNativeTransport = [bool]$InitializeNativeTransport; initialIntervalNanoseconds = $(if ($ShortInitialInterval) { 10000 } else { 1000000 }); sampledGc = [bool]$SampledGc
 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
 $runtime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
     '--tmpfs', '/tmp:rw,nosuid,size=64m', '--env', 'LD_LIBRARY_PATH=/native',
@@ -64,19 +88,46 @@ $runtime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop'
 $outcomes = @()
 & docker @runtime --verify-timer-layout *> (Join-Path $run 'layout.log')
 $outcomes += @{ mode = 'layout'; exitCode = $LASTEXITCODE; recordExists = $true }
-if ($ManagedWorkload -or $TransitionMatrix) {
+if ($ManagedWorkload -or $TransitionMatrix -or $SampledTimer) {
     $managedRuntime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
         '--tmpfs', '/tmp:rw,nosuid,size=64m', '--env', 'LD_LIBRARY_PATH=/native:/native/signal',
         '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0', '--env', 'CORECLR_ENABLE_PROFILING=0',
         '--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1',
         '--mount', "type=bind,source=$native,target=/native,readonly", '--mount', "type=bind,source=$workload,target=/work,readonly",
         '--mount', "type=bind,source=$run,target=/output", $runtimeImage, 'timeout', '-k', '2s', '20s', 'dotnet', '/work/CozNet.LinuxPerf.dll')
-    if ($TransitionMatrix) {
+    if ($SampledTimer) {
+        $imageIndex = [Array]::IndexOf($managedRuntime, $runtimeImage)
+        $managedRuntime = @($managedRuntime[0..($imageIndex - 1)]) + @('--security-opt', 'seccomp=unconfined') + @($managedRuntime[$imageIndex..($managedRuntime.Count - 1)])
+        $sampledCases = if ($SchedulerCost) {
+            $random = [Random]::new(20261014)
+            for ($block = 1; $block -le 8; $block++) {
+                $modes = if ($random.Next(2) -eq 0) { @($false, $true) } else { @($true, $false) }
+                foreach ($capture in $modes) {
+                    $label = if ($capture) { 'enabled' } else { 'disabled' }
+                    @{ name = "block-$block-$label"; percent = '0'; capture = $capture }
+                }
+            }
+        } else {
+            foreach ($percent in @('0', '50')) { @{ name = "sampled-$percent"; percent = $percent; capture = [bool]$SchedulerCapture } }
+        }
+        foreach ($case in $sampledCases) {
+            $name = $case.name
+            $sampledMode = if ($case.capture) { '--sampled-timer-scheduler' } elseif ($InitializeNativeTransport -and -not $ControllerPhases) { '--sampled-timer-capacity' } elseif ($InitializeNativeTransport) { '--sampled-timer-prepared' } elseif ($InitializeManagedPaths) { '--sampled-timer-initialized' } elseif ($ControllerPhases) { '--sampled-timer-phases' } else { '--sampled-timer' }
+            $intervalArguments = @(if ($ShortInitialInterval) { '10us' })
+            $workloadArguments = @($sampledMode, "/output/$name.json", $case.percent) + $intervalArguments
+            if ($SampledGc) { $workloadArguments += 'gc' }
+            & docker @managedRuntime @workloadArguments *> (Join-Path $run "$name.log")
+            $outcomes += @{ mode = $name; arguments = $workloadArguments; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "$name.json") }
+            $outcomes | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'outcomes.json')
+        }
+    } elseif ($TransitionMatrix) {
         foreach ($scenario in @('jit', 'native-wait', 'managed-wait', 'transitions')) {
             foreach ($gcMode in @('no-gc', 'gc')) {
                 $case = "$scenario-$gcMode"
-                & docker @managedRuntime --verify-timer-transition "/output/$case.json" $scenario $gcMode *> (Join-Path $run "$case.log")
-                $outcomes += @{ mode = $case; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "$case.json") }
+                $intervalArguments = @(if ($ShortInitialInterval) { '10us' })
+                $workloadArguments = @('--verify-timer-transition', "/output/$case.json", $scenario, $gcMode) + $intervalArguments
+                & docker @managedRuntime @workloadArguments *> (Join-Path $run "$case.log")
+                $outcomes += @{ mode = $case; arguments = $workloadArguments; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "$case.json") }
             }
         }
     } else {

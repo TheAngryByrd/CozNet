@@ -4,11 +4,54 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--sampled-timer", var sampledTimerPath, var sampledTimerPercent])
+    return SampledTimerWorkload.Run(sampledTimerPath, SampledSignalPlan.Parse(sampledTimerPercent).Percent,
+        sink => new LinuxCpuEventSession(sink));
+
+if (args is ["--sampled-timer-phases", var sampledTimerPhasesPath, var sampledTimerPhasesPercent])
+    return SampledTimerWorkload.Run(sampledTimerPhasesPath, SampledSignalPlan.Parse(sampledTimerPhasesPercent).Percent,
+        sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock());
+
+if (args is ["--sampled-timer-initialized", var sampledTimerInitializedPath, var sampledTimerInitializedPercent])
+    return SampledTimerWorkload.Run(sampledTimerInitializedPath, SampledSignalPlan.Parse(sampledTimerInitializedPercent).Percent,
+        sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(), initializeManagedPaths: true);
+
+if (args is ["--sampled-timer-prepared", var sampledTimerPreparedPath, var sampledTimerPreparedPercent])
+    return SampledTimerWorkload.Run(sampledTimerPreparedPath, SampledSignalPlan.Parse(sampledTimerPreparedPercent).Percent,
+        sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(), initializeManagedPaths: true, initializeNativeTransport: true);
+
+if (args is ["--sampled-timer-prepared", var sampledTimerFastPath, var sampledTimerFastPercent, var timerInitialInterval])
+    return SampledTimerWorkload.Run(sampledTimerFastPath, SampledSignalPlan.Parse(sampledTimerFastPercent).Percent,
+        sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(), initializeManagedPaths: true,
+        initializeNativeTransport: true, initialInterval: TimerInitialInterval.Parse(timerInitialInterval));
+
+if (args is ["--sampled-timer-capacity", var sampledTimerCapacityPath, var sampledTimerCapacityPercent, var capacityInitialInterval])
+    return SampledTimerWorkload.Run(sampledTimerCapacityPath, SampledSignalPlan.Parse(sampledTimerCapacityPercent).Percent,
+        sink => new LinuxCpuEventSession(sink), initializeManagedPaths: true,
+        initializeNativeTransport: true, initialInterval: TimerInitialInterval.Parse(capacityInitialInterval));
+
+if (args is ["--sampled-timer-capacity", var sampledTimerGcPath, var sampledTimerGcPercent, var gcInitialInterval, var sampledTimerGcMode])
+    return SampledTimerWorkload.Run(sampledTimerGcPath, SampledSignalPlan.Parse(sampledTimerGcPercent).Percent,
+        sink => new LinuxCpuEventSession(sink), initializeManagedPaths: true,
+        initializeNativeTransport: true, initialInterval: TimerInitialInterval.Parse(gcInitialInterval),
+        forceGc: TimerGcReach.ParseMode(sampledTimerGcMode));
+
+if (args is ["--sampled-timer-scheduler", var timerSchedulerPath, var timerSchedulerPercent, var schedulerInterval, var timerSchedulerGc])
+    return SampledTimerWorkload.Run(timerSchedulerPath, SampledSignalPlan.Parse(timerSchedulerPercent).Percent,
+        sink => new LinuxCpuEventSession(sink), initializeManagedPaths: true, initializeNativeTransport: true,
+        initialInterval: TimerInitialInterval.Parse(schedulerInterval), forceGc: TimerGcReach.ParseMode(timerSchedulerGc),
+        schedulerFactory: () => new LinuxSchedulerEventSession());
+
 if (args is ["--verify-timer-layout"])
 {
+    TimerSchedulerCaptureGroupChecks.Run();
+    TimerSessionCleanupChecks.Run();
     NativeTimerClient.VerifyLayout();
+    TimerInitialIntervalChecks.Run();
     TargetLeaseReceiptsChecks.Run();
     TimerAccountingAdapterChecks.Run();
+    TimerServiceControllerChecks.Run();
+    ControllerPhaseCaptureChecks.Run();
     TimerGcReachChecks.Run();
     TimerWorkloadPlanChecks.Run();
     TimerWorkerLifetimeChecks.Run();
@@ -27,6 +70,10 @@ if (args is ["--verify-timer-managed", var timerGcPath, var timerGcMode])
 if (args is ["--verify-timer-transition", var timerTransitionPath, var timerScenario, var timerTransitionGc])
     return TimerManagedWorkload.Run(timerTransitionPath, TimerWorkloadPlan.ParseTransition(timerScenario, timerTransitionGc),
         () => new LinuxSignalTransitionOperations());
+
+if (args is ["--verify-timer-transition", var fastTransitionPath, var fastScenario, var fastTransitionGc, var transitionInterval])
+    return TimerManagedWorkload.Run(fastTransitionPath, TimerWorkloadPlan.ParseTransition(fastScenario, fastTransitionGc),
+        () => new LinuxSignalTransitionOperations(), TimerInitialInterval.Parse(transitionInterval));
 
 if (args is ["--service-accounting-cost", var serviceCostPath])
     return ServiceAccountingCosts.Run(serviceCostPath);

@@ -1,6 +1,7 @@
 #include "TimerApi.h"
 #include "LeaseMailbox.h"
 #include "TargetLease.h"
+#include "TimerJournalSnapshot.h"
 #include <cerrno>
 #include <csignal>
 #include <cstddef>
@@ -46,6 +47,7 @@ struct Target {
 }
 struct CozTimerSession {
     uint64_t begin, size;
+    uint64_t initial_interval_ns{1000000};
     int signal_number;
     struct sigaction previous{};
     std::thread::id controller{std::this_thread::get_id()};
@@ -196,6 +198,14 @@ int32_t coz_timer_open(uint64_t begin, uint64_t size, uint32_t count, uint32_t c
     } catch (const std::bad_alloc&) { return ENOMEM; }
     catch (...) { return EIO; }
 }
+int32_t coz_timer_configure_initial_interval(CozTimerSession* session, uint64_t nanoseconds) {
+    return guarded(session, true, [&](auto& value) {
+        if (nanoseconds != 10000 && nanoseconds != 1000000) return EINVAL;
+        for (const auto& target : value.targets) if (target->ever_registered) return EBUSY;
+        value.initial_interval_ns = nanoseconds;
+        return 0;
+    });
+}
 int32_t coz_timer_register(CozTimerSession* session, uint32_t slot) {
     return guarded(session, false, [&](auto& value) {
         auto* target = get(value, slot);
@@ -249,7 +259,7 @@ int32_t coz_timer_submit(CozTimerSession* session, uint32_t slot, uint64_t comma
         target->announced.store(target->generation, std::memory_order_release);
         if (!target->mailbox.publish(*submission)) return EPROTO;
         itimerspec next{};
-        next.it_value.tv_nsec = 1000000;
+        next.it_value.tv_nsec = value.initial_interval_ns;
         const auto result = direct(SYS_timer_settime, target->timer, 0, reinterpret_cast<long>(&next));
         if (result != 0) {
             target->initial_arm_error = static_cast<int>(-result);
@@ -276,13 +286,16 @@ int32_t coz_timer_snapshot(CozTimerSession* session, uint32_t slot, uint64_t gen
         auto reader = target->mailbox.read(target->generation);
         if (!reader) return EBUSY;
         std::size_t count = 0;
-        const auto snapshot = target->lease->snapshot(target->copy, count);
+        const auto snapshot = captureTimerJournal(*target->lease, *reader, target->copy, count);
         if (!snapshot) return EPROTO;
         const auto& header = *snapshot;
         *result = {header.generation, header.command, header.budget, header.children, header.measured,
             static_cast<uint64_t>(header.visibility), static_cast<uint64_t>(header.stop), static_cast<uint64_t>(header.error),
             header.transport_error, header.may_have_delivery, 0, target->backend_error.load(std::memory_order_acquire)};
-        if (count > capacity) return ENOBUFS;
+        if (count > capacity) {
+            result->captured_ns = now();
+            return result->captured_ns == 0 ? EIO : ENOBUFS;
+        }
         for (std::size_t index = 0; index < count; ++index) {
             const auto& child = target->copy[index];
             children[index] = {child.ordinal, child.requested, child.armed, child.started, child.finished, child.waited, child.ip,

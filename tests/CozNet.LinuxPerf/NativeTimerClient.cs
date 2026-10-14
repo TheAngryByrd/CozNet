@@ -2,13 +2,13 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
 [StructLayout(LayoutKind.Sequential)]
-struct TimerNativeChild
+record struct TimerNativeChild
 {
     public ulong Ordinal, Requested, Armed, Started, Finished, Waited, Ip, WaitStatus, Valid;
 }
 
 [StructLayout(LayoutKind.Sequential)]
-struct TimerNativeSnapshot
+record struct TimerNativeSnapshot
 {
     public ulong Generation, Command, Budget, Children, Measured, Visibility, Stop, Error;
     public long TransportError;
@@ -31,6 +31,8 @@ static unsafe partial class TimerNativeMethods
     private const string Library = "CozNet.Timer";
     [LibraryImport(Library, EntryPoint = "coz_timer_open")]
     internal static partial int Open(ulong begin, ulong size, uint targets, uint capacity, out TimerSessionHandle session);
+    [LibraryImport(Library, EntryPoint = "coz_timer_configure_initial_interval")]
+    internal static partial int ConfigureInitialInterval(TimerSessionHandle session, ulong nanoseconds);
     [LibraryImport(Library, EntryPoint = "coz_timer_register")]
     internal static partial int Register(TimerSessionHandle session, uint slot);
     [LibraryImport(Library, EntryPoint = "coz_timer_retire")]
@@ -50,7 +52,7 @@ static unsafe partial class TimerNativeMethods
     internal static partial int Close(TimerSessionHandle session);
 }
 
-sealed class NativeTimerClient
+sealed class NativeTimerClient : ITimerTransport
 {
     private readonly TimerSessionHandle session;
     private readonly TimerNativeChild[][] buffers;
@@ -67,7 +69,7 @@ sealed class NativeTimerClient
             throw new InvalidOperationException("The timer ABI layout differs.");
     }
 
-    public NativeTimerClient(ulong begin, ulong size, uint targets = 1, uint capacity = 64)
+    public NativeTimerClient(ulong begin, ulong size, uint targets = 1, uint capacity = 64, TimerInitialInterval? initialInterval = null)
     {
         if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
             throw new PlatformNotSupportedException("The timer backend requires Linux x64.");
@@ -78,12 +80,14 @@ sealed class NativeTimerClient
         trackers = new TargetLeaseReceipts[targets];
         generations = new ulong[targets];
         Check(TimerNativeMethods.Open(begin, size, targets, capacity, out session), "open");
+        Check(TimerNativeMethods.ConfigureInitialInterval(session, (initialInterval ?? TimerInitialInterval.Default).Nanoseconds), "configure initial interval");
     }
 
     public void RegisterCurrentThread(uint slot) => Check(TimerNativeMethods.Register(session, slot), "register");
     public void RetireCurrentThread(uint slot) => Check(TimerNativeMethods.Retire(session, slot), "retire");
     public ulong Submit(uint slot, ulong command, ulong budget)
     {
+        LastSubmission = null;
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(slot, (uint)buffers.Length);
         var tracker = TargetLeaseReceipts.Create(1, command, budget);
         int result = TimerNativeMethods.Submit(session, slot, command, budget, out ulong generation);
@@ -98,6 +102,8 @@ sealed class NativeTimerClient
     }
     public void Cancel(uint slot) => Check(TimerNativeMethods.Cancel(session, slot, Generation(slot)), "cancel");
 
+    TimerObservation ITimerTransport.Read(uint slot) => Read(slot);
+
     public unsafe TimerNativeSnapshot Probe(uint slot)
     {
         int result = TimerNativeMethods.Snapshot(session, slot, Generation(slot), out var header, null, 0);
@@ -107,6 +113,7 @@ sealed class NativeTimerClient
 
     public unsafe TimerObservation Read(uint slot, Func<TimerSessionHandle, TimerClockRead>? readClock = null)
     {
+        LastRaw = null;
         ulong generation = Generation(slot);
         var buffer = buffers[slot];
         TimerNativeSnapshot header;

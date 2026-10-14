@@ -28,3 +28,15 @@ The runner executes all eight cases even if an earlier case fails.
 Each case has a separate process and a 20-second watchdog.
 A failed case makes the target fail after the runner writes the summary.
 See [the workload reference](../Reference/timer-transitions.md) for record fields, bounds, and interpretation limits.
+
+## Check 10 µs initial delivery
+
+Run the short-interval matrix:
+
+```powershell
+dotnet run --project build/build.fsproj -- -t LinuxFastTimerTransitions
+```
+
+Apply the same checks to all eight records.
+Confirm that each record and the manifest report `initialIntervalNanoseconds = 10000`.
+This matrix checks controlled runtime transitions. It does not establish sampled forced-GC capacity or prediction accuracy.

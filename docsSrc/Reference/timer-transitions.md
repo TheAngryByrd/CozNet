@@ -33,6 +33,11 @@ Failed target joins retain native ownership and wait events.
 
 ## Records
 
+`initialIntervalNanoseconds` records the selected initial timer interval.
+`LinuxTimerTransitions` uses the default 1,000,000 ns.
+`LinuxFastTimerTransitions` uses 10,000 ns with the same scenario plans, reach checks, and bounds.
+The manifest also records the interval and the exact arguments for each case.
+
 `completedOperations` counts completed arithmetic calls, dynamic methods, controlled waits, or transition loops, according to `scenario`.
 `stableWaitReached` records the controlled-wait entry check.
 `addresses` counts final journal addresses by classification.
@@ -68,6 +73,10 @@ That run used the earlier harness, which rejected selected-side wait requests.
 The revised matrix passes all eight cases and records selected payments in both transition cases.
 The arithmetic regressions also pass with and without forced GC.
 These controlled results do not extend the public engine's supported workload model.
+The [10 µs matrix](../../reliability/features/native-signal/timer-fast-transitions.md) also passes all eight cases.
+Both transition cases include selected payment. Every forced-GC case reaches the existing command-overlap condition.
+The matrix also passes all eight cases after the mailbox-retirement fix.
+These results do not establish sampled forced-GC capacity.
 
 See [the procedure](../How_Tos/run-timer-transitions.md) and [timer journal accounting](timer-accounting.md).
 See [the worker lifecycle](timer-worker-lifetime.md) for cleanup states and fault-check scope.

@@ -60,6 +60,17 @@ These bounds address different failures.
 A request can satisfy the handler and acknowledgment limits while the experiment fails the debt limit.
 The observed owner's off-CPU interval does not justify forgiving debt or crediting an unperformed wait.
 
+The inspected native Coz and JCoz accounting and result paths have no equivalent absolute per-target unpaid-debt cap. [2][4][7][8]
+Both request the full current debt difference. Their cadence and full-debt waits therefore cannot directly satisfy CozNet's bounded protocol.
+Native Coz separately rejects results when accumulated global delay reaches elapsed duration or progress is insufficient. [7]
+Those result checks do not establish a maximum outstanding debt for each target.
+
+Ordinary preemption before a measured wait does not earn local delay credit in either inspected handler. [2][4]
+Later settlement does not prove that the earlier progress measurements match a physical optimization.
+CozNet retains the 2 ms debt gate and the separate two-percentage-point prediction gate.
+The [sampled timer capture](../../reliability/features/native-signal/timer-sampled.md#first-scheduler-capture) establishes peer preemption during one failed delivery interval.
+Its [observer comparison](../../reliability/features/native-signal/timer-sampled.md#scheduler-capture-throughput-comparison) does not establish a small diagnostic-overhead bound.
+
 ## Bounded polling result
 
 The implemented prototype compares the existing yield policy with a finite active-poll policy behind a portable owner scheduling interface.
@@ -108,3 +119,7 @@ Neither local settlement nor bounded polling establishes physical prediction acc
 [5] [WSL perf switch marker](https://github.com/microsoft/WSL2-Linux-Kernel/blob/linux-msft-wsl-5.15.153.1/kernel/events/core.c#L8958-L8963).
 
 [6] [WSL yield path](https://github.com/microsoft/WSL2-Linux-Kernel/blob/linux-msft-wsl-5.15.153.1/kernel/sched/core.c#L8217-L8245).
+
+[7] [Native Coz experiment result handling](https://github.com/plasma-umass/coz/blob/256e3c389424d6a1691ee5d18b5ecb5a6c1001ec/libcoz/profiler.cpp#L359-L477).
+
+[8] [JCoz experiment completion and result handling](https://github.com/ByteLab-David/JCoz/blob/1df02b0f6e319bd7df05ba5451b1814791d1849f/src/native/profiler.cc#L198-L257).

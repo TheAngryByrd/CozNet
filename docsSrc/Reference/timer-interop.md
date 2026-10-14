@@ -1,7 +1,8 @@
 # Target-local timer interop
 
 This page describes the experimental `CozNet.Timer` C ABI and its managed receipt client.
-The backend runs on Linux x64. Windows checks cover managed structure layout only.
+The backend runs on Linux x64. Windows checks cover structure layout and portable managed contracts.
+They do not exercise native timer delivery on Windows.
 The public engine still supports only serial, synchronous CPU regions.
 
 ## Session and target ownership
@@ -13,6 +14,7 @@ Status zero means success. Nonzero statuses are positive Linux errno values.
 | Function | Calling thread | Contract |
 | --- | --- | --- |
 | `coz_timer_open` | Controller | Opens one session with a nonwrapping instruction range. |
+| `coz_timer_configure_initial_interval` | Controller | Selects 10,000 or 1,000,000 ns before any target registers. |
 | `coz_timer_register` | Target | Registers one target slot and creates its timer. |
 | `coz_timer_submit` | Controller | Starts a bounded lease and returns its generation. |
 | `coz_timer_cancel` | Controller | Requests cancellation of the matching outstanding generation. |
@@ -30,7 +32,10 @@ The Linux backend reserves `SIGRTMIN + 7` and requires its previous disposition 
 
 A command identifier must be nonzero. Its budget must be 1–2,000,000 ns.
 Each child requests at most 50,000 ns of wait.
-The first timer interval is 1 ms. Continuation intervals are 10 µs.
+The first timer interval defaults to 1 ms. The controller can select 10 µs before target registration.
+Any prior registration makes later interval configuration fail with `EBUSY`, including after that target retires.
+Other interval values fail with `EINVAL`. A non-controller caller receives `EPERM`.
+Continuation intervals remain 10 µs.
 These intervals do not guarantee delivery latency.
 
 ## Snapshot layout
@@ -47,9 +52,13 @@ Fields are unsigned 64-bit integers except `transport_error` and `backend_error`
 State values follow the [target-local lease contract](target-local-lease.md).
 
 An insufficient child buffer returns `ENOBUFS` with the header and no child copy.
+That header includes a nonzero native capture timestamp taken after the core snapshot.
 It does not authorize result release.
 A complete successful copy sets `captured_ns` after copying the children.
 Release requires retired visibility and no possible delivery.
+Retired visibility also requires mailbox quiescence for the same generation.
+If core retirement precedes mailbox quiescence, the API reports quiesced visibility until the mailbox completes its transition.
+This prevents release from authorizing reuse while the previous execution still owns the mailbox.
 A later incomplete snapshot removes the previous release authorization.
 
 ## Managed receipt bounds

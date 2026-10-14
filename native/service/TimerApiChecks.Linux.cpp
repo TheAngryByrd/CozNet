@@ -51,6 +51,11 @@ int main(int argc, char** argv) {
         const auto begin = chain ? reinterpret_cast<uint64_t>(&coz_timer_workload_begin) : 1;
         const auto size = chain ? reinterpret_cast<uint64_t>(&coz_timer_workload_end) - begin : 1;
         require(coz_timer_open(begin, size, 2, 64, &session) == 0 && session, 6);
+        require(coz_timer_configure_initial_interval(session, 0) == EINVAL
+            && coz_timer_configure_initial_interval(session, 9999) == EINVAL
+            && coz_timer_configure_initial_interval(session, 1000001) == EINVAL, 40);
+        require(coz_timer_configure_initial_interval(session, 10000) == 0
+            && coz_timer_configure_initial_interval(session, 1000000) == 0, 41);
         CozTimerSession* duplicate{};
         require(coz_timer_open(begin, size, 2, 64, &duplicate) == EALREADY && !duplicate, 7);
         require(coz_timer_register(session, 2) == EINVAL && coz_timer_register(session, 0) == EPERM, 8);
@@ -77,6 +82,7 @@ int main(int argc, char** argv) {
         });
         await([&] { return ready[0].load(std::memory_order_acquire) && ready[1].load(std::memory_order_acquire); });
         require(target_errors[0].load() == 0 && target_errors[1].load() == 0, 9);
+        require(coz_timer_configure_initial_interval(session, 10000) == EBUSY, 42);
         await([&] { return entered[0].load(std::memory_order_acquire) && entered[1].load(std::memory_order_acquire); });
         require(coz_timer_close(session) == EBUSY && coz_timer_retire(session, 0) == EPERM, 10);
         for (uint32_t command = 1; command <= 3; ++command) {
@@ -100,10 +106,11 @@ int main(int argc, char** argv) {
                 require(result == 0 || result == ENOBUFS, 19);
                 return header.visibility == 3;
             });
-            require(header.children > 0 && header.children <= journal.size() && header.captured_ns == 0, 20);
+            require(header.children > 0 && header.children <= journal.size() && header.captured_ns > 0, 20);
+            const uint64_t probe_captured = header.captured_ns;
             require(coz_timer_release(session, slot, generation) == EBUSY, 21);
             require(coz_timer_snapshot(session, slot, generation, &header, journal.data(), journal.size()) == 0, 22);
-            require(coz_timer_clock(session, &receipts[command - 1]) == 0, 23);
+            require(coz_timer_clock(session, &receipts[command - 1]) == 0 && header.captured_ns >= probe_captured, 23);
             require(header.generation == generation && header.command == command && header.visibility == 3
                 && header.error == 0 && header.backend_error == 0 && header.may_have_delivery == 0
                 && header.stop == (command == 3 ? 3u : chain ? 1u : 2u)

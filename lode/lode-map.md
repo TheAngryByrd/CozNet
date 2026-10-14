@@ -9,8 +9,12 @@ For target-local timer delivery, read [the lease plan](plans/target-local-lease.
 For repeated native timer generations, read [the reuse procedure](../docsSrc/How_Tos/run-target-lease-reuse.md).
 For the timer C ABI and first managed receipt, read [timer interop](profiling/timer-interop.md).
 For timer journal settlement, read [timer accounting](profiling/timer-accounting.md).
+For timer controller ownership and portable failure checks, read [the controller reference](../docsSrc/Reference/timer-service-controller.md).
+For real CPU samples driving timer leases, read [the first sampled timer evidence](../reliability/features/native-signal/timer-sampled.md).
+For current sampled timer execution and support limits, read [sampled timers](profiling/timer-sampled.md).
 For paid timer waits during managed arithmetic, read [the managed timer workload](profiling/timer-managed.md).
 For timer runtime transitions and the selected-debt limitation, read [the retained matrix](../reliability/features/native-signal/timer-transitions.md).
+For the 10 µs initial interval during runtime transitions, read [the short-interval matrix](../reliability/features/native-signal/timer-fast-transitions.md).
 For selected-worker cleanup decisions and fault checks, read [the lifecycle evidence](../reliability/features/native-signal/timer-worker-lifetime.md).
 Read [summary.md](summary.md), [terminology.md](terminology.md), and [practices.md](practices.md) at session start.
 For profiling changes, read [the serial engine](profiling/summary.md).

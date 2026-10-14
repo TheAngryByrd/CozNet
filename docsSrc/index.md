@@ -8,6 +8,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Run the sampled timer experiment](How_Tos/run-sampled-timer.md).
+
 - [Verify the deterministic contract](How_Tos/verify-the-contract.md).
 - [Inspect measurement evidence](How_Tos/inspect-measurements.md).
 - [Verify native service accounting](How_Tos/verify-native-service.md).
@@ -19,6 +21,10 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Sampled timer workload](Reference/sampled-timer.md): CPU sample credit, timer ownership, and retained failures.
+
+- [Timer service controller draft](Reference/timer-service-controller.md): transport boundary, slot ownership, and unverified failure behavior.
 
 - [Native service accounting](Reference/native-service-accounting.md): request states, journal rules, timing limits, and platform scope.
 

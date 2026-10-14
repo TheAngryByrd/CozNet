@@ -36,7 +36,8 @@ static class TimerManagedWorkload
     public static int Run(string path, bool forceGc = false)
         => Run(path, TimerWorkloadPlan.Arithmetic(forceGc), null);
 
-    public static int Run(string path, TimerWorkloadPlan plan, Func<ISignalTransitionOperations>? operationsFactory)
+    public static int Run(string path, TimerWorkloadPlan plan, Func<ISignalTransitionOperations>? operationsFactory,
+        TimerInitialInterval? initialInterval = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         bool forceGc = plan.ForceGc;
@@ -76,7 +77,7 @@ static class TimerManagedWorkload
             Require(CpuWorkload.Run() == 49995000L, "Managed timer warmup changed the arithmetic checksum.");
             (start, size) = CaptureMap(path + ".initial.perf.map");
             operations = operationsFactory?.Invoke();
-            client = new NativeTimerClient(start, size, targets: 2, capacity: 64);
+            client = new NativeTimerClient(start, size, targets: 2, capacity: 64, initialInterval: initialInterval);
             selectedWorker = new TimerSelectedWorker(client, start, size);
             selectedWorker.AwaitReady();
             var worker = new Thread(() =>
@@ -302,6 +303,7 @@ static class TimerManagedWorkload
             cpuCreditPerStep = plan.CpuCreditPerStep, syntheticCredit = true, stableWaitReached, addresses,
             addressMap = operations?.DescribeAddressMap(),
             forceGc, gcReleased, gcJoined, gcReachedCommand, gcError, collections, stopwatchFrequency = Stopwatch.Frequency,
+            initialIntervalNanoseconds = (initialInterval ?? TimerInitialInterval.Default).Nanoseconds,
             skippedSteps, records, unfinishedInterval, unfinishedSnapshots = snapshots, lastRaw = client?.LastRaw, lastSubmission = client?.LastSubmission,
             selectedPayments = selectedWorker?.Payments, selectedPendingSnapshots = selectedWorker?.PendingSnapshots,
             selectedPendingInterval = selectedWorker?.PendingInterval, selectedJoined = selectedWorker?.Joined,

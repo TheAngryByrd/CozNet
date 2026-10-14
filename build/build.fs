@@ -525,6 +525,76 @@ let linuxTimerApi _ = nativeScript "VerifyTimerApi.ps1"
 
 let linuxTimerInterop _ = nativeScript "VerifyTimerInterop.ps1"
 
+let linuxSampledTimer _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [ "-SampledTimer" ]
+
+let linuxSampledTimerPhases _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-SampledTimer"
+        "-ControllerPhases"
+    ]
+
+let linuxInitializedTimer _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-SampledTimer"
+        "-ControllerPhases"
+        "-InitializeManagedPaths"
+    ]
+
+let linuxPreparedTimer _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-SampledTimer"
+        "-ControllerPhases"
+        "-InitializeManagedPaths"
+        "-InitializeNativeTransport"
+    ]
+
+let linuxFastTimer _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-SampledTimer"
+        "-ControllerPhases"
+        "-InitializeManagedPaths"
+        "-InitializeNativeTransport"
+        "-ShortInitialInterval"
+    ]
+
+let linuxFastTimerCapacity _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-SampledTimer"
+        "-InitializeManagedPaths"
+        "-InitializeNativeTransport"
+        "-ShortInitialInterval"
+    ]
+
+let linuxFastTimerScheduler _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-SampledTimer"
+        "-InitializeManagedPaths"
+        "-InitializeNativeTransport"
+        "-ShortInitialInterval"
+        "-SampledGc"
+        "-SchedulerCapture"
+    ]
+
+let linuxTimerSchedulerCost _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-SampledTimer"
+        "-InitializeManagedPaths"
+        "-InitializeNativeTransport"
+        "-ShortInitialInterval"
+        "-SampledGc"
+        "-SchedulerCost"
+    ]
+
+let linuxFastTimerGc _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-SampledTimer"
+        "-InitializeManagedPaths"
+        "-InitializeNativeTransport"
+        "-ShortInitialInterval"
+        "-SampledGc"
+    ]
+
 let linuxTimerManaged _ =
     nativeScriptWithArgs "VerifyTimerInterop.ps1" [ "-ManagedWorkload" ]
 
@@ -536,6 +606,12 @@ let linuxTimerManagedGc _ =
 
 let linuxTimerTransitions _ =
     nativeScriptWithArgs "VerifyTimerInterop.ps1" [ "-TransitionMatrix" ]
+
+let linuxFastTimerTransitions _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-TransitionMatrix"
+        "-ShortInitialInterval"
+    ]
 
 let timerLayoutVerify _ =
     CreateProcess.fromRawCommand "dotnet" [
@@ -1078,8 +1154,18 @@ let initTargets () =
     Target.create "LinuxTimerApi" linuxTimerApi
     Target.create "LinuxTimerInterop" linuxTimerInterop
     Target.create "LinuxTimerManaged" linuxTimerManaged
+    Target.create "LinuxSampledTimer" linuxSampledTimer
+    Target.create "LinuxSampledTimerPhases" linuxSampledTimerPhases
+    Target.create "LinuxInitializedTimer" linuxInitializedTimer
+    Target.create "LinuxPreparedTimer" linuxPreparedTimer
+    Target.create "LinuxFastTimer" linuxFastTimer
+    Target.create "LinuxFastTimerCapacity" linuxFastTimerCapacity
+    Target.create "LinuxFastTimerGc" linuxFastTimerGc
+    Target.create "LinuxFastTimerScheduler" linuxFastTimerScheduler
+    Target.create "LinuxTimerSchedulerCost" linuxTimerSchedulerCost
     Target.create "LinuxTimerManagedGc" linuxTimerManagedGc
     Target.create "LinuxTimerTransitions" linuxTimerTransitions
+    Target.create "LinuxFastTimerTransitions" linuxFastTimerTransitions
     Target.create "TimerLayoutVerify" timerLayoutVerify
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
@@ -1158,6 +1244,17 @@ let initTargets () =
     "LinuxPerfWorkload"
     ==> "LinuxTimerInterop"
     |> ignore
+
+    "LinuxPerfWorkload" ==> "LinuxSampledTimer" |> ignore
+    "LinuxPerfWorkload" ==> "LinuxSampledTimerPhases" |> ignore
+    "LinuxPerfWorkload" ==> "LinuxInitializedTimer" |> ignore
+    "LinuxPerfWorkload" ==> "LinuxPreparedTimer" |> ignore
+    "LinuxPerfWorkload" ==> "LinuxFastTimer" |> ignore
+    "LinuxPerfWorkload" ==> "LinuxFastTimerCapacity" |> ignore
+    "LinuxPerfWorkload" ==> "LinuxFastTimerGc" |> ignore
+    "LinuxPerfWorkload" ==> "LinuxFastTimerScheduler" |> ignore
+    "LinuxPerfWorkload" ==> "LinuxTimerSchedulerCost" |> ignore
+    "LinuxPerfWorkload" ==> "LinuxFastTimerTransitions" |> ignore
 
     "LinuxPerfWorkload"
     ==> "LinuxTimerManaged"
