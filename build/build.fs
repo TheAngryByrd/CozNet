@@ -521,6 +521,20 @@ let linuxTargetLeaseDisarmFailure _ =
         "disarm-failure"
     ]
 
+let linuxTimerApi _ = nativeScript "VerifyTimerApi.ps1"
+
+let linuxTimerInterop _ = nativeScript "VerifyTimerInterop.ps1"
+
+let timerLayoutVerify _ =
+    CreateProcess.fromRawCommand "dotnet" [
+        rootDirectory </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
+        "--verify-timer-layout"
+    ]
+    |> Proc.run
+    |> fun result ->
+        if result.ExitCode <> 0 then
+            failwith "Timer layout and receipt checks failed."
+
 let linuxTargetLeaseDrainFailure _ =
     nativeScriptWithArgs "VerifyTargetLeaseReuse.ps1" [
         "-Mode"
@@ -1045,6 +1059,9 @@ let initTargets () =
     Target.create "LinuxTargetLeaseActiveCancellation" linuxTargetLeaseActiveCancellation
     Target.create "LinuxTargetLeaseDisarmFailure" linuxTargetLeaseDisarmFailure
     Target.create "LinuxTargetLeaseDrainFailure" linuxTargetLeaseDrainFailure
+    Target.create "LinuxTimerApi" linuxTimerApi
+    Target.create "LinuxTimerInterop" linuxTimerInterop
+    Target.create "TimerLayoutVerify" timerLayoutVerify
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
@@ -1117,6 +1134,14 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxServiceInteropVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxTimerInterop"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "TimerLayoutVerify"
     |> ignore
 
     "LinuxPerfWorkload"

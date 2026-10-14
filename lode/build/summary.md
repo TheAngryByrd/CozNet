@@ -1,5 +1,12 @@
 # MiniScaffold build
 
+`LinuxTimerApi` checks the target-local timer C ABI in deferred and chained-wait modes.
+`TimerLayoutVerify` checks managed ABI sizes and offsets on the host without loading the Linux library.
+`LinuxTimerInterop` checks first managed receipt preservation, late receipt rejection, and wrong-thread clock rejection on Linux x64.
+Both managed targets depend on `LinuxPerfWorkload` inside the FAKE target graph.
+The Linux runners retain unique directories under `artifacts/timer-api/` and `artifacts/timer-interop/`.
+See [timer interop](../profiling/timer-interop.md) for scope and ownership.
+
 `ServiceOwnerVerify` builds and checks the portable native coordinator on the host with CMake and a C++20 compiler.
 `LinuxSampledServiceVerify` builds the managed workload and native service libraries, then runs bounded zero and 50-percent sampled cases.
 It retains every outcome under `artifacts/linux-sampled-service/`. The first treatment fails during warmup.

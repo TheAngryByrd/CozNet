@@ -60,7 +60,7 @@ The first failed capture poisons the tracker. Later reads cannot repair its timi
 Returned accepted prefixes are immutable snapshots. Receipt parsing reuses `ServiceReceiptTiming`.
 It does not replace wait accounting or eligibility validation.
 Its deterministic checks run through `--verify-service-accounting`.
-Live first managed receipt, lease reuse, and CLR transitions remain incomplete.
+The [timer ABI](timer-interop.md) checks live first managed receipt and native lease reuse. CLR intervention remains incomplete.
 
 `LeaseMailbox` now supplies portable generation and reader ownership for future transport integration.
 One atomic word combines generation, phase, cancellation, and reader count, so a reader and reuse cannot both claim the same quiescent storage.
@@ -98,7 +98,8 @@ The pinned native attempt does not isolate reader exclusion because mailbox quie
 Portable mailbox checks separately verify that exclusion after mailbox quiescence.
 After reader release and successful `begin`, the controller reconstructs the single-use lease before arming.
 The first native receipt timestamp follows the first successful child copy and remains fixed.
-No live managed backend consumes this core yet. Concurrent cancellation and injected transport failures remain unverified.
+The [timer ABI](timer-interop.md) consumes this core from a controlled managed receipt workload.
+The cancellation and failure fixtures below cover specific ownership boundaries, not general CLR intervention.
 The `cancel-before-delivery` mode cancels odd generations while configuring, before publication and timer arming.
 Those generations must retain cancellation through native delivery and retire with zero measured wait.
 Even generations must complete normally, proving the previous cancellation does not cross the generation boundary.

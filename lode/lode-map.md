@@ -7,6 +7,8 @@ For the finite active-polling prototype and its retained capacity failures, read
 For the portable target-local lease state machine, read [target-local leases](profiling/target-local-lease.md).
 For target-local timer delivery, read [the lease plan](plans/target-local-lease.md).
 For repeated native timer generations, read [the reuse procedure](../docsSrc/How_Tos/run-target-lease-reuse.md).
+For the timer C ABI and first managed receipt, read [timer interop](profiling/timer-interop.md).
+For timer journal settlement, read [timer accounting](profiling/timer-accounting.md).
 Read [summary.md](summary.md), [terminology.md](terminology.md), and [practices.md](practices.md) at session start.
 For profiling changes, read [the serial engine](profiling/summary.md).
 For sampled experiment accounting, read [the delay ledger](profiling/delay-ledger.md).

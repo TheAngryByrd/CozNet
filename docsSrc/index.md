@@ -14,12 +14,15 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Run the native sampled service experiment](How_Tos/run-native-sampled-service.md).
 - [Check target-local timer delivery](How_Tos/run-target-lease-delivery.md).
 - [Check target-local timer reuse](How_Tos/run-target-lease-reuse.md).
+- [Verify timer interop](How_Tos/verify-timer-interop.md).
 
 ## Reference
 
 - [Native service accounting](Reference/native-service-accounting.md): request states, journal rules, timing limits, and platform scope.
 
 - [Target-local lease contract](Reference/target-local-lease.md): portable states, bounded children, and retirement ownership.
+- [Target-local timer interop](Reference/timer-interop.md): C ABI, managed receipt bounds, and cleanup ownership.
+- [Timer journal accounting](Reference/timer-accounting.md): ledger binding, accepted prefixes, and exact-once settlement.
 
 ## Explanation
 

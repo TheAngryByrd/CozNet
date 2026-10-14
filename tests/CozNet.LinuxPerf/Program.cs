@@ -4,6 +4,17 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-timer-layout"])
+{
+    NativeTimerClient.VerifyLayout();
+    TargetLeaseReceiptsChecks.Run();
+    TimerAccountingAdapterChecks.Run();
+    return 0;
+}
+
+if (args is ["--verify-timer-interop", var timerPath, var timerMode])
+    return TimerInteropChecks.Run(timerPath, timerMode);
+
 if (args is ["--service-accounting-cost", var serviceCostPath])
     return ServiceAccountingCosts.Run(serviceCostPath);
 
