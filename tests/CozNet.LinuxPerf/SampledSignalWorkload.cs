@@ -46,7 +46,7 @@ static class SampledSignalWorkload
     private sealed record DebtPeak(int Slot, Boundary Boundary, ServiceInterval Interval, ulong[] LastAcknowledgedSequences);
     private sealed record StageResult(Boundary Measurement, Boundary Settled, long ControllerCpuNanoseconds,
         int SamplingPauses, long SelectedChecks, long[] MaxDebtNanoseconds, ServiceInterval? LongestServiceInterval, DebtPeak?[] PeakDebt,
-        RuntimeCounters? RuntimeCountersStart);
+        RuntimeCounters? RuntimeCountersStart, long PeerChecks, long PeerCheckSkips);
     private sealed class Sink(Action<CpuSample> publish) : ICpuSampleSink
     {
         public void Publish(CpuSample sample) => publish(sample);
@@ -90,7 +90,9 @@ static class SampledSignalWorkload
         RuntimeCounters? runtimeCountersStart = null;
         var timer = new Stopwatch();
         var cadence = new SelectedSignalCadence(plan.Cadence);
+        var peerCadence = new PeerSignalCadence();
         long selectedChecks = 0;
+        long peerChecks = 0, peerCheckSkips = 0;
         var state = SignalAccountingModule.create();
         var selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(plan.Percent), state));
         state = selected.Item2;
@@ -185,6 +187,7 @@ static class SampledSignalWorkload
         bool Prepare(int slot)
         {
             if (pending[slot] is not null) return false;
+            if (slot == 1 && runningStage) peerChecks++;
             var transition = Parsed(SignalAccountingModule.prepare(handles[slot], state));
             state = transition.Item2;
             if (transition.Item1 is null) return true;
@@ -231,7 +234,12 @@ static class SampledSignalWorkload
                     selectedChecks++;
                     Prepare(0);
                 }
-                Prepare(1);
+                if (peerCadence.NeedsCheck(state))
+                {
+                    Prepare(1);
+                    peerCadence.RecordChecked(state);
+                }
+                else peerCheckSkips++;
                 long finished = Stopwatch.GetTimestamp();
                 var interval = new ServiceInterval(previousServiceTimestamp, finished, samplesBefore, samples.Count);
                 previousServiceTimestamp = finished;
@@ -325,7 +333,7 @@ static class SampledSignalWorkload
                 var warmBoundary = RunStage("warmup", plan.WarmupMilliseconds);
                 var warmSettled = SettleStage("warmup-settlement");
                 warmup = new(warmBoundary, warmSettled, controllerCpu, pauses, selectedChecks, (long[])maxDebt.Clone(),
-                    longestServiceInterval, peakDebt, runtimeCountersStart);
+                    longestServiceInterval, peakDebt, runtimeCountersStart, peerChecks, peerCheckSkips);
                 state = SignalAccountingModule.create();
                 selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(plan.Percent), state));
                 peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
@@ -342,8 +350,10 @@ static class SampledSignalWorkload
                 longestServiceInterval = null;
                 registered = [true, true];
                 cadence = new SelectedSignalCadence(plan.Cadence);
+                peerCadence = new PeerSignalCadence();
                 pauses = 0;
                 selectedChecks = 0;
+                peerChecks = peerCheckSkips = 0;
                 batchBaseline = [Volatile.Read(ref batches[0]), Volatile.Read(ref batches[1])];
             }
             measurementStartRecords = records;
@@ -390,6 +400,7 @@ static class SampledSignalWorkload
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
             backend = backend?.Name, backendDetails = backend?.Describe(), percent = plan.Percent, selectedCadence = plan.Cadence.ToString(), selectedChecks,
+            peerChecks, peerCheckSkips,
             runtime = Environment.Version.ToString(),
             runtimeCountersStart, runtimeSettings = new { serverGc = System.Runtime.GCSettings.IsServerGC,
                 latencyMode = System.Runtime.GCSettings.LatencyMode.ToString(), processorCount = Environment.ProcessorCount },

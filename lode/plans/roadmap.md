@@ -33,10 +33,13 @@ The three-block warm comparison passes all protocol checks but fails capacity in
 Measure wait overshoot, service gaps, and debt age before selecting another intervention actuator.
 The [service timing run](../../reliability/features/native-signal/service-timing.md) exposes both wait overshoot and long pending requests that perform no wait.
 The [native phase run](../../reliability/features/native-signal/phase-timing.md) places most of one long acknowledgment before the first handler clock reading.
+Two of that run's three 50-percent cases pass capacity. A separate delay case still exceeds the 5 ms handler limit.
 Investigate target scheduling and CLR suspension before choosing between delivery and actuator changes.
 The [GC counter comparison](../../reliability/features/native-signal/gc-and-ring-cache.md) shows substantial controller allocation even after empty ring drains reuse snapshots.
 Inspect repeated accounting work during idle polling. Keep GC causation and sampled capacity unresolved.
-Two of its three 50-percent cases pass capacity. A separate delay case still exceeds the 5 ms handler limit.
+The [peer-cadence run](../../reliability/features/native-signal/peer-cadence.md) skips unchanged-state preparation and lowers allocation in completed cases.
+It still fails one warmup handler bound and both completed 50-percent debt checks.
+Measure per-iteration accounting reads next. Keep acknowledgment polling continuous.
 The original signal and transition experiments generate no causal credits.
 See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal research](../../docsSrc/Research/native-signal-intervention.md).
 See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).

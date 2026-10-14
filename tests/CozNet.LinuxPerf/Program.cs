@@ -4,6 +4,12 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-peer-cadence"])
+{
+    PeerSignalCadenceChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-ring-reader"])
 {
     RingReaderChecks.Run();

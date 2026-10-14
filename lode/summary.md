@@ -34,6 +34,8 @@ Wait overshoot and service stability remain unresolved.
 The [service timing records](../reliability/features/native-signal/service-timing.md) expose long pending requests that perform no native wait.
 The [native phase records](../reliability/features/native-signal/phase-timing.md) place most of one long request before the first handler clock reading.
 The [allocation comparison](../reliability/features/native-signal/gc-and-ring-cache.md) removes empty-drain allocation but still exposes gigabytes of controller allocation and a capacity failure.
+The [peer cadence](../reliability/features/native-signal/peer-cadence.md) skips redundant accounting preparation and reduces allocation in completed cases.
+Its retained run still fails handler or debt limits in every 50-percent case.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

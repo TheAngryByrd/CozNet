@@ -24,6 +24,16 @@ It records raw samples, requests, acknowledgments, periodic boundaries, and cont
 The first sample after an epoch change cannot trigger another selected pause.
 Qualified zero-credit intervals still permit checks. Zero-percent runs use the same rule.
 The peer continues bounded debt settlement independently.
+`PeerSignalCadence` permits peer preparation only when the immutable accounting state changes.
+It caches the resulting state after preparation and request submission, including a preparation skipped for a pending request.
+Matching acknowledgments and new sample observations create new accounting states and permit another check.
+The controller polls both acknowledgment slots on every iteration, including iterations that skip peer preparation.
+Settlement calls preparation directly. Measurement starts with a fresh cadence instance after warmup.
+Warmup and measurement record separate `peerChecks` and `peerCheckSkips` counters.
+`peerChecks` counts preparation attempts without a pending request. Pending-request skips do not increment either counter.
+The seven `--verify-peer-cadence` checks pass on Windows and Linux.
+The [peer-cadence run](../../reliability/features/native-signal/peer-cadence.md) reduces controller allocation in completed cases but fails all three 50-percent cases.
+One fails the handler bound during warmup. Two complete their protocols but exceed the observed debt limit.
 
 `LinuxSampleCadenceVerify` runs the sample-cadence mode without warmup.
 `LinuxWarmSampleCadenceVerify` adds a 250 ms warmup to both percentages.
