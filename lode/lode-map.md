@@ -13,6 +13,7 @@ For the bounded native signal experiment, read [signal intervention](profiling/s
 For signal delivery during runtime transitions, read [signal transitions](profiling/signal-transitions.md).
 For sample credit and bounded request ownership, read [signal accounting](profiling/signal-accounting.md).
 For finite peer lease ownership and journal parsing, read [service accounting](profiling/signal-service.md).
+For the portable native coordinator and shutdown contract, read [native service ownership](profiling/native-service-owner.md).
 For the live sampled signal controller and capacity limit, read [sampled signals](profiling/sampled-signals.md).
 For request timing and peak-debt evidence, read [service timing](../reliability/features/native-signal/service-timing.md).
 For native queue, handler, and observation phases, read [native phase timing](../reliability/features/native-signal/phase-timing.md).

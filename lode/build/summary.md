@@ -1,5 +1,10 @@
 # MiniScaffold build
 
+`ServiceOwnerVerify` builds and checks the portable native coordinator on the host with CMake and a C++20 compiler.
+`LinuxServiceOwnerVerify` performs the same checks in the existing `coznet-native-build:10.0.100` Linux image.
+Both targets call `native/VerifyServiceOwner.ps1` and require no CLR profiler or signal transport.
+They do not establish native delivery or prediction accuracy.
+
 `build/build.fs` owns the FAKE target graph. Its baseline is MiniScaffold's `v0.40.0-beta001` library template.
 The [release package](https://github.com/TheAngryByrd/MiniScaffold/releases/tag/v0.40.0-beta001) matches commit `bb58c5acb91c6bc34648ec8829d7866ffaa049e2` for these build files.
 The release still contains `SourceLinkTest`. CozNet removes that target and its CLI helper at the user's request.

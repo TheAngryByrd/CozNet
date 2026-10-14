@@ -4,6 +4,8 @@
 
 The [portable accounting model](../profiling/signal-service.md) implements reservation, submission binding, journal checks, cancellation receipts, and aggregate settlement.
 The live workload still uses one managed controller for every bounded signal request.
+The [portable native owner](../profiling/native-service-owner.md) passes fake-transport checks on Windows and Linux.
+The Linux transport and managed integration remain unimplemented.
 The next experiment will test whether a native service owner reduces those controller round trips.
 It will not change the public serial engine or claim general CLR signal safety.
 

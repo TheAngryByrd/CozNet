@@ -455,6 +455,12 @@ let nativeLinuxBuild _ = nativeScript "BuildLinux.ps1"
 
 let nativeLinuxVerify _ = nativeScript "VerifyLinuxNative.ps1"
 
+let serviceOwnerVerify platform _ =
+    nativeScriptWithArgs "VerifyServiceOwner.ps1" [
+        "-Platform"
+        platform
+    ]
+
 let nativeWorkload _ =
     DotNet.build
         (fun options -> {
@@ -889,6 +895,8 @@ let initTargets () =
     Target.create "NativeLinuxBuild" nativeLinuxBuild
     Target.create "NativeLinuxWorkload" nativeWorkload
     Target.create "NativeLinuxVerify" nativeLinuxVerify
+    Target.create "ServiceOwnerVerify" (serviceOwnerVerify "Host")
+    Target.create "LinuxServiceOwnerVerify" (serviceOwnerVerify "LinuxContainer")
     Target.create "NativeWorkload" nativeWorkload
     Target.create "NativeVerify" nativeVerify
     Target.create "NativeMapWorkload" nativeMapWorkload
