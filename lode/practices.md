@@ -7,6 +7,11 @@ Preserve raw observations and the seed. A seed reproduces intervention order, no
 Do not add test-output calls. Put failure details in assertions.
 Run both required adversarial reviews before a code commit.
 Keep the MiniScaffold FAKE target graph in `build/build.fs`. Make scripts and CI call its targets.
+Update human-readable documentation in `docsSrc/` with each feature or bug fix.
+Use `/divio-docs-system` to separate tutorials, how-to guides, reference, and explanation.
+Keep navigation in [the documentation index](../docsSrc/index.md) aligned with those reader needs.
+Describe implemented behavior separately from planned work and unverified platform support.
+Run the repository's `BuildDocs` target to check documentation generation.
 
 ```powershell
 dotnet test tests/CozNet.Tests/CozNet.Tests.fsproj -c Release

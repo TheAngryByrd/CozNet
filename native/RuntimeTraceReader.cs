@@ -4,6 +4,26 @@ using System.Text.Json;
 
 using var source = new EventPipeEventSource(args[0]);
 var events = new List<object>();
+bool includeJit = args.Length == 3 && args[2] == "jit";
+if (includeJit)
+{
+    source.Clr.MethodJittingStarted += item =>
+    {
+        var payload = new Dictionary<string, object>();
+        for (int i = 0; i < item.PayloadNames.Length; i++) payload[item.PayloadNames[i]] = item.PayloadValue(i);
+        events.Add(new { provider = item.ProviderName, id = (int)item.ID, version = item.Version,
+            name = item.EventName, milliseconds = item.TimeStampRelativeMSec, processId = item.ProcessID,
+            threadId = item.ThreadID, payload });
+    };
+    source.Clr.MethodLoadVerbose += item =>
+    {
+        var payload = new Dictionary<string, object>();
+        for (int i = 0; i < item.PayloadNames.Length; i++) payload[item.PayloadNames[i]] = item.PayloadValue(i);
+        events.Add(new { provider = item.ProviderName, id = (int)item.ID, version = item.Version,
+            name = item.EventName, milliseconds = item.TimeStampRelativeMSec, processId = item.ProcessID,
+            threadId = item.ThreadID, payload });
+    };
+}
 source.Dynamic.All += item =>
 {
     if (item.ProviderName == "CozNet-SampledSignals" ||
@@ -25,6 +45,6 @@ File.WriteAllText(args[1], JsonSerializer.Serialize(new
 {
     decoderVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
     decoderRuntime = Environment.Version.ToString(),
-    eventsLost = source.EventsLost,
+    includeJit, eventsLost = source.EventsLost,
     events
 }, new JsonSerializerOptions { WriteIndented = true }));

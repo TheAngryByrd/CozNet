@@ -3,7 +3,8 @@
 `ServiceAccountingAdapter.cs` connects [native observations](service-interop.md) to the immutable [service accounting model](signal-service.md).
 Its [pure checks](../../reliability/features/native-signal/service-accounting/README.md) pass on Windows and Linux.
 Controlled live Linux journals also pass through the adapter into the ledger.
-It does not yet replace the sampled workload controller.
+`NativeServiceController` connects it to the optional sampled native service path.
+The [first live treatment](../../reliability/features/native-signal/sampled-service/README.md) fails the lease capacity bound during warmup.
 
 ## Cursor and state
 

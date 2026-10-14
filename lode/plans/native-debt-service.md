@@ -8,7 +8,15 @@ The [portable native owner](../profiling/native-service-owner.md) passes fake-tr
 The [Linux transport](../profiling/linux-service-transport.md) passes controlled native delivery and lifetime checks.
 The [C ABI and managed client](../profiling/service-interop.md) pass controlled receipt and lifetime checks.
 The [ledger adapter](../profiling/service-accounting-adapter.md) passes pure and controlled live journal checks.
-Sampled workload integration remains unimplemented.
+Sampled workload integration is wired through `NativeServiceController` and `--sampled-service`.
+Five controller checks pass on Windows and Linux. The bounded runner is `LinuxSampledServiceVerify`.
+Its first treatment fails during warmup at 19,999,953 ns of observed peer debt. Zero speedup passes.
+See [the retained run](../../reliability/features/native-signal/sampled-service/README.md).
+Stable capacity and physical prediction validation remain incomplete.
+The [startup diagnostics](../../reliability/features/native-signal/service-startup/README.md) associate most first-use drain and journal completion delay with JIT compilation.
+The [initialization comparison](../../reliability/features/native-signal/service-initialization/README.md) exercises those paths before sampled debt accumulation.
+Both initialized treatments still fail capacity. The combined setup leaves completed peer preparation intervals with little controller CPU.
+The next investigation must distinguish native command handoff, scheduling, and runtime suspension without relaxing any limit.
 The next experiment will test whether a native service owner reduces those controller round trips.
 It will not change the public serial engine or claim general CLR signal safety.
 

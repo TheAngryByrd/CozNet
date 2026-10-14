@@ -42,5 +42,6 @@ An ineligible target returns a deferred child and leaves that debt unpaid.
 The deliberately late case must reject accounting and retain an unbound submitted request.
 Quiescent native teardown does not make a rejected receipt valid.
 The [retained checks](../../reliability/features/native-signal/selected-service/README.md) pass on Windows and Linux for pure parsing and on Linux for live slot 0 delivery.
-Live sampled-controller integration remains pending.
+The optional sampled native service path uses this adapter through `NativeServiceController`.
+The first live treatment fails during peer warmup before exercising a selected request.
 See [request ownership](signal-accounting.md), [peer accounting](service-accounting-adapter.md), and [the native service plan](../plans/native-debt-service.md).

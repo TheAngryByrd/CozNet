@@ -1,0 +1,593 @@
+{
+  "eventsLost": 0,
+  "controllerCompilations": 2721,
+  "alignmentWidthNanoseconds": 3608.0,
+  "jitIntervalsMeasureElapsedTime": true,
+  "phases": [
+    {
+      "stage": "warmup",
+      "phase": "drain",
+      "iteration": 1,
+      "completed": true,
+      "wallMilliseconds": 22.804104,
+      "cpuMilliseconds": 22.7665,
+      "jitElapsedLowerMilliseconds": 21.14975,
+      "jitElapsedUpperMilliseconds": 21.597142,
+      "methods": [
+        {
+          "method": "RingReader.Drain",
+          "possibleMilliseconds": 2.60809
+        },
+        {
+          "method": "System.Numerics.BigInteger.Add",
+          "possibleMilliseconds": 1.469638
+        },
+        {
+          "method": "SampledSignalWorkload+<>c__DisplayClass11_0.<Run>g__Publish|2",
+          "possibleMilliseconds": 1.149876
+        },
+        {
+          "method": "System.Numerics.BigInteger.op_Division",
+          "possibleMilliseconds": 1.050279
+        },
+        {
+          "method": "CozNet.SampleCreditStreamModule.observe",
+          "possibleMilliseconds": 0.973799
+        },
+        {
+          "method": "System.Numerics.BigInteger.Multiply",
+          "possibleMilliseconds": 0.960647
+        },
+        {
+          "method": "System.Numerics.BigInteger..ctor",
+          "possibleMilliseconds": 0.882048
+        },
+        {
+          "method": "CozNet.SignalAccountingModule.observe$cont@126",
+          "possibleMilliseconds": 0.768631
+        },
+        {
+          "method": "System.Collections.Generic.HashSet`1[System.UInt64].AddIfNotPresent",
+          "possibleMilliseconds": 0.756451
+        },
+        {
+          "method": "System.Numerics.BigIntegerCalculator.DivideGrammarSchool",
+          "possibleMilliseconds": 0.623191
+        },
+        {
+          "method": "Microsoft.FSharp.Collections.MapTreeModule.rebalance",
+          "possibleMilliseconds": 0.567777
+        },
+        {
+          "method": "CozNet.DelayLedgerModule.withRunnable",
+          "possibleMilliseconds": 0.525264
+        },
+        {
+          "method": "System.Numerics.BigInteger.op_Modulus",
+          "possibleMilliseconds": 0.521057
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.getEqualityComparer",
+          "possibleMilliseconds": 0.499262
+        },
+        {
+          "method": "System.SpanHelpers.LastIndexOfValueType",
+          "possibleMilliseconds": 0.423524
+        },
+        {
+          "method": "System.Collections.Generic.HashSet`1[System.__Canon].CopyTo",
+          "possibleMilliseconds": 0.417079
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.checkType@1743",
+          "possibleMilliseconds": 0.388661
+        },
+        {
+          "method": "System.Numerics.BigIntegerCalculator.Divide",
+          "possibleMilliseconds": 0.385636
+        },
+        {
+          "method": "System.Numerics.BigIntegerCalculator.Remainder",
+          "possibleMilliseconds": 0.3625
+        },
+        {
+          "method": "CozNet.DelayLedgerModule+creditSample@112.Invoke",
+          "possibleMilliseconds": 0.328248
+        },
+        {
+          "method": "System.Linq.Enumerable+OrderedIterator`1[System.__Canon].ToArray",
+          "possibleMilliseconds": 0.282408
+        },
+        {
+          "method": "ControllerPhaseCapture.End",
+          "possibleMilliseconds": 0.27585
+        },
+        {
+          "method": "System.Numerics.BigInteger.op_Addition",
+          "possibleMilliseconds": 0.258592
+        },
+        {
+          "method": "System.Numerics.BigIntegerCalculator.SubtractDivisor",
+          "possibleMilliseconds": 0.246162
+        },
+        {
+          "method": "Microsoft.FSharp.Collections.MapTreeModule.mem",
+          "possibleMilliseconds": 0.231854
+        },
+        {
+          "method": "RingReader.Copy",
+          "possibleMilliseconds": 0.223417
+        },
+        {
+          "method": "Microsoft.FSharp.Collections.MapTreeModule.mk",
+          "possibleMilliseconds": 0.221877
+        },
+        {
+          "method": "System.Numerics.BigIntegerCalculator.Multiply",
+          "possibleMilliseconds": 0.218218
+        },
+        {
+          "method": "System.Numerics.BigInteger.CompareTo",
+          "possibleMilliseconds": 0.217139
+        },
+        {
+          "method": "System.Numerics.BigInteger.op_Explicit",
+          "possibleMilliseconds": 0.215211
+        },
+        {
+          "method": "System.Linq.Enumerable.ICollectionToArray",
+          "possibleMilliseconds": 0.198834
+        },
+        {
+          "method": "System.Linq.Enumerable+EnumerableSorter`1[System.__Canon]..cctor",
+          "possibleMilliseconds": 0.176924
+        },
+        {
+          "method": "PerfMapSnapshot.Resolve",
+          "possibleMilliseconds": 0.17499
+        },
+        {
+          "method": "System.Numerics.BigInteger.CompareTo",
+          "possibleMilliseconds": 0.165996
+        },
+        {
+          "method": "System.Numerics.BigInteger..ctor",
+          "possibleMilliseconds": 0.162627
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.canUseDefaultEqualityComparer",
+          "possibleMilliseconds": 0.157495
+        },
+        {
+          "method": "System.Numerics.BigInteger..ctor",
+          "possibleMilliseconds": 0.155406
+        },
+        {
+          "method": "SampledSignalWorkload+<>c__DisplayClass11_0.<Run>g__Drain|3",
+          "possibleMilliseconds": 0.145732
+        },
+        {
+          "method": "CozNet.DelayLedgerModule.creditSample",
+          "possibleMilliseconds": 0.142245
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.GenericEqualityIntrinsic",
+          "possibleMilliseconds": 0.139575
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.GenericGreaterThanIntrinsic",
+          "possibleMilliseconds": 0.138789
+        },
+        {
+          "method": "CozNet.DelayTicksModule.tryCreate",
+          "possibleMilliseconds": 0.136788
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.isNullable",
+          "possibleMilliseconds": 0.134009
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.GenericComparisonWithComparerIntrinsic",
+          "possibleMilliseconds": 0.122622
+        },
+        {
+          "method": "System.Collections.Generic.HashSet`1[System.UInt64].Initialize",
+          "possibleMilliseconds": 0.11778
+        },
+        {
+          "method": "CpuSample.Create",
+          "possibleMilliseconds": 0.117736
+        },
+        {
+          "method": "CozNet.SampleLocation..cctor",
+          "possibleMilliseconds": 0.115516
+        },
+        {
+          "method": "SelectedSignalCadence.Observe",
+          "possibleMilliseconds": 0.11065
+        },
+        {
+          "method": "System.Runtime.InteropServices.Marshal.WriteInt64",
+          "possibleMilliseconds": 0.102093
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.isArray",
+          "possibleMilliseconds": 0.099993
+        },
+        {
+          "method": "System.Collections.Generic.GenericEqualityComparer`1[System.Guid].Equals",
+          "possibleMilliseconds": 0.087077
+        },
+        {
+          "method": "System.Runtime.InteropServices.Marshal.ReadByte",
+          "possibleMilliseconds": 0.078727
+        },
+        {
+          "method": "System.Collections.Generic.HashSet`1[System.__Canon].CopyTo",
+          "possibleMilliseconds": 0.078213
+        },
+        {
+          "method": "PerfMapSnapshot+CodeRange.Contains",
+          "possibleMilliseconds": 0.072361
+        },
+        {
+          "method": "LinuxCpuEventSession.Drain",
+          "possibleMilliseconds": 0.069442
+        },
+        {
+          "method": "System.Collections.Generic.EqualityComparer`1[System.Guid]..cctor",
+          "possibleMilliseconds": 0.056356
+        },
+        {
+          "method": "System.Linq.Enumerable+EnumerableSorter`1+<>c[System.__Canon]..cctor",
+          "possibleMilliseconds": 0.056075
+        },
+        {
+          "method": "System.Numerics.BigInteger..ctor",
+          "possibleMilliseconds": 0.053224
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare+EqualityComparerPER`1[System.Guid]..cctor",
+          "possibleMilliseconds": 0.04994
+        },
+        {
+          "method": "System.Collections.Generic.HashSet`1[System.__Canon].get_Count",
+          "possibleMilliseconds": 0.048949
+        },
+        {
+          "method": "SampledSignalWorkload+Sink.Publish",
+          "possibleMilliseconds": 0.045554
+        },
+        {
+          "method": "System.Collections.Generic.GenericEqualityComparer`1[System.Guid]..ctor",
+          "possibleMilliseconds": 0.033038
+        }
+      ]
+    },
+    {
+      "stage": "warmup",
+      "phase": "complete-selected",
+      "iteration": 1,
+      "completed": true,
+      "wallMilliseconds": 2.661243,
+      "cpuMilliseconds": 2.5122,
+      "jitElapsedLowerMilliseconds": 2.602347,
+      "jitElapsedUpperMilliseconds": 2.616779,
+      "methods": [
+        {
+          "method": "SampledSignalWorkload+<>c__DisplayClass11_0.<Run>g__Complete|4",
+          "possibleMilliseconds": 1.450165
+        },
+        {
+          "method": "NativeServiceController.Poll",
+          "possibleMilliseconds": 1.166614
+        }
+      ]
+    },
+    {
+      "stage": "warmup",
+      "phase": "complete-peer",
+      "iteration": 1,
+      "completed": true,
+      "wallMilliseconds": 0.000615,
+      "cpuMilliseconds": 0.0004,
+      "jitElapsedLowerMilliseconds": 0.0,
+      "jitElapsedUpperMilliseconds": 0.0,
+      "methods": []
+    },
+    {
+      "stage": "warmup",
+      "phase": "prepare-selected",
+      "iteration": 1,
+      "completed": true,
+      "wallMilliseconds": 3.570351,
+      "cpuMilliseconds": 3.5692,
+      "jitElapsedLowerMilliseconds": 3.174254,
+      "jitElapsedUpperMilliseconds": 3.210334,
+      "methods": [
+        {
+          "method": "SampledSignalWorkload+<>c__DisplayClass11_0.<Run>g__Prepare|5",
+          "possibleMilliseconds": 1.171552
+        },
+        {
+          "method": "CozNet.SignalAccountingModule.prepare",
+          "possibleMilliseconds": 0.844392
+        },
+        {
+          "method": "CozNet.DelayLedgerModule+catchUp@121.Invoke",
+          "possibleMilliseconds": 0.702005
+        },
+        {
+          "method": "CozNet.DelayLedgerModule.catchUp",
+          "possibleMilliseconds": 0.398908
+        },
+        {
+          "method": "CozNet.DelayAction..cctor",
+          "possibleMilliseconds": 0.093477
+        }
+      ]
+    },
+    {
+      "stage": "warmup",
+      "phase": "prepare-peer",
+      "iteration": 1,
+      "completed": true,
+      "wallMilliseconds": 4.140516,
+      "cpuMilliseconds": 4.1393,
+      "jitElapsedLowerMilliseconds": 3.779304,
+      "jitElapsedUpperMilliseconds": 3.865896,
+      "methods": [
+        {
+          "method": "CozNet.SignalAccountingModule.prepareService",
+          "possibleMilliseconds": 0.779931
+        },
+        {
+          "method": "CozNet.SignalAccountingModule.sentService",
+          "possibleMilliseconds": 0.575782
+        },
+        {
+          "method": "NativeServiceController.SubmitPeer",
+          "possibleMilliseconds": 0.488757
+        },
+        {
+          "method": "NativeServiceClient.Parts",
+          "possibleMilliseconds": 0.400918
+        },
+        {
+          "method": "LinuxServiceBackend.Submit",
+          "possibleMilliseconds": 0.29885
+        },
+        {
+          "method": "Microsoft.FSharp.Core.LanguagePrimitives+HashCompare.GenericEqualityWithComparerIntrinsic",
+          "possibleMilliseconds": 0.245031
+        },
+        {
+          "method": "NativeServiceController.NewOperation",
+          "possibleMilliseconds": 0.236263
+        },
+        {
+          "method": "ServiceNativeMethods.Submit",
+          "possibleMilliseconds": 0.202361
+        },
+        {
+          "method": "ServiceAccountingAdapter..ctor",
+          "possibleMilliseconds": 0.191855
+        },
+        {
+          "method": "CozNet.SignalServiceLeaseModule.tryCreate",
+          "possibleMilliseconds": 0.177393
+        },
+        {
+          "method": "CozNet.SignalServiceLease.Equals",
+          "possibleMilliseconds": 0.156116
+        },
+        {
+          "method": "CozNet.LedgerThread.Equals",
+          "possibleMilliseconds": 0.112639
+        }
+      ]
+    },
+    {
+      "stage": "warmup",
+      "phase": "drain",
+      "iteration": 2,
+      "completed": true,
+      "wallMilliseconds": 0.61407,
+      "cpuMilliseconds": 0.6117,
+      "jitElapsedLowerMilliseconds": 0.3894,
+      "jitElapsedUpperMilliseconds": 0.396616,
+      "methods": [
+        {
+          "method": "System.Collections.Generic.HashSet`1[System.UInt64].Resize",
+          "possibleMilliseconds": 0.396616
+        }
+      ]
+    },
+    {
+      "stage": "warmup",
+      "phase": "complete-selected",
+      "iteration": 2,
+      "completed": true,
+      "wallMilliseconds": 0.000719,
+      "cpuMilliseconds": 0.0006,
+      "jitElapsedLowerMilliseconds": 0.0,
+      "jitElapsedUpperMilliseconds": 0.0,
+      "methods": []
+    },
+    {
+      "stage": "warmup",
+      "phase": "complete-peer",
+      "iteration": 2,
+      "completed": true,
+      "wallMilliseconds": 10.725568,
+      "cpuMilliseconds": 10.7244,
+      "jitElapsedLowerMilliseconds": 9.865125,
+      "jitElapsedUpperMilliseconds": 10.074389,
+      "methods": [
+        {
+          "method": "ServiceAccountingAdapter.Accept",
+          "possibleMilliseconds": 2.338564
+        },
+        {
+          "method": "NativeServiceClient.Read",
+          "possibleMilliseconds": 1.128423
+        },
+        {
+          "method": "SignalPhaseTiming.Parse",
+          "possibleMilliseconds": 0.656453
+        },
+        {
+          "method": "CozNet.DelayLedgerModule.completeDelay",
+          "possibleMilliseconds": 0.513692
+        },
+        {
+          "method": "Microsoft.FSharp.Collections.MapTreeModule.remove",
+          "possibleMilliseconds": 0.498694
+        },
+        {
+          "method": "CozNet.SignalAccountingModule.acceptServiceChild",
+          "possibleMilliseconds": 0.475689
+        },
+        {
+          "method": "CozNet.SignalAccountingModule.acceptServiceChild$cont@405",
+          "possibleMilliseconds": 0.441166
+        },
+        {
+          "method": "CozNet.SignalAccountingModule.serviceProgress",
+          "possibleMilliseconds": 0.435606
+        },
+        {
+          "method": "ServiceAccountingAdapter.RequireProgress",
+          "possibleMilliseconds": 0.366129
+        },
+        {
+          "method": "CozNet.SignalAccountingModule.completeService",
+          "possibleMilliseconds": 0.355271
+        },
+        {
+          "method": "CozNet.SignalAccountingModule.releaseService",
+          "possibleMilliseconds": 0.310533
+        },
+        {
+          "method": "ServiceNativeMethods.Snapshot",
+          "possibleMilliseconds": 0.297216
+        },
+        {
+          "method": "System.Array.Copy",
+          "possibleMilliseconds": 0.257362
+        },
+        {
+          "method": "CozNet.SignalServiceChildModule.tryCreate$cont@67",
+          "possibleMilliseconds": 0.233017
+        },
+        {
+          "method": "ServiceNativeMethods.Release",
+          "possibleMilliseconds": 0.21407
+        },
+        {
+          "method": "CozNet.SignalServiceChildModule.tryCreate",
+          "possibleMilliseconds": 0.213555
+        },
+        {
+          "method": "ServiceNativeMethods.Clock",
+          "possibleMilliseconds": 0.201238
+        },
+        {
+          "method": "System.Collections.Generic.List`1[System.__Canon].ToArray",
+          "possibleMilliseconds": 0.158527
+        },
+        {
+          "method": "NativeServiceClient.Release",
+          "possibleMilliseconds": 0.143434
+        },
+        {
+          "method": "LinuxServiceBackend.IsEligibleAddress",
+          "possibleMilliseconds": 0.134582
+        },
+        {
+          "method": "Microsoft.FSharp.Collections.MapTreeModule.find",
+          "possibleMilliseconds": 0.131206
+        },
+        {
+          "method": "ServiceReceiptTiming.Parse",
+          "possibleMilliseconds": 0.118241
+        },
+        {
+          "method": "LinuxServiceBackend.Read",
+          "possibleMilliseconds": 0.100332
+        },
+        {
+          "method": "LinuxServiceBackend.Release",
+          "possibleMilliseconds": 0.0668
+        },
+        {
+          "method": "NativeServiceClient.IsValidOutcome",
+          "possibleMilliseconds": 0.062764
+        },
+        {
+          "method": "System.SZArrayHelper.CopyTo",
+          "possibleMilliseconds": 0.058831
+        },
+        {
+          "method": "System.SZArrayHelper.get_Count",
+          "possibleMilliseconds": 0.055712
+        },
+        {
+          "method": "System.Array+EmptyArray`1[ServiceNativeAcknowledgment]..cctor",
+          "possibleMilliseconds": 0.054519
+        },
+        {
+          "method": "LinuxServiceBackend.IsValidOutcome",
+          "possibleMilliseconds": 0.052763
+        }
+      ]
+    },
+    {
+      "stage": "warmup",
+      "phase": "prepare-selected",
+      "iteration": 2,
+      "completed": true,
+      "wallMilliseconds": 0.003137,
+      "cpuMilliseconds": 0.0029,
+      "jitElapsedLowerMilliseconds": 0.0,
+      "jitElapsedUpperMilliseconds": 0.0,
+      "methods": []
+    },
+    {
+      "stage": "warmup",
+      "phase": "prepare-peer",
+      "iteration": 2,
+      "completed": false,
+      "wallMilliseconds": 1.697575,
+      "cpuMilliseconds": 1.6969,
+      "jitElapsedLowerMilliseconds": 1.462698,
+      "jitElapsedUpperMilliseconds": 1.505994,
+      "methods": [
+        {
+          "method": "System.Runtime.EH.FindFirstPassHandler",
+          "possibleMilliseconds": 0.544302
+        },
+        {
+          "method": "System.Runtime.EH.DispatchEx",
+          "possibleMilliseconds": 0.525955
+        },
+        {
+          "method": "System.Runtime.EH.ShouldTypedClauseCatchThisException",
+          "possibleMilliseconds": 0.132211
+        },
+        {
+          "method": "System.Runtime.EH.RhThrowEx",
+          "possibleMilliseconds": 0.10879
+        },
+        {
+          "method": "System.InvalidOperationException..ctor",
+          "possibleMilliseconds": 0.103753
+        },
+        {
+          "method": "System.Runtime.ExceptionServices.InternalCalls.RhpSfiInit",
+          "possibleMilliseconds": 0.090983
+        }
+      ]
+    }
+  ]
+}

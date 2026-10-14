@@ -6,7 +6,7 @@
 The [retained runs](../../reliability/features/native-signal/service-interop/README.md) pass native ABI and controlled managed receipt checks on Linux x64.
 The receipt parser also passes on Windows.
 The [ledger adapter](service-accounting-adapter.md) passes pure checks and controlled live journal checks.
-The sampled workload does not use this path yet.
+The optional `--sampled-service` workload uses this path. Its first treatment fails the lease capacity bound during warmup.
 
 ## Memory and controller ownership
 
@@ -68,8 +68,8 @@ An excessive upper bound fails the conservative gate. It does not prove the exac
 Raw observations remain available before receipt parsing.
 
 The current client copies retained journal arrays when it returns an observation.
-Allocation cost and snapshot-copy overhead remain unmeasured.
-Do not connect this client to a capacity comparison without measuring those costs.
+The [snapshot cost workload](service-snapshot-cost.md) measures the combined copy, clock, cache, and managed-copy path.
+Those fixed costs do not establish sampled workload capacity.
 
 ## Checks
 

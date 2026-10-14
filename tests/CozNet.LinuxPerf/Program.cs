@@ -25,8 +25,14 @@ if (args is ["--verify-service-accounting"])
 {
     ServiceAccountingAdapterChecks.Run();
     ServiceSelectedAdapterChecks.Run();
+    NativeServiceControllerChecks.Run();
+    ControllerPhaseCaptureChecks.Run();
+    SignalTargetLifetimeChecks.UnresolvedDeliveryKeepsTargetAlive();
     return 0;
 }
+
+if (args is ["--verify-service-initialization", var initializationPath, var initializationPercent])
+    return SampledSignalAbortChecks.Run(initializationPath, "cold", true, initializationPercent);
 
 if (args is ["--verify-service-interop", var servicePath, var receiptMode])
 {
@@ -129,6 +135,17 @@ if (args is ["--verify-signal-cadence"])
 {
     SelectedSignalCadenceChecks.Run();
     return 0;
+}
+
+if (args is [var serviceMode, var nativePath, var nativePercent, var nativeCadence, var nativeStartup, var nativeWait, var nativeGc]
+    && serviceMode is "--sampled-service" or "--sampled-service-phases" or "--sampled-service-jit" or "--sampled-service-initialized")
+{
+    var parsedWait = SignalWaitMode.Parse(nativeWait);
+    return SampledSignalWorkload.Run(nativePath, SampledSignalPlan.Parse(nativePercent, nativeCadence, nativeStartup, nativeGc),
+        () => new LinuxServiceBackend(parsedWait), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(),
+        trace: serviceMode == "--sampled-service-jit" ? new SampledSignalTrace() : null,
+        captureServicePhases: serviceMode != "--sampled-service",
+        initializeManagedPaths: serviceMode == "--sampled-service-initialized");
 }
 
 if (args is ["--sampled-signal", var gcPath, var gcPercent, var gcCadence, var gcStartup, var gcWait, var sampledGc])

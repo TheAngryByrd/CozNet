@@ -19,16 +19,28 @@ sealed class SignalPlan
 sealed record SignalAcknowledgment(ulong Sequence, ulong Outcome, ulong InstructionPointer,
     ulong MeasuredHandlerNanoseconds, ulong WaitNanoseconds, long WaitResult, SignalPhaseTiming? Timing = null);
 
-interface IBoundedInterventionBackend
+interface IInterventionBackend
 {
     string Name { get; }
     object Describe();
     bool IsEligibleAddress(ulong address);
     void RegisterCurrentThread(int slot);
-    ulong Request(int slot, SignalPlan plan);
-    SignalAcknowledgment? Read(int slot, ulong sequence);
     void RetireCurrentThread(int slot);
     void RestoreAfterThreadJoin();
+}
+
+interface IBoundedInterventionBackend : IInterventionBackend
+{
+    ulong Request(int slot, SignalPlan plan);
+    SignalAcknowledgment? Read(int slot, ulong sequence);
+}
+
+interface IServiceInterventionBackend : IInterventionBackend
+{
+    bool IsValidOutcome(ulong outcome, long result);
+    void Submit(int slot, Guid identity, ulong command, ulong budget);
+    ServiceNativeObservation Read(int slot, Guid identity);
+    void Release(int slot, Guid identity);
 }
 
 sealed class LinuxSignalBackend : IBoundedInterventionBackend, ITargetCpuObservationBackend

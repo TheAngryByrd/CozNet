@@ -1,0 +1,38 @@
+{
+  "generalClrSafetyEstablished": false,
+  "passed": false,
+  "inputsUnchanged": true,
+  "outcomes": [
+    {
+      "exitCode": 0,
+      "name": "native",
+      "recordExists": true
+    },
+    {
+      "exitCode": 0,
+      "name": "accounting",
+      "recordExists": true
+    },
+    {
+      "exitCode": 0,
+      "name": "initialization-0",
+      "recordExists": true
+    },
+    {
+      "exitCode": 0,
+      "name": "initialization-50",
+      "recordExists": true
+    },
+    {
+      "exitCode": 0,
+      "name": "speedup-0",
+      "recordExists": true
+    },
+    {
+      "exitCode": 1,
+      "name": "speedup-50",
+      "recordExists": true
+    }
+  ],
+  "predictionAccuracyEstablished": false
+}

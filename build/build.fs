@@ -470,6 +470,17 @@ let linuxSignalServiceVerify _ =
 
 let linuxServiceInteropVerify _ = nativeScript "VerifyServiceInterop.ps1"
 
+let linuxSampledServiceVerify _ = nativeScript "VerifyLinuxSampledService.ps1"
+
+let linuxSampledServicePhases _ =
+    nativeScriptWithArgs "VerifyLinuxSampledService.ps1" [ "-CapturePhases" ]
+
+let linuxSampledServiceJit _ =
+    nativeScriptWithArgs "VerifyLinuxSampledService.ps1" [ "-CaptureJit" ]
+
+let linuxInitializedServiceVerify _ =
+    nativeScriptWithArgs "VerifyLinuxSampledService.ps1" [ "-InitializeManagedPaths" ]
+
 let linuxSelectedServiceInteropVerify _ =
     nativeScriptWithArgs "VerifyServiceInterop.ps1" [ "-SelectedOnly" ]
 
@@ -974,6 +985,10 @@ let initTargets () =
     Target.create "LinuxServiceOwnerVerify" (serviceOwnerVerify "LinuxContainer")
     Target.create "LinuxSignalServiceVerify" linuxSignalServiceVerify
     Target.create "LinuxServiceInteropVerify" linuxServiceInteropVerify
+    Target.create "LinuxSampledServiceVerify" linuxSampledServiceVerify
+    Target.create "LinuxSampledServicePhases" linuxSampledServicePhases
+    Target.create "LinuxSampledServiceJit" linuxSampledServiceJit
+    Target.create "LinuxInitializedServiceVerify" linuxInitializedServiceVerify
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
@@ -1046,6 +1061,22 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxServiceInteropVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxSampledServiceVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxSampledServicePhases"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxSampledServiceJit"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxInitializedServiceVerify"
     |> ignore
 
     "LinuxPerfWorkload"

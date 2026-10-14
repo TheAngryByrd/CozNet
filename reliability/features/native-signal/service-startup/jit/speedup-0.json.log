@@ -1,0 +1,12 @@
+
+Provider Name                           Keywords            Level               Enabled By
+Microsoft-Windows-DotNETRuntime         0x0000000000000011  Verbose(5)          --providers
+CozNet-SampledSignals                   0x0000000000000000  Informational(4)    --providers
+
+Launching: dotnet /work/CozNet.LinuxPerf.dll --sampled-service-jit /output/speedup-0.json 0 qualified-sample warm spin no-gc 
+Process        : /usr/share/dotnet/dotnet
+Output File    : /output/speedup-0.nettrace
+
+
+Trace completed.
+Process exited with code '0'.

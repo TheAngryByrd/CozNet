@@ -1,6 +1,43 @@
 # Sampled signal controller
 
-`SampledSignalWorkload` connects `ICpuEventSession` to `SignalAccounting` and `IBoundedInterventionBackend`.
+`SampledSignalWorkload` connects `ICpuEventSession` to `SignalAccounting` and `IInterventionBackend`.
+`IBoundedInterventionBackend` retains individual managed submissions for comparison.
+`IServiceInterventionBackend` supplies native selected commands and finite peer leases through `NativeServiceController`.
+The `--sampled-service` entry point selects `LinuxServiceBackend`.
+`LinuxSampledServiceVerify` retains the first native service run: zero passes, while treatment fails during warmup at 19,999,953 ns of peer debt.
+See [the retained evidence](../../reliability/features/native-signal/sampled-service/README.md).
+The controller checks accounting submission before native effects and retains ambiguous slot ownership.
+Active peer prefixes reduce observed debt before terminal settlement. Committed waits exclude these active prefixes.
+Terminal journals and pending raw observations remain in the output, including failure boundaries.
+JSON serialization includes native public fields so retained journals contain their actual headers and acknowledgments.
+`LinuxSampledServicePhases` enables a bounded diagnostic prefix of 128 controller phases.
+The phase records bracket thread CPU readings with process timestamps and retain incomplete phases on failure.
+Drain, completion, and preparation records distinguish controller CPU work from elapsed time without attributing that work to JIT or scheduling.
+The diagnostic adds clock reads and record allocation. It is not a capacity baseline.
+`LinuxSampledServiceJit` adds runtime JIT and GC events plus bracketed clock anchors to the same phase diagnostic.
+`ExportRuntimeTrace.ps1 -IncludeJit` retains runtime method events for correlation.
+The default trace export keeps its existing GC and clock-marker selection.
+The [startup captures](../../reliability/features/native-signal/service-startup/README.md) retain treatment failures with and without JIT events.
+Controller CPU covers nearly all first-drain and first-journal completion elapsed time.
+The traced run attributes at least 21.15 ms of the first drain's 22.80 ms to compilation intervals.
+Initialization before sampled debt accumulation remains the next experiment, not a verified capacity fix.
+The optional `--sampled-service-initialized` path now exercises one synthetic perf record and two synthetic service journals before backend creation.
+It calls the live controller's drain, prepare, and complete functions with a separate in-memory session and backend.
+The fixed path credits 40,000 ns, settles 70,000 ns peer wait and 30,000 ns selected wait, and requires zero pending ownership.
+Its records remain under `initialization`, labeled synthetic. Fresh accounting, sample records, and backend ownership start the live workload.
+`LinuxInitializedServiceVerify` retains isolation checks for zero and 50 percent and a live bounded comparison.
+The managed-only initialization run passes isolation and zero-speedup checks but retains a warmup failure at 2,499,928 ns of peer debt.
+Its first live drain takes 0.97 ms instead of 28.34 ms in the prior phase capture. Its first native peer completion still takes 3.90 ms CPU.
+The initialized path now also sends one peer command while workers remain at their start gate.
+This transport setup uses synthetic credit and requires one deferred, zero-wait native child under the existing 100 ms bound.
+It retains `transportInitialization` separately, resets accounting, and keeps the native controller's command sequence increasing.
+Live zero-speedup checks exclude only the separately retained setup journal. Ambiguous setup ownership still prevents native teardown.
+The combined initialization run also fails warmup capacity, at 2,098,793 ns of peer debt.
+Its zero-speedup case passes with one separate setup journal and no live service commands.
+Completed peer preparations include 2.37 ms elapsed with 0.044 ms CPU and 2.26 ms elapsed with 0.274 ms CPU.
+Native handoff, scheduling, and suspension remain unresolved. See [the initialization comparison](../../reliability/features/native-signal/service-initialization/README.md).
+Target threads remain alive after delivery stop while native ownership remains unresolved.
+They retire only after the controller reports quiescence. Unresolved ownership therefore fails join and restoration checks instead of allowing target thread exit.
 Platform calls stay behind those interfaces and `IThreadCpuClock`.
 Only the Linux x64 adapters currently supply the required operations.
 The controller runs on the OS thread that installs the native signal backend.

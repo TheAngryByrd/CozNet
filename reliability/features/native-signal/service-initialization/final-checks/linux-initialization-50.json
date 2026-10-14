@@ -1,0 +1,319 @@
+{
+  "backend": "trace-abort-check",
+  "backendDetails": {
+    "injectedControllerFailure": true
+  },
+  "percent": 50,
+  "selectedCadence": "QualifiedSample",
+  "selectedChecks": 0,
+  "peerChecks": 0,
+  "peerCheckSkips": 0,
+  "runtime": "10.0.0",
+  "runtimeCountersStart": {
+    "Stage": "measurement",
+    "StartedTimestamp": 345359129971775,
+    "FinishedTimestamp": 345359129984948,
+    "ControllerAllocatedBytes": 150696,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "GcPauseTicks": 0,
+    "ProcessCpuTicks": 16568180
+  },
+  "runtimeSettings": {
+    "serverGc": false,
+    "latencyMode": "Interactive",
+    "processorCount": 4
+  },
+  "warmupMilliseconds": 0,
+  "warmup": null,
+  "measurement": null,
+  "settled": null,
+  "failureBoundary": {
+    "Stage": "measurement",
+    "Milliseconds": 0,
+    "GlobalNanoseconds": 0,
+    "CreditNanoseconds": 0,
+    "WaitNanoseconds": [
+      0,
+      0
+    ],
+    "DebtNanoseconds": [
+      0,
+      0
+    ],
+    "Registered": [
+      true,
+      true
+    ],
+    "Pending": 0,
+    "Batches": [
+      0,
+      0
+    ],
+    "Timestamp": 345359135777998,
+    "PendingRequests": [],
+    "PendingServices": [],
+    "RuntimeCounters": {
+      "Stage": "measurement",
+      "StartedTimestamp": 345359135981350,
+      "FinishedTimestamp": 345359136117660,
+      "ControllerAllocatedBytes": 151776,
+      "Gen0Collections": 0,
+      "Gen1Collections": 0,
+      "Gen2Collections": 0,
+      "GcPauseTicks": 0,
+      "ProcessCpuTicks": 16629310
+    }
+  },
+  "measurementStartRecords": null,
+  "boundaries": [],
+  "maxDebtNanoseconds": [
+    0,
+    0
+  ],
+  "debtBoundNanoseconds": 2000000,
+  "stopwatchFrequency": 1000000000,
+  "longestServiceInterval": null,
+  "peakDebt": [
+    null,
+    null
+  ],
+  "traceAnchors": [
+    {
+      "Id": 0,
+      "Phase": "run-start",
+      "BeforeTimestamp": 345358844079356,
+      "AfterTimestamp": 345358861513840
+    },
+    {
+      "Id": 1,
+      "Phase": "measurement-start",
+      "BeforeTimestamp": 345359129963951,
+      "AfterTimestamp": 345359129970759
+    },
+    {
+      "Id": 2,
+      "Phase": "run-abort",
+      "BeforeTimestamp": 345359573844548,
+      "AfterTimestamp": 345359573852506
+    },
+    {
+      "Id": 3,
+      "Phase": "run-end",
+      "BeforeTimestamp": 345359576664994,
+      "AfterTimestamp": 345359576671354
+    }
+  ],
+  "diagnosticTrace": true,
+  "traceAbort": {
+    "AnchorId": 2,
+    "FailureTimestamp": 345359135777998,
+    "Stage": "measurement"
+  },
+  "controllerCpuTiming": true,
+  "targetCpuTiming": false,
+  "schedulerTiming": false,
+  "schedulerStopped": true,
+  "schedulerCaptures": [
+    null,
+    null,
+    null
+  ],
+  "controllerCpuNanoseconds": 0,
+  "samplingPauses": 0,
+  "records": null,
+  "samples": [],
+  "requests": [],
+  "serviceJournals": null,
+  "pendingServiceJournals": null,
+  "controllerPhases": null,
+  "controllerPhaseCapture": false,
+  "initialization": {
+    "Source": "synthetic",
+    "Samples": [
+      {
+        "Sample": {
+          "ProcessId": 7,
+          "ThreadId": 42,
+          "Timestamp": 1,
+          "PeriodNanoseconds": 80000,
+          "InstructionPointer": 100,
+          "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        "Epoch": 0,
+        "Accepted": true,
+        "CreditNanoseconds": 40000,
+        "ConsumedMilliseconds": 0,
+        "Stage": "initialization",
+        "ConsumedTimestamp": 345358964642632
+      }
+    ],
+    "Journals": [
+      {
+        "Slot": 1,
+        "Identity": "5c5fbd3b-d7f7-441a-ae1f-6626d093e8b4",
+        "Command": 1,
+        "BudgetNanoseconds": 40000,
+        "StartedTimestamp": 345358985777864,
+        "StartedStage": "initialization",
+        "ObservedTimestamp": 345359003500278,
+        "ObservedStage": "initialization",
+        "Observation": {
+          "Header": {
+            "IdentityFirst": 4907472201380248891,
+            "IdentitySecond": 13035831643630608302,
+            "Command": 1,
+            "Budget": 40000,
+            "Measured": 70000,
+            "Phase": 2,
+            "Error": 0,
+            "TransportError": 0,
+            "Cancellation": 0,
+            "Outstanding": 0,
+            "Children": 1,
+            "Rejected": 0,
+            "Captured": 1070005
+          },
+          "Children": [
+            {
+              "Native": {
+                "Ordinal": 1,
+                "Requested": 40000,
+                "Acknowledgment": {
+                  "Sequence": 1,
+                  "Outcome": 2,
+                  "Ip": 100,
+                  "Handler": 70000,
+                  "Wait": 70000,
+                  "WaitResult": 0,
+                  "Started": 1000000,
+                  "Queued": 1000001,
+                  "HandlerStarted": 1000002,
+                  "HandlerFinished": 1070002,
+                  "Observed": 1070003
+                }
+              },
+              "FirstSnapshotCaptured": 1070004,
+              "FirstManagedReceiptUpper": 1070005,
+              "ClockStatus": 0
+            }
+          ],
+          "Rejected": []
+        }
+      },
+      {
+        "Slot": 0,
+        "Identity": "892de3bd-9832-480b-8a06-55f87cfeeaa5",
+        "Command": 2,
+        "BudgetNanoseconds": 30000,
+        "StartedTimestamp": 345359044893267,
+        "StartedStage": "initialization",
+        "ObservedTimestamp": 345359045246648,
+        "ObservedStage": "initialization",
+        "Observation": {
+          "Header": {
+            "IdentityFirst": 5191410338291901373,
+            "IdentitySecond": 11955647973504124554,
+            "Command": 2,
+            "Budget": 30000,
+            "Measured": 30000,
+            "Phase": 2,
+            "Error": 0,
+            "TransportError": 0,
+            "Cancellation": 0,
+            "Outstanding": 0,
+            "Children": 1,
+            "Rejected": 0,
+            "Captured": 2030005
+          },
+          "Children": [
+            {
+              "Native": {
+                "Ordinal": 1,
+                "Requested": 30000,
+                "Acknowledgment": {
+                  "Sequence": 2,
+                  "Outcome": 2,
+                  "Ip": 100,
+                  "Handler": 30000,
+                  "Wait": 30000,
+                  "WaitResult": 0,
+                  "Started": 2000000,
+                  "Queued": 2000001,
+                  "HandlerStarted": 2000002,
+                  "HandlerFinished": 2030002,
+                  "Observed": 2030003
+                }
+              },
+              "FirstSnapshotCaptured": 2030004,
+              "FirstManagedReceiptUpper": 2030005,
+              "ClockStatus": 0
+            }
+          ],
+          "Rejected": []
+        }
+      }
+    ],
+    "Boundary": {
+      "Stage": "initialization",
+      "Milliseconds": 0,
+      "GlobalNanoseconds": 70000,
+      "CreditNanoseconds": 40000,
+      "WaitNanoseconds": [
+        30000,
+        70000
+      ],
+      "DebtNanoseconds": [
+        0,
+        0
+      ],
+      "Registered": [
+        true,
+        true
+      ],
+      "Pending": 0,
+      "Batches": [
+        0,
+        0
+      ],
+      "Timestamp": 345359067539604,
+      "PendingRequests": [],
+      "PendingServices": [],
+      "RuntimeCounters": {
+        "Stage": "initialization",
+        "StartedTimestamp": 345359096837555,
+        "FinishedTimestamp": 345359097366535,
+        "ControllerAllocatedBytes": 147512,
+        "Gen0Collections": 0,
+        "Gen1Collections": 0,
+        "Gen2Collections": 0,
+        "GcPauseTicks": 0,
+        "ProcessCpuTicks": 16102670
+      }
+    }
+  },
+  "transportInitialization": null,
+  "failures": [
+    "System.InvalidOperationException: Injected controller CPU failure.\n   at SampledSignalAbortChecks.Clock.ReadNanoseconds() in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalAbortChecks.cs:line 126\n   at SampledSignalWorkload.\u003C\u003Ec__DisplayClass12_0.\u003CRun\u003Eg__RunStage|6(String name, Int32 milliseconds) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 296\n   at SampledSignalWorkload.Run(String path, SampledSignalPlan plan, Func\u00601 backendFactory, Func\u00602 sessionFactory, IThreadCpuClock controllerClock, SampledSignalTrace trace, Boolean captureTargetCpu, Func\u00601 schedulerFactory, Boolean captureServicePhases, Boolean initializeManagedPaths) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 524",
+    "The sampled signal workload did not reach its measurement requirements.",
+    "Selected credit did not cause peer waits during measurement."
+  ],
+  "capacityViolations": [],
+  "joined": true,
+  "restored": true,
+  "protocolPassed": false,
+  "capacityPassed": false,
+  "passed": false,
+  "forcedGc": false,
+  "gcObservations": null,
+  "gcJoined": true,
+  "measurementStartedTimestamp": 345359129971012,
+  "gcCallBoundMilliseconds": 250,
+  "gcCallDurationIsSuspensionLatency": false,
+  "predictionAccuracyEstablished": false,
+  "generalClrSafetyEstablished": false,
+  "requestBoundNanoseconds": 50000,
+  "handlerBoundNanoseconds": 5000000,
+  "acknowledgmentBoundMilliseconds": 100
+}

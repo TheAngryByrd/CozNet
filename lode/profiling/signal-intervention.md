@@ -36,6 +36,8 @@ The recorded handler interval excludes entry checks, publication, and return. It
 Acknowledgment publishes the result. It does not prove that the handler has returned to managed execution.
 The controller stops sending before target-side retirement and thread join. Retirement blocks delivery and checks the target's pending queue.
 `SignalTargetLifetime` holds registered targets alive until the controller closes delivery, including after workload failures.
+After delivery stop, targets also wait for unresolved native ownership to become quiescent before they retire or exit.
+Both successful and failed target bodies use this rule. `SignalTargetChecks` exercises it through the transition runner.
 This prevents requests from using an exited target's potentially reused native thread ID.
 Only then does the controller restore the disposition.
 An acknowledgment timeout abandons normal teardown. Static state and code remain loaded until the bounded child process exits.

@@ -21,6 +21,9 @@ For single-child selected request settlement, read [the selected service adapter
 For fixed journal allocation and copy measurements, read [service accounting costs](profiling/service-accounting-cost.md).
 For the combined native snapshot and managed receipt-cache path, read [snapshot costs](profiling/service-snapshot-cost.md).
 For the live sampled signal controller and capacity limit, read [sampled signals](profiling/sampled-signals.md).
+For the first native sampled service capacity failure, read [the retained run](../reliability/features/native-signal/sampled-service/README.md).
+For controller startup CPU and JIT correlation, read [the startup evidence](../reliability/features/native-signal/service-startup/README.md).
+For managed and native setup isolation and retained capacity failures, read [initialization](../reliability/features/native-signal/service-initialization/README.md).
 For request timing and peak-debt evidence, read [service timing](../reliability/features/native-signal/service-timing.md).
 For native queue, handler, and observation phases, read [native phase timing](../reliability/features/native-signal/phase-timing.md).
 For controller allocation and ring snapshot reuse, read [the GC comparison](../reliability/features/native-signal/gc-and-ring-cache.md).

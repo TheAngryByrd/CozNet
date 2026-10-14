@@ -1,0 +1,2201 @@
+{
+  "backend": "linux-x64-native-service",
+  "backendDetails": {
+    "nativeStart": 139775173076672,
+    "nativeSize": 26,
+    "symbol": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]",
+    "timingClock": "linux-clock-monotonic",
+    "timingUnit": "nanoseconds",
+    "waitMode": "spin",
+    "selectedChildrenPerCommand": 1,
+    "peerBudgetBoundNanoseconds": 2000000
+  },
+  "percent": 50,
+  "selectedCadence": "QualifiedSample",
+  "selectedChecks": 4,
+  "peerChecks": 5,
+  "peerCheckSkips": 0,
+  "runtime": "10.0.0",
+  "runtimeCountersStart": {
+    "Stage": "warmup",
+    "StartedTimestamp": 344669412650400,
+    "FinishedTimestamp": 344669412656768,
+    "ControllerAllocatedBytes": 20144680,
+    "Gen0Collections": 1,
+    "Gen1Collections": 1,
+    "Gen2Collections": 1,
+    "GcPauseTicks": 9000,
+    "ProcessCpuTicks": 10069070
+  },
+  "runtimeSettings": {
+    "serverGc": false,
+    "latencyMode": "Interactive",
+    "processorCount": 4
+  },
+  "warmupMilliseconds": 250,
+  "warmup": null,
+  "measurement": null,
+  "settled": null,
+  "failureBoundary": {
+    "Stage": "warmup",
+    "Milliseconds": 15.5684,
+    "GlobalNanoseconds": 4500000,
+    "CreditNanoseconds": 4500000,
+    "WaitNanoseconds": [
+      0,
+      2401207
+    ],
+    "DebtNanoseconds": [
+      0,
+      2098793
+    ],
+    "Registered": [
+      true,
+      true
+    ],
+    "Pending": 0,
+    "Batches": [
+      2866,
+      2459
+    ],
+    "Timestamp": 344669429945006,
+    "PendingRequests": [],
+    "PendingServices": [],
+    "RuntimeCounters": {
+      "Stage": "warmup",
+      "StartedTimestamp": 344669429953530,
+      "FinishedTimestamp": 344669429958714,
+      "ControllerAllocatedBytes": 20226800,
+      "Gen0Collections": 1,
+      "Gen1Collections": 1,
+      "Gen2Collections": 1,
+      "GcPauseTicks": 9000,
+      "ProcessCpuTicks": 10352270
+    }
+  },
+  "measurementStartRecords": null,
+  "boundaries": [],
+  "maxDebtNanoseconds": [
+    0,
+    1999916
+  ],
+  "debtBoundNanoseconds": 2000000,
+  "stopwatchFrequency": 1000000000,
+  "longestServiceInterval": {
+    "StartedTimestamp": 344669417407072,
+    "FinishedTimestamp": 344669421532266,
+    "SamplesBefore": 1,
+    "SamplesAfter": 3
+  },
+  "peakDebt": [
+    null,
+    {
+      "Slot": 1,
+      "Boundary": {
+        "Stage": "warmup",
+        "Milliseconds": 9.9593,
+        "GlobalNanoseconds": 3500000,
+        "CreditNanoseconds": 3500000,
+        "WaitNanoseconds": [
+          0,
+          1500084
+        ],
+        "DebtNanoseconds": [
+          0,
+          1999916
+        ],
+        "Registered": [
+          true,
+          true
+        ],
+        "Pending": 1,
+        "Batches": [
+          1976,
+          1614
+        ],
+        "Timestamp": 344669424338454,
+        "PendingRequests": [],
+        "PendingServices": [
+          {
+            "Slot": 1,
+            "Identity": "ea2db63a-d6d8-4182-9d41-296c542b71e3",
+            "Command": 4,
+            "BudgetNanoseconds": 1999916,
+            "StartedTimestamp": 344669422080249,
+            "StartedStage": "warmup",
+            "ObservedTimestamp": 0,
+            "ObservedStage": "warmup",
+            "Observation": null
+          }
+        ],
+        "RuntimeCounters": {
+          "Stage": "warmup",
+          "StartedTimestamp": 344669424348970,
+          "FinishedTimestamp": 344669424355636,
+          "ControllerAllocatedBytes": 20200888,
+          "Gen0Collections": 1,
+          "Gen1Collections": 1,
+          "Gen2Collections": 1,
+          "GcPauseTicks": 9000,
+          "ProcessCpuTicks": 10297600
+        }
+      },
+      "Interval": {
+        "StartedTimestamp": 344669421532266,
+        "FinishedTimestamp": 344669424332205,
+        "SamplesBefore": 3,
+        "SamplesAfter": 7
+      },
+      "LastAcknowledgedSequences": [
+        0,
+        31
+      ]
+    }
+  ],
+  "traceAnchors": null,
+  "diagnosticTrace": false,
+  "traceAbort": null,
+  "controllerCpuTiming": false,
+  "targetCpuTiming": false,
+  "schedulerTiming": false,
+  "schedulerStopped": true,
+  "schedulerCaptures": [
+    null,
+    null,
+    null
+  ],
+  "controllerCpuNanoseconds": 0,
+  "samplingPauses": 0,
+  "records": {
+    "Samples": 9,
+    "DistinctInstructionPointers": 3,
+    "RepresentedCpuNanoseconds": 9000000,
+    "LostRecords": 0,
+    "LostSamples": 0,
+    "Throttles": 0,
+    "SelectedMethodSamples": 9,
+    "UnmappedSamples": 0,
+    "SelectedSymbols": [
+      "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+    ]
+  },
+  "samples": [
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344650878686030,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139775173076686,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 2.3977,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344669416771695
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344650879683930,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139775173076686,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 3.5732,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344669417947072
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344650880681030,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139775173076686,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 4.3232,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344669418697072
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344650881682630,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139775173076683,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 7.1984,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344669421572394
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344650882681230,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139775173076686,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 7.2544,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344669421628315
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344650883680530,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139775173076680,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 7.2671,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344669421640946
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344650884682430,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139775173076680,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 7.2712,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344669421645048
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344650885681630,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139775173076686,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 10.1714,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344669424545290
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344650886681530,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139775173076680,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 10.1812,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344669424554975
+    }
+  ],
+  "requests": [],
+  "serviceJournals": [
+    {
+      "Slot": 1,
+      "Identity": "db8cc23b-8591-4d32-9d6f-604d65b04d04",
+      "Command": 2,
+      "BudgetNanoseconds": 500000,
+      "StartedTimestamp": 344669416795141,
+      "StartedStage": "warmup",
+      "ObservedTimestamp": 344669418852720,
+      "ObservedStage": "warmup",
+      "Observation": {
+        "Header": {
+          "IdentityFirst": 5562655351256171067,
+          "IdentitySecond": 310097898494783389,
+          "Command": 2,
+          "Budget": 500000,
+          "Measured": 500070,
+          "Phase": 2,
+          "Error": 0,
+          "TransportError": 0,
+          "Cancellation": 0,
+          "Outstanding": 0,
+          "Children": 10,
+          "Rejected": 0,
+          "Captured": 344669418848203
+        },
+        "Children": [
+          {
+            "Native": {
+              "Ordinal": 1,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 2,
+                "Outcome": 2,
+                "Ip": 139775173076683,
+                "Handler": 50294,
+                "Wait": 49639,
+                "WaitResult": 0,
+                "Started": 344669416825301,
+                "Queued": 344669416835954,
+                "HandlerStarted": 344669416845387,
+                "HandlerFinished": 344669416895681,
+                "Observed": 344669416896142
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 2,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 3,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50336,
+                "Wait": 50097,
+                "WaitResult": 0,
+                "Started": 344669416897132,
+                "Queued": 344669416899550,
+                "HandlerStarted": 344669416900786,
+                "HandlerFinished": 344669416951122,
+                "Observed": 344669416952026
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 3,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 4,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50349,
+                "Wait": 50111,
+                "WaitResult": 0,
+                "Started": 344669416952646,
+                "Queued": 344669416954684,
+                "HandlerStarted": 344669416955794,
+                "HandlerFinished": 344669417006143,
+                "Observed": 344669417006592
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 4,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 5,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50309,
+                "Wait": 50069,
+                "WaitResult": 0,
+                "Started": 344669417007223,
+                "Queued": 344669417009029,
+                "HandlerStarted": 344669417010152,
+                "HandlerFinished": 344669417060461,
+                "Observed": 344669417060786
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 5,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 6,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50278,
+                "Wait": 50040,
+                "WaitResult": 0,
+                "Started": 344669417061391,
+                "Queued": 344669417063173,
+                "HandlerStarted": 344669417064270,
+                "HandlerFinished": 344669417114548,
+                "Observed": 344669417114913
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 6,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 7,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50306,
+                "Wait": 50068,
+                "WaitResult": 0,
+                "Started": 344669417115500,
+                "Queued": 344669417117285,
+                "HandlerStarted": 344669417118390,
+                "HandlerFinished": 344669417168696,
+                "Observed": 344669417169254
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 7,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 8,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50268,
+                "Wait": 50037,
+                "WaitResult": 0,
+                "Started": 344669417169857,
+                "Queued": 344669417171720,
+                "HandlerStarted": 344669417173430,
+                "HandlerFinished": 344669417223698,
+                "Observed": 344669417223968
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 8,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 9,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50339,
+                "Wait": 50063,
+                "WaitResult": 0,
+                "Started": 344669417224683,
+                "Queued": 344669417226545,
+                "HandlerStarted": 344669417227867,
+                "HandlerFinished": 344669417278206,
+                "Observed": 344669417278619
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 9,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 10,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50279,
+                "Wait": 50018,
+                "WaitResult": 0,
+                "Started": 344669417279222,
+                "Queued": 344669417281096,
+                "HandlerStarted": 344669417282266,
+                "HandlerFinished": 344669417332545,
+                "Observed": 344669417333145
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 10,
+              "Requested": 49858,
+              "Acknowledgment": {
+                "Sequence": 11,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50179,
+                "Wait": 49928,
+                "WaitResult": 0,
+                "Started": 344669417333753,
+                "Queued": 344669417335617,
+                "HandlerStarted": 344669417336716,
+                "HandlerFinished": 344669417386895,
+                "Observed": 344669417391970
+              }
+            },
+            "FirstSnapshotCaptured": 344669418848203,
+            "FirstManagedReceiptUpper": 344669418849187,
+            "ClockStatus": 0
+          }
+        ],
+        "Rejected": []
+      }
+    },
+    {
+      "Slot": 1,
+      "Identity": "4f430a24-853f-4b68-a4a3-69e7f58fac55",
+      "Command": 3,
+      "BudgetNanoseconds": 999930,
+      "StartedTimestamp": 344669419180719,
+      "StartedStage": "warmup",
+      "ObservedTimestamp": 344669422037028,
+      "ObservedStage": "warmup",
+      "Observation": {
+        "Header": {
+          "IdentityFirst": 5433739457381730852,
+          "IdentitySecond": 6173467475530326948,
+          "Command": 3,
+          "Budget": 999930,
+          "Measured": 1000014,
+          "Phase": 2,
+          "Error": 0,
+          "TransportError": 0,
+          "Cancellation": 0,
+          "Outstanding": 0,
+          "Children": 20,
+          "Rejected": 0,
+          "Captured": 344669422033843
+        },
+        "Children": [
+          {
+            "Native": {
+              "Ordinal": 1,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 12,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50379,
+                "Wait": 49794,
+                "WaitResult": 0,
+                "Started": 344669419207097,
+                "Queued": 344669419213401,
+                "HandlerStarted": 344669419218931,
+                "HandlerFinished": 344669419269310,
+                "Observed": 344669419273996
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 2,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 13,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50299,
+                "Wait": 50057,
+                "WaitResult": 0,
+                "Started": 344669419275020,
+                "Queued": 344669419289860,
+                "HandlerStarted": 344669419290963,
+                "HandlerFinished": 344669419341262,
+                "Observed": 344669419341651
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 3,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 14,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50305,
+                "Wait": 50044,
+                "WaitResult": 0,
+                "Started": 344669419342380,
+                "Queued": 344669419344317,
+                "HandlerStarted": 344669419345733,
+                "HandlerFinished": 344669419396038,
+                "Observed": 344669419396621
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 4,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 15,
+                "Outcome": 2,
+                "Ip": 139775173076683,
+                "Handler": 72394,
+                "Wait": 72129,
+                "WaitResult": 0,
+                "Started": 344669419397412,
+                "Queued": 344669419399287,
+                "HandlerStarted": 344669419400363,
+                "HandlerFinished": 344669419472757,
+                "Observed": 344669419475889
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 5,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 16,
+                "Outcome": 2,
+                "Ip": 139775173076683,
+                "Handler": 50298,
+                "Wait": 49999,
+                "WaitResult": 0,
+                "Started": 344669419476722,
+                "Queued": 344669419478754,
+                "HandlerStarted": 344669419479957,
+                "HandlerFinished": 344669419530255,
+                "Observed": 344669419532227
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 6,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 17,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50358,
+                "Wait": 50039,
+                "WaitResult": 0,
+                "Started": 344669419533636,
+                "Queued": 344669419562334,
+                "HandlerStarted": 344669419561780,
+                "HandlerFinished": 344669419612138,
+                "Observed": 344669419612822
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 7,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 18,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50342,
+                "Wait": 50088,
+                "WaitResult": 0,
+                "Started": 344669419613803,
+                "Queued": 344669419618848,
+                "HandlerStarted": 344669419619871,
+                "HandlerFinished": 344669419670213,
+                "Observed": 344669419763816
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 8,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 19,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50277,
+                "Wait": 50012,
+                "WaitResult": 0,
+                "Started": 344669419765930,
+                "Queued": 344669419770374,
+                "HandlerStarted": 344669419771318,
+                "HandlerFinished": 344669419821595,
+                "Observed": 344669419822436
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 9,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 20,
+                "Outcome": 2,
+                "Ip": 139775173076688,
+                "Handler": 50344,
+                "Wait": 50066,
+                "WaitResult": 0,
+                "Started": 344669419824521,
+                "Queued": 344669419827020,
+                "HandlerStarted": 344669419828418,
+                "HandlerFinished": 344669419878762,
+                "Observed": 344669419879402
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 10,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 21,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50307,
+                "Wait": 50058,
+                "WaitResult": 0,
+                "Started": 344669419880033,
+                "Queued": 344669419881765,
+                "HandlerStarted": 344669419883001,
+                "HandlerFinished": 344669419933308,
+                "Observed": 344669419933618
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 11,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 22,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50266,
+                "Wait": 50033,
+                "WaitResult": 0,
+                "Started": 344669419934219,
+                "Queued": 344669419936034,
+                "HandlerStarted": 344669419937171,
+                "HandlerFinished": 344669419987437,
+                "Observed": 344669419988017
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 12,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 23,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50280,
+                "Wait": 50032,
+                "WaitResult": 0,
+                "Started": 344669419988649,
+                "Queued": 344669419990525,
+                "HandlerStarted": 344669419991642,
+                "HandlerFinished": 344669420041922,
+                "Observed": 344669420042298
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 13,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 24,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50268,
+                "Wait": 50027,
+                "WaitResult": 0,
+                "Started": 344669420042985,
+                "Queued": 344669420045018,
+                "HandlerStarted": 344669420046216,
+                "HandlerFinished": 344669420096484,
+                "Observed": 344669420389351
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 14,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 25,
+                "Outcome": 2,
+                "Ip": 139775173076683,
+                "Handler": 50353,
+                "Wait": 50035,
+                "WaitResult": 0,
+                "Started": 344669420406628,
+                "Queued": 344669420410777,
+                "HandlerStarted": 344669420412765,
+                "HandlerFinished": 344669420463118,
+                "Observed": 344669420619248
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 15,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 26,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50289,
+                "Wait": 50001,
+                "WaitResult": 0,
+                "Started": 344669420622659,
+                "Queued": 344669420625610,
+                "HandlerStarted": 344669420626606,
+                "HandlerFinished": 344669420676895,
+                "Observed": 344669420677246
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 16,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 27,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50293,
+                "Wait": 50014,
+                "WaitResult": 0,
+                "Started": 344669420677872,
+                "Queued": 344669420679542,
+                "HandlerStarted": 344669420680573,
+                "HandlerFinished": 344669420730866,
+                "Observed": 344669421048154
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 17,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 28,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50268,
+                "Wait": 49598,
+                "WaitResult": 0,
+                "Started": 344669421050191,
+                "Queued": 344669421059547,
+                "HandlerStarted": 344669421061150,
+                "HandlerFinished": 344669421111418,
+                "Observed": 344669421196125
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 18,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 29,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50290,
+                "Wait": 49990,
+                "WaitResult": 0,
+                "Started": 344669421199831,
+                "Queued": 344669421202930,
+                "HandlerStarted": 344669421204302,
+                "HandlerFinished": 344669421254592,
+                "Observed": 344669421313408
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 19,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 30,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50257,
+                "Wait": 49992,
+                "WaitResult": 0,
+                "Started": 344669421314413,
+                "Queued": 344669421316540,
+                "HandlerStarted": 344669421317592,
+                "HandlerFinished": 344669421367849,
+                "Observed": 344669421443462
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 20,
+              "Requested": 27922,
+              "Acknowledgment": {
+                "Sequence": 31,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 28312,
+                "Wait": 28006,
+                "WaitResult": 0,
+                "Started": 344669421444432,
+                "Queued": 344669421446357,
+                "HandlerStarted": 344669421447514,
+                "HandlerFinished": 344669421475826,
+                "Observed": 344669421516445
+              }
+            },
+            "FirstSnapshotCaptured": 344669422033843,
+            "FirstManagedReceiptUpper": 344669422034721,
+            "ClockStatus": 0
+          }
+        ],
+        "Rejected": []
+      }
+    },
+    {
+      "Slot": 1,
+      "Identity": "ea2db63a-d6d8-4182-9d41-296c542b71e3",
+      "Command": 4,
+      "BudgetNanoseconds": 1999916,
+      "StartedTimestamp": 344669422080249,
+      "StartedStage": "warmup",
+      "ObservedTimestamp": 344669424573533,
+      "ObservedStage": "warmup",
+      "Observation": {
+        "Header": {
+          "IdentityFirst": 4720571586567845434,
+          "IdentitySecond": 16388928160569835933,
+          "Command": 4,
+          "Budget": 1999916,
+          "Measured": 901123,
+          "Phase": 2,
+          "Error": 0,
+          "TransportError": 0,
+          "Cancellation": 0,
+          "Outstanding": 0,
+          "Children": 19,
+          "Rejected": 0,
+          "Captured": 344669424571757
+        },
+        "Children": [
+          {
+            "Native": {
+              "Ordinal": 1,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 32,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50316,
+                "Wait": 49880,
+                "WaitResult": 0,
+                "Started": 344669422094760,
+                "Queued": 344669422099530,
+                "HandlerStarted": 344669422103048,
+                "HandlerFinished": 344669422153364,
+                "Observed": 344669422154826
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 2,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 33,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50246,
+                "Wait": 49961,
+                "WaitResult": 0,
+                "Started": 344669422155775,
+                "Queued": 344669422205167,
+                "HandlerStarted": 344669422204419,
+                "HandlerFinished": 344669422254665,
+                "Observed": 344669422449439
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 3,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 34,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50375,
+                "Wait": 50065,
+                "WaitResult": 0,
+                "Started": 344669422450939,
+                "Queued": 344669422454081,
+                "HandlerStarted": 344669422455967,
+                "HandlerFinished": 344669422506342,
+                "Observed": 344669422557362
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 4,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 35,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50274,
+                "Wait": 49964,
+                "WaitResult": 0,
+                "Started": 344669422560291,
+                "Queued": 344669422566037,
+                "HandlerStarted": 344669422567281,
+                "HandlerFinished": 344669422617555,
+                "Observed": 344669422848750
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 5,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 36,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50254,
+                "Wait": 49967,
+                "WaitResult": 0,
+                "Started": 344669422853632,
+                "Queued": 344669422857527,
+                "HandlerStarted": 344669422860432,
+                "HandlerFinished": 344669422910686,
+                "Observed": 344669423008932
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 6,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 37,
+                "Outcome": 2,
+                "Ip": 139775173076688,
+                "Handler": 50357,
+                "Wait": 50076,
+                "WaitResult": 0,
+                "Started": 344669423022575,
+                "Queued": 344669423027684,
+                "HandlerStarted": 344669423028921,
+                "HandlerFinished": 344669423079278,
+                "Observed": 344669423161416
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 7,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 38,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50241,
+                "Wait": 49985,
+                "WaitResult": 0,
+                "Started": 344669423162858,
+                "Queued": 344669423168935,
+                "HandlerStarted": 344669423169724,
+                "HandlerFinished": 344669423219965,
+                "Observed": 344669423262450
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 8,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 39,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50359,
+                "Wait": 50126,
+                "WaitResult": 0,
+                "Started": 344669423263619,
+                "Queued": 344669423285480,
+                "HandlerStarted": 344669423286022,
+                "HandlerFinished": 344669423336381,
+                "Observed": 344669423367755
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 9,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 40,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50383,
+                "Wait": 50144,
+                "WaitResult": 0,
+                "Started": 344669423368584,
+                "Queued": 344669423370966,
+                "HandlerStarted": 344669423372160,
+                "HandlerFinished": 344669423422543,
+                "Observed": 344669423466539
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 10,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 41,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50441,
+                "Wait": 50126,
+                "WaitResult": 0,
+                "Started": 344669423468786,
+                "Queued": 344669423481028,
+                "HandlerStarted": 344669423491776,
+                "HandlerFinished": 344669423542217,
+                "Observed": 344669423542501
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 11,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 42,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50305,
+                "Wait": 50017,
+                "WaitResult": 0,
+                "Started": 344669423543226,
+                "Queued": 344669423545710,
+                "HandlerStarted": 344669423546554,
+                "HandlerFinished": 344669423596859,
+                "Observed": 344669423597403
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 12,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 43,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50416,
+                "Wait": 50146,
+                "WaitResult": 0,
+                "Started": 344669423597989,
+                "Queued": 344669423600317,
+                "HandlerStarted": 344669423601052,
+                "HandlerFinished": 344669423651468,
+                "Observed": 344669423678843
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 13,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 44,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50443,
+                "Wait": 50173,
+                "WaitResult": 0,
+                "Started": 344669423679658,
+                "Queued": 344669423682347,
+                "HandlerStarted": 344669423684190,
+                "HandlerFinished": 344669423734633,
+                "Observed": 344669423734885
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 14,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 45,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50414,
+                "Wait": 50147,
+                "WaitResult": 0,
+                "Started": 344669423735474,
+                "Queued": 344669423737329,
+                "HandlerStarted": 344669423738628,
+                "HandlerFinished": 344669423789042,
+                "Observed": 344669423790363
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 15,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 46,
+                "Outcome": 2,
+                "Ip": 139775173076680,
+                "Handler": 50399,
+                "Wait": 50139,
+                "WaitResult": 0,
+                "Started": 344669423791141,
+                "Queued": 344669423792901,
+                "HandlerStarted": 344669423794156,
+                "HandlerFinished": 344669423844555,
+                "Observed": 344669423844950
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 16,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 47,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50334,
+                "Wait": 50057,
+                "WaitResult": 0,
+                "Started": 344669423845612,
+                "Queued": 344669423847401,
+                "HandlerStarted": 344669423848867,
+                "HandlerFinished": 344669423899201,
+                "Observed": 344669423946889
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 17,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 48,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50433,
+                "Wait": 50119,
+                "WaitResult": 0,
+                "Started": 344669423947619,
+                "Queued": 344669423950371,
+                "HandlerStarted": 344669423954163,
+                "HandlerFinished": 344669424004596,
+                "Observed": 344669424004933
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 18,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 49,
+                "Outcome": 2,
+                "Ip": 139775173076686,
+                "Handler": 50333,
+                "Wait": 50031,
+                "WaitResult": 0,
+                "Started": 344669424005579,
+                "Queued": 344669424007653,
+                "HandlerStarted": 344669424009153,
+                "HandlerFinished": 344669424059486,
+                "Observed": 344669424060068
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 19,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 50,
+                "Outcome": 1,
+                "Ip": 139775173219823,
+                "Handler": 161,
+                "Wait": 0,
+                "WaitResult": 0,
+                "Started": 344669424060708,
+                "Queued": 344669424062629,
+                "HandlerStarted": 344669424063979,
+                "HandlerFinished": 344669424064140,
+                "Observed": 344669424064421
+              }
+            },
+            "FirstSnapshotCaptured": 344669424571757,
+            "FirstManagedReceiptUpper": 344669424572259,
+            "ClockStatus": 0
+          }
+        ],
+        "Rejected": []
+      }
+    }
+  ],
+  "pendingServiceJournals": [],
+  "controllerPhases": [
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344669414642949,
+        "CpuNanoseconds": 971937900,
+        "AfterTimestamp": 344669414684631
+      },
+      "After": {
+        "BeforeTimestamp": 344669415756711,
+        "CpuNanoseconds": 972970300,
+        "AfterTimestamp": 344669415759490
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344669415760127,
+        "CpuNanoseconds": 972972000,
+        "AfterTimestamp": 344669415760426
+      },
+      "After": {
+        "BeforeTimestamp": 344669415761172,
+        "CpuNanoseconds": 972973000,
+        "AfterTimestamp": 344669415761443
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344669415761517,
+        "CpuNanoseconds": 972973400,
+        "AfterTimestamp": 344669415761778
+      },
+      "After": {
+        "BeforeTimestamp": 344669415761906,
+        "CpuNanoseconds": 972973800,
+        "AfterTimestamp": 344669415762172
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344669415762250,
+        "CpuNanoseconds": 972974100,
+        "AfterTimestamp": 344669415762511
+      },
+      "After": {
+        "BeforeTimestamp": 344669415762616,
+        "CpuNanoseconds": 972974500,
+        "AfterTimestamp": 344669415762878
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344669415762957,
+        "CpuNanoseconds": 972974800,
+        "AfterTimestamp": 344669415763223
+      },
+      "After": {
+        "BeforeTimestamp": 344669415770439,
+        "CpuNanoseconds": 972982300,
+        "AfterTimestamp": 344669415770708
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344669415771357,
+        "CpuNanoseconds": 972983200,
+        "AfterTimestamp": 344669415771616
+      },
+      "After": {
+        "BeforeTimestamp": 344669416779120,
+        "CpuNanoseconds": 973992700,
+        "AfterTimestamp": 344669416782307
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344669416782544,
+        "CpuNanoseconds": 973994400,
+        "AfterTimestamp": 344669416782892
+      },
+      "After": {
+        "BeforeTimestamp": 344669416783243,
+        "CpuNanoseconds": 973995000,
+        "AfterTimestamp": 344669416783516
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344669416783594,
+        "CpuNanoseconds": 973995400,
+        "AfterTimestamp": 344669416783857
+      },
+      "After": {
+        "BeforeTimestamp": 344669416783956,
+        "CpuNanoseconds": 973995700,
+        "AfterTimestamp": 344669416784222
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344669416784301,
+        "CpuNanoseconds": 973996100,
+        "AfterTimestamp": 344669416784574
+      },
+      "After": {
+        "BeforeTimestamp": 344669416785999,
+        "CpuNanoseconds": 973997800,
+        "AfterTimestamp": 344669416786265
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344669416786345,
+        "CpuNanoseconds": 973998100,
+        "AfterTimestamp": 344669416786607
+      },
+      "After": {
+        "BeforeTimestamp": 344669417403778,
+        "CpuNanoseconds": 974032800,
+        "AfterTimestamp": 344669417406683
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344669417864168,
+        "CpuNanoseconds": 974461200,
+        "AfterTimestamp": 344669417865287
+      },
+      "After": {
+        "BeforeTimestamp": 344669418755724,
+        "CpuNanoseconds": 975353500,
+        "AfterTimestamp": 344669418780109
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344669418780546,
+        "CpuNanoseconds": 975377900,
+        "AfterTimestamp": 344669418782092
+      },
+      "After": {
+        "BeforeTimestamp": 344669418782649,
+        "CpuNanoseconds": 975378900,
+        "AfterTimestamp": 344669418782936
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344669418783018,
+        "CpuNanoseconds": 975379200,
+        "AfterTimestamp": 344669418783308
+      },
+      "After": {
+        "BeforeTimestamp": 344669419157832,
+        "CpuNanoseconds": 975755100,
+        "AfterTimestamp": 344669419160101
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344669419160210,
+        "CpuNanoseconds": 975756400,
+        "AfterTimestamp": 344669419160554
+      },
+      "After": {
+        "BeforeTimestamp": 344669419162782,
+        "CpuNanoseconds": 975759000,
+        "AfterTimestamp": 344669419163128
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344669419163207,
+        "CpuNanoseconds": 975759400,
+        "AfterTimestamp": 344669419163475
+      },
+      "After": {
+        "BeforeTimestamp": 344669421528229,
+        "CpuNanoseconds": 975803000,
+        "AfterTimestamp": 344669421531718
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344669421551972,
+        "CpuNanoseconds": 975824000,
+        "AfterTimestamp": 344669421552410
+      },
+      "After": {
+        "BeforeTimestamp": 344669422018880,
+        "CpuNanoseconds": 976293200,
+        "AfterTimestamp": 344669422022268
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344669422022567,
+        "CpuNanoseconds": 976294400,
+        "AfterTimestamp": 344669422022823
+      },
+      "After": {
+        "BeforeTimestamp": 344669422023508,
+        "CpuNanoseconds": 976295300,
+        "AfterTimestamp": 344669422023747
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344669422023830,
+        "CpuNanoseconds": 976295600,
+        "AfterTimestamp": 344669422024077
+      },
+      "After": {
+        "BeforeTimestamp": 344669422072200,
+        "CpuNanoseconds": 976344100,
+        "AfterTimestamp": 344669422072622
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344669422072704,
+        "CpuNanoseconds": 976344500,
+        "AfterTimestamp": 344669422072941
+      },
+      "After": {
+        "BeforeTimestamp": 344669422073936,
+        "CpuNanoseconds": 976345700,
+        "AfterTimestamp": 344669422074183
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344669422074260,
+        "CpuNanoseconds": 976346100,
+        "AfterTimestamp": 344669422074501
+      },
+      "After": {
+        "BeforeTimestamp": 344669424324932,
+        "CpuNanoseconds": 976620000,
+        "AfterTimestamp": 344669424331612
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344669424356583,
+        "CpuNanoseconds": 976646500,
+        "AfterTimestamp": 344669424357023
+      },
+      "After": {
+        "BeforeTimestamp": 344669424557704,
+        "CpuNanoseconds": 976848100,
+        "AfterTimestamp": 344669424558890
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344669424559022,
+        "CpuNanoseconds": 976848800,
+        "AfterTimestamp": 344669424559333
+      },
+      "After": {
+        "BeforeTimestamp": 344669424560200,
+        "CpuNanoseconds": 976849900,
+        "AfterTimestamp": 344669424560467
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344669424560550,
+        "CpuNanoseconds": 976850300,
+        "AfterTimestamp": 344669424560818
+      },
+      "After": {
+        "BeforeTimestamp": 344669424813439,
+        "CpuNanoseconds": 977103800,
+        "AfterTimestamp": 344669424814562
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344669424814671,
+        "CpuNanoseconds": 977104400,
+        "AfterTimestamp": 344669424815018
+      },
+      "After": {
+        "BeforeTimestamp": 344669424816778,
+        "CpuNanoseconds": 977106500,
+        "AfterTimestamp": 344669424817068
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344669424817158,
+        "CpuNanoseconds": 977106800,
+        "AfterTimestamp": 344669424817426
+      },
+      "After": {
+        "BeforeTimestamp": 344669429917335,
+        "CpuNanoseconds": 982074800,
+        "AfterTimestamp": 344669429923561
+      },
+      "Completed": false
+    }
+  ],
+  "controllerPhaseCapture": true,
+  "initialization": {
+    "Source": "synthetic",
+    "Samples": [
+      {
+        "Sample": {
+          "ProcessId": 7,
+          "ThreadId": 42,
+          "Timestamp": 1,
+          "PeriodNanoseconds": 80000,
+          "InstructionPointer": 100,
+          "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        "Epoch": 0,
+        "Accepted": true,
+        "CreditNanoseconds": 40000,
+        "ConsumedMilliseconds": 0,
+        "Stage": "initialization",
+        "ConsumedTimestamp": 344668832769255
+      }
+    ],
+    "Journals": [
+      {
+        "Slot": 1,
+        "Identity": "f6cfc9ce-792a-4661-a26e-80a9f1256160",
+        "Command": 1,
+        "BudgetNanoseconds": 40000,
+        "StartedTimestamp": 344668856461144,
+        "StartedStage": "initialization",
+        "ObservedTimestamp": 344668877050099,
+        "ObservedStage": "initialization",
+        "Observation": {
+          "Header": {
+            "IdentityFirst": 5071467880832289230,
+            "IdentitySecond": 6944873820243127970,
+            "Command": 1,
+            "Budget": 40000,
+            "Measured": 70000,
+            "Phase": 2,
+            "Error": 0,
+            "TransportError": 0,
+            "Cancellation": 0,
+            "Outstanding": 0,
+            "Children": 1,
+            "Rejected": 0,
+            "Captured": 1070005
+          },
+          "Children": [
+            {
+              "Native": {
+                "Ordinal": 1,
+                "Requested": 40000,
+                "Acknowledgment": {
+                  "Sequence": 1,
+                  "Outcome": 2,
+                  "Ip": 100,
+                  "Handler": 70000,
+                  "Wait": 70000,
+                  "WaitResult": 0,
+                  "Started": 1000000,
+                  "Queued": 1000001,
+                  "HandlerStarted": 1000002,
+                  "HandlerFinished": 1070002,
+                  "Observed": 1070003
+                }
+              },
+              "FirstSnapshotCaptured": 1070004,
+              "FirstManagedReceiptUpper": 1070005,
+              "ClockStatus": 0
+            }
+          ],
+          "Rejected": []
+        }
+      },
+      {
+        "Slot": 0,
+        "Identity": "8da1cb3a-1735-4cd7-847b-3763f6f57872",
+        "Command": 2,
+        "BudgetNanoseconds": 30000,
+        "StartedTimestamp": 344668915748679,
+        "StartedStage": "initialization",
+        "ObservedTimestamp": 344668916317027,
+        "ObservedStage": "initialization",
+        "Observation": {
+          "Header": {
+            "IdentityFirst": 5536919785652210490,
+            "IdentitySecond": 8248613156104403844,
+            "Command": 2,
+            "Budget": 30000,
+            "Measured": 30000,
+            "Phase": 2,
+            "Error": 0,
+            "TransportError": 0,
+            "Cancellation": 0,
+            "Outstanding": 0,
+            "Children": 1,
+            "Rejected": 0,
+            "Captured": 2030005
+          },
+          "Children": [
+            {
+              "Native": {
+                "Ordinal": 1,
+                "Requested": 30000,
+                "Acknowledgment": {
+                  "Sequence": 2,
+                  "Outcome": 2,
+                  "Ip": 100,
+                  "Handler": 30000,
+                  "Wait": 30000,
+                  "WaitResult": 0,
+                  "Started": 2000000,
+                  "Queued": 2000001,
+                  "HandlerStarted": 2000002,
+                  "HandlerFinished": 2030002,
+                  "Observed": 2030003
+                }
+              },
+              "FirstSnapshotCaptured": 2030004,
+              "FirstManagedReceiptUpper": 2030005,
+              "ClockStatus": 0
+            }
+          ],
+          "Rejected": []
+        }
+      }
+    ],
+    "Boundary": {
+      "Stage": "initialization",
+      "Milliseconds": 0,
+      "GlobalNanoseconds": 70000,
+      "CreditNanoseconds": 40000,
+      "WaitNanoseconds": [
+        30000,
+        70000
+      ],
+      "DebtNanoseconds": [
+        0,
+        0
+      ],
+      "Registered": [
+        true,
+        true
+      ],
+      "Pending": 0,
+      "Batches": [
+        0,
+        0
+      ],
+      "Timestamp": 344668937156014,
+      "PendingRequests": [],
+      "PendingServices": [],
+      "RuntimeCounters": {
+        "Stage": "initialization",
+        "StartedTimestamp": 344668970959036,
+        "FinishedTimestamp": 344668971351234,
+        "ControllerAllocatedBytes": 84360,
+        "Gen0Collections": 0,
+        "Gen1Collections": 0,
+        "Gen2Collections": 0,
+        "GcPauseTicks": 0,
+        "ProcessCpuTicks": 6399510
+      }
+    }
+  },
+  "transportInitialization": {
+    "Source": "synthetic-credit/native-deferred",
+    "Samples": [
+      {
+        "Sample": {
+          "ProcessId": 7,
+          "ThreadId": 42,
+          "Timestamp": 1,
+          "PeriodNanoseconds": 80000,
+          "InstructionPointer": 100,
+          "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        "Epoch": 0,
+        "Accepted": true,
+        "CreditNanoseconds": 40000,
+        "ConsumedMilliseconds": 0,
+        "Stage": "transport-initialization",
+        "ConsumedTimestamp": 344669390379399
+      }
+    ],
+    "Journals": [
+      {
+        "Slot": 1,
+        "Identity": "38b6fa1e-4dee-425a-9c59-4c40eeef33be",
+        "Command": 1,
+        "BudgetNanoseconds": 40000,
+        "StartedTimestamp": 344669390388885,
+        "StartedStage": "transport-initialization",
+        "ObservedTimestamp": 344669395841505,
+        "ObservedStage": "transport-initialization",
+        "Observation": {
+          "Header": {
+            "IdentityFirst": 4781219639956273694,
+            "IdentitySecond": 13705561897578551708,
+            "Command": 1,
+            "Budget": 40000,
+            "Measured": 0,
+            "Phase": 2,
+            "Error": 0,
+            "TransportError": 0,
+            "Cancellation": 0,
+            "Outstanding": 0,
+            "Children": 1,
+            "Rejected": 0,
+            "Captured": 344669394633714
+          },
+          "Children": [
+            {
+              "Native": {
+                "Ordinal": 1,
+                "Requested": 40000,
+                "Acknowledgment": {
+                  "Sequence": 1,
+                  "Outcome": 1,
+                  "Ip": 139777294773617,
+                  "Handler": 897,
+                  "Wait": 0,
+                  "WaitResult": 0,
+                  "Started": 344669391557413,
+                  "Queued": 344669391568671,
+                  "HandlerStarted": 344669392929152,
+                  "HandlerFinished": 344669392930049,
+                  "Observed": 344669392937665
+                }
+              },
+              "FirstSnapshotCaptured": 344669394633714,
+              "FirstManagedReceiptUpper": 344669395837057,
+              "ClockStatus": 0
+            }
+          ],
+          "Rejected": []
+        }
+      }
+    ],
+    "Boundary": {
+      "Stage": "transport-initialization",
+      "Milliseconds": 0,
+      "GlobalNanoseconds": 40000,
+      "CreditNanoseconds": 40000,
+      "WaitNanoseconds": [
+        0,
+        0
+      ],
+      "DebtNanoseconds": [
+        0,
+        40000
+      ],
+      "Registered": [
+        true,
+        true
+      ],
+      "Pending": 0,
+      "Batches": [
+        0,
+        0
+      ],
+      "Timestamp": 344669405783518,
+      "PendingRequests": [],
+      "PendingServices": [],
+      "RuntimeCounters": {
+        "Stage": "transport-initialization",
+        "StartedTimestamp": 344669405836761,
+        "FinishedTimestamp": 344669405842188,
+        "ControllerAllocatedBytes": 20142952,
+        "Gen0Collections": 1,
+        "Gen1Collections": 1,
+        "Gen2Collections": 1,
+        "GcPauseTicks": 9000,
+        "ProcessCpuTicks": 10023020
+      }
+    }
+  },
+  "failures": [
+    "System.InvalidOperationException: The service lease debt exceeds its capacity bound.\n   at SampledSignalWorkload.\u003C\u003Ec__DisplayClass12_0.\u003CRun\u003Eg__Prepare|5(Int32 slot) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 245\n   at SampledSignalWorkload.\u003C\u003Ec__DisplayClass12_0.\u003CRun\u003Eg__RunStage|6(String name, Int32 milliseconds) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 326\n   at SampledSignalWorkload.Run(String path, SampledSignalPlan plan, Func\u00601 backendFactory, Func\u00602 sessionFactory, IThreadCpuClock controllerClock, SampledSignalTrace trace, Boolean captureTargetCpu, Func\u00601 schedulerFactory, Boolean captureServicePhases, Boolean initializeManagedPaths) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 517",
+    "The sampled signal workload did not reach its measurement requirements.",
+    "Selected credit did not cause peer waits during measurement."
+  ],
+  "capacityViolations": [],
+  "joined": true,
+  "restored": true,
+  "protocolPassed": false,
+  "capacityPassed": false,
+  "passed": false,
+  "forcedGc": false,
+  "gcObservations": null,
+  "gcJoined": true,
+  "measurementStartedTimestamp": 0,
+  "gcCallBoundMilliseconds": 250,
+  "gcCallDurationIsSuspensionLatency": false,
+  "predictionAccuracyEstablished": false,
+  "generalClrSafetyEstablished": false,
+  "requestBoundNanoseconds": 50000,
+  "handlerBoundNanoseconds": 5000000,
+  "acknowledgmentBoundMilliseconds": 100
+}

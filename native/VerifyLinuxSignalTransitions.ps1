@@ -20,6 +20,7 @@ foreach ($file in @('native/signal/Signal.LinuxX64.cpp', 'native/signal/Signal.h
     'tests/CozNet.LinuxPerf/SignalTransitionOperations.cs', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs',
     'tests/CozNet.LinuxPerf/SignalPhaseTiming.cs', 'tests/CozNet.LinuxPerf/SignalPhaseTimingChecks.cs',
     'tests/CozNet.LinuxPerf/SignalTargetLifetime.cs', 'tests/CozNet.LinuxPerf/SignalTargetChecks.cs', 'tests/CozNet.LinuxPerf/SignalWorkload.cs',
+    'tests/CozNet.LinuxPerf/SignalTargetLifetimeChecks.cs',
     'tests/CozNet.LinuxPerf/InstructionMap.cs', 'tests/CozNet.LinuxPerf/Program.cs',
     'artifacts/native-signal/libCozNet.Signal.so', 'artifacts/native-signal/libCozNet.SignalWorkload.so',
     'artifacts/native-signal/SignalContractChecks', 'tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll')) {

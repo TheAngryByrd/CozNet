@@ -1,0 +1,1798 @@
+{
+  "backend": "linux-x64-native-service",
+  "backendDetails": {
+    "nativeStart": 140051964738016,
+    "nativeSize": 26,
+    "symbol": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]",
+    "timingClock": "linux-clock-monotonic",
+    "timingUnit": "nanoseconds",
+    "waitMode": "spin",
+    "selectedChildrenPerCommand": 1,
+    "peerBudgetBoundNanoseconds": 2000000
+  },
+  "percent": 50,
+  "selectedCadence": "QualifiedSample",
+  "selectedChecks": 2,
+  "peerChecks": 2,
+  "peerCheckSkips": 0,
+  "runtime": "10.0.0",
+  "runtimeCountersStart": {
+    "Stage": "warmup",
+    "StartedTimestamp": 343329445155127,
+    "FinishedTimestamp": 343329445363888,
+    "ControllerAllocatedBytes": 21486048,
+    "Gen0Collections": 1,
+    "Gen1Collections": 1,
+    "Gen2Collections": 1,
+    "GcPauseTicks": 11300,
+    "ProcessCpuTicks": 4732670
+  },
+  "runtimeSettings": {
+    "serverGc": false,
+    "latencyMode": "Interactive",
+    "processorCount": 4
+  },
+  "warmupMilliseconds": 250,
+  "warmup": null,
+  "measurement": null,
+  "settled": null,
+  "failureBoundary": {
+    "Stage": "warmup",
+    "Milliseconds": 54.2343,
+    "GlobalNanoseconds": 20500000,
+    "CreditNanoseconds": 20500000,
+    "WaitNanoseconds": [
+      0,
+      1500057
+    ],
+    "DebtNanoseconds": [
+      0,
+      18999943
+    ],
+    "Registered": [
+      true,
+      true
+    ],
+    "Pending": 0,
+    "Batches": [
+      16665,
+      16159
+    ],
+    "Timestamp": 343329500534077,
+    "PendingRequests": [],
+    "PendingServices": [],
+    "RuntimeCounters": {
+      "Stage": "warmup",
+      "StartedTimestamp": 343329500547591,
+      "FinishedTimestamp": 343329500551509,
+      "ControllerAllocatedBytes": 21597064,
+      "Gen0Collections": 1,
+      "Gen1Collections": 1,
+      "Gen2Collections": 1,
+      "GcPauseTicks": 11300,
+      "ProcessCpuTicks": 6367880
+    }
+  },
+  "measurementStartRecords": null,
+  "boundaries": [
+    {
+      "Stage": "warmup",
+      "Milliseconds": 41.1428,
+      "GlobalNanoseconds": 1500000,
+      "CreditNanoseconds": 1500000,
+      "WaitNanoseconds": [
+        0,
+        0
+      ],
+      "DebtNanoseconds": [
+        0,
+        1500000
+      ],
+      "Registered": [
+        true,
+        true
+      ],
+      "Pending": 1,
+      "Batches": [
+        12786,
+        12351
+      ],
+      "Timestamp": 343329487441566,
+      "PendingRequests": [],
+      "PendingServices": [
+        {
+          "Slot": 1,
+          "Identity": "c1390060-d5b6-4de3-88f2-bef4cdcba989",
+          "Command": 1,
+          "BudgetNanoseconds": 1500000,
+          "StartedTimestamp": 343329478537506,
+          "StartedStage": "warmup",
+          "ObservedTimestamp": 0,
+          "ObservedStage": "warmup",
+          "Observation": null
+        }
+      ],
+      "RuntimeCounters": {
+        "Stage": "warmup",
+        "StartedTimestamp": 343329487487531,
+        "FinishedTimestamp": 343329487488724,
+        "ControllerAllocatedBytes": 21496976,
+        "Gen0Collections": 1,
+        "Gen1Collections": 1,
+        "Gen2Collections": 1,
+        "GcPauseTicks": 11300,
+        "ProcessCpuTicks": 5912700
+      }
+    }
+  ],
+  "maxDebtNanoseconds": [
+    0,
+    1500000
+  ],
+  "debtBoundNanoseconds": 2000000,
+  "stopwatchFrequency": 1000000000,
+  "longestServiceInterval": {
+    "StartedTimestamp": 343329446298165,
+    "FinishedTimestamp": 343329479746242,
+    "SamplesBefore": 0,
+    "SamplesAfter": 3
+  },
+  "peakDebt": [
+    null,
+    {
+      "Slot": 1,
+      "Boundary": {
+        "Stage": "warmup",
+        "Milliseconds": 34.6291,
+        "GlobalNanoseconds": 1500000,
+        "CreditNanoseconds": 1500000,
+        "WaitNanoseconds": [
+          0,
+          0
+        ],
+        "DebtNanoseconds": [
+          0,
+          1500000
+        ],
+        "Registered": [
+          true,
+          true
+        ],
+        "Pending": 1,
+        "Batches": [
+          11037,
+          10572
+        ],
+        "Timestamp": 343329481750307,
+        "PendingRequests": [],
+        "PendingServices": [
+          {
+            "Slot": 1,
+            "Identity": "c1390060-d5b6-4de3-88f2-bef4cdcba989",
+            "Command": 1,
+            "BudgetNanoseconds": 1500000,
+            "StartedTimestamp": 343329478537506,
+            "StartedStage": "warmup",
+            "ObservedTimestamp": 0,
+            "ObservedStage": "warmup",
+            "Observation": null
+          }
+        ],
+        "RuntimeCounters": {
+          "Stage": "warmup",
+          "StartedTimestamp": 343329487432998,
+          "FinishedTimestamp": 343329487438126,
+          "ControllerAllocatedBytes": 21496120,
+          "Gen0Collections": 1,
+          "Gen1Collections": 1,
+          "Gen2Collections": 1,
+          "GcPauseTicks": 11300,
+          "ProcessCpuTicks": 5912180
+        }
+      },
+      "Interval": {
+        "StartedTimestamp": 343329446298165,
+        "FinishedTimestamp": 343329479746242,
+        "SamplesBefore": 0,
+        "SamplesAfter": 3
+      },
+      "LastAcknowledgedSequences": [
+        0,
+        0
+      ]
+    }
+  ],
+  "traceAnchors": [
+    {
+      "Id": 0,
+      "Phase": "run-start",
+      "BeforeTimestamp": 343329338251752,
+      "AfterTimestamp": 343329339537302
+    },
+    {
+      "Id": 1,
+      "Phase": "warmup-start",
+      "BeforeTimestamp": 343329444562596,
+      "AfterTimestamp": 343329444572622
+    },
+    {
+      "Id": 2,
+      "Phase": "run-abort",
+      "BeforeTimestamp": 343329679201457,
+      "AfterTimestamp": 343329679207565
+    },
+    {
+      "Id": 3,
+      "Phase": "run-end",
+      "BeforeTimestamp": 343329681968357,
+      "AfterTimestamp": 343329681971965
+    }
+  ],
+  "diagnosticTrace": true,
+  "traceAbort": {
+    "AnchorId": 2,
+    "FailureTimestamp": 343329500534077,
+    "Stage": "warmup"
+  },
+  "controllerCpuTiming": true,
+  "targetCpuTiming": false,
+  "schedulerTiming": false,
+  "schedulerStopped": true,
+  "schedulerCaptures": [
+    null,
+    null,
+    null
+  ],
+  "controllerCpuNanoseconds": 0,
+  "samplingPauses": 0,
+  "records": {
+    "Samples": 41,
+    "DistinctInstructionPointers": 5,
+    "RepresentedCpuNanoseconds": 41000000,
+    "LostRecords": 0,
+    "LostSamples": 0,
+    "Throttles": 0,
+    "SelectedMethodSamples": 41,
+    "UnmappedSamples": 0,
+    "SelectedSymbols": [
+      "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+    ]
+  },
+  "samples": [
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311052803930,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 21.174,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329467472457
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311053801030,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 21.2448,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329467543082
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311054800830,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 21.2501,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329467548371
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311055801030,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.2204,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487518732
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311056800530,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.2245,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487522682
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311057801130,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.2271,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487525321
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311058800630,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.2367,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487534933
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311059804130,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.239,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487537199
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311060800730,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.2412,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487539432
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311061800930,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738041,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.2434,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487541597
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311062802930,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.2533,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487551516
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311063803630,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.2556,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487553833
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311064800530,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738032,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.6973,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487995612
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311065800630,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7007,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329487998973
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311066801930,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.703,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488001253
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311067800730,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7114,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488009609
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311068800830,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7136,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488011868
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311069801330,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.717,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488015214
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311070800930,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7192,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488017442
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311071800130,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7214,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488019621
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311072800030,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.734,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488032246
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311073800730,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7362,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488034489
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311074800330,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7385,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488036682
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311075800130,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7406,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488038846
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311076802330,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7451,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488043333
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311077800330,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7472,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488045456
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311078803030,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7492,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488047435
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311079802830,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7512,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488049455
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311080803330,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7533,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488051473
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311081800530,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7577,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488055953
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311082799830,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7598,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488058075
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311083799830,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7619,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488060076
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311084800730,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7639,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488062143
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311085799630,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7663,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488067000
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311086799630,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.771,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488069266
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311087800230,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738027,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7732,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488071441
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311088799230,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7752,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488073488
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311089800030,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7773,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488075504
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311090799630,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7828,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488081062
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311091865230,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738024,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7859,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488084129
+    },
+    {
+      "Sample": {
+        "ProcessId": 15,
+        "ThreadId": 30,
+        "Timestamp": 343311092904330,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 140051964738030,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 41.7889,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 343329488087164
+    }
+  ],
+  "requests": [],
+  "serviceJournals": [
+    {
+      "Slot": 1,
+      "Identity": "c1390060-d5b6-4de3-88f2-bef4cdcba989",
+      "Command": 1,
+      "BudgetNanoseconds": 1500000,
+      "StartedTimestamp": 343329478537506,
+      "StartedStage": "warmup",
+      "ObservedTimestamp": 343329490208150,
+      "ObservedStage": "warmup",
+      "Observation": {
+        "Header": {
+          "IdentityFirst": 5612564541536272480,
+          "IdentitySecond": 9919683739695116936,
+          "Command": 1,
+          "Budget": 1500000,
+          "Measured": 1500057,
+          "Phase": 2,
+          "Error": 0,
+          "TransportError": 0,
+          "Cancellation": 0,
+          "Outstanding": 0,
+          "Children": 30,
+          "Rejected": 0,
+          "Captured": 343329489721952
+        },
+        "Children": [
+          {
+            "Native": {
+              "Ordinal": 1,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 1,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50211,
+                "Wait": 49853,
+                "WaitResult": 0,
+                "Started": 343329479759534,
+                "Queued": 343329479767825,
+                "HandlerStarted": 343329479773364,
+                "HandlerFinished": 343329479823575,
+                "Observed": 343329479823996
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 2,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 2,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50244,
+                "Wait": 50076,
+                "WaitResult": 0,
+                "Started": 343329479824626,
+                "Queued": 343329479830807,
+                "HandlerStarted": 343329479827164,
+                "HandlerFinished": 343329479877408,
+                "Observed": 343329479877600
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 3,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 3,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50209,
+                "Wait": 50047,
+                "WaitResult": 0,
+                "Started": 343329479877994,
+                "Queued": 343329479879224,
+                "HandlerStarted": 343329479880032,
+                "HandlerFinished": 343329479930241,
+                "Observed": 343329479930650
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 4,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 4,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50206,
+                "Wait": 50047,
+                "WaitResult": 0,
+                "Started": 343329479931085,
+                "Queued": 343329479932259,
+                "HandlerStarted": 343329479933078,
+                "HandlerFinished": 343329479983284,
+                "Observed": 343329479983694
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 5,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 5,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50210,
+                "Wait": 50046,
+                "WaitResult": 0,
+                "Started": 343329479984133,
+                "Queued": 343329479985237,
+                "HandlerStarted": 343329479986059,
+                "HandlerFinished": 343329480036269,
+                "Observed": 343329480036584
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 6,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 6,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50266,
+                "Wait": 50103,
+                "WaitResult": 0,
+                "Started": 343329480037038,
+                "Queued": 343329480038296,
+                "HandlerStarted": 343329480039197,
+                "HandlerFinished": 343329480089463,
+                "Observed": 343329480090475
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 7,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 7,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50221,
+                "Wait": 50058,
+                "WaitResult": 0,
+                "Started": 343329480090983,
+                "Queued": 343329480092090,
+                "HandlerStarted": 343329480092901,
+                "HandlerFinished": 343329480143122,
+                "Observed": 343329480143321
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 8,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 8,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50211,
+                "Wait": 50049,
+                "WaitResult": 0,
+                "Started": 343329480143686,
+                "Queued": 343329480144774,
+                "HandlerStarted": 343329480145581,
+                "HandlerFinished": 343329480195792,
+                "Observed": 343329480196195
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 9,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 9,
+                "Outcome": 2,
+                "Ip": 140051964738024,
+                "Handler": 50175,
+                "Wait": 50014,
+                "WaitResult": 0,
+                "Started": 343329480196645,
+                "Queued": 343329480197781,
+                "HandlerStarted": 343329480198580,
+                "HandlerFinished": 343329480248755,
+                "Observed": 343329480249005
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 10,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 10,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50202,
+                "Wait": 50040,
+                "WaitResult": 0,
+                "Started": 343329480249453,
+                "Queued": 343329480250544,
+                "HandlerStarted": 343329480251349,
+                "HandlerFinished": 343329480301551,
+                "Observed": 343329480301756
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 11,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 11,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50184,
+                "Wait": 50022,
+                "WaitResult": 0,
+                "Started": 343329480302109,
+                "Queued": 343329480303154,
+                "HandlerStarted": 343329480303967,
+                "HandlerFinished": 343329480354151,
+                "Observed": 343329480354476
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 12,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 12,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50166,
+                "Wait": 50004,
+                "WaitResult": 0,
+                "Started": 343329480354909,
+                "Queued": 343329480356053,
+                "HandlerStarted": 343329480356847,
+                "HandlerFinished": 343329480407013,
+                "Observed": 343329480407351
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 13,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 13,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50200,
+                "Wait": 50038,
+                "WaitResult": 0,
+                "Started": 343329480407781,
+                "Queued": 343329480408873,
+                "HandlerStarted": 343329480409671,
+                "HandlerFinished": 343329480459871,
+                "Observed": 343329480463387
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 14,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 14,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50181,
+                "Wait": 50018,
+                "WaitResult": 0,
+                "Started": 343329480464174,
+                "Queued": 343329480465442,
+                "HandlerStarted": 343329480466265,
+                "HandlerFinished": 343329480516446,
+                "Observed": 343329480516654
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 15,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 15,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50258,
+                "Wait": 50096,
+                "WaitResult": 0,
+                "Started": 343329480517014,
+                "Queued": 343329480518122,
+                "HandlerStarted": 343329480518926,
+                "HandlerFinished": 343329480569184,
+                "Observed": 343329480569689
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 16,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 16,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50262,
+                "Wait": 50099,
+                "WaitResult": 0,
+                "Started": 343329480570190,
+                "Queued": 343329480571876,
+                "HandlerStarted": 343329480572548,
+                "HandlerFinished": 343329480622810,
+                "Observed": 343329480623161
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 17,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 17,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50210,
+                "Wait": 50047,
+                "WaitResult": 0,
+                "Started": 343329480623625,
+                "Queued": 343329480624792,
+                "HandlerStarted": 343329480625585,
+                "HandlerFinished": 343329480675795,
+                "Observed": 343329480676084
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 18,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 18,
+                "Outcome": 2,
+                "Ip": 140051964738024,
+                "Handler": 50181,
+                "Wait": 50020,
+                "WaitResult": 0,
+                "Started": 343329480676439,
+                "Queued": 343329480677500,
+                "HandlerStarted": 343329480678308,
+                "HandlerFinished": 343329480728489,
+                "Observed": 343329480728804
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 19,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 19,
+                "Outcome": 2,
+                "Ip": 140051964738024,
+                "Handler": 50262,
+                "Wait": 50099,
+                "WaitResult": 0,
+                "Started": 343329480729259,
+                "Queued": 343329480730360,
+                "HandlerStarted": 343329480731195,
+                "HandlerFinished": 343329480781457,
+                "Observed": 343329480781751
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 20,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 20,
+                "Outcome": 2,
+                "Ip": 140051964738024,
+                "Handler": 50183,
+                "Wait": 50022,
+                "WaitResult": 0,
+                "Started": 343329480782266,
+                "Queued": 343329480783338,
+                "HandlerStarted": 343329480784144,
+                "HandlerFinished": 343329480834327,
+                "Observed": 343329480834579
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 21,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 21,
+                "Outcome": 2,
+                "Ip": 140051964738024,
+                "Handler": 50265,
+                "Wait": 50103,
+                "WaitResult": 0,
+                "Started": 343329480835034,
+                "Queued": 343329480836284,
+                "HandlerStarted": 343329480837057,
+                "HandlerFinished": 343329480887322,
+                "Observed": 343329480887592
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 22,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 22,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50256,
+                "Wait": 50094,
+                "WaitResult": 0,
+                "Started": 343329480887939,
+                "Queued": 343329480888992,
+                "HandlerStarted": 343329480889817,
+                "HandlerFinished": 343329480940073,
+                "Observed": 343329480940292
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 23,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 23,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50195,
+                "Wait": 50033,
+                "WaitResult": 0,
+                "Started": 343329480940721,
+                "Queued": 343329480941818,
+                "HandlerStarted": 343329480942641,
+                "HandlerFinished": 343329480992836,
+                "Observed": 343329480993129
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 24,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 24,
+                "Outcome": 2,
+                "Ip": 140051964738024,
+                "Handler": 50181,
+                "Wait": 50006,
+                "WaitResult": 0,
+                "Started": 343329480993563,
+                "Queued": 343329480994798,
+                "HandlerStarted": 343329480995711,
+                "HandlerFinished": 343329481045892,
+                "Observed": 343329481048761
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 25,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 25,
+                "Outcome": 2,
+                "Ip": 140051964738027,
+                "Handler": 50285,
+                "Wait": 50123,
+                "WaitResult": 0,
+                "Started": 343329481049287,
+                "Queued": 343329481050420,
+                "HandlerStarted": 343329481051226,
+                "HandlerFinished": 343329481101511,
+                "Observed": 343329481101772
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 26,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 26,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50234,
+                "Wait": 50066,
+                "WaitResult": 0,
+                "Started": 343329481102171,
+                "Queued": 343329481103425,
+                "HandlerStarted": 343329481104090,
+                "HandlerFinished": 343329481154324,
+                "Observed": 343329481154634
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 27,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 27,
+                "Outcome": 2,
+                "Ip": 140051964738027,
+                "Handler": 50179,
+                "Wait": 50016,
+                "WaitResult": 0,
+                "Started": 343329481155367,
+                "Queued": 343329481156778,
+                "HandlerStarted": 343329481157566,
+                "HandlerFinished": 343329481207745,
+                "Observed": 343329481207980
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 28,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 28,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50269,
+                "Wait": 50106,
+                "WaitResult": 0,
+                "Started": 343329481208441,
+                "Queued": 343329481209684,
+                "HandlerStarted": 343329481210484,
+                "HandlerFinished": 343329481260753,
+                "Observed": 343329481261015
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 29,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 29,
+                "Outcome": 2,
+                "Ip": 140051964738030,
+                "Handler": 50233,
+                "Wait": 50073,
+                "WaitResult": 0,
+                "Started": 343329481261378,
+                "Queued": 343329481262439,
+                "HandlerStarted": 343329481263280,
+                "HandlerFinished": 343329481313513,
+                "Observed": 343329481313887
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 30,
+              "Requested": 48582,
+              "Acknowledgment": {
+                "Sequence": 30,
+                "Outcome": 2,
+                "Ip": 140051964738024,
+                "Handler": 48803,
+                "Wait": 48639,
+                "WaitResult": 0,
+                "Started": 343329481314336,
+                "Queued": 343329481315573,
+                "HandlerStarted": 343329481316304,
+                "HandlerFinished": 343329481365107,
+                "Observed": 343329481365468
+              }
+            },
+            "FirstSnapshotCaptured": 343329489721952,
+            "FirstManagedReceiptUpper": 343329489942300,
+            "ClockStatus": 0
+          }
+        ],
+        "Rejected": []
+      }
+    }
+  ],
+  "pendingServiceJournals": [],
+  "controllerPhases": [
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 343329446567793,
+        "CpuNanoseconds": 456508600,
+        "AfterTimestamp": 343329446604048
+      },
+      "After": {
+        "BeforeTimestamp": 343329469368402,
+        "CpuNanoseconds": 479275100,
+        "AfterTimestamp": 343329469371897
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 343329469372206,
+        "CpuNanoseconds": 479276400,
+        "AfterTimestamp": 343329469372518
+      },
+      "After": {
+        "BeforeTimestamp": 343329472030308,
+        "CpuNanoseconds": 481788600,
+        "AfterTimestamp": 343329472033449
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 343329472033854,
+        "CpuNanoseconds": 481789800,
+        "AfterTimestamp": 343329472034104
+      },
+      "After": {
+        "BeforeTimestamp": 343329472034231,
+        "CpuNanoseconds": 481790200,
+        "AfterTimestamp": 343329472034469
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 343329472034532,
+        "CpuNanoseconds": 481790400,
+        "AfterTimestamp": 343329472034729
+      },
+      "After": {
+        "BeforeTimestamp": 343329475601244,
+        "CpuNanoseconds": 485359600,
+        "AfterTimestamp": 343329475604883
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 343329475605424,
+        "CpuNanoseconds": 485361100,
+        "AfterTimestamp": 343329475605606
+      },
+      "After": {
+        "BeforeTimestamp": 343329479743061,
+        "CpuNanoseconds": 489500400,
+        "AfterTimestamp": 343329479745940
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 343329487489876,
+        "CpuNanoseconds": 497017000,
+        "AfterTimestamp": 343329487492090
+      },
+      "After": {
+        "BeforeTimestamp": 343329488102328,
+        "CpuNanoseconds": 497628700,
+        "AfterTimestamp": 343329488103946
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 343329488104435,
+        "CpuNanoseconds": 497629700,
+        "AfterTimestamp": 343329488104600
+      },
+      "After": {
+        "BeforeTimestamp": 343329488104993,
+        "CpuNanoseconds": 497630300,
+        "AfterTimestamp": 343329488105154
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 343329488105208,
+        "CpuNanoseconds": 497630500,
+        "AfterTimestamp": 343329488105373
+      },
+      "After": {
+        "BeforeTimestamp": 343329498828135,
+        "CpuNanoseconds": 508354900,
+        "AfterTimestamp": 343329498830776
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 343329498831195,
+        "CpuNanoseconds": 508356000,
+        "AfterTimestamp": 343329498831378
+      },
+      "After": {
+        "BeforeTimestamp": 343329498834166,
+        "CpuNanoseconds": 508358900,
+        "AfterTimestamp": 343329498834332
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 343329498834382,
+        "CpuNanoseconds": 508359100,
+        "AfterTimestamp": 343329498834540
+      },
+      "After": {
+        "BeforeTimestamp": 343329500530080,
+        "CpuNanoseconds": 510056000,
+        "AfterTimestamp": 343329500531957
+      },
+      "Completed": false
+    }
+  ],
+  "controllerPhaseCapture": true,
+  "failures": [
+    "System.InvalidOperationException: The service lease debt exceeds its capacity bound.\n   at SampledSignalWorkload.\u003C\u003Ec__DisplayClass11_0.\u003CRun\u003Eg__Prepare|5(Int32 slot) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 239\n   at SampledSignalWorkload.\u003C\u003Ec__DisplayClass11_0.\u003CRun\u003Eg__RunStage|6(String name, Int32 milliseconds) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 320\n   at SampledSignalWorkload.Run(String path, SampledSignalPlan plan, Func\u00601 backendFactory, Func\u00602 sessionFactory, IThreadCpuClock controllerClock, SampledSignalTrace trace, Boolean captureTargetCpu, Func\u00601 schedulerFactory, Boolean captureServicePhases) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 433",
+    "The sampled signal workload did not reach its measurement requirements.",
+    "Selected credit did not cause peer waits during measurement."
+  ],
+  "capacityViolations": [],
+  "joined": true,
+  "restored": true,
+  "protocolPassed": false,
+  "capacityPassed": false,
+  "passed": false,
+  "forcedGc": false,
+  "gcObservations": null,
+  "gcJoined": true,
+  "measurementStartedTimestamp": 0,
+  "gcCallBoundMilliseconds": 250,
+  "gcCallDurationIsSuspensionLatency": false,
+  "predictionAccuracyEstablished": false,
+  "generalClrSafetyEstablished": false,
+  "requestBoundNanoseconds": 50000,
+  "handlerBoundNanoseconds": 5000000,
+  "acknowledgmentBoundMilliseconds": 100
+}

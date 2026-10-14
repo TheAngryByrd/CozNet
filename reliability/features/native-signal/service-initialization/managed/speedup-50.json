@@ -1,0 +1,3080 @@
+{
+  "backend": "linux-x64-native-service",
+  "backendDetails": {
+    "nativeStart": 139635077293632,
+    "nativeSize": 26,
+    "symbol": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]",
+    "timingClock": "linux-clock-monotonic",
+    "timingUnit": "nanoseconds",
+    "waitMode": "spin",
+    "selectedChildrenPerCommand": 1,
+    "peerBudgetBoundNanoseconds": 2000000
+  },
+  "percent": 50,
+  "selectedCadence": "QualifiedSample",
+  "selectedChecks": 4,
+  "peerChecks": 4,
+  "peerCheckSkips": 62,
+  "runtime": "10.0.0",
+  "runtimeCountersStart": {
+    "Stage": "warmup",
+    "StartedTimestamp": 344339665502766,
+    "FinishedTimestamp": 344339665514454,
+    "ControllerAllocatedBytes": 20134520,
+    "Gen0Collections": 1,
+    "Gen1Collections": 1,
+    "Gen2Collections": 1,
+    "GcPauseTicks": 17700,
+    "ProcessCpuTicks": 3479670
+  },
+  "runtimeSettings": {
+    "serverGc": false,
+    "latencyMode": "Interactive",
+    "processorCount": 4
+  },
+  "warmupMilliseconds": 250,
+  "warmup": null,
+  "measurement": null,
+  "settled": null,
+  "failureBoundary": {
+    "Stage": "warmup",
+    "Milliseconds": 10.656,
+    "GlobalNanoseconds": 3500000,
+    "CreditNanoseconds": 3500000,
+    "WaitNanoseconds": [
+      0,
+      1000072
+    ],
+    "DebtNanoseconds": [
+      0,
+      2499928
+    ],
+    "Registered": [
+      true,
+      true
+    ],
+    "Pending": 0,
+    "Batches": [
+      2749,
+      2628
+    ],
+    "Timestamp": 344339677876988,
+    "PendingRequests": [],
+    "PendingServices": [],
+    "RuntimeCounters": {
+      "Stage": "warmup",
+      "StartedTimestamp": 344339677886377,
+      "FinishedTimestamp": 344339677894937,
+      "ControllerAllocatedBytes": 20246312,
+      "Gen0Collections": 1,
+      "Gen1Collections": 1,
+      "Gen2Collections": 1,
+      "GcPauseTicks": 17700,
+      "ProcessCpuTicks": 3705640
+    }
+  },
+  "measurementStartRecords": null,
+  "boundaries": [],
+  "maxDebtNanoseconds": [
+    0,
+    2950156
+  ],
+  "debtBoundNanoseconds": 2000000,
+  "stopwatchFrequency": 1000000000,
+  "longestServiceInterval": {
+    "StartedTimestamp": 344339669735266,
+    "FinishedTimestamp": 344339674235807,
+    "SamplesBefore": 1,
+    "SamplesAfter": 2
+  },
+  "peakDebt": [
+    null,
+    {
+      "Slot": 1,
+      "Boundary": {
+        "Stage": "warmup",
+        "Milliseconds": 7.1289,
+        "GlobalNanoseconds": 3500000,
+        "CreditNanoseconds": 3500000,
+        "WaitNanoseconds": [
+          0,
+          500089
+        ],
+        "DebtNanoseconds": [
+          0,
+          2950156
+        ],
+        "Registered": [
+          true,
+          true
+        ],
+        "Pending": 1,
+        "Batches": [
+          1865,
+          1717
+        ],
+        "Timestamp": 344339674347468,
+        "PendingRequests": [],
+        "PendingServices": [
+          {
+            "Slot": 1,
+            "Identity": "a8878dd5-8ff5-4696-b307-bb5394ad0e62",
+            "Command": 2,
+            "BudgetNanoseconds": 499911,
+            "StartedTimestamp": 344339674185209,
+            "StartedStage": "warmup",
+            "ObservedTimestamp": 344339674342926,
+            "ObservedStage": "warmup",
+            "Observation": {
+              "Header": {
+                "IdentityFirst": 5086411114418769365,
+                "IdentitySecond": 7065775717962418099,
+                "Command": 2,
+                "Budget": 499911,
+                "Measured": 49755,
+                "Phase": 1,
+                "Error": 0,
+                "TransportError": 0,
+                "Cancellation": 0,
+                "Outstanding": 1,
+                "Children": 1,
+                "Rejected": 0,
+                "Captured": 344339674342382
+              },
+              "Children": [
+                {
+                  "Native": {
+                    "Ordinal": 1,
+                    "Requested": 50000,
+                    "Acknowledgment": {
+                      "Sequence": 11,
+                      "Outcome": 2,
+                      "Ip": 139635077293646,
+                      "Handler": 50192,
+                      "Wait": 49755,
+                      "WaitResult": 0,
+                      "Started": 344339674251381,
+                      "Queued": 344339674260460,
+                      "HandlerStarted": 344339674263009,
+                      "HandlerFinished": 344339674313201,
+                      "Observed": 344339674313500
+                    }
+                  },
+                  "FirstSnapshotCaptured": 344339674342382,
+                  "FirstManagedReceiptUpper": 344339674342623,
+                  "ClockStatus": 0
+                }
+              ],
+              "Rejected": []
+            }
+          }
+        ],
+        "RuntimeCounters": {
+          "Stage": "warmup",
+          "StartedTimestamp": 344339674347999,
+          "FinishedTimestamp": 344339674348518,
+          "ControllerAllocatedBytes": 20172856,
+          "Gen0Collections": 1,
+          "Gen1Collections": 1,
+          "Gen2Collections": 1,
+          "GcPauseTicks": 17700,
+          "ProcessCpuTicks": 3667220
+        }
+      },
+      "Interval": {
+        "StartedTimestamp": 344339674317893,
+        "FinishedTimestamp": 344339674347019,
+        "SamplesBefore": 6,
+        "SamplesAfter": 7
+      },
+      "LastAcknowledgedSequences": [
+        0,
+        10
+      ]
+    }
+  ],
+  "traceAnchors": null,
+  "diagnosticTrace": false,
+  "traceAbort": null,
+  "controllerCpuTiming": false,
+  "targetCpuTiming": false,
+  "schedulerTiming": false,
+  "schedulerStopped": true,
+  "schedulerCaptures": [
+    null,
+    null,
+    null
+  ],
+  "controllerCpuNanoseconds": 0,
+  "samplingPauses": 0,
+  "records": {
+    "Samples": 7,
+    "DistinctInstructionPointers": 2,
+    "RepresentedCpuNanoseconds": 7000000,
+    "LostRecords": 0,
+    "LostSamples": 0,
+    "Throttles": 0,
+    "SelectedMethodSamples": 7,
+    "UnmappedSamples": 0,
+    "SelectedSymbols": [
+      "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+    ]
+  },
+  "samples": [
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344321159663930,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139635077293646,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 1.7531,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344339668971469
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344321160663830,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139635077293640,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 2.7686,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344339669986870
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344321161656030,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139635077293640,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 7.0394,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344339674257736
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344321162662230,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139635077293646,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 7.0653,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344339674283516
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344321163663930,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139635077293646,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 7.0682,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344339674286454
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344321164661130,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139635077293640,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 7.0719,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344339674290114
+    },
+    {
+      "Sample": {
+        "ProcessId": 7,
+        "ThreadId": 15,
+        "Timestamp": 344321165659230,
+        "PeriodNanoseconds": 1000000,
+        "InstructionPointer": 139635077293646,
+        "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+      },
+      "Epoch": 0,
+      "Accepted": true,
+      "CreditNanoseconds": 500000,
+      "ConsumedMilliseconds": 7.1198,
+      "Stage": "warmup",
+      "ConsumedTimestamp": 344339674338014
+    }
+  ],
+  "requests": [],
+  "serviceJournals": [
+    {
+      "Slot": 1,
+      "Identity": "4c7309f4-2539-4427-a496-1488b06b3c21",
+      "Command": 1,
+      "BudgetNanoseconds": 500000,
+      "StartedTimestamp": 344339669010918,
+      "StartedStage": "warmup",
+      "ObservedTimestamp": 344339672992664,
+      "ObservedStage": "warmup",
+      "Observation": {
+        "Header": {
+          "IdentityFirst": 4910934846696786420,
+          "IdentitySecond": 2394907507795728036,
+          "Command": 1,
+          "Budget": 500000,
+          "Measured": 500089,
+          "Phase": 2,
+          "Error": 0,
+          "TransportError": 0,
+          "Cancellation": 0,
+          "Outstanding": 0,
+          "Children": 10,
+          "Rejected": 0,
+          "Captured": 344339672517379
+        },
+        "Children": [
+          {
+            "Native": {
+              "Ordinal": 1,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 1,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50191,
+                "Wait": 49682,
+                "WaitResult": 0,
+                "Started": 344339669762983,
+                "Queued": 344339669778283,
+                "HandlerStarted": 344339669787328,
+                "HandlerFinished": 344339669837519,
+                "Observed": 344339669837824
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 2,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 2,
+                "Outcome": 2,
+                "Ip": 139635077293640,
+                "Handler": 50216,
+                "Wait": 50037,
+                "WaitResult": 0,
+                "Started": 344339669838766,
+                "Queued": 344339669840535,
+                "HandlerStarted": 344339669841370,
+                "HandlerFinished": 344339669891586,
+                "Observed": 344339669892039
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 3,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 3,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50257,
+                "Wait": 50079,
+                "WaitResult": 0,
+                "Started": 344339669892598,
+                "Queued": 344339669894603,
+                "HandlerStarted": 344339669895576,
+                "HandlerFinished": 344339669945833,
+                "Observed": 344339669946352
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 4,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 4,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50233,
+                "Wait": 50062,
+                "WaitResult": 0,
+                "Started": 344339669946851,
+                "Queued": 344339669948455,
+                "HandlerStarted": 344339669949173,
+                "HandlerFinished": 344339669999406,
+                "Observed": 344339669999905
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 5,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 5,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50180,
+                "Wait": 49958,
+                "WaitResult": 0,
+                "Started": 344339670015517,
+                "Queued": 344339670017447,
+                "HandlerStarted": 344339670018662,
+                "HandlerFinished": 344339670068842,
+                "Observed": 344339670069261
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 6,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 6,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50205,
+                "Wait": 50032,
+                "WaitResult": 0,
+                "Started": 344339670069886,
+                "Queued": 344339670071331,
+                "HandlerStarted": 344339670072141,
+                "HandlerFinished": 344339670122346,
+                "Observed": 344339670122832
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 7,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 7,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50243,
+                "Wait": 50071,
+                "WaitResult": 0,
+                "Started": 344339670123330,
+                "Queued": 344339670124841,
+                "HandlerStarted": 344339670125730,
+                "HandlerFinished": 344339670175973,
+                "Observed": 344339670176290
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 8,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 8,
+                "Outcome": 2,
+                "Ip": 139635077293640,
+                "Handler": 51137,
+                "Wait": 50964,
+                "WaitResult": 0,
+                "Started": 344339670176817,
+                "Queued": 344339670178245,
+                "HandlerStarted": 344339670179039,
+                "HandlerFinished": 344339670230176,
+                "Observed": 344339670230718
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 9,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 9,
+                "Outcome": 2,
+                "Ip": 139635077293640,
+                "Handler": 50221,
+                "Wait": 50047,
+                "WaitResult": 0,
+                "Started": 344339670231488,
+                "Queued": 344339670233438,
+                "HandlerStarted": 344339670234398,
+                "HandlerFinished": 344339670284619,
+                "Observed": 344339670284838
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 10,
+              "Requested": 49068,
+              "Acknowledgment": {
+                "Sequence": 10,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 49329,
+                "Wait": 49157,
+                "WaitResult": 0,
+                "Started": 344339670285332,
+                "Queued": 344339670286898,
+                "HandlerStarted": 344339670287584,
+                "HandlerFinished": 344339670336913,
+                "Observed": 344339670356754
+              }
+            },
+            "FirstSnapshotCaptured": 344339672517379,
+            "FirstManagedReceiptUpper": 344339672985877,
+            "ClockStatus": 0
+          }
+        ],
+        "Rejected": []
+      }
+    },
+    {
+      "Slot": 1,
+      "Identity": "a8878dd5-8ff5-4696-b307-bb5394ad0e62",
+      "Command": 2,
+      "BudgetNanoseconds": 499911,
+      "StartedTimestamp": 344339674185209,
+      "StartedStage": "warmup",
+      "ObservedTimestamp": 344339674819932,
+      "ObservedStage": "warmup",
+      "Observation": {
+        "Header": {
+          "IdentityFirst": 5086411114418769365,
+          "IdentitySecond": 7065775717962418099,
+          "Command": 2,
+          "Budget": 499911,
+          "Measured": 499983,
+          "Phase": 2,
+          "Error": 0,
+          "TransportError": 0,
+          "Cancellation": 0,
+          "Outstanding": 0,
+          "Children": 10,
+          "Rejected": 0,
+          "Captured": 344339674819601
+        },
+        "Children": [
+          {
+            "Native": {
+              "Ordinal": 1,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 11,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50192,
+                "Wait": 49755,
+                "WaitResult": 0,
+                "Started": 344339674251381,
+                "Queued": 344339674260460,
+                "HandlerStarted": 344339674263009,
+                "HandlerFinished": 344339674313201,
+                "Observed": 344339674313500
+              }
+            },
+            "FirstSnapshotCaptured": 344339674342382,
+            "FirstManagedReceiptUpper": 344339674342623,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 2,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 12,
+                "Outcome": 2,
+                "Ip": 139635077293640,
+                "Handler": 50205,
+                "Wait": 50035,
+                "WaitResult": 0,
+                "Started": 344339674314498,
+                "Queued": 344339674315700,
+                "HandlerStarted": 344339674316650,
+                "HandlerFinished": 344339674366855,
+                "Observed": 344339674370640
+              }
+            },
+            "FirstSnapshotCaptured": 344339674389647,
+            "FirstManagedReceiptUpper": 344339674389890,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 3,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 13,
+                "Outcome": 2,
+                "Ip": 139635077293640,
+                "Handler": 50266,
+                "Wait": 50094,
+                "WaitResult": 0,
+                "Started": 344339674371299,
+                "Queued": 344339674372531,
+                "HandlerStarted": 344339674373396,
+                "HandlerFinished": 344339674423662,
+                "Observed": 344339674427374
+              }
+            },
+            "FirstSnapshotCaptured": 344339674432081,
+            "FirstManagedReceiptUpper": 344339674432300,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 4,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 14,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50274,
+                "Wait": 50101,
+                "WaitResult": 0,
+                "Started": 344339674428215,
+                "Queued": 344339674429632,
+                "HandlerStarted": 344339674430540,
+                "HandlerFinished": 344339674480814,
+                "Observed": 344339674481183
+              }
+            },
+            "FirstSnapshotCaptured": 344339674486948,
+            "FirstManagedReceiptUpper": 344339674487158,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 5,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 15,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50195,
+                "Wait": 50025,
+                "WaitResult": 0,
+                "Started": 344339674481622,
+                "Queued": 344339674482870,
+                "HandlerStarted": 344339674483714,
+                "HandlerFinished": 344339674533909,
+                "Observed": 344339674534231
+              }
+            },
+            "FirstSnapshotCaptured": 344339674551398,
+            "FirstManagedReceiptUpper": 344339674552363,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 6,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 16,
+                "Outcome": 2,
+                "Ip": 139635077293640,
+                "Handler": 50230,
+                "Wait": 50059,
+                "WaitResult": 0,
+                "Started": 344339674539985,
+                "Queued": 344339674541210,
+                "HandlerStarted": 344339674542054,
+                "HandlerFinished": 344339674592284,
+                "Observed": 344339674592621
+              }
+            },
+            "FirstSnapshotCaptured": 344339674683701,
+            "FirstManagedReceiptUpper": 344339674684274,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 7,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 17,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50200,
+                "Wait": 50026,
+                "WaitResult": 0,
+                "Started": 344339674593050,
+                "Queued": 344339674594300,
+                "HandlerStarted": 344339674595174,
+                "HandlerFinished": 344339674645374,
+                "Observed": 344339674645617
+              }
+            },
+            "FirstSnapshotCaptured": 344339674683701,
+            "FirstManagedReceiptUpper": 344339674684274,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 8,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 18,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 50347,
+                "Wait": 50137,
+                "WaitResult": 0,
+                "Started": 344339674646045,
+                "Queued": 344339674647732,
+                "HandlerStarted": 344339674648670,
+                "HandlerFinished": 344339674699017,
+                "Observed": 344339674701688
+              }
+            },
+            "FirstSnapshotCaptured": 344339674702079,
+            "FirstManagedReceiptUpper": 344339674702128,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 9,
+              "Requested": 50000,
+              "Acknowledgment": {
+                "Sequence": 19,
+                "Outcome": 2,
+                "Ip": 139635077293643,
+                "Handler": 50202,
+                "Wait": 50022,
+                "WaitResult": 0,
+                "Started": 344339674702490,
+                "Queued": 344339674703996,
+                "HandlerStarted": 344339674704925,
+                "HandlerFinished": 344339674755127,
+                "Observed": 344339674755365
+              }
+            },
+            "FirstSnapshotCaptured": 344339674760686,
+            "FirstManagedReceiptUpper": 344339674760841,
+            "ClockStatus": 0
+          },
+          {
+            "Native": {
+              "Ordinal": 10,
+              "Requested": 49657,
+              "Acknowledgment": {
+                "Sequence": 20,
+                "Outcome": 2,
+                "Ip": 139635077293646,
+                "Handler": 49901,
+                "Wait": 49729,
+                "WaitResult": 0,
+                "Started": 344339674755843,
+                "Queued": 344339674757078,
+                "HandlerStarted": 344339674757931,
+                "HandlerFinished": 344339674807832,
+                "Observed": 344339674808475
+              }
+            },
+            "FirstSnapshotCaptured": 344339674819601,
+            "FirstManagedReceiptUpper": 344339674819662,
+            "ClockStatus": 0
+          }
+        ],
+        "Rejected": []
+      }
+    }
+  ],
+  "pendingServiceJournals": [],
+  "controllerPhases": [
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344339667548082,
+        "CpuNanoseconds": 331329800,
+        "AfterTimestamp": 344339667624229
+      },
+      "After": {
+        "BeforeTimestamp": 344339668518889,
+        "CpuNanoseconds": 332228200,
+        "AfterTimestamp": 344339668522670
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344339668523117,
+        "CpuNanoseconds": 332229900,
+        "AfterTimestamp": 344339668523398
+      },
+      "After": {
+        "BeforeTimestamp": 344339668524456,
+        "CpuNanoseconds": 332231200,
+        "AfterTimestamp": 344339668524661
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344339668524725,
+        "CpuNanoseconds": 332231500,
+        "AfterTimestamp": 344339668524904
+      },
+      "After": {
+        "BeforeTimestamp": 344339668525235,
+        "CpuNanoseconds": 332232000,
+        "AfterTimestamp": 344339668525484
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344339668525544,
+        "CpuNanoseconds": 332232300,
+        "AfterTimestamp": 344339668525717
+      },
+      "After": {
+        "BeforeTimestamp": 344339668526027,
+        "CpuNanoseconds": 332232800,
+        "AfterTimestamp": 344339668526200
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 1,
+      "Before": {
+        "BeforeTimestamp": 344339668526260,
+        "CpuNanoseconds": 332233000,
+        "AfterTimestamp": 344339668526431
+      },
+      "After": {
+        "BeforeTimestamp": 344339668531664,
+        "CpuNanoseconds": 332238400,
+        "AfterTimestamp": 344339668531845
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344339668532335,
+        "CpuNanoseconds": 332239100,
+        "AfterTimestamp": 344339668532510
+      },
+      "After": {
+        "BeforeTimestamp": 344339668979460,
+        "CpuNanoseconds": 332687900,
+        "AfterTimestamp": 344339668982441
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344339668982683,
+        "CpuNanoseconds": 332690000,
+        "AfterTimestamp": 344339668983550
+      },
+      "After": {
+        "BeforeTimestamp": 344339668984211,
+        "CpuNanoseconds": 332690900,
+        "AfterTimestamp": 344339668984413
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344339668984496,
+        "CpuNanoseconds": 332691200,
+        "AfterTimestamp": 344339668984704
+      },
+      "After": {
+        "BeforeTimestamp": 344339668984819,
+        "CpuNanoseconds": 332691500,
+        "AfterTimestamp": 344339668985036
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344339668985108,
+        "CpuNanoseconds": 332691800,
+        "AfterTimestamp": 344339668985315
+      },
+      "After": {
+        "BeforeTimestamp": 344339668986805,
+        "CpuNanoseconds": 332693500,
+        "AfterTimestamp": 344339668987029
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 2,
+      "Before": {
+        "BeforeTimestamp": 344339668987107,
+        "CpuNanoseconds": 332693900,
+        "AfterTimestamp": 344339668987342
+      },
+      "After": {
+        "BeforeTimestamp": 344339669731973,
+        "CpuNanoseconds": 333440600,
+        "AfterTimestamp": 344339669735064
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344339669958223,
+        "CpuNanoseconds": 333665800,
+        "AfterTimestamp": 344339669959646
+      },
+      "After": {
+        "BeforeTimestamp": 344339670261577,
+        "CpuNanoseconds": 333969300,
+        "AfterTimestamp": 344339670263330
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344339670263576,
+        "CpuNanoseconds": 333970200,
+        "AfterTimestamp": 344339670263840
+      },
+      "After": {
+        "BeforeTimestamp": 344339670264606,
+        "CpuNanoseconds": 333971200,
+        "AfterTimestamp": 344339670264854
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344339670264935,
+        "CpuNanoseconds": 333971600,
+        "AfterTimestamp": 344339670265159
+      },
+      "After": {
+        "BeforeTimestamp": 344339674165683,
+        "CpuNanoseconds": 337874600,
+        "AfterTimestamp": 344339674169653
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344339674170266,
+        "CpuNanoseconds": 337876500,
+        "AfterTimestamp": 344339674170484
+      },
+      "After": {
+        "BeforeTimestamp": 344339674176479,
+        "CpuNanoseconds": 337882700,
+        "AfterTimestamp": 344339674176703
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 3,
+      "Before": {
+        "BeforeTimestamp": 344339674176775,
+        "CpuNanoseconds": 337883000,
+        "AfterTimestamp": 344339674176983
+      },
+      "After": {
+        "BeforeTimestamp": 344339674234900,
+        "CpuNanoseconds": 337941500,
+        "AfterTimestamp": 344339674235658
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344339674236384,
+        "CpuNanoseconds": 337942700,
+        "AfterTimestamp": 344339674236625
+      },
+      "After": {
+        "BeforeTimestamp": 344339674292668,
+        "CpuNanoseconds": 337999100,
+        "AfterTimestamp": 344339674293169
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344339674293263,
+        "CpuNanoseconds": 337999500,
+        "AfterTimestamp": 344339674293530
+      },
+      "After": {
+        "BeforeTimestamp": 344339674294035,
+        "CpuNanoseconds": 338000300,
+        "AfterTimestamp": 344339674294213
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344339674294266,
+        "CpuNanoseconds": 338000500,
+        "AfterTimestamp": 344339674294447
+      },
+      "After": {
+        "BeforeTimestamp": 344339674315691,
+        "CpuNanoseconds": 338022000,
+        "AfterTimestamp": 344339674315970
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344339674316036,
+        "CpuNanoseconds": 338022300,
+        "AfterTimestamp": 344339674316283
+      },
+      "After": {
+        "BeforeTimestamp": 344339674317082,
+        "CpuNanoseconds": 338023300,
+        "AfterTimestamp": 344339674317279
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 4,
+      "Before": {
+        "BeforeTimestamp": 344339674317339,
+        "CpuNanoseconds": 338023600,
+        "AfterTimestamp": 344339674317549
+      },
+      "After": {
+        "BeforeTimestamp": 344339674317633,
+        "CpuNanoseconds": 338023900,
+        "AfterTimestamp": 344339674317844
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344339674331072,
+        "CpuNanoseconds": 338037300,
+        "AfterTimestamp": 344339674331301
+      },
+      "After": {
+        "BeforeTimestamp": 344339674338308,
+        "CpuNanoseconds": 338044600,
+        "AfterTimestamp": 344339674338589
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344339674338667,
+        "CpuNanoseconds": 338044900,
+        "AfterTimestamp": 344339674338876
+      },
+      "After": {
+        "BeforeTimestamp": 344339674338968,
+        "CpuNanoseconds": 338045200,
+        "AfterTimestamp": 344339674339178
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344339674339229,
+        "CpuNanoseconds": 338045500,
+        "AfterTimestamp": 344339674339455
+      },
+      "After": {
+        "BeforeTimestamp": 344339674345245,
+        "CpuNanoseconds": 338051500,
+        "AfterTimestamp": 344339674345560
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344339674345627,
+        "CpuNanoseconds": 338051900,
+        "AfterTimestamp": 344339674345815
+      },
+      "After": {
+        "BeforeTimestamp": 344339674346248,
+        "CpuNanoseconds": 338052500,
+        "AfterTimestamp": 344339674346434
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 5,
+      "Before": {
+        "BeforeTimestamp": 344339674346480,
+        "CpuNanoseconds": 338052700,
+        "AfterTimestamp": 344339674346685
+      },
+      "After": {
+        "BeforeTimestamp": 344339674346750,
+        "CpuNanoseconds": 338053000,
+        "AfterTimestamp": 344339674346975
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 6,
+      "Before": {
+        "BeforeTimestamp": 344339674348771,
+        "CpuNanoseconds": 338055000,
+        "AfterTimestamp": 344339674349020
+      },
+      "After": {
+        "BeforeTimestamp": 344339674349118,
+        "CpuNanoseconds": 338055400,
+        "AfterTimestamp": 344339674349348
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 6,
+      "Before": {
+        "BeforeTimestamp": 344339674349400,
+        "CpuNanoseconds": 338055700,
+        "AfterTimestamp": 344339674349626
+      },
+      "After": {
+        "BeforeTimestamp": 344339674349680,
+        "CpuNanoseconds": 338055900,
+        "AfterTimestamp": 344339674349911
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 6,
+      "Before": {
+        "BeforeTimestamp": 344339674349971,
+        "CpuNanoseconds": 338056200,
+        "AfterTimestamp": 344339674350196
+      },
+      "After": {
+        "BeforeTimestamp": 344339674355848,
+        "CpuNanoseconds": 338062200,
+        "AfterTimestamp": 344339674356216
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 6,
+      "Before": {
+        "BeforeTimestamp": 344339674356277,
+        "CpuNanoseconds": 338062500,
+        "AfterTimestamp": 344339674356507
+      },
+      "After": {
+        "BeforeTimestamp": 344339674356572,
+        "CpuNanoseconds": 338062800,
+        "AfterTimestamp": 344339674356771
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 6,
+      "Before": {
+        "BeforeTimestamp": 344339674356829,
+        "CpuNanoseconds": 338063100,
+        "AfterTimestamp": 344339674357051
+      },
+      "After": {
+        "BeforeTimestamp": 344339674357107,
+        "CpuNanoseconds": 338063300,
+        "AfterTimestamp": 344339674357315
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 7,
+      "Before": {
+        "BeforeTimestamp": 344339674357575,
+        "CpuNanoseconds": 338063800,
+        "AfterTimestamp": 344339674357788
+      },
+      "After": {
+        "BeforeTimestamp": 344339674357918,
+        "CpuNanoseconds": 338064200,
+        "AfterTimestamp": 344339674358128
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 7,
+      "Before": {
+        "BeforeTimestamp": 344339674358195,
+        "CpuNanoseconds": 338064400,
+        "AfterTimestamp": 344339674358418
+      },
+      "After": {
+        "BeforeTimestamp": 344339674358498,
+        "CpuNanoseconds": 338064700,
+        "AfterTimestamp": 344339674358692
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 7,
+      "Before": {
+        "BeforeTimestamp": 344339674358757,
+        "CpuNanoseconds": 338065000,
+        "AfterTimestamp": 344339674358943
+      },
+      "After": {
+        "BeforeTimestamp": 344339674362461,
+        "CpuNanoseconds": 338068800,
+        "AfterTimestamp": 344339674362805
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 7,
+      "Before": {
+        "BeforeTimestamp": 344339674362868,
+        "CpuNanoseconds": 338069100,
+        "AfterTimestamp": 344339674363102
+      },
+      "After": {
+        "BeforeTimestamp": 344339674363153,
+        "CpuNanoseconds": 338069400,
+        "AfterTimestamp": 344339674363394
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 7,
+      "Before": {
+        "BeforeTimestamp": 344339674363459,
+        "CpuNanoseconds": 338069700,
+        "AfterTimestamp": 344339674363690
+      },
+      "After": {
+        "BeforeTimestamp": 344339674363757,
+        "CpuNanoseconds": 338070000,
+        "AfterTimestamp": 344339674363993
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 8,
+      "Before": {
+        "BeforeTimestamp": 344339674364174,
+        "CpuNanoseconds": 338070400,
+        "AfterTimestamp": 344339674364390
+      },
+      "After": {
+        "BeforeTimestamp": 344339674364530,
+        "CpuNanoseconds": 338070800,
+        "AfterTimestamp": 344339674364753
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 8,
+      "Before": {
+        "BeforeTimestamp": 344339674364829,
+        "CpuNanoseconds": 338071100,
+        "AfterTimestamp": 344339674365051
+      },
+      "After": {
+        "BeforeTimestamp": 344339674365129,
+        "CpuNanoseconds": 338071400,
+        "AfterTimestamp": 344339674365354
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 8,
+      "Before": {
+        "BeforeTimestamp": 344339674365415,
+        "CpuNanoseconds": 338071700,
+        "AfterTimestamp": 344339674365630
+      },
+      "After": {
+        "BeforeTimestamp": 344339674368990,
+        "CpuNanoseconds": 338075300,
+        "AfterTimestamp": 344339674369327
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 8,
+      "Before": {
+        "BeforeTimestamp": 344339674384705,
+        "CpuNanoseconds": 338091000,
+        "AfterTimestamp": 344339674384987
+      },
+      "After": {
+        "BeforeTimestamp": 344339674385078,
+        "CpuNanoseconds": 338091300,
+        "AfterTimestamp": 344339674385300
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 8,
+      "Before": {
+        "BeforeTimestamp": 344339674385363,
+        "CpuNanoseconds": 338091600,
+        "AfterTimestamp": 344339674385589
+      },
+      "After": {
+        "BeforeTimestamp": 344339674385639,
+        "CpuNanoseconds": 338091900,
+        "AfterTimestamp": 344339674385860
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 9,
+      "Before": {
+        "BeforeTimestamp": 344339674386051,
+        "CpuNanoseconds": 338092300,
+        "AfterTimestamp": 344339674386279
+      },
+      "After": {
+        "BeforeTimestamp": 344339674386466,
+        "CpuNanoseconds": 338092700,
+        "AfterTimestamp": 344339674386691
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 9,
+      "Before": {
+        "BeforeTimestamp": 344339674386756,
+        "CpuNanoseconds": 338093000,
+        "AfterTimestamp": 344339674386977
+      },
+      "After": {
+        "BeforeTimestamp": 344339674387059,
+        "CpuNanoseconds": 338093300,
+        "AfterTimestamp": 344339674387277
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 9,
+      "Before": {
+        "BeforeTimestamp": 344339674387338,
+        "CpuNanoseconds": 338093600,
+        "AfterTimestamp": 344339674387557
+      },
+      "After": {
+        "BeforeTimestamp": 344339674392324,
+        "CpuNanoseconds": 338098700,
+        "AfterTimestamp": 344339674392764
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 9,
+      "Before": {
+        "BeforeTimestamp": 344339674392831,
+        "CpuNanoseconds": 338099100,
+        "AfterTimestamp": 344339674393063
+      },
+      "After": {
+        "BeforeTimestamp": 344339674393112,
+        "CpuNanoseconds": 338099400,
+        "AfterTimestamp": 344339674393340
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 9,
+      "Before": {
+        "BeforeTimestamp": 344339674393405,
+        "CpuNanoseconds": 338099700,
+        "AfterTimestamp": 344339674393636
+      },
+      "After": {
+        "BeforeTimestamp": 344339674393717,
+        "CpuNanoseconds": 338100000,
+        "AfterTimestamp": 344339674393950
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 10,
+      "Before": {
+        "BeforeTimestamp": 344339674394132,
+        "CpuNanoseconds": 338100400,
+        "AfterTimestamp": 344339674394365
+      },
+      "After": {
+        "BeforeTimestamp": 344339674394509,
+        "CpuNanoseconds": 338100800,
+        "AfterTimestamp": 344339674394739
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 10,
+      "Before": {
+        "BeforeTimestamp": 344339674394804,
+        "CpuNanoseconds": 338101100,
+        "AfterTimestamp": 344339674395029
+      },
+      "After": {
+        "BeforeTimestamp": 344339674395106,
+        "CpuNanoseconds": 338101400,
+        "AfterTimestamp": 344339674395336
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 10,
+      "Before": {
+        "BeforeTimestamp": 344339674395404,
+        "CpuNanoseconds": 338101600,
+        "AfterTimestamp": 344339674395616
+      },
+      "After": {
+        "BeforeTimestamp": 344339674425593,
+        "CpuNanoseconds": 338132200,
+        "AfterTimestamp": 344339674426233
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 10,
+      "Before": {
+        "BeforeTimestamp": 344339674426312,
+        "CpuNanoseconds": 338132600,
+        "AfterTimestamp": 344339674426667
+      },
+      "After": {
+        "BeforeTimestamp": 344339674426736,
+        "CpuNanoseconds": 338133100,
+        "AfterTimestamp": 344339674427053
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 10,
+      "Before": {
+        "BeforeTimestamp": 344339674427120,
+        "CpuNanoseconds": 338133400,
+        "AfterTimestamp": 344339674427452
+      },
+      "After": {
+        "BeforeTimestamp": 344339674427506,
+        "CpuNanoseconds": 338133800,
+        "AfterTimestamp": 344339674427762
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 11,
+      "Before": {
+        "BeforeTimestamp": 344339674427960,
+        "CpuNanoseconds": 338134200,
+        "AfterTimestamp": 344339674428211
+      },
+      "After": {
+        "BeforeTimestamp": 344339674428355,
+        "CpuNanoseconds": 338134600,
+        "AfterTimestamp": 344339674428571
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 11,
+      "Before": {
+        "BeforeTimestamp": 344339674428631,
+        "CpuNanoseconds": 338134900,
+        "AfterTimestamp": 344339674428857
+      },
+      "After": {
+        "BeforeTimestamp": 344339674428941,
+        "CpuNanoseconds": 338135200,
+        "AfterTimestamp": 344339674429176
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 11,
+      "Before": {
+        "BeforeTimestamp": 344339674429230,
+        "CpuNanoseconds": 338135500,
+        "AfterTimestamp": 344339674429430
+      },
+      "After": {
+        "BeforeTimestamp": 344339674435139,
+        "CpuNanoseconds": 338141500,
+        "AfterTimestamp": 344339674435485
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 11,
+      "Before": {
+        "BeforeTimestamp": 344339674435546,
+        "CpuNanoseconds": 338141800,
+        "AfterTimestamp": 344339674435769
+      },
+      "After": {
+        "BeforeTimestamp": 344339674435836,
+        "CpuNanoseconds": 338142100,
+        "AfterTimestamp": 344339674436066
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 11,
+      "Before": {
+        "BeforeTimestamp": 344339674436125,
+        "CpuNanoseconds": 338142400,
+        "AfterTimestamp": 344339674436352
+      },
+      "After": {
+        "BeforeTimestamp": 344339674436441,
+        "CpuNanoseconds": 338142700,
+        "AfterTimestamp": 344339674436667
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 12,
+      "Before": {
+        "BeforeTimestamp": 344339674436844,
+        "CpuNanoseconds": 338143100,
+        "AfterTimestamp": 344339674437072
+      },
+      "After": {
+        "BeforeTimestamp": 344339674437210,
+        "CpuNanoseconds": 338143500,
+        "AfterTimestamp": 344339674437431
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 12,
+      "Before": {
+        "BeforeTimestamp": 344339674437492,
+        "CpuNanoseconds": 338143800,
+        "AfterTimestamp": 344339674437730
+      },
+      "After": {
+        "BeforeTimestamp": 344339674437811,
+        "CpuNanoseconds": 338144100,
+        "AfterTimestamp": 344339674438027
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 12,
+      "Before": {
+        "BeforeTimestamp": 344339674438089,
+        "CpuNanoseconds": 338144300,
+        "AfterTimestamp": 344339674438294
+      },
+      "After": {
+        "BeforeTimestamp": 344339674440292,
+        "CpuNanoseconds": 338146600,
+        "AfterTimestamp": 344339674440553
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 12,
+      "Before": {
+        "BeforeTimestamp": 344339674440607,
+        "CpuNanoseconds": 338146900,
+        "AfterTimestamp": 344339674440841
+      },
+      "After": {
+        "BeforeTimestamp": 344339674440886,
+        "CpuNanoseconds": 338147100,
+        "AfterTimestamp": 344339674441116
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 12,
+      "Before": {
+        "BeforeTimestamp": 344339674441171,
+        "CpuNanoseconds": 338147400,
+        "AfterTimestamp": 344339674441411
+      },
+      "After": {
+        "BeforeTimestamp": 344339674441448,
+        "CpuNanoseconds": 338147700,
+        "AfterTimestamp": 344339674441669
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 13,
+      "Before": {
+        "BeforeTimestamp": 344339674446058,
+        "CpuNanoseconds": 338152400,
+        "AfterTimestamp": 344339674446347
+      },
+      "After": {
+        "BeforeTimestamp": 344339674446415,
+        "CpuNanoseconds": 338152700,
+        "AfterTimestamp": 344339674446645
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 13,
+      "Before": {
+        "BeforeTimestamp": 344339674446710,
+        "CpuNanoseconds": 338153000,
+        "AfterTimestamp": 344339674446944
+      },
+      "After": {
+        "BeforeTimestamp": 344339674446990,
+        "CpuNanoseconds": 338153200,
+        "AfterTimestamp": 344339674447218
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 13,
+      "Before": {
+        "BeforeTimestamp": 344339674447279,
+        "CpuNanoseconds": 338153500,
+        "AfterTimestamp": 344339674447505
+      },
+      "After": {
+        "BeforeTimestamp": 344339674449126,
+        "CpuNanoseconds": 338155400,
+        "AfterTimestamp": 344339674449383
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 13,
+      "Before": {
+        "BeforeTimestamp": 344339674449437,
+        "CpuNanoseconds": 338155700,
+        "AfterTimestamp": 344339674449666
+      },
+      "After": {
+        "BeforeTimestamp": 344339674449708,
+        "CpuNanoseconds": 338156000,
+        "AfterTimestamp": 344339674449945
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 13,
+      "Before": {
+        "BeforeTimestamp": 344339674449999,
+        "CpuNanoseconds": 338156300,
+        "AfterTimestamp": 344339674450230
+      },
+      "After": {
+        "BeforeTimestamp": 344339674450271,
+        "CpuNanoseconds": 338156500,
+        "AfterTimestamp": 344339674450505
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 14,
+      "Before": {
+        "BeforeTimestamp": 344339674450656,
+        "CpuNanoseconds": 338156900,
+        "AfterTimestamp": 344339674450887
+      },
+      "After": {
+        "BeforeTimestamp": 344339674450950,
+        "CpuNanoseconds": 338157200,
+        "AfterTimestamp": 344339674451181
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 14,
+      "Before": {
+        "BeforeTimestamp": 344339674451237,
+        "CpuNanoseconds": 338157500,
+        "AfterTimestamp": 344339674451467
+      },
+      "After": {
+        "BeforeTimestamp": 344339674451519,
+        "CpuNanoseconds": 338157800,
+        "AfterTimestamp": 344339674451736
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 14,
+      "Before": {
+        "BeforeTimestamp": 344339674451799,
+        "CpuNanoseconds": 338158100,
+        "AfterTimestamp": 344339674452026
+      },
+      "After": {
+        "BeforeTimestamp": 344339674455595,
+        "CpuNanoseconds": 338161900,
+        "AfterTimestamp": 344339674455951
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 14,
+      "Before": {
+        "BeforeTimestamp": 344339674456021,
+        "CpuNanoseconds": 338162300,
+        "AfterTimestamp": 344339674456246
+      },
+      "After": {
+        "BeforeTimestamp": 344339674456299,
+        "CpuNanoseconds": 338162600,
+        "AfterTimestamp": 344339674456531
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 14,
+      "Before": {
+        "BeforeTimestamp": 344339674456595,
+        "CpuNanoseconds": 338162800,
+        "AfterTimestamp": 344339674456820
+      },
+      "After": {
+        "BeforeTimestamp": 344339674456869,
+        "CpuNanoseconds": 338163100,
+        "AfterTimestamp": 344339674457103
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 15,
+      "Before": {
+        "BeforeTimestamp": 344339674457283,
+        "CpuNanoseconds": 338163500,
+        "AfterTimestamp": 344339674457511
+      },
+      "After": {
+        "BeforeTimestamp": 344339674457645,
+        "CpuNanoseconds": 338163900,
+        "AfterTimestamp": 344339674457875
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 15,
+      "Before": {
+        "BeforeTimestamp": 344339674457940,
+        "CpuNanoseconds": 338164200,
+        "AfterTimestamp": 344339674458160
+      },
+      "After": {
+        "BeforeTimestamp": 344339674458238,
+        "CpuNanoseconds": 338164500,
+        "AfterTimestamp": 344339674458457
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 15,
+      "Before": {
+        "BeforeTimestamp": 344339674458520,
+        "CpuNanoseconds": 338164800,
+        "AfterTimestamp": 344339674458738
+      },
+      "After": {
+        "BeforeTimestamp": 344339674460402,
+        "CpuNanoseconds": 338166700,
+        "AfterTimestamp": 344339674460651
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 15,
+      "Before": {
+        "BeforeTimestamp": 344339674460706,
+        "CpuNanoseconds": 338167000,
+        "AfterTimestamp": 344339674460935
+      },
+      "After": {
+        "BeforeTimestamp": 344339674460981,
+        "CpuNanoseconds": 338167200,
+        "AfterTimestamp": 344339674461210
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 15,
+      "Before": {
+        "BeforeTimestamp": 344339674461261,
+        "CpuNanoseconds": 338167500,
+        "AfterTimestamp": 344339674461476
+      },
+      "After": {
+        "BeforeTimestamp": 344339674461519,
+        "CpuNanoseconds": 338167800,
+        "AfterTimestamp": 344339674461750
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 16,
+      "Before": {
+        "BeforeTimestamp": 344339674461910,
+        "CpuNanoseconds": 338168200,
+        "AfterTimestamp": 344339674462136
+      },
+      "After": {
+        "BeforeTimestamp": 344339674462195,
+        "CpuNanoseconds": 338168400,
+        "AfterTimestamp": 344339674462419
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 16,
+      "Before": {
+        "BeforeTimestamp": 344339674462476,
+        "CpuNanoseconds": 338168700,
+        "AfterTimestamp": 344339674462706
+      },
+      "After": {
+        "BeforeTimestamp": 344339674462751,
+        "CpuNanoseconds": 338169000,
+        "AfterTimestamp": 344339674462980
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 16,
+      "Before": {
+        "BeforeTimestamp": 344339674463035,
+        "CpuNanoseconds": 338169300,
+        "AfterTimestamp": 344339674463258
+      },
+      "After": {
+        "BeforeTimestamp": 344339674464887,
+        "CpuNanoseconds": 338171100,
+        "AfterTimestamp": 344339674465146
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 16,
+      "Before": {
+        "BeforeTimestamp": 344339674465193,
+        "CpuNanoseconds": 338171400,
+        "AfterTimestamp": 344339674465423
+      },
+      "After": {
+        "BeforeTimestamp": 344339674465468,
+        "CpuNanoseconds": 338171700,
+        "AfterTimestamp": 344339674465716
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 16,
+      "Before": {
+        "BeforeTimestamp": 344339674465773,
+        "CpuNanoseconds": 338172000,
+        "AfterTimestamp": 344339674466006
+      },
+      "After": {
+        "BeforeTimestamp": 344339674466059,
+        "CpuNanoseconds": 338172300,
+        "AfterTimestamp": 344339674466300
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 17,
+      "Before": {
+        "BeforeTimestamp": 344339674466501,
+        "CpuNanoseconds": 338172700,
+        "AfterTimestamp": 344339674466719
+      },
+      "After": {
+        "BeforeTimestamp": 344339674466783,
+        "CpuNanoseconds": 338173100,
+        "AfterTimestamp": 344339674467047
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 17,
+      "Before": {
+        "BeforeTimestamp": 344339674467103,
+        "CpuNanoseconds": 338173300,
+        "AfterTimestamp": 344339674467327
+      },
+      "After": {
+        "BeforeTimestamp": 344339674467373,
+        "CpuNanoseconds": 338173600,
+        "AfterTimestamp": 344339674467589
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 17,
+      "Before": {
+        "BeforeTimestamp": 344339674467644,
+        "CpuNanoseconds": 338173900,
+        "AfterTimestamp": 344339674467866
+      },
+      "After": {
+        "BeforeTimestamp": 344339674471601,
+        "CpuNanoseconds": 338177900,
+        "AfterTimestamp": 344339674471960
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 17,
+      "Before": {
+        "BeforeTimestamp": 344339674472023,
+        "CpuNanoseconds": 338178300,
+        "AfterTimestamp": 344339674472263
+      },
+      "After": {
+        "BeforeTimestamp": 344339674472319,
+        "CpuNanoseconds": 338178600,
+        "AfterTimestamp": 344339674472565
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 17,
+      "Before": {
+        "BeforeTimestamp": 344339674472631,
+        "CpuNanoseconds": 338178900,
+        "AfterTimestamp": 344339674472871
+      },
+      "After": {
+        "BeforeTimestamp": 344339674472921,
+        "CpuNanoseconds": 338179200,
+        "AfterTimestamp": 344339674473158
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 18,
+      "Before": {
+        "BeforeTimestamp": 344339674473339,
+        "CpuNanoseconds": 338179600,
+        "AfterTimestamp": 344339674473563
+      },
+      "After": {
+        "BeforeTimestamp": 344339674473700,
+        "CpuNanoseconds": 338180000,
+        "AfterTimestamp": 344339674473952
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 18,
+      "Before": {
+        "BeforeTimestamp": 344339674474009,
+        "CpuNanoseconds": 338180300,
+        "AfterTimestamp": 344339674474234
+      },
+      "After": {
+        "BeforeTimestamp": 344339674474312,
+        "CpuNanoseconds": 338180600,
+        "AfterTimestamp": 344339674474540
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 18,
+      "Before": {
+        "BeforeTimestamp": 344339674474605,
+        "CpuNanoseconds": 338180800,
+        "AfterTimestamp": 344339674474832
+      },
+      "After": {
+        "BeforeTimestamp": 344339674481585,
+        "CpuNanoseconds": 338187900,
+        "AfterTimestamp": 344339674481956
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 18,
+      "Before": {
+        "BeforeTimestamp": 344339674482024,
+        "CpuNanoseconds": 338188300,
+        "AfterTimestamp": 344339674482244
+      },
+      "After": {
+        "BeforeTimestamp": 344339674482296,
+        "CpuNanoseconds": 338188500,
+        "AfterTimestamp": 344339674482523
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 18,
+      "Before": {
+        "BeforeTimestamp": 344339674482587,
+        "CpuNanoseconds": 338188800,
+        "AfterTimestamp": 344339674482805
+      },
+      "After": {
+        "BeforeTimestamp": 344339674482859,
+        "CpuNanoseconds": 338189100,
+        "AfterTimestamp": 344339674483071
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 19,
+      "Before": {
+        "BeforeTimestamp": 344339674483256,
+        "CpuNanoseconds": 338189500,
+        "AfterTimestamp": 344339674483472
+      },
+      "After": {
+        "BeforeTimestamp": 344339674483619,
+        "CpuNanoseconds": 338189900,
+        "AfterTimestamp": 344339674483851
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 19,
+      "Before": {
+        "BeforeTimestamp": 344339674483915,
+        "CpuNanoseconds": 338190200,
+        "AfterTimestamp": 344339674484136
+      },
+      "After": {
+        "BeforeTimestamp": 344339674484208,
+        "CpuNanoseconds": 338190400,
+        "AfterTimestamp": 344339674484421
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 19,
+      "Before": {
+        "BeforeTimestamp": 344339674484484,
+        "CpuNanoseconds": 338190700,
+        "AfterTimestamp": 344339674484707
+      },
+      "After": {
+        "BeforeTimestamp": 344339674489355,
+        "CpuNanoseconds": 338195700,
+        "AfterTimestamp": 344339674489724
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 19,
+      "Before": {
+        "BeforeTimestamp": 344339674489789,
+        "CpuNanoseconds": 338196000,
+        "AfterTimestamp": 344339674490027
+      },
+      "After": {
+        "BeforeTimestamp": 344339674490078,
+        "CpuNanoseconds": 338196300,
+        "AfterTimestamp": 344339674490286
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 19,
+      "Before": {
+        "BeforeTimestamp": 344339674490355,
+        "CpuNanoseconds": 338196600,
+        "AfterTimestamp": 344339674490579
+      },
+      "After": {
+        "BeforeTimestamp": 344339674490656,
+        "CpuNanoseconds": 338196900,
+        "AfterTimestamp": 344339674490881
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 20,
+      "Before": {
+        "BeforeTimestamp": 344339674491060,
+        "CpuNanoseconds": 338197300,
+        "AfterTimestamp": 344339674491295
+      },
+      "After": {
+        "BeforeTimestamp": 344339674491443,
+        "CpuNanoseconds": 338197700,
+        "AfterTimestamp": 344339674491669
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 20,
+      "Before": {
+        "BeforeTimestamp": 344339674491732,
+        "CpuNanoseconds": 338198000,
+        "AfterTimestamp": 344339674491958
+      },
+      "After": {
+        "BeforeTimestamp": 344339674492034,
+        "CpuNanoseconds": 338198300,
+        "AfterTimestamp": 344339674492253
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 20,
+      "Before": {
+        "BeforeTimestamp": 344339674492316,
+        "CpuNanoseconds": 338198600,
+        "AfterTimestamp": 344339674492549
+      },
+      "After": {
+        "BeforeTimestamp": 344339674496256,
+        "CpuNanoseconds": 338202700,
+        "AfterTimestamp": 344339674496707
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 20,
+      "Before": {
+        "BeforeTimestamp": 344339674496779,
+        "CpuNanoseconds": 338203000,
+        "AfterTimestamp": 344339674497015
+      },
+      "After": {
+        "BeforeTimestamp": 344339674497066,
+        "CpuNanoseconds": 338203300,
+        "AfterTimestamp": 344339674497281
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 20,
+      "Before": {
+        "BeforeTimestamp": 344339674497343,
+        "CpuNanoseconds": 338203600,
+        "AfterTimestamp": 344339674497543
+      },
+      "After": {
+        "BeforeTimestamp": 344339674497588,
+        "CpuNanoseconds": 338203800,
+        "AfterTimestamp": 344339674497800
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 21,
+      "Before": {
+        "BeforeTimestamp": 344339674497972,
+        "CpuNanoseconds": 338204200,
+        "AfterTimestamp": 344339674498208
+      },
+      "After": {
+        "BeforeTimestamp": 344339674498346,
+        "CpuNanoseconds": 338204600,
+        "AfterTimestamp": 344339674498578
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 21,
+      "Before": {
+        "BeforeTimestamp": 344339674498639,
+        "CpuNanoseconds": 338204900,
+        "AfterTimestamp": 344339674498860
+      },
+      "After": {
+        "BeforeTimestamp": 344339674498941,
+        "CpuNanoseconds": 338205200,
+        "AfterTimestamp": 344339674499165
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 21,
+      "Before": {
+        "BeforeTimestamp": 344339674499227,
+        "CpuNanoseconds": 338205500,
+        "AfterTimestamp": 344339674499416
+      },
+      "After": {
+        "BeforeTimestamp": 344339674501194,
+        "CpuNanoseconds": 338207400,
+        "AfterTimestamp": 344339674501410
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 21,
+      "Before": {
+        "BeforeTimestamp": 344339674501456,
+        "CpuNanoseconds": 338207700,
+        "AfterTimestamp": 344339674501681
+      },
+      "After": {
+        "BeforeTimestamp": 344339674501733,
+        "CpuNanoseconds": 338208000,
+        "AfterTimestamp": 344339674501939
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 21,
+      "Before": {
+        "BeforeTimestamp": 344339674501993,
+        "CpuNanoseconds": 338208300,
+        "AfterTimestamp": 344339674502235
+      },
+      "After": {
+        "BeforeTimestamp": 344339674502276,
+        "CpuNanoseconds": 338208500,
+        "AfterTimestamp": 344339674502505
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 22,
+      "Before": {
+        "BeforeTimestamp": 344339674502674,
+        "CpuNanoseconds": 338208900,
+        "AfterTimestamp": 344339674502915
+      },
+      "After": {
+        "BeforeTimestamp": 344339674502980,
+        "CpuNanoseconds": 338209200,
+        "AfterTimestamp": 344339674503207
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 22,
+      "Before": {
+        "BeforeTimestamp": 344339674503259,
+        "CpuNanoseconds": 338209500,
+        "AfterTimestamp": 344339674503482
+      },
+      "After": {
+        "BeforeTimestamp": 344339674503539,
+        "CpuNanoseconds": 338209800,
+        "AfterTimestamp": 344339674503766
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 22,
+      "Before": {
+        "BeforeTimestamp": 344339674503831,
+        "CpuNanoseconds": 338210100,
+        "AfterTimestamp": 344339674504049
+      },
+      "After": {
+        "BeforeTimestamp": 344339674507681,
+        "CpuNanoseconds": 338214000,
+        "AfterTimestamp": 344339674508097
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 22,
+      "Before": {
+        "BeforeTimestamp": 344339674508154,
+        "CpuNanoseconds": 338214400,
+        "AfterTimestamp": 344339674508352
+      },
+      "After": {
+        "BeforeTimestamp": 344339674508399,
+        "CpuNanoseconds": 338214600,
+        "AfterTimestamp": 344339674508605
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 22,
+      "Before": {
+        "BeforeTimestamp": 344339674508667,
+        "CpuNanoseconds": 338214900,
+        "AfterTimestamp": 344339674508871
+      },
+      "After": {
+        "BeforeTimestamp": 344339674508924,
+        "CpuNanoseconds": 338215200,
+        "AfterTimestamp": 344339674509151
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 23,
+      "Before": {
+        "BeforeTimestamp": 344339674509334,
+        "CpuNanoseconds": 338215600,
+        "AfterTimestamp": 344339674509553
+      },
+      "After": {
+        "BeforeTimestamp": 344339674509691,
+        "CpuNanoseconds": 338215900,
+        "AfterTimestamp": 344339674509914
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 23,
+      "Before": {
+        "BeforeTimestamp": 344339674509973,
+        "CpuNanoseconds": 338216200,
+        "AfterTimestamp": 344339674510195
+      },
+      "After": {
+        "BeforeTimestamp": 344339674510273,
+        "CpuNanoseconds": 338216500,
+        "AfterTimestamp": 344339674510510
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 23,
+      "Before": {
+        "BeforeTimestamp": 344339674510567,
+        "CpuNanoseconds": 338216800,
+        "AfterTimestamp": 344339674510791
+      },
+      "After": {
+        "BeforeTimestamp": 344339674517363,
+        "CpuNanoseconds": 338223700,
+        "AfterTimestamp": 344339674517709
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 23,
+      "Before": {
+        "BeforeTimestamp": 344339674517775,
+        "CpuNanoseconds": 338224000,
+        "AfterTimestamp": 344339674517999
+      },
+      "After": {
+        "BeforeTimestamp": 344339674518057,
+        "CpuNanoseconds": 338224300,
+        "AfterTimestamp": 344339674518283
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 23,
+      "Before": {
+        "BeforeTimestamp": 344339674518344,
+        "CpuNanoseconds": 338224600,
+        "AfterTimestamp": 344339674518574
+      },
+      "After": {
+        "BeforeTimestamp": 344339674518622,
+        "CpuNanoseconds": 338224900,
+        "AfterTimestamp": 344339674518851
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 24,
+      "Before": {
+        "BeforeTimestamp": 344339674519038,
+        "CpuNanoseconds": 338225300,
+        "AfterTimestamp": 344339674519261
+      },
+      "After": {
+        "BeforeTimestamp": 344339674519397,
+        "CpuNanoseconds": 338225600,
+        "AfterTimestamp": 344339674519629
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 24,
+      "Before": {
+        "BeforeTimestamp": 344339674519694,
+        "CpuNanoseconds": 338225900,
+        "AfterTimestamp": 344339674519916
+      },
+      "After": {
+        "BeforeTimestamp": 344339674519994,
+        "CpuNanoseconds": 338226200,
+        "AfterTimestamp": 344339674520216
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 24,
+      "Before": {
+        "BeforeTimestamp": 344339674520276,
+        "CpuNanoseconds": 338226500,
+        "AfterTimestamp": 344339674520499
+      },
+      "After": {
+        "BeforeTimestamp": 344339674524279,
+        "CpuNanoseconds": 338230600,
+        "AfterTimestamp": 344339674524646
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 24,
+      "Before": {
+        "BeforeTimestamp": 344339674524714,
+        "CpuNanoseconds": 338231000,
+        "AfterTimestamp": 344339674524939
+      },
+      "After": {
+        "BeforeTimestamp": 344339674524997,
+        "CpuNanoseconds": 338231200,
+        "AfterTimestamp": 344339674525202
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 24,
+      "Before": {
+        "BeforeTimestamp": 344339674525260,
+        "CpuNanoseconds": 338231500,
+        "AfterTimestamp": 344339674525451
+      },
+      "After": {
+        "BeforeTimestamp": 344339674525497,
+        "CpuNanoseconds": 338231700,
+        "AfterTimestamp": 344339674525715
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 25,
+      "Before": {
+        "BeforeTimestamp": 344339674525889,
+        "CpuNanoseconds": 338232100,
+        "AfterTimestamp": 344339674526081
+      },
+      "After": {
+        "BeforeTimestamp": 344339674526219,
+        "CpuNanoseconds": 338232400,
+        "AfterTimestamp": 344339674526404
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 25,
+      "Before": {
+        "BeforeTimestamp": 344339674526463,
+        "CpuNanoseconds": 338232700,
+        "AfterTimestamp": 344339674526680
+      },
+      "After": {
+        "BeforeTimestamp": 344339674526758,
+        "CpuNanoseconds": 338233000,
+        "AfterTimestamp": 344339674526990
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 25,
+      "Before": {
+        "BeforeTimestamp": 344339674527053,
+        "CpuNanoseconds": 338233300,
+        "AfterTimestamp": 344339674527301
+      },
+      "After": {
+        "BeforeTimestamp": 344339674530933,
+        "CpuNanoseconds": 338237200,
+        "AfterTimestamp": 344339674531261
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-selected",
+      "Iteration": 25,
+      "Before": {
+        "BeforeTimestamp": 344339674531330,
+        "CpuNanoseconds": 338237600,
+        "AfterTimestamp": 344339674531579
+      },
+      "After": {
+        "BeforeTimestamp": 344339674531638,
+        "CpuNanoseconds": 338237900,
+        "AfterTimestamp": 344339674531883
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "prepare-peer",
+      "Iteration": 25,
+      "Before": {
+        "BeforeTimestamp": 344339674531948,
+        "CpuNanoseconds": 338238200,
+        "AfterTimestamp": 344339674532172
+      },
+      "After": {
+        "BeforeTimestamp": 344339674532215,
+        "CpuNanoseconds": 338238500,
+        "AfterTimestamp": 344339674532430
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "drain",
+      "Iteration": 26,
+      "Before": {
+        "BeforeTimestamp": 344339674532625,
+        "CpuNanoseconds": 338238800,
+        "AfterTimestamp": 344339674532822
+      },
+      "After": {
+        "BeforeTimestamp": 344339674532952,
+        "CpuNanoseconds": 338239200,
+        "AfterTimestamp": 344339674533152
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-selected",
+      "Iteration": 26,
+      "Before": {
+        "BeforeTimestamp": 344339674533212,
+        "CpuNanoseconds": 338239500,
+        "AfterTimestamp": 344339674533436
+      },
+      "After": {
+        "BeforeTimestamp": 344339674533499,
+        "CpuNanoseconds": 338239700,
+        "AfterTimestamp": 344339674533706
+      },
+      "Completed": true
+    },
+    {
+      "Stage": "warmup",
+      "Phase": "complete-peer",
+      "Iteration": 26,
+      "Before": {
+        "BeforeTimestamp": 344339674533767,
+        "CpuNanoseconds": 338240000,
+        "AfterTimestamp": 344339674533987
+      },
+      "After": {
+        "BeforeTimestamp": 344339674556891,
+        "CpuNanoseconds": 338251700,
+        "AfterTimestamp": 344339674557453
+      },
+      "Completed": true
+    }
+  ],
+  "controllerPhaseCapture": true,
+  "initialization": {
+    "Source": "synthetic",
+    "Samples": [
+      {
+        "Sample": {
+          "ProcessId": 7,
+          "ThreadId": 42,
+          "Timestamp": 1,
+          "PeriodNanoseconds": 80000,
+          "InstructionPointer": 100,
+          "Method": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+        },
+        "Epoch": 0,
+        "Accepted": true,
+        "CreditNanoseconds": 40000,
+        "ConsumedMilliseconds": 0,
+        "Stage": "initialization",
+        "ConsumedTimestamp": 344339409482904
+      }
+    ],
+    "Journals": [
+      {
+        "Slot": 1,
+        "Identity": "1a73a368-7bd9-4475-849c-b4238c450850",
+        "Command": 1,
+        "BudgetNanoseconds": 40000,
+        "StartedTimestamp": 344339418067581,
+        "StartedStage": "initialization",
+        "ObservedTimestamp": 344339424069650,
+        "ObservedStage": "initialization",
+        "Observation": {
+          "Header": {
+            "IdentityFirst": 4932985139236152168,
+            "IdentitySecond": 5766935791044697220,
+            "Command": 1,
+            "Budget": 40000,
+            "Measured": 70000,
+            "Phase": 2,
+            "Error": 0,
+            "TransportError": 0,
+            "Cancellation": 0,
+            "Outstanding": 0,
+            "Children": 1,
+            "Rejected": 0,
+            "Captured": 1070005
+          },
+          "Children": [
+            {
+              "Native": {
+                "Ordinal": 1,
+                "Requested": 40000,
+                "Acknowledgment": {
+                  "Sequence": 1,
+                  "Outcome": 2,
+                  "Ip": 100,
+                  "Handler": 70000,
+                  "Wait": 70000,
+                  "WaitResult": 0,
+                  "Started": 1000000,
+                  "Queued": 1000001,
+                  "HandlerStarted": 1000002,
+                  "HandlerFinished": 1070002,
+                  "Observed": 1070003
+                }
+              },
+              "FirstSnapshotCaptured": 1070004,
+              "FirstManagedReceiptUpper": 1070005,
+              "ClockStatus": 0
+            }
+          ],
+          "Rejected": []
+        }
+      },
+      {
+        "Slot": 0,
+        "Identity": "b931501b-74c8-4c70-be53-1ae1b1e95e4b",
+        "Command": 2,
+        "BudgetNanoseconds": 30000,
+        "StartedTimestamp": 344339435062457,
+        "StartedStage": "initialization",
+        "ObservedTimestamp": 344339435294260,
+        "ObservedStage": "initialization",
+        "Observation": {
+          "Header": {
+            "IdentityFirst": 5508030749723414555,
+            "IdentitySecond": 5431035150850479038,
+            "Command": 2,
+            "Budget": 30000,
+            "Measured": 30000,
+            "Phase": 2,
+            "Error": 0,
+            "TransportError": 0,
+            "Cancellation": 0,
+            "Outstanding": 0,
+            "Children": 1,
+            "Rejected": 0,
+            "Captured": 2030005
+          },
+          "Children": [
+            {
+              "Native": {
+                "Ordinal": 1,
+                "Requested": 30000,
+                "Acknowledgment": {
+                  "Sequence": 2,
+                  "Outcome": 2,
+                  "Ip": 100,
+                  "Handler": 30000,
+                  "Wait": 30000,
+                  "WaitResult": 0,
+                  "Started": 2000000,
+                  "Queued": 2000001,
+                  "HandlerStarted": 2000002,
+                  "HandlerFinished": 2030002,
+                  "Observed": 2030003
+                }
+              },
+              "FirstSnapshotCaptured": 2030004,
+              "FirstManagedReceiptUpper": 2030005,
+              "ClockStatus": 0
+            }
+          ],
+          "Rejected": []
+        }
+      }
+    ],
+    "Boundary": {
+      "Stage": "initialization",
+      "Milliseconds": 0,
+      "GlobalNanoseconds": 70000,
+      "CreditNanoseconds": 40000,
+      "WaitNanoseconds": [
+        30000,
+        70000
+      ],
+      "DebtNanoseconds": [
+        0,
+        0
+      ],
+      "Registered": [
+        true,
+        true
+      ],
+      "Pending": 0,
+      "Batches": [
+        0,
+        0
+      ],
+      "Timestamp": 344339441372761,
+      "PendingRequests": [],
+      "PendingServices": [],
+      "RuntimeCounters": {
+        "Stage": "initialization",
+        "StartedTimestamp": 344339450301502,
+        "FinishedTimestamp": 344339450491832,
+        "ControllerAllocatedBytes": 84352,
+        "Gen0Collections": 0,
+        "Gen1Collections": 0,
+        "Gen2Collections": 0,
+        "GcPauseTicks": 0,
+        "ProcessCpuTicks": 2102720
+      }
+    }
+  },
+  "failures": [
+    "System.InvalidOperationException: The service lease debt exceeds its capacity bound.\n   at SampledSignalWorkload.\u003C\u003Ec__DisplayClass12_0.\u003CRun\u003Eg__Prepare|5(Int32 slot) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 243\n   at SampledSignalWorkload.\u003C\u003Ec__DisplayClass12_0.\u003CRun\u003Eg__RunStage|6(String name, Int32 milliseconds) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 324\n   at SampledSignalWorkload.Run(String path, SampledSignalPlan plan, Func\u00601 backendFactory, Func\u00602 sessionFactory, IThreadCpuClock controllerClock, SampledSignalTrace trace, Boolean captureTargetCpu, Func\u00601 schedulerFactory, Boolean captureServicePhases, Boolean initializeManagedPaths) in C:\\Users\\jimmy\\Repositories\\public\\TheAngryByrd\\CozNet\\tests\\CozNet.LinuxPerf\\SampledSignalWorkload.cs:line 483",
+    "The sampled signal workload did not reach its measurement requirements.",
+    "Selected credit did not cause peer waits during measurement."
+  ],
+  "capacityViolations": [
+    "Slot 1 exceeded the 2000000 ns observed debt limit: 2950156 ns."
+  ],
+  "joined": true,
+  "restored": true,
+  "protocolPassed": false,
+  "capacityPassed": false,
+  "passed": false,
+  "forcedGc": false,
+  "gcObservations": null,
+  "gcJoined": true,
+  "measurementStartedTimestamp": 0,
+  "gcCallBoundMilliseconds": 250,
+  "gcCallDurationIsSuspensionLatency": false,
+  "predictionAccuracyEstablished": false,
+  "generalClrSafetyEstablished": false,
+  "requestBoundNanoseconds": 50000,
+  "handlerBoundNanoseconds": 5000000,
+  "acknowledgmentBoundMilliseconds": 100
+}

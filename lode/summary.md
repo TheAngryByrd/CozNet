@@ -40,7 +40,7 @@ Its [portable native owner](profiling/native-service-owner.md) passes fake-trans
 Its [Linux transport](profiling/linux-service-transport.md) passes controlled native delivery and lifetime checks.
 Its [C ABI and managed client](profiling/service-interop.md) pass controlled receipt and lifetime checks.
 Its [ledger adapter](profiling/service-accounting-adapter.md) passes pure and controlled live journal checks.
-Its sampled workload integration remains unimplemented.
+Its sampled native service path now runs through both adapters. The first zero-speedup case passes, but treatment fails during warmup at 19,999,953 ns of peer debt. See [the retained service run](../reliability/features/native-signal/sampled-service/README.md).
 Its deterministic replay checks cover debt settlement and sampling epochs.
 The [live sampled signal workload](profiling/sampled-signals.md) connects these components, but its first run fails the observed debt limit.
 Sample-driven selected checks recover credit. The first warmup run then fails the handler-duration bound.

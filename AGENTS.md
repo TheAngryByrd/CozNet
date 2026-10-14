@@ -85,3 +85,8 @@ IMPORTANT: Before exploring the codebase or searching for files, ALWAYS check lo
 When the session starts, briefly show that you have domain knowledge before attending to the first request.
 
 if the lode/ does not exist, ask the user if you should create one.
+
+
+## Documentation
+
+As you write features and fix bugs, update the human readable documentation in docsSrc. Use /divio-docs-system to build and maintain the documentation consistently.

@@ -68,13 +68,14 @@ internal static class SampledSignalAbortChecks
         }
     }
 
-    public static int Run(string path, string startup)
+    public static int Run(string path, string startup, bool initialize = false, string percent = "0")
     {
-        var plan = SampledSignalPlan.Parse("0", "qualified-sample", startup, "no-gc");
+        var plan = SampledSignalPlan.Parse(percent, "qualified-sample", startup, "no-gc");
         var trace = new SampledSignalTrace();
         var backend = new Backend();
         using var listener = new Listener();
-        int result = SampledSignalWorkload.Run(path, plan, () => backend, _ => new Session(), new Clock(), trace);
+        int result = SampledSignalWorkload.Run(path, plan, () => backend, _ => new Session(), new Clock(), trace,
+            initializeManagedPaths: initialize);
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         var root = document.RootElement;
         string stage = plan.WarmupMilliseconds > 0 ? "warmup" : "measurement";
@@ -86,7 +87,30 @@ internal static class SampledSignalAbortChecks
             || !root.GetProperty("failures").EnumerateArray().Any(value => value.GetString()!.Contains(Failure, StringComparison.Ordinal))
             || !trace.Anchors.Select(anchor => anchor.Phase).SequenceEqual(["run-start", stage + "-start", "run-abort", "run-end"]))
             throw new InvalidOperationException("The injected failure must preserve its abort marker, failed result, and joined targets.");
+        if (initialize) InitializationRetainsSeparateEvidenceAndResetsLiveState(root);
         return 0;
+    }
+
+    private static void InitializationRetainsSeparateEvidenceAndResetsLiveState(JsonElement root)
+    {
+        var preparation = root.GetProperty("initialization");
+        var boundary = root.GetProperty("failureBoundary");
+        var synthetic = preparation.GetProperty("Boundary");
+        if (preparation.GetProperty("Source").GetString() != "synthetic"
+            || preparation.GetProperty("Samples").GetArrayLength() != 1
+            || preparation.GetProperty("Journals").GetArrayLength() != 2
+            || synthetic.GetProperty("CreditNanoseconds").GetInt64() != 40000
+            || !synthetic.GetProperty("WaitNanoseconds").EnumerateArray().Select(item => item.GetInt64()).SequenceEqual([30000L, 70000L])
+            || synthetic.GetProperty("Pending").GetInt32() != 0
+            || boundary.GetProperty("GlobalNanoseconds").GetInt64() != 0
+            || boundary.GetProperty("CreditNanoseconds").GetInt64() != 0
+            || boundary.GetProperty("Pending").GetInt32() != 0
+            || boundary.GetProperty("WaitNanoseconds").EnumerateArray().Any(item => item.GetInt64() != 0)
+            || boundary.GetProperty("DebtNanoseconds").EnumerateArray().Any(item => item.GetInt64() != 0)
+            || root.GetProperty("samples").GetArrayLength() != 0
+            || root.GetProperty("requests").GetArrayLength() != 0
+            || root.GetProperty("serviceJournals").ValueKind != JsonValueKind.Null)
+            throw new InvalidOperationException("Synthetic initialization must retain separate evidence and leave fresh live accounting.");
     }
 
     private sealed class Listener : EventListener

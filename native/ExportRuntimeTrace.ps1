@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory)][string]$TracePath,
     [Parameter(Mandatory)][string]$OutputPath,
-    [string]$ToolDirectory = (Join-Path $PSScriptRoot '../lode/tmp/diagnostic-tools/.store/dotnet-trace/10.0.750501/dotnet-trace/10.0.750501/tools/net8.0/any')
+    [string]$ToolDirectory = (Join-Path $PSScriptRoot '../lode/tmp/diagnostic-tools/.store/dotnet-trace/10.0.750501/dotnet-trace/10.0.750501/tools/net8.0/any'),
+    [switch]$IncludeJit
 )
 $ErrorActionPreference = 'Stop'
 $trace = (Resolve-Path -LiteralPath $TracePath).Path
@@ -25,5 +26,9 @@ $project = @"
 "@
 $projectPath = Join-Path $scratch 'RuntimeTraceReader.csproj'
 [IO.File]::WriteAllText($projectPath, $project)
-& dotnet run --project $projectPath -- $trace $output
+& dotnet build $projectPath --nologo --verbosity quiet
+if ($LASTEXITCODE -ne 0) { throw 'Runtime trace decoder build failed.' }
+$decoderArguments = @($trace, $output)
+if ($IncludeJit) { $decoderArguments += 'jit' }
+& dotnet (Join-Path $scratch 'bin/Debug/net10.0/RuntimeTraceReader.dll') @decoderArguments
 if ($LASTEXITCODE -ne 0) { throw 'Runtime trace decoding failed.' }

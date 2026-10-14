@@ -51,9 +51,12 @@ static class SampledSignalWorkload
         long ControllerAllocatedBytes, int Gen0Collections, int Gen1Collections, int Gen2Collections, long GcPauseTicks, long ProcessCpuTicks);
     private sealed record Boundary(string Stage, double Milliseconds, long GlobalNanoseconds, long CreditNanoseconds,
         long[] WaitNanoseconds, long[] DebtNanoseconds, bool[] Registered, int Pending, long[] Batches,
-        long Timestamp, PendingRecord[] PendingRequests, RuntimeCounters RuntimeCounters);
+        long Timestamp, PendingRecord[] PendingRequests, NativeServiceController.Journal[] PendingServices,
+        RuntimeCounters RuntimeCounters);
     private readonly record struct ServiceInterval(long StartedTimestamp, long FinishedTimestamp, int SamplesBefore, int SamplesAfter);
     private sealed record DebtPeak(int Slot, Boundary Boundary, ServiceInterval Interval, ulong[] LastAcknowledgedSequences);
+    private sealed record InitializationResult(string Source, SampleRecord[] Samples,
+        NativeServiceController.Journal[] Journals, Boundary Boundary);
     private sealed record StageResult(Boundary Measurement, Boundary Settled, long ControllerCpuNanoseconds,
         int SamplingPauses, long SelectedChecks, long[] MaxDebtNanoseconds, ServiceInterval? LongestServiceInterval, DebtPeak?[] PeakDebt,
         RuntimeCounters? RuntimeCountersStart, long PeerChecks, long PeerCheckSkips);
@@ -65,12 +68,17 @@ static class SampledSignalWorkload
         result.IsOk ? result.ResultValue : throw new InvalidOperationException(result.ErrorValue);
 
     public static int Run(string path, SampledSignalPlan plan,
-        Func<IBoundedInterventionBackend> backendFactory,
+        Func<IInterventionBackend> backendFactory,
         Func<ICpuSampleSink, ICpuEventSession> sessionFactory, IThreadCpuClock controllerClock,
         SampledSignalTrace? trace = null, bool captureTargetCpu = false,
-        Func<ISchedulerEventSession>? schedulerFactory = null)
+        Func<ISchedulerEventSession>? schedulerFactory = null, bool captureServicePhases = false,
+        bool initializeManagedPaths = false)
     {
         var failures = new List<string>();
+        var phaseCapture = captureServicePhases ? new ControllerPhaseCapture(controllerClock) : null;
+        InitializationResult? initialization = null;
+        InitializationResult? transportInitialization = null;
+        int initializationJournalCount = 0;
         var schedulerGate = new object();
         bool schedulerAccepting = true;
         bool schedulerStopped = true;
@@ -92,7 +100,8 @@ static class SampledSignalWorkload
         using var start = new ManualResetEventSlim();
         using var stop = new ManualResetEventSlim();
         var deliveryStopped = new ManualResetEventSlim();
-        IBoundedInterventionBackend? backend = null;
+        IInterventionBackend? backend = null;
+        NativeServiceController? serviceController = null;
         ICpuEventSession? session = null;
         Thread[] workers = [];
         SampledGcStress? gcStress = null;
@@ -136,7 +145,7 @@ static class SampledSignalWorkload
         {
             long global = SignalAccountingModule.globalNanoseconds(state);
             long[] debt = [registered[0] ? Math.Max(0, global - credited - waits[0]) : 0,
-                registered[1] ? Math.Max(0, global - waits[1]) : 0];
+                registered[1] ? Math.Max(0, global - waits[1] - (serviceController?.ConfirmedPeerWait ?? 0)) : 0];
             return new(stage, timer.Elapsed.TotalMilliseconds, global, credited, (long[])waits.Clone(), debt,
                 (bool[])registered.Clone(), SignalAccountingModule.pendingCount(state),
                 [Volatile.Read(ref batches[0]) - batchBaseline[0], Volatile.Read(ref batches[1]) - batchBaseline[1]],
@@ -145,7 +154,7 @@ static class SampledSignalWorkload
                     var operation = pending[slot]!;
                     return new PendingRecord(slot, operation.Sequence, SignalDelayRequestModule.nanoseconds(operation.Request),
                         operation.Started, operation.Stage);
-                }).ToArray(), ReadRuntimeCounters());
+                }).ToArray(), serviceController?.PendingJournals ?? [], ReadRuntimeCounters());
         }
         void Publish(CpuSample sample)
         {
@@ -175,9 +184,24 @@ static class SampledSignalWorkload
         }
         void Complete(int slot)
         {
+            if (serviceController is not null)
+            {
+                var polled = serviceController.Poll(slot, state, stage);
+                state = polled.State;
+                if (!polled.Completed) return;
+                waits[slot] = checked(waits[slot] + polled.SettledWait);
+                nativeOutstanding[slot] = false;
+                lastAcknowledged[slot] = polled.LastSequence;
+                if (slot == 0 && runningStage)
+                {
+                    session!.Enable();
+                    enabled = accept = true;
+                }
+                return;
+            }
             var operation = pending[slot];
             if (operation is null) return;
-            var result = backend!.Read(slot, operation.Sequence);
+            var result = ((IBoundedInterventionBackend)backend!).Read(slot, operation.Sequence);
             long completed = Stopwatch.GetTimestamp();
             double elapsed = Stopwatch.GetElapsedTime(operation.Started, completed).TotalMilliseconds;
             if (result is null)
@@ -218,8 +242,17 @@ static class SampledSignalWorkload
         }
         bool Prepare(int slot)
         {
-            if (pending[slot] is not null) return false;
+            if (pending[slot] is not null || serviceController?.HasPending(slot) == true) return false;
             if (slot == 1 && runningStage) peerChecks++;
+            if (slot == 1 && serviceController is not null)
+            {
+                var prepared = Parsed(SignalAccountingModule.prepareService(handles[slot], state));
+                state = prepared.Item2;
+                if (prepared.Item1 is null) return true;
+                nativeOutstanding[slot] = true;
+                state = serviceController.SubmitPeer(prepared.Item1.Value, state, stage);
+                return false;
+            }
             var transition = Parsed(SignalAccountingModule.prepare(handles[slot], state));
             state = transition.Item2;
             if (transition.Item1 is null) return true;
@@ -233,12 +266,18 @@ static class SampledSignalWorkload
                 epoch = Parsed(SignalAccountingModule.requiredEpoch(handles[0], state));
                 pauses++;
             }
+            if (serviceController is not null)
+            {
+                nativeOutstanding[slot] = true;
+                state = serviceController.SubmitSelected(request, state, stage);
+                return false;
+            }
             if (requests.Count >= 100000) throw new InvalidOperationException("The signal request capture limit was exceeded.");
             var cpuStart = trace is null ? null : ControllerCpuSnapshot.Capture(controllerClock);
             var targetCpuStart = captureTargetCpu ? ((ITargetCpuObservationBackend)backend!).ReadTargetCpu(slot) : null;
             long started = Stopwatch.GetTimestamp();
             nativeOutstanding[slot] = true;
-            ulong nativeSequence = backend!.Request(slot, SignalPlan.FromRequest(request));
+            ulong nativeSequence = ((IBoundedInterventionBackend)backend!).Request(slot, SignalPlan.FromRequest(request));
             pending[slot] = new(request, nativeSequence, started, stage, cpuStart, targetCpuStart);
             state = Parsed(SignalAccountingModule.sent(request, nativeSequence, state));
             return false;
@@ -260,23 +299,35 @@ static class SampledSignalWorkload
             start.Set();
             gcStress?.Release();
             double nextBoundary = 10;
+            int iteration = 0;
             while (timer.ElapsedMilliseconds < milliseconds)
             {
+                iteration++;
                 int samplesBefore = samples.Count;
+                phaseCapture?.Begin(stage, "drain", iteration);
                 Drain();
+                phaseCapture?.End();
+                phaseCapture?.Begin(stage, "complete-selected", iteration);
                 Complete(0);
+                phaseCapture?.End();
+                phaseCapture?.Begin(stage, "complete-peer", iteration);
                 Complete(1);
-                if (pending[0] is null && cadence.TryCheck())
+                phaseCapture?.End();
+                phaseCapture?.Begin(stage, "prepare-selected", iteration);
+                if (pending[0] is null && serviceController?.HasPending(0) != true && cadence.TryCheck())
                 {
                     selectedChecks++;
                     Prepare(0);
                 }
+                phaseCapture?.End();
+                phaseCapture?.Begin(stage, "prepare-peer", iteration);
                 if (peerCadence.NeedsCheck(state))
                 {
                     Prepare(1);
                     peerCadence.RecordChecked(state);
                 }
                 else peerCheckSkips++;
+                phaseCapture?.End();
                 long finished = Stopwatch.GetTimestamp();
                 var interval = new ServiceInterval(previousServiceTimestamp, finished, samplesBefore, samples.Count);
                 previousServiceTimestamp = finished;
@@ -285,7 +336,7 @@ static class SampledSignalWorkload
                     longestServiceInterval = interval;
                 long global = SignalAccountingModule.globalNanoseconds(state);
                 long selectedDebt = Math.Max(0, global - credited - waits[0]);
-                long peerDebt = Math.Max(0, global - waits[1]);
+                long peerDebt = Math.Max(0, global - waits[1] - (serviceController?.ConfirmedPeerWait ?? 0));
                 if (selectedDebt > maxDebt[0] || peerDebt > maxDebt[1])
                 {
                     var peak = Snapshot();
@@ -335,6 +386,82 @@ static class SampledSignalWorkload
             return Snapshot();
         }
 
+        void ResetAccounting(int percent, ulong initialEpoch)
+        {
+            state = SignalAccountingModule.create();
+            selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(percent), state));
+            peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
+            state = peer.Item2;
+            handles = [selected.Item1, peer.Item1];
+            stream = Parsed(SignalAccountingModule.sampleIdentity(handles[0], state));
+            sequence = represented = 0; epoch = initialEpoch; credited = 0;
+            waits = new long[2]; maxDebt = new long[2]; peakDebt = new DebtPeak?[2];
+            lastAcknowledged = new ulong[2]; longestServiceInterval = null; registered = [true, true];
+            cadence = new SelectedSignalCadence(plan.Cadence); peerCadence = new PeerSignalCadence();
+            pauses = 0; selectedChecks = 0; peerChecks = peerCheckSkips = 0;
+            batchBaseline = [Volatile.Read(ref batches[0]), Volatile.Read(ref batches[1])];
+        }
+
+        void InitializeManagedPaths()
+        {
+            using var preparation = new ServicePathPreparation(new Sink(Publish));
+            backend = preparation;
+            serviceController = new(preparation);
+            session = preparation;
+            stage = "initialization";
+            ResetAccounting(50, 0);
+            session.Enable(); enabled = accept = true;
+            Drain();
+            Prepare(0);
+            Prepare(1);
+            Complete(1);
+            Prepare(1);
+            Prepare(0);
+            Complete(0);
+            var boundary = Snapshot();
+            if (boundary.Pending != 0 || nativeOutstanding.Any(value => value) || boundary.DebtNanoseconds.Any(value => value != 0)
+                || serviceController.Journals.Count != 2 || samples.Count != 1 || credited != 40000
+                || waits[0] != 30000 || waits[1] != 70000)
+                throw new InvalidOperationException("Managed initialization did not complete its fixed accounting path.");
+            initialization = new("synthetic", samples.ToArray(), serviceController.Journals.ToArray(), boundary);
+            samples.Clear(); records = null;
+            accept = enabled = false;
+            session = null; serviceController = null; backend = null;
+            ResetAccounting(plan.Percent, 0);
+            stage = "setup";
+        }
+
+        void InitializeNativeTransport()
+        {
+            if (serviceController is null) return;
+            stage = "transport-initialization";
+            ResetAccounting(50, 0);
+            accept = true;
+            Publish(CpuSample.Create(checked((uint)Environment.ProcessId), 42, 1, 80000, 100, OverheadWorkload.SelectedSymbol));
+            accept = false;
+            Prepare(0);
+            var deadline = Stopwatch.StartNew();
+            Prepare(1);
+            while (serviceController.HasPending(1))
+            {
+                if (deadline.ElapsedMilliseconds > 100)
+                    throw new TimeoutException("Native transport initialization exceeded 100 milliseconds.");
+                Complete(1);
+            }
+            var journal = serviceController.Journals.Single();
+            if (journal.Observation?.Children.Length != 1
+                || journal.Observation.Children[0].Native.Acknowledgment.Outcome != 1
+                || journal.Observation.Header.Measured != 0 || SignalAccountingModule.pendingCount(state) != 0
+                || nativeOutstanding.Any(value => value))
+                throw new InvalidOperationException("Native transport initialization must finish one deferred peer request.");
+            transportInitialization = new("synthetic-credit/native-deferred", samples.ToArray(),
+                serviceController.Journals.ToArray(), Snapshot());
+            initializationJournalCount = serviceController.Journals.Count;
+            samples.Clear(); records = null;
+            ResetAccounting(plan.Percent, 0);
+            stage = "setup";
+        }
+
         try
         {
             trace?.Mark("run-start");
@@ -343,7 +470,12 @@ static class SampledSignalWorkload
                 || Environment.GetEnvironmentVariable("CORECLR_ENABLE_PROFILING") == "1")
                 throw new InvalidOperationException("Sampled signals require disabled tiering, ReadyToRun, and startup profiling.");
             if (CpuWorkload.Run() != 49995000L) throw new InvalidOperationException("The sampled signal warmup checksum differs.");
+            if (initializeManagedPaths) InitializeManagedPaths();
             backend = backendFactory();
+            if (backend is IServiceInterventionBackend serviceBackend)
+                serviceController = new(serviceBackend);
+            else if (backend is not IBoundedInterventionBackend)
+                throw new NotSupportedException("The intervention backend has no supported request protocol.");
             if (schedulerFactory is not null) schedulerSessions[0] = schedulerFactory();
             if (captureTargetCpu && backend is not ITargetCpuObservationBackend)
                 throw new PlatformNotSupportedException("The intervention backend does not support target CPU observations.");
@@ -378,6 +510,7 @@ static class SampledSignalWorkload
             foreach (var worker in workers) worker.Start();
             if (!ready.Wait(TimeSpan.FromSeconds(5)) || errors.Any(error => error is not null))
                 throw new InvalidOperationException("The sampled signal workers failed to become ready.");
+            if (initializeManagedPaths) InitializeNativeTransport();
             if (plan.ForceGc) gcStress = SampledGcStress.Start();
             if (plan.WarmupMilliseconds > 0)
             {
@@ -385,27 +518,7 @@ static class SampledSignalWorkload
                 var warmSettled = SettleStage("warmup-settlement");
                 warmup = new(warmBoundary, warmSettled, controllerCpu, pauses, selectedChecks, (long[])maxDebt.Clone(),
                     longestServiceInterval, peakDebt, runtimeCountersStart, peerChecks, peerCheckSkips);
-                state = SignalAccountingModule.create();
-                selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(plan.Percent), state));
-                peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
-                state = peer.Item2;
-                handles = [selected.Item1, peer.Item1];
-                stream = Parsed(SignalAccountingModule.sampleIdentity(handles[0], state));
-                sequence = represented = 0;
-                epoch = 1;
-                credited = 0;
-                waits = new long[2];
-                maxDebt = new long[2];
-                peakDebt = new DebtPeak?[2];
-                lastAcknowledged = new ulong[2];
-                longestServiceInterval = null;
-                registered = [true, true];
-                cadence = new SelectedSignalCadence(plan.Cadence);
-                peerCadence = new PeerSignalCadence();
-                pauses = 0;
-                selectedChecks = 0;
-                peerChecks = peerCheckSkips = 0;
-                batchBaseline = [Volatile.Read(ref batches[0]), Volatile.Read(ref batches[1])];
+                ResetAccounting(plan.Percent, 1);
             }
             measurementStartRecords = records;
             measurement = RunStage("measurement", 2000);
@@ -413,6 +526,8 @@ static class SampledSignalWorkload
         }
         catch (Exception error)
         {
+            try { phaseCapture?.End(false); }
+            catch (Exception captureError) { failures.Add(captureError.ToString()); }
             failureBoundary = Snapshot();
             failures.Add(error.ToString());
             if (trace is not null)
@@ -478,7 +593,9 @@ static class SampledSignalWorkload
         if (measurement is null || settled is null || records is null
             || records.SelectedMethodSamples - (measurementStartRecords?.SelectedMethodSamples ?? 0) == 0
             || measurement.Batches.Any(count => count == 0)) failures.Add("The sampled signal workload did not reach its measurement requirements.");
-        if (plan.Percent == 0 && (credited != 0 || requests.Count != 0)) failures.Add("Zero speedup created signal debt.");
+        if (plan.Percent == 0 && (credited != 0 || requests.Count != 0
+            || serviceController?.Journals.Count > initializationJournalCount || serviceController?.PendingJournals.Length > 0))
+            failures.Add("Zero speedup created signal debt.");
         if (plan.Percent > 0 && (measurement?.CreditNanoseconds is not > 0 || measurement.WaitNanoseconds[1] == 0))
             failures.Add("Selected credit did not cause peer waits during measurement.");
         if (plan.ForceGc && (gcObservations is null || measurement is null
@@ -514,11 +631,15 @@ static class SampledSignalWorkload
             schedulerStopped,
             schedulerCaptures,
             controllerCpuNanoseconds = controllerCpu, samplingPauses = pauses, records, samples, requests,
+            serviceJournals = serviceController?.Journals.Skip(initializationJournalCount).ToArray(),
+            pendingServiceJournals = serviceController?.PendingJournals,
+            controllerPhases = phaseCapture?.Entries, controllerPhaseCapture = captureServicePhases,
+            initialization, transportInitialization,
             failures, capacityViolations, joined, restored, protocolPassed, capacityPassed, passed = protocolPassed && capacityPassed,
             forcedGc = plan.ForceGc, gcObservations, gcJoined, measurementStartedTimestamp, gcCallBoundMilliseconds = 250,
             gcCallDurationIsSuspensionLatency = false, predictionAccuracyEstablished = false, generalClrSafetyEstablished = false,
             requestBoundNanoseconds = 50000, handlerBoundNanoseconds = 5000000, acknowledgmentBoundMilliseconds = 100
-        }, new JsonSerializerOptions { WriteIndented = true }));
+        }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
         return protocolPassed && capacityPassed ? 0 : 1;
     }
 }

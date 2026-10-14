@@ -1,6 +1,6 @@
 static class SignalTargetLifetime
 {
-    public static void Run(IBoundedInterventionBackend backend, int slot, ManualResetEventSlim deliveryStopped,
+    public static void Run(IInterventionBackend backend, int slot, ManualResetEventSlim deliveryStopped,
         Func<bool> drained, Action body, Action<Exception> failure)
     {
         bool registered = false;
@@ -16,11 +16,9 @@ static class SignalTargetLifetime
             if (registered)
             {
                 deliveryStopped.Wait();
-                if (drained())
-                {
-                    try { backend.RetireCurrentThread(slot); }
-                    catch (Exception error) { failure(error); }
-                }
+                while (!drained()) Thread.Sleep(10);
+                try { backend.RetireCurrentThread(slot); }
+                catch (Exception error) { failure(error); }
             }
         }
     }

@@ -8,7 +8,7 @@ static class SignalTargetChecks
     }
     private static void FailedTargetWaitsForSenderStop() => CheckLifetime(true, true);
     private static void CompletedTargetWaitsForSenderStop() => CheckLifetime(false, true);
-    private static void PendingRequestPreventsRetirement() => CheckLifetime(true, false);
+    private static void PendingRequestPreventsRetirement() => SignalTargetLifetimeChecks.UnresolvedDeliveryKeepsTargetAlive(true);
     private static void CheckLifetime(bool fail, bool drained)
     {
         using var stopped = new ManualResetEventSlim();

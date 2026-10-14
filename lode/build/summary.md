@@ -1,6 +1,11 @@
 # MiniScaffold build
 
 `ServiceOwnerVerify` builds and checks the portable native coordinator on the host with CMake and a C++20 compiler.
+`LinuxSampledServiceVerify` builds the managed workload and native service libraries, then runs bounded zero and 50-percent sampled cases.
+It retains every outcome under `artifacts/linux-sampled-service/`. The first treatment fails during warmup.
+`LinuxSampledServicePhases` uses the same runner with bounded controller phase capture enabled.
+`LinuxSampledServiceJit` also collects EventPipe JIT and GC events with dotnet-trace 10.0.750501.
+`LinuxInitializedServiceVerify` exercises managed initialization, checks that synthetic accounting stays separate, and runs the phase comparison.
 `LinuxServiceOwnerVerify` performs the same checks in the existing `coznet-native-build:10.0.100` Linux image.
 Both targets call `native/VerifyServiceOwner.ps1` and require no CLR profiler or signal transport.
 They do not establish native delivery or prediction accuracy.

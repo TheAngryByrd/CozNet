@@ -1,0 +1,27 @@
+{
+  "hashes": {
+    "tests/CozNet.LinuxPerf/ServicePathPreparation.cs": "50CBEAD6DC51593DE88319E094CAAB591F475F2B2D157456563CB507FFE4C4EE",
+    "tests/CozNet.LinuxPerf/SignalTargetLifetimeChecks.cs": "5B113416FC27E130CF0460E3BBD6040113DECDE6C611C3998380B2ACA8FF6E95",
+    "tests/CozNet.LinuxPerf/SignalTargetChecks.cs": "5F70E45C7DCDEA2FFC492D180ECBEBC7F97FBD0395F45B2F485B58F53ED69CB7",
+    "tests/CozNet.LinuxPerf/SampledSignalWorkload.cs": "BB275F0CE72BD9BD1218B5D6BC2A9DE7A9C2D62CC87F662D65486379363E3CC0",
+    "tests/CozNet.LinuxPerf/SignalTargetLifetime.cs": "9DB976FB43CDE4CF393C7DB780D24F725879EABD5A39171819FB47D430675378",
+    "tests/CozNet.LinuxPerf/Program.cs": "A3596C583E9FFE32A285755028301F6BD3F2991BFB632A9E813AFDE51D01DDEF",
+    "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll": "D6AC550C79317209646CBAA8A6017B040C8C36D3BB9DDD59442C3BCD2F199748",
+    "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.dll": "3EDCE5556C6980262CADB67E9EC8D15C0C6529FBC6737AD5D5A6EC3B51241B00",
+    "native/VerifyLinuxSignalTransitions.ps1": "9731931F0165DC8B4892970FF21DFECAB35B3368962438EA87CB516F88A83FB8"
+  },
+  "timingWorkloadsRerun": false,
+  "linuxOutcomes": "outcomes.json",
+  "windowsExitCodes": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "windowsCommands": [
+    "--verify-signal-targets",
+    "--verify-service-accounting",
+    "--verify-service-initialization 0",
+    "--verify-service-initialization 50"
+  ]
+}
