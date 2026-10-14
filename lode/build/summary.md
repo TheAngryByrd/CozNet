@@ -6,6 +6,8 @@ It retains every outcome under `artifacts/linux-sampled-service/`. The first tre
 `LinuxSampledServicePhases` uses the same runner with bounded controller phase capture enabled.
 `LinuxSampledServiceJit` also collects EventPipe JIT and GC events with dotnet-trace 10.0.750501.
 `LinuxInitializedServiceVerify` exercises managed initialization, checks that synthetic accounting stays separate, and runs the phase comparison.
+`LinuxServiceSubmissionTiming` uses the initialized workload and retains native submission intervals with managed timestamp brackets.
+`LinuxServiceSchedulerTiming` also captures four scheduler streams, including the native owner, and runs native-clock overlap analysis on both retained cases.
 `LinuxServiceOwnerVerify` performs the same checks in the existing `coznet-native-build:10.0.100` Linux image.
 Both targets call `native/VerifyServiceOwner.ps1` and require no CLR profiler or signal transport.
 They do not establish native delivery or prediction accuracy.
@@ -128,3 +130,12 @@ flowchart LR
 ```
 
 See [practices](../practices.md), [the index](../lode-map.md), and [the README](../../README.md).
+
+`LinuxServiceOwnerPolling` uses `LinuxPerfWorkload` and the sampled service runner with `-CompareOwnerPolling`.
+It compares yield and poll-64 at zero and 50 percent, retains every case, and fails after analysis if any case fails.
+See [owner polling](../profiling/owner-polling.md).
+
+`LinuxTargetLeaseDelivery` builds the isolated Linux x64 timer fixture and retains chain, snapshot-chain, pending-retirement, and cancel-rearm cases.
+It uses the native compiler image and does not run .NET application workloads.
+`LinuxTargetLeaseReuse` runs portable mailbox and lease checks, then retains one native 16-generation timer reuse case.
+See [target-local leases](../plans/target-local-lease.md).

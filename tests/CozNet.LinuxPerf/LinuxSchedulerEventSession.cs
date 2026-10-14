@@ -43,19 +43,20 @@ sealed class LinuxSchedulerEventSession : ISchedulerEventSession
     private SchedulerCapture? result;
     private bool disposed;
 
-    public LinuxSchedulerEventSession()
+    public LinuxSchedulerEventSession(int? targetThreadId = null)
     {
         if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
             throw new PlatformNotSupportedException("Scheduler capture requires Linux x64.");
         pid = Environment.ProcessId;
-        tid = checked((int)Native.GetTid(186));
+        tid = targetThreadId ?? checked((int)Native.GetTid(186));
+        if (tid <= 0) throw new ArgumentOutOfRangeException(nameof(targetThreadId));
         var attribute = new Attribute
         {
             Type = 1, Size = 96, Config = 9, SampleType = 6, ReadFormat = 16,
             Flags = 1UL | (1UL << 5) | (1UL << 6) | (1UL << 18) | (1UL << 25) | (1UL << 26),
             ClockId = 1
         };
-        long descriptor = Open(298, ref attribute, 0, -1, -1, 8);
+        long descriptor = Open(298, ref attribute, tid, -1, -1, 8);
         if (descriptor < 0) throw Error("Scheduler perf_event_open");
         fd = checked((int)descriptor);
         length = checked((nuint)(65 * Environment.SystemPageSize));

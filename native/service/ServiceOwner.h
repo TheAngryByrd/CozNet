@@ -1,4 +1,5 @@
 #pragma once
+#include "OwnerPollSchedule.h"
 #include <array>
 #include <condition_variable>
 #include <cstddef>
@@ -49,13 +50,16 @@ struct Snapshot {
     std::vector<Acknowledgment> rejected;
 };
 
+struct SubmissionTiming { uint64_t entered{}, locked{}, finished{}; };
+
 class Owner {
 public:
-    explicit Owner(Transport& transport, std::size_t capacity = 100000);
+    explicit Owner(Transport& transport, std::size_t capacity = 100000,
+        OwnerPollSchedule polling = OwnerPollSchedule::yielding());
     Owner(const Owner&) = delete;
     Owner& operator=(const Owner&) = delete;
     int start();
-    bool submit(int slot, Identity identity, uint64_t command, uint64_t budget);
+    bool submit(int slot, Identity identity, uint64_t command, uint64_t budget, SubmissionTiming* timing = nullptr);
     bool cancel(int slot, Identity identity);
     bool snapshot(int slot, Identity identity, Snapshot& result);
     bool release(int slot, Identity identity);
@@ -69,6 +73,7 @@ private:
     };
     Transport& transport_;
     const std::size_t capacity_;
+    OwnerPollSchedule polling_;
     std::array<Slot, 2> slots_;
     std::mutex mutex_;
     std::condition_variable changed_;

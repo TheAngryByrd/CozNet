@@ -22,11 +22,14 @@ public:
     Read read(int slot, uint64_t sequence) noexcept override;
     bool eligible(uint64_t ip) const noexcept override;
     uint64_t now() const noexcept override;
+    static uint64_t monotonicNow() noexcept;
     int restore() noexcept override;
     int registerTarget(int slot) noexcept;
     int retireTarget(int slot) noexcept;
+    int32_t ownerThreadId() const noexcept { return owner_thread_id_; }
 private:
     const InstructionRange range_;
     const int mode_;
+    int32_t owner_thread_id_{};
 };
 }

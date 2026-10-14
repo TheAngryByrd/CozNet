@@ -3,11 +3,13 @@ using Microsoft.FSharp.Core;
 
 static class NativeServiceControllerChecks
 {
-    private sealed class Backend : IServiceInterventionBackend
+    private sealed class Backend : IServiceInterventionBackend, IServiceSubmissionDiagnostics
     {
         public string Name => "fake-service";
         public int Submissions, Releases;
         public bool FailSubmit, FailRelease;
+        public bool CaptureSubmission, InvalidTiming;
+        public ServiceSubmissionObservation? LastSubmission { get; private set; }
         public Guid Identity;
         public ulong Command, Budget;
         public ServiceNativeObservation Observation = null!;
@@ -21,6 +23,9 @@ static class NativeServiceControllerChecks
         {
             Submissions++;
             (Identity, Command, Budget) = (identity, command, budget);
+            LastSubmission = CaptureSubmission ? new(slot, identity, command, budget, 10, 20,
+                FailSubmit ? null : 0, new() { Entered = 1, ApiLocked = 2, OwnerEntered = 3,
+                    OwnerLocked = 4, OwnerFinished = InvalidTiming ? 0UL : 5UL, Returned = 6 }) : null;
             if (FailSubmit) throw new IOException("Ambiguous submission.");
         }
         public ServiceNativeObservation Read(int slot, Guid identity) => Observation;
@@ -74,11 +79,37 @@ static class NativeServiceControllerChecks
     }
     public static void Run()
     {
+        SubmissionTimingRetainsOwnership();
+        ServiceSubmissionTimingChecks.Run();
         PeerPrefixesSettleOnce();
         InvalidReceiptRetainsRawJournal();
         InvalidStateCannotSubmit();
         AmbiguousSubmissionRetainsOwnership();
         FailedReleaseRetainsOwnership();
+    }
+
+    private static void SubmissionTimingRetainsOwnership()
+    {
+        foreach (bool failSubmit in new[] { false, true })
+        {
+            var fixture = Reserve();
+            var backend = new Backend { CaptureSubmission = true, InvalidTiming = true, FailSubmit = failSubmit };
+            var controller = new NativeServiceController(backend);
+            if (failSubmit) Reject<IOException>(() => controller.SubmitPeer(fixture.Lease, fixture.State, "measurement"));
+            else Reject<InvalidDataException>(() => controller.SubmitPeer(fixture.Lease, fixture.State, "measurement"));
+            Require(controller.HasPending(1) && backend.Submissions == 1 && backend.Releases == 0
+                && ReferenceEquals(controller.PendingJournals.Single().Submission, backend.LastSubmission)
+                && controller.PendingJournals.Single().SubmissionTiming is null,
+                "Submission failure or invalid timing must retain raw evidence and ownership without release.");
+            Reject<InvalidOperationException>(() => controller.SubmitPeer(fixture.Lease, fixture.State, "measurement"));
+            Require(backend.Submissions == 1, "Timing rejection must prevent reuse of the owned slot.");
+        }
+        var success = Reserve();
+        var validBackend = new Backend { CaptureSubmission = true };
+        var validController = new NativeServiceController(validBackend);
+        validController.SubmitPeer(success.Lease, success.State, "measurement");
+        Require(validController.PendingJournals.Single().SubmissionTiming?.NativeNanoseconds == 5,
+            "Accepted timing must retain parsed intervals beside the raw record.");
     }
     private static void PeerPrefixesSettleOnce()
     {

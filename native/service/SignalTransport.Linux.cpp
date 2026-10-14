@@ -4,6 +4,8 @@
 #include <ctime>
 #include <limits>
 #include <stdexcept>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 namespace coz::service {
 InstructionRange::InstructionRange(uint64_t begin, uint64_t size) : begin_(begin), size_(size) {
@@ -22,7 +24,13 @@ static int nativeMode(SignalWaitMode mode) {
 LinuxSignalTransport::LinuxSignalTransport(InstructionRange range, SignalWaitMode mode)
     : range_(range), mode_(nativeMode(mode)) {}
 
-int LinuxSignalTransport::install() noexcept { return coz_signal_install_with_wait(mode_); }
+int LinuxSignalTransport::install() noexcept {
+    const auto tid = ::syscall(SYS_gettid);
+    if (tid <= 0 || tid > std::numeric_limits<int32_t>::max()) return EIO;
+    const int result = coz_signal_install_with_wait(mode_);
+    if (result == 0) owner_thread_id_ = static_cast<int32_t>(tid);
+    return result;
+}
 
 Send LinuxSignalTransport::request(int slot, uint64_t requested) noexcept {
     uint64_t sequence{};
@@ -44,6 +52,10 @@ Read LinuxSignalTransport::read(int slot, uint64_t sequence) noexcept {
 bool LinuxSignalTransport::eligible(uint64_t ip) const noexcept { return range_.contains(ip); }
 
 uint64_t LinuxSignalTransport::now() const noexcept {
+    return monotonicNow();
+}
+
+uint64_t LinuxSignalTransport::monotonicNow() noexcept {
     timespec time{};
     if (clock_gettime(CLOCK_MONOTONIC, &time) != 0 || time.tv_sec < 0 || time.tv_nsec < 0 || time.tv_nsec >= 1000000000)
         return 0;

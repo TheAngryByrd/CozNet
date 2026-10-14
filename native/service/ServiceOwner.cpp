@@ -4,8 +4,10 @@
 #include <stdexcept>
 
 namespace coz::service {
-Owner::Owner(Transport& transport, std::size_t capacity) : transport_(transport), capacity_(capacity) {
+Owner::Owner(Transport& transport, std::size_t capacity, OwnerPollSchedule polling)
+    : transport_(transport), capacity_(capacity), polling_(polling) {
     if (capacity == 0 || capacity > 100000) throw std::invalid_argument("Invalid service journal capacity.");
+    polling_.reset();
     for (auto& slot : slots_) {
         slot.value.children.reserve(capacity);
         slot.value.rejected.reserve(capacity);
@@ -28,8 +30,10 @@ bool Owner::matches(int index, Identity identity) const {
     return index >= 0 && index < 2 && slots_[index].value.phase != Phase::idle && slots_[index].value.identity == identity;
 }
 
-bool Owner::submit(int index, Identity identity, uint64_t command, uint64_t budget) {
+bool Owner::submit(int index, Identity identity, uint64_t command, uint64_t budget, SubmissionTiming* timing) {
+    if (timing != nullptr) *timing = {transport_.now(), 0, 0};
     std::lock_guard lock(mutex_);
+    if (timing != nullptr) timing->locked = transport_.now();
     if (!installed_ || failed_ || shutdown_requested_ || index < 0 || index >= 2 || identity == Identity{} || command == 0
         || budget == 0 || budget > (index == 0 ? 50000ULL : 2000000ULL)) return false;
     auto& slot = slots_[index];
@@ -50,6 +54,7 @@ bool Owner::submit(int index, Identity identity, uint64_t command, uint64_t budg
     slot.observed_children = 0;
     slot.observed_terminal = false;
     changed_.notify_all();
+    if (timing != nullptr) timing->finished = transport_.now();
     return true;
 }
 
@@ -167,12 +172,18 @@ void Owner::run() {
             changed_.notify_all();
             if (exited_) return;
         }
-        if (!active) changed_.wait(lock, [this] {
-            return shutdown_requested_ || std::any_of(slots_.begin(), slots_.end(), [](const Slot& slot) {
-                return slot.value.phase == Phase::active || slot.value.outstanding;
+        if (!active) {
+            polling_.reset();
+            changed_.wait(lock, [this] {
+                return shutdown_requested_ || std::any_of(slots_.begin(), slots_.end(), [](const Slot& slot) {
+                    return slot.value.phase == Phase::active || slot.value.outstanding;
+                });
             });
-        });
-        else { lock.unlock(); std::this_thread::yield(); lock.lock(); }
+        } else {
+            lock.unlock();
+            if (polling_.yieldAfterActiveIteration()) std::this_thread::yield();
+            lock.lock();
+        }
     }
 }
 

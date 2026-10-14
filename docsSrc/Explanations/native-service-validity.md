@@ -35,6 +35,15 @@ Both initialized treatments still fail the unchanged debt bound during warmup.
 See [the initialization comparison](../../reliability/features/native-signal/service-initialization/README.md).
 Initialization reduces the measured first-use cost. It does not establish stable service capacity.
 Native service capacity and physical prediction accuracy remain unverified.
+The later [scheduler diagnostic](../../reliability/features/native-signal/service-submission/scheduler.md) fails during measurement with valid scheduler capture.
+It exposes a 2.413 ms interval from the last handler clock reading to native owner observation.
+Controller and target switch-out intervals cover only small parts of that gap.
+That three-thread capture does not include the owner.
+The later [owner capture](../../reliability/features/native-signal/service-submission/owner-scheduler.md) records a 6.240 ms acknowledgment-observation interval.
+Owner switch-out time overlaps 6.237 ms of that interval. The record marks the switch-out as preemption.
+The owner must observe each acknowledgment before it can issue the next bounded child.
+This dependency can interrupt continued service when the owner is switched out.
+The evidence does not identify why preemption occurred or justify changing debt limits.
 The public engine still supports only explicit serial, synchronous CPU regions.
 
 See the [accounting reference](../Reference/native-service-accounting.md) for exact contracts.

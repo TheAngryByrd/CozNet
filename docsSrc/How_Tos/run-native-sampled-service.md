@@ -35,6 +35,40 @@ See the [first retained run](../../reliability/features/native-signal/sampled-se
 
 ## Inspect controller startup phases
 
+To capture native submission intervals, run the `LinuxServiceSubmissionTiming` target.
+This mode includes managed and native transport initialization.
+Inspect `Submission` and `SubmissionTiming` in terminal and pending service journals.
+Keep the initialization journals separate from live measurements.
+Use the [timing reference](../Reference/native-service-accounting.md#native-submission-timing) for units and capture boundaries.
+The [first submission capture](../../reliability/features/native-signal/service-submission/README.md) fails during measurement at the unchanged debt limit.
+
+To check retained boundary snapshots for delayed publication, run:
+
+```sh
+python native/AnalyzeServiceSnapshotLag.py path/to/speedup-50.json path/to/snapshot-lag-50.json
+```
+
+Inspect `matchedPrefixes`, `unmatchedPrefixes`, and `findings` in the output.
+An unmatched prefix has no later journal for comparison. It does not prove the absence of delay.
+The analyzer rejects inconsistent identities, counts, clocks, and child prefixes.
+Each finding reports a lower bound after the owner snapshot copy, using native timestamps only.
+The output preserves workload failure. It does not identify a scheduling cause.
+
+To include controller, native owner, and target switch records, run `LinuxServiceSchedulerTiming`.
+This target enables initialization, submission timing, and the existing Linux scheduler backend.
+Inspect `scheduler-analysis-0.json` and `scheduler-analysis-50.json` in the retained run directory.
+The analyzer requires complete loss accounting and stopped captures from four distinct threads in one process.
+It matches the fourth stream to the native owner thread ID returned by the backend.
+It compares native snapshot bounds and receipt intervals with observed controller switch-out intervals.
+Incomplete switch pairs remain censored. Overlap does not establish the reason for a switch-out.
+The runner retains failed workloads and runs analysis before it reports the final result.
+`longestBeforeHandler` and `longestAfterHandler` compare native child phases with target and controller switch records.
+`ownerAfterHandler` and `ownerBeforeHandler` expose native owner switch-out overlaps.
+`BeforeHandler` ends at the first handler clock reading. `AfterHandler` starts at the last handler clock reading.
+`DuringHandler` covers the measured interval between those readings. It excludes the handler prefix and publication suffix.
+Older three-thread records remain readable but cannot establish owner scheduling.
+See the [earlier scheduler comparison](../../reliability/features/native-signal/service-submission/scheduler.md) for that limitation in a failed treatment.
+
 To record startup phases, run `LinuxSampledServicePhases` instead of `LinuxSampledServiceVerify`.
 Inspect `controllerPhases` in each result.
 The diagnostic retains the first 128 drain, completion, and preparation phases.
@@ -80,3 +114,19 @@ Both workers remain at their start gate during that request.
 It uses synthetic credit and must return one deferred child with zero measured wait.
 The live experiment then starts with fresh accounting. Native command numbering continues across setup and measurement.
 Neither initialization record is evidence of measured intervention in eligible application code.
+
+## Compare native owner polling
+
+1. Run `dotnet run --project build/build.fsproj -- -t LinuxServiceOwnerPolling` from the repository root.
+2. Open the retained run directory under `artifacts/linux-sampled-service`.
+3. Compare `yield-speedup-0.json` with `poll-64-speedup-0.json` for CPU cost.
+4. Inspect both `*-speedup-50.json` files for failures and peak debt.
+5. Inspect each `*-scheduler-analysis-*.json` for capture validity and owner switch-out overlap.
+
+The target runs each policy once at zero and 50 percent. It runs yield first.
+It uses managed and native initialization, submission timing, and four scheduler streams.
+All existing timing limits remain active. Failed cases remain in the result directory.
+The target reports failure after it retains all case outcomes and analyses.
+Do not infer a causal improvement from one fixed-order comparison.
+See [the polling contract](../Reference/native-service-accounting.md#portable-owner-polling-policy)
+and [the scheduling explanation](../Research/native-owner-scheduling.md).

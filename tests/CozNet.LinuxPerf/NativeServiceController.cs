@@ -6,7 +6,11 @@ sealed class NativeServiceController(IServiceInterventionBackend backend)
 {
     internal sealed record Journal(int Slot, Guid Identity, ulong Command, long BudgetNanoseconds,
         long StartedTimestamp, string StartedStage, long ObservedTimestamp, string ObservedStage,
-        ServiceNativeObservation? Observation);
+        ServiceNativeObservation? Observation)
+    {
+        public ServiceSubmissionObservation? Submission { get; init; }
+        public ServiceSubmissionTiming? SubmissionTiming { get; init; }
+    }
     internal readonly record struct PollResult(SignalAccounting State, bool Completed, long SettledWait, ulong LastSequence);
     private sealed class Pending(Journal journal, ServiceSelectedAdapter? selected, ServiceAccountingAdapter? peer)
     {
@@ -29,7 +33,7 @@ sealed class NativeServiceController(IServiceInterventionBackend backend)
         var submitted = Parsed(SignalAccountingModule.submitted(request, state));
         var operation = NewOperation(0, SignalDelayRequestModule.identity(request), SignalDelayRequestModule.nanoseconds(request), stage);
         pending[0] = new(operation, new(request, operation.Command, backend.IsEligibleAddress, backend.IsValidOutcome), null);
-        backend.Submit(0, operation.Identity, operation.Command, (ulong)operation.BudgetNanoseconds);
+        Submit(operation);
         return submitted;
     }
 
@@ -38,8 +42,28 @@ sealed class NativeServiceController(IServiceInterventionBackend backend)
         var submitted = Parsed(SignalAccountingModule.sentService(lease, state));
         var operation = NewOperation(1, SignalServiceLeaseModule.identity(lease), SignalServiceLeaseModule.nanoseconds(lease), stage);
         pending[1] = new(operation, null, new(lease, operation.Command, backend.IsEligibleAddress, backend.IsValidOutcome));
-        backend.Submit(1, operation.Identity, operation.Command, (ulong)operation.BudgetNanoseconds);
+        Submit(operation);
         return submitted;
+    }
+
+    private void Submit(Journal operation)
+    {
+        var pendingOperation = pending[operation.Slot]!;
+        try
+        {
+            backend.Submit(operation.Slot, operation.Identity, operation.Command, (ulong)operation.BudgetNanoseconds);
+        }
+        finally
+        {
+            if (backend is IServiceSubmissionDiagnostics diagnostics)
+                pendingOperation.Journal = pendingOperation.Journal with { Submission = diagnostics.LastSubmission };
+        }
+        if (pendingOperation.Journal.Submission is { } observation)
+        {
+            var timing = ServiceSubmissionTiming.Parse(observation, operation.Slot, operation.Identity,
+                operation.Command, (ulong)operation.BudgetNanoseconds);
+            pendingOperation.Journal = pendingOperation.Journal with { SubmissionTiming = timing };
+        }
     }
 
     private Journal NewOperation(int slot, Guid identity, long budget, string stage)

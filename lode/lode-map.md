@@ -1,5 +1,12 @@
 # Lode index
 
+For native submission timing and the retained capacity failure, read [submission evidence](../reliability/features/native-signal/service-submission/README.md).
+For owner preemption and upstream debt-payment differences, read [the scheduling comparison](../docsSrc/Research/native-owner-scheduling.md).
+For the finite active-polling prototype and its retained capacity failures, read [owner polling](profiling/owner-polling.md).
+
+For the portable target-local lease state machine, read [target-local leases](profiling/target-local-lease.md).
+For target-local timer delivery, read [the lease plan](plans/target-local-lease.md).
+For repeated native timer generations, read [the reuse procedure](../docsSrc/How_Tos/run-target-lease-reuse.md).
 Read [summary.md](summary.md), [terminology.md](terminology.md), and [practices.md](practices.md) at session start.
 For profiling changes, read [the serial engine](profiling/summary.md).
 For sampled experiment accounting, read [the delay ledger](profiling/delay-ledger.md).

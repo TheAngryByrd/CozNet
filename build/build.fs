@@ -481,6 +481,21 @@ let linuxSampledServiceJit _ =
 let linuxInitializedServiceVerify _ =
     nativeScriptWithArgs "VerifyLinuxSampledService.ps1" [ "-InitializeManagedPaths" ]
 
+let linuxServiceSubmissionTiming _ =
+    nativeScriptWithArgs "VerifyLinuxSampledService.ps1" [ "-CaptureSubmission" ]
+
+let linuxServiceSchedulerTiming _ =
+    nativeScriptWithArgs "VerifyLinuxSampledService.ps1" [ "-CaptureScheduler" ]
+
+let linuxTargetLeaseDelivery _ =
+    nativeScript "VerifyTargetLeaseDelivery.ps1"
+
+let linuxTargetLeaseReuse _ =
+    nativeScript "VerifyTargetLeaseReuse.ps1"
+
+let linuxServiceOwnerPolling _ =
+    nativeScriptWithArgs "VerifyLinuxSampledService.ps1" [ "-CompareOwnerPolling" ]
+
 let linuxSelectedServiceInteropVerify _ =
     nativeScriptWithArgs "VerifyServiceInterop.ps1" [ "-SelectedOnly" ]
 
@@ -989,6 +1004,11 @@ let initTargets () =
     Target.create "LinuxSampledServicePhases" linuxSampledServicePhases
     Target.create "LinuxSampledServiceJit" linuxSampledServiceJit
     Target.create "LinuxInitializedServiceVerify" linuxInitializedServiceVerify
+    Target.create "LinuxServiceSubmissionTiming" linuxServiceSubmissionTiming
+    Target.create "LinuxServiceSchedulerTiming" linuxServiceSchedulerTiming
+    Target.create "LinuxServiceOwnerPolling" linuxServiceOwnerPolling
+    Target.create "LinuxTargetLeaseDelivery" linuxTargetLeaseDelivery
+    Target.create "LinuxTargetLeaseReuse" linuxTargetLeaseReuse
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
@@ -1077,6 +1097,18 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxInitializedServiceVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxServiceSubmissionTiming"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxServiceSchedulerTiming"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxServiceOwnerPolling"
     |> ignore
 
     "LinuxPerfWorkload"

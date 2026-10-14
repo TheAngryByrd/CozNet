@@ -72,7 +72,7 @@ static class SampledSignalWorkload
         Func<ICpuSampleSink, ICpuEventSession> sessionFactory, IThreadCpuClock controllerClock,
         SampledSignalTrace? trace = null, bool captureTargetCpu = false,
         Func<ISchedulerEventSession>? schedulerFactory = null, bool captureServicePhases = false,
-        bool initializeManagedPaths = false)
+        bool initializeManagedPaths = false, bool captureServiceOwnerScheduling = false)
     {
         var failures = new List<string>();
         var phaseCapture = captureServicePhases ? new ControllerPhaseCapture(controllerClock) : null;
@@ -82,8 +82,8 @@ static class SampledSignalWorkload
         var schedulerGate = new object();
         bool schedulerAccepting = true;
         bool schedulerStopped = true;
-        var schedulerSessions = new ISchedulerEventSession?[3];
-        var schedulerCaptures = new SchedulerCapture?[3];
+        var schedulerSessions = new ISchedulerEventSession?[captureServiceOwnerScheduling ? 4 : 3];
+        var schedulerCaptures = new SchedulerCapture?[schedulerSessions.Length];
         var requests = new List<RequestRecord>();
         var samples = new List<SampleRecord>();
         var boundaries = new List<Boundary>();
@@ -477,6 +477,12 @@ static class SampledSignalWorkload
             else if (backend is not IBoundedInterventionBackend)
                 throw new NotSupportedException("The intervention backend has no supported request protocol.");
             if (schedulerFactory is not null) schedulerSessions[0] = schedulerFactory();
+            if (captureServiceOwnerScheduling)
+            {
+                if (schedulerFactory is null || backend is not IServiceOwnerSchedulerBackend ownerScheduler)
+                    throw new NotSupportedException("Native owner scheduling requires a scheduler factory and a supported backend.");
+                schedulerSessions[3] = ownerScheduler.CaptureOwnerScheduling();
+            }
             if (captureTargetCpu && backend is not ITargetCpuObservationBackend)
                 throw new PlatformNotSupportedException("The intervention backend does not support target CPU observations.");
             workers = Enumerable.Range(0, 2).Select(slot => new Thread(() =>
@@ -582,7 +588,7 @@ static class SampledSignalWorkload
                 }
                 else failures.Add("The sampled GC worker did not join.");
             }
-            if (backend is not null && joined && !nativeOutstanding.Any(value => value))
+            if (backend is not null && joined && schedulerStopped && !nativeOutstanding.Any(value => value))
             {
                 try { backend.RestoreAfterThreadJoin(); restored = true; }
                 catch (Exception error) { failures.Add(error.ToString()); }
@@ -628,6 +634,7 @@ static class SampledSignalWorkload
             controllerCpuTiming = trace is not null,
             targetCpuTiming = captureTargetCpu,
             schedulerTiming = schedulerFactory is not null,
+            serviceOwnerSchedulerTiming = captureServiceOwnerScheduling,
             schedulerStopped,
             schedulerCaptures,
             controllerCpuNanoseconds = controllerCpu, samplingPauses = pauses, records, samples, requests,

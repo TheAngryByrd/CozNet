@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
@@ -41,12 +42,16 @@ static unsafe partial class ServiceNativeMethods
     private const string Library = "CozNet.Service";
     [LibraryImport(Library, EntryPoint = "coz_service_open")]
     internal static partial int Open(ulong begin, ulong size, int mode, ulong capacity, out ServiceSessionHandle session);
+    [LibraryImport(Library, EntryPoint = "coz_service_open_with_polling")]
+    internal static partial int OpenWithPolling(ulong begin, ulong size, int mode, ulong capacity, int polling, out ServiceSessionHandle session);
     [LibraryImport(Library, EntryPoint = "coz_service_register")]
     internal static partial int Register(ServiceSessionHandle session, int slot);
     [LibraryImport(Library, EntryPoint = "coz_service_retire")]
     internal static partial int Retire(ServiceSessionHandle session, int slot);
     [LibraryImport(Library, EntryPoint = "coz_service_submit")]
     internal static partial int Submit(ServiceSessionHandle session, int slot, ulong first, ulong second, ulong command, ulong budget);
+    [LibraryImport(Library, EntryPoint = "coz_service_submit_timed")]
+    internal static partial int SubmitTimed(ServiceSessionHandle session, int slot, ulong first, ulong second, ulong command, ulong budget, out ServiceNativeSubmissionTiming timing);
     [LibraryImport(Library, EntryPoint = "coz_service_cancel")]
     internal static partial int Cancel(ServiceSessionHandle session, int slot, ulong first, ulong second);
     [LibraryImport(Library, EntryPoint = "coz_service_snapshot")]
@@ -57,6 +62,8 @@ static unsafe partial class ServiceNativeMethods
     internal static partial int Release(ServiceSessionHandle session, int slot, ulong first, ulong second);
     [LibraryImport(Library, EntryPoint = "coz_service_clock")]
     internal static partial int Clock(ServiceSessionHandle session, out ulong nanoseconds);
+    [LibraryImport(Library, EntryPoint = "coz_service_owner_thread")]
+    internal static partial int OwnerThread(ServiceSessionHandle session, out int threadId);
     [LibraryImport(Library, EntryPoint = "coz_service_close")]
     internal static partial int Close(ServiceSessionHandle session);
     [LibraryImport(Library, EntryPoint = "coz_service_close")]
@@ -71,24 +78,35 @@ sealed class NativeServiceClient
     private readonly ServiceNativeAcknowledgment[] rejected;
     private readonly List<ReceivedServiceChild>[] received = [[], []];
     private readonly Guid[] identities = new Guid[2];
+    private readonly bool captureSubmission;
+    public ServiceSubmissionObservation? LastSubmission { get; private set; }
 
-    public NativeServiceClient(ulong begin, ulong size, SignalWaitMode mode, int capacity = 100000)
+    public NativeServiceClient(ulong begin, ulong size, SignalWaitMode mode, int capacity = 100000,
+        bool captureSubmission = false, OwnerPollingPolicy? polling = null)
     {
         if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
             throw new PlatformNotSupportedException("The native service transport requires Linux x64.");
         ArgumentNullException.ThrowIfNull(mode);
         if (capacity is < 1 or > 100000) throw new ArgumentOutOfRangeException(nameof(capacity));
         if (Marshal.SizeOf<ServiceNativeAcknowledgment>() != 88 || Marshal.SizeOf<ServiceNativeChild>() != 104
-            || Marshal.SizeOf<ServiceNativeSnapshot>() != 104)
+            || Marshal.SizeOf<ServiceNativeSnapshot>() != 104 || Marshal.SizeOf<ServiceNativeSubmissionTiming>() != 48)
             throw new InvalidOperationException("The service ABI layout differs.");
         children = new ServiceNativeChild[capacity];
         rejected = new ServiceNativeAcknowledgment[capacity];
-        Check(ServiceNativeMethods.Open(begin, size, mode.NativeValue, (ulong)capacity, out session), "open");
+        polling ??= OwnerPollingPolicy.Yielding;
+        Check(ServiceNativeMethods.OpenWithPolling(begin, size, mode.NativeValue, (ulong)capacity, polling.NativeValue, out session), "open");
         this.begin = begin;
         this.size = size;
+        this.captureSubmission = captureSubmission;
     }
 
     public void RegisterCurrentThread(int slot) => Check(ServiceNativeMethods.Register(session, slot), "register");
+    public int OwnerThreadId()
+    {
+        Check(ServiceNativeMethods.OwnerThread(session, out int threadId), "owner thread");
+        if (threadId <= 0) throw new InvalidDataException("The native owner thread identity is invalid.");
+        return threadId;
+    }
     public void RetireCurrentThread(int slot) => Check(ServiceNativeMethods.Retire(session, slot), "retire");
 
     public bool IsEligibleAddress(ulong address) => address >= begin && address - begin < size;
@@ -109,10 +127,36 @@ sealed class NativeServiceClient
 
     public void Submit(int slot, Guid identity, ulong command, ulong budget)
     {
+        LastSubmission = null;
         var parts = Parts(identity);
-        Check(ServiceNativeMethods.Submit(session, slot, parts.First, parts.Second, command, budget), "submit");
-        identities[slot] = identity;
-        received[slot].Clear();
+        int status;
+        if (captureSubmission)
+        {
+            ServiceNativeSubmissionTiming timing = default;
+            int? returnedStatus = null;
+            long entered = Stopwatch.GetTimestamp();
+            try
+            {
+                status = ServiceNativeMethods.SubmitTimed(session, slot, parts.First, parts.Second, command, budget, out timing);
+                returnedStatus = status;
+                if (status == 0)
+                {
+                    identities[slot] = identity;
+                    received[slot].Clear();
+                }
+            }
+            finally
+            {
+                LastSubmission = new(slot, identity, command, budget, entered, Stopwatch.GetTimestamp(), returnedStatus, timing);
+            }
+        }
+        else status = ServiceNativeMethods.Submit(session, slot, parts.First, parts.Second, command, budget);
+        Check(status, "submit");
+        if (!captureSubmission)
+        {
+            identities[slot] = identity;
+            received[slot].Clear();
+        }
     }
 
     public void Cancel(int slot, Guid identity)

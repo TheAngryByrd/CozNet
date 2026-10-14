@@ -209,7 +209,51 @@ static void ambiguousDeliveryResolvesOnlyMatchingChild() {
     std::_Exit(0);
 }
 
+static void boundedPollingPreservesSettlement() {
+    auto yielding = OwnerPollSchedule::yielding();
+    for (int index = 0; index < 128; ++index) require(yielding.yieldAfterActiveIteration(), 76);
+    auto bounded = OwnerPollSchedule::bounded();
+    for (int cycle = 0; cycle < 3; ++cycle)
+        for (int index = 1; index <= 64; ++index)
+            require(bounded.yieldAfterActiveIteration() == (index == 64), 77);
+    for (int index = 0; index < 63; ++index) require(!bounded.yieldAfterActiveIteration(), 78);
+    bounded.reset();
+    for (int index = 1; index <= 64; ++index)
+        require(bounded.yieldAfterActiveIteration() == (index == 64), 79);
+    Fake transport;
+    transport.overshoot = 7;
+    Owner owner(transport, 64, OwnerPollSchedule::bounded());
+    const Identity id{1, 2};
+    require(owner.start() == 0 && owner.submit(1, id, 1, 110000), 82);
+    const auto done = terminal(owner, 1, id);
+    uint64_t measured = 0;
+    for (const auto& child : done.children) {
+        require(child.requested > 0 && child.requested <= 50000, 83);
+        measured += child.acknowledgment.wait_ns;
+    }
+    require(done.phase == Phase::completed && done.children.size() == 3 && done.measured == measured && measured == 110007, 84);
+    require(owner.release(1, id) && owner.shutdown() == 0, 85);
+}
+
+static void optionalSubmissionTiming() {
+    Fake transport;
+    Owner owner(transport);
+    SubmissionTiming timing{99, 99, 99};
+    require(!owner.submit(1, {1, 2}, 1, 50000, &timing)
+        && timing.entered == 1000 && timing.locked == 1000 && timing.finished == 0, 70);
+    require(owner.start() == 0, 71);
+    require(owner.submit(1, {1, 2}, 1, 50000, &timing)
+        && timing.entered == 1000 && timing.locked == 1000 && timing.finished == 1000, 72);
+    require(!owner.submit(1, {3, 4}, 2, 50000, &timing)
+        && timing.entered == 1000 && timing.locked == 1000 && timing.finished == 0, 73);
+    const auto done = terminal(owner, 1, {1, 2});
+    require(done.phase == Phase::completed && done.measured == 50000 && done.children.size() == 1, 74);
+    require(owner.release(1, {1, 2}) && owner.shutdown() == 0, 75);
+}
+
 int main(int argc, char** argv) {
+    boundedPollingPreservesSettlement();
+    optionalSubmissionTiming();
     if (argc == 2) {
         const std::string_view mode{argv[1]};
         if (mode == "rejected-limit") rejectedJournalLimitRetainsOwnership();

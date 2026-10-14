@@ -10,6 +10,7 @@ using namespace coz::service;
 static_assert(sizeof(CozServiceAcknowledgment) == 88);
 static_assert(sizeof(CozServiceChild) == 104);
 static_assert(sizeof(CozServiceSnapshot) == 104);
+static_assert(sizeof(CozServiceSubmissionTiming) == 48);
 
 struct CozServiceSession {
     std::thread::id controller{std::this_thread::get_id()};
@@ -17,8 +18,8 @@ struct CozServiceSession {
     Owner owner;
     std::array<Snapshot, 2> snapshots;
     std::array<bool, 2> delivered_terminal{};
-    CozServiceSession(InstructionRange range, SignalWaitMode mode, std::size_t capacity)
-        : transport(range, mode), owner(transport, capacity) {}
+    CozServiceSession(InstructionRange range, SignalWaitMode mode, std::size_t capacity, OwnerPollSchedule polling)
+        : transport(range, mode), owner(transport, capacity, polling) {}
 };
 
 namespace {
@@ -26,9 +27,10 @@ std::mutex api_mutex;
 CozServiceSession* active{};
 bool closed{};
 
-template<class Action> int32_t guarded(CozServiceSession* session, bool controller, Action action) noexcept {
+template<class Action> int32_t guarded(CozServiceSession* session, bool controller, Action action, uint64_t* locked = nullptr) noexcept {
     try {
         std::lock_guard lock(api_mutex);
+        if (locked != nullptr) *locked = LinuxSignalTransport::monotonicNow();
         if (session == nullptr || session != active) return EINVAL;
         if (controller && session->controller != std::this_thread::get_id()) return EPERM;
         return action(*session);
@@ -43,14 +45,20 @@ CozServiceAcknowledgment copy(const Acknowledgment& value) {
 }
 
 int32_t coz_service_open(uint64_t begin, uint64_t size, int32_t mode, uint64_t capacity, CozServiceSession** result) {
+    return coz_service_open_with_polling(begin, size, mode, capacity, 0, result);
+}
+
+int32_t coz_service_open_with_polling(uint64_t begin, uint64_t size, int32_t mode,
+    uint64_t capacity, int32_t polling, CozServiceSession** result) {
     if (result == nullptr) return EINVAL;
     *result = nullptr;
     try {
         std::lock_guard lock(api_mutex);
         if (active != nullptr || closed) return EALREADY;
-        if (mode < 0 || mode > 1 || capacity == 0 || capacity > 100000) return EINVAL;
+        if (mode < 0 || mode > 1 || capacity == 0 || capacity > 100000 || polling < 0 || polling > 1) return EINVAL;
         auto session = std::make_unique<CozServiceSession>(InstructionRange(begin, size),
-            mode == 0 ? SignalWaitMode::sleep : SignalWaitMode::spin, static_cast<std::size_t>(capacity));
+            mode == 0 ? SignalWaitMode::sleep : SignalWaitMode::spin, static_cast<std::size_t>(capacity),
+            polling == 0 ? OwnerPollSchedule::yielding() : OwnerPollSchedule::bounded());
         const int error = session->owner.start();
         if (error != 0) return error;
         active = session.release();
@@ -76,6 +84,24 @@ int32_t coz_service_submit(CozServiceSession* session, int32_t slot, uint64_t fi
 }
 int32_t coz_service_cancel(CozServiceSession* session, int32_t slot, uint64_t first, uint64_t second) {
     return guarded(session, true, [&](auto& value) { return value.owner.cancel(slot, {first, second}) ? 0 : EINVAL; });
+}
+
+int32_t coz_service_submit_timed(CozServiceSession* session, int32_t slot, uint64_t first, uint64_t second,
+    uint64_t command, uint64_t budget, CozServiceSubmissionTiming* timing) {
+    if (timing == nullptr) return EINVAL;
+    *timing = {LinuxSignalTransport::monotonicNow(), 0, 0, 0, 0, 0};
+    const int32_t result = guarded(session, true, [&](auto& value) {
+        SubmissionTiming owner;
+        const bool accepted = value.owner.submit(slot, {first, second}, command, budget, &owner);
+        timing->owner_entered = owner.entered;
+        timing->owner_locked = owner.locked;
+        timing->owner_finished = owner.finished;
+        if (!accepted) return EINVAL;
+        value.delivered_terminal[slot] = false;
+        return 0;
+    }, &timing->api_locked);
+    timing->returned = LinuxSignalTransport::monotonicNow();
+    return result;
 }
 
 int32_t coz_service_snapshot(CozServiceSession* session, int32_t slot, uint64_t first, uint64_t second,
@@ -124,5 +150,14 @@ int32_t coz_service_close(CozServiceSession* session) {
         closed = true;
         delete &value;
         return 0;
+    });
+}
+
+int32_t coz_service_owner_thread(CozServiceSession* session, int32_t* thread_id) {
+    if (thread_id == nullptr) return EINVAL;
+    *thread_id = 0;
+    return guarded(session, true, [&](auto& value) {
+        *thread_id = value.transport.ownerThreadId();
+        return *thread_id > 0 ? 0 : EIO;
     });
 }

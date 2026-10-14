@@ -1,5 +1,25 @@
 # Scheduler observations
 
+`LinuxServiceSchedulerTiming` connects the existing scheduler backend to the initialized native-service workload with submission timing.
+`AnalyzeServiceSnapshotLag.py --scheduler` requires stopped, loss-free captures with distinct thread identities in one process.
+Current service runs contain four streams: controller, selected target, peer target, and native owner.
+The fourth identity must match `backendDetails.nativeOwnerThreadId` from the native ABI.
+Legacy three-stream records remain readable without an owner attribution claim.
+`IServiceOwnerSchedulerBackend` isolates owner capture behind a backend interface.
+The Linux implementation opens the event for the native owner ID. All captures stop before target retirement and owner restoration.
+`OwnerSchedulerShutdown` checks normal teardown and failed owner-capture termination on the shared workload.
+It correlates delayed snapshot lower bounds and first managed receipt intervals with controller switch-out pairs.
+All compared intervals use native monotonic nanoseconds and must fit assured capture boundaries.
+The runner snapshots and hashes both analyzers and their checks. Analysis preserves workload failure and does not assign a scheduling cause.
+The [native service capture](../../reliability/features/native-signal/service-submission/scheduler.md) fails at 2,049,444 ns peer debt with zero reported loss.
+Its final command has a 2,413,347 ns interval from the last handler clock reading to owner observation.
+Controller and target switch-out overlap cover 96,694 ns and 30,061 ns respectively.
+That earlier run has no owner stream. Native owner lock acquisition remains unresolved.
+The [four-thread capture](../../reliability/features/native-signal/service-submission/owner-scheduler.md) fails during warmup at 2,999,973 ns peer debt.
+Command 19 child 8 has a 6,239,753 ns post-handler observation interval with 6,236,648 ns of owner switch-out overlap.
+The owner switch-out is marked preemption. Controller and target overlap are zero in that interval.
+This run establishes an owner scheduling gap. Its cause and the general viability of centralized child dispatch remain unresolved.
+
 A standalone Linux x64 capability probe captures per-thread `PERF_RECORD_SWITCH` records.
 The optional `--sampled-signal-scheduler` route connects a Linux backend to the sampled signal controller.
 `--sampled-signal-scheduler-trace` also emits EventPipe clock anchors for runtime suspension correlation.

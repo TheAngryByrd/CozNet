@@ -8,3 +8,8 @@ interface ISchedulerEventSession : IDisposable
 {
     SchedulerCapture Finish();
 }
+
+interface IServiceOwnerSchedulerBackend
+{
+    ISchedulerEventSession CaptureOwnerScheduling();
+}

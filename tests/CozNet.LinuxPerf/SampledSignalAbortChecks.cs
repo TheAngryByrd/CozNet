@@ -4,6 +4,28 @@ using System.Text.Json;
 internal static class SampledSignalAbortChecks
 {
     private const string Failure = "Injected controller CPU failure.";
+    public static int OwnerSchedulerShutdown(string path, string mode)
+    {
+        if (mode is not ("normal" or "finish-failure")) throw new ArgumentException("Invalid owner scheduler fixture mode.");
+        int finished = 0, disposed = 0;
+        bool fail = mode == "finish-failure";
+        ISchedulerEventSession Create(bool owner) => new SchedulerSession(owner && fail, false,
+            () => Interlocked.Increment(ref finished), () => Interlocked.Increment(ref disposed));
+        var backend = new Backend(() => Volatile.Read(ref finished) == 4 && Volatile.Read(ref disposed) == 4,
+            () => Create(true));
+        int result = SampledSignalWorkload.Run(path, SampledSignalPlan.Parse("0", "qualified-sample", "warm"),
+            () => backend, _ => new Session(), new Clock(), schedulerFactory: () => Create(false), captureServiceOwnerScheduling: true);
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        var root = document.RootElement;
+        if (result != 1 || root.GetProperty("passed").GetBoolean()
+            || !root.GetProperty("serviceOwnerSchedulerTiming").GetBoolean()
+            || root.GetProperty("schedulerCaptures").GetArrayLength() != 4
+            || root.GetProperty("schedulerStopped").GetBoolean() == fail
+            || root.GetProperty("joined").GetBoolean() == fail || root.GetProperty("restored").GetBoolean() == fail
+            || backend.Retired != (fail ? 0 : 2) || finished != (fail ? 3 : 4) || disposed != (fail ? 3 : 4))
+            throw new InvalidOperationException("Owner capture must finish before target retirement and service restoration.");
+        return 0;
+    }
 
     public static int SchedulerShutdown(string path, string mode)
     {
@@ -134,12 +156,14 @@ internal static class SampledSignalAbortChecks
         public void Dispose() { }
     }
 
-    private sealed class Backend(Func<bool>? canRetire = null) : IBoundedInterventionBackend
+    private sealed class Backend(Func<bool>? canRetire = null, Func<ISchedulerEventSession>? ownerCapture = null) : IBoundedInterventionBackend, IServiceOwnerSchedulerBackend
     {
         private readonly int[] owners = new int[2];
         private int retired;
         public int Retired => Volatile.Read(ref retired);
         public string Name => "trace-abort-check";
+        public ISchedulerEventSession CaptureOwnerScheduling() => ownerCapture is null
+            ? throw new NotSupportedException("Owner capture is not configured.") : ownerCapture();
         public object Describe() => new { injectedControllerFailure = true };
         public bool IsEligibleAddress(ulong address) => false;
         public void RegisterCurrentThread(int slot) => owners[slot] = Environment.CurrentManagedThreadId;

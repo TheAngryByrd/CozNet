@@ -23,6 +23,8 @@ if (args is ["--verify-selected-service-interop", var selectedServicePath, var s
 
 if (args is ["--verify-service-accounting"])
 {
+    OwnerPollingPolicyChecks.Run();
+    TargetLeaseReceiptsChecks.Run();
     ServiceAccountingAdapterChecks.Run();
     ServiceSelectedAdapterChecks.Run();
     NativeServiceControllerChecks.Run();
@@ -68,6 +70,9 @@ if (args is ["--verify-scheduler-records"])
 
 if (args is ["--verify-scheduler-shutdown", var schedulerCheckPath, var schedulerCheckMode])
     return SampledSignalAbortChecks.SchedulerShutdown(schedulerCheckPath, schedulerCheckMode);
+
+if (args is ["--verify-owner-scheduler-shutdown", var ownerSchedulerCheckPath, var ownerSchedulerCheckMode])
+    return SampledSignalAbortChecks.OwnerSchedulerShutdown(ownerSchedulerCheckPath, ownerSchedulerCheckMode);
 
 if (args is ["--sampled-signal-scheduler", var schedulerPath, var schedulerPercent, var schedulerCadence,
     var schedulerStartup, var schedulerWait, var schedulerGc])
@@ -137,15 +142,23 @@ if (args is ["--verify-signal-cadence"])
     return 0;
 }
 
-if (args is [var serviceMode, var nativePath, var nativePercent, var nativeCadence, var nativeStartup, var nativeWait, var nativeGc]
-    && serviceMode is "--sampled-service" or "--sampled-service-phases" or "--sampled-service-jit" or "--sampled-service-initialized")
+if (args is [var serviceMode, var nativePath, var nativePercent, var nativeCadence, var nativeStartup, var nativeWait, var nativeGc, .. var pollingArgs]
+    && serviceMode is "--sampled-service" or "--sampled-service-phases" or "--sampled-service-jit" or "--sampled-service-initialized" or "--sampled-service-submission" or "--sampled-service-scheduler")
 {
     var parsedWait = SignalWaitMode.Parse(nativeWait);
+    var polling = pollingArgs switch
+    {
+        [] => OwnerPollingPolicy.Yielding,
+        [var value] => OwnerPollingPolicy.Parse(value),
+        _ => throw new ArgumentException("Supply at most one native owner polling policy.")
+    };
     return SampledSignalWorkload.Run(nativePath, SampledSignalPlan.Parse(nativePercent, nativeCadence, nativeStartup, nativeGc),
-        () => new LinuxServiceBackend(parsedWait), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(),
+        () => new LinuxServiceBackend(parsedWait, serviceMode is "--sampled-service-submission" or "--sampled-service-scheduler", polling), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(),
         trace: serviceMode == "--sampled-service-jit" ? new SampledSignalTrace() : null,
+        schedulerFactory: serviceMode == "--sampled-service-scheduler" ? () => new LinuxSchedulerEventSession() : null,
+        captureServiceOwnerScheduling: serviceMode == "--sampled-service-scheduler",
         captureServicePhases: serviceMode != "--sampled-service",
-        initializeManagedPaths: serviceMode == "--sampled-service-initialized");
+        initializeManagedPaths: serviceMode is "--sampled-service-initialized" or "--sampled-service-submission" or "--sampled-service-scheduler");
 }
 
 if (args is ["--sampled-signal", var gcPath, var gcPercent, var gcCadence, var gcStartup, var gcWait, var sampledGc])
