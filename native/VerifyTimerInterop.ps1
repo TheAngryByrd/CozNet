@@ -1,7 +1,9 @@
-param([string]$EvidenceDirectory, [switch]$ManagedWorkload)
+param([string]$EvidenceDirectory, [switch]$ManagedWorkload, [switch]$ForceGc)
 $ErrorActionPreference = 'Stop'
+if ($ForceGc -and -not $ManagedWorkload) { throw 'ForceGc requires ManagedWorkload.' }
 if (-not $EvidenceDirectory) {
-    $EvidenceDirectory = Join-Path $PSScriptRoot $(if ($ManagedWorkload) { '../artifacts/timer-managed' } else { '../artifacts/timer-interop' })
+    $directoryName = if ($ForceGc) { 'timer-managed-gc' } elseif ($ManagedWorkload) { 'timer-managed' } else { 'timer-interop' }
+    $EvidenceDirectory = Join-Path $PSScriptRoot "../artifacts/$directoryName"
 }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -20,6 +22,8 @@ $sources = @('native/service/TimerApi.h', 'native/service/TimerApi.Linux.cpp', '
     'tests/CozNet.LinuxPerf/NativeTimerClient.cs', 'tests/CozNet.LinuxPerf/TimerInteropChecks.cs',
     'tests/CozNet.LinuxPerf/TimerAccountingAdapter.cs', 'tests/CozNet.LinuxPerf/TimerAccountingAdapterChecks.cs',
     'tests/CozNet.LinuxPerf/TimerManagedWorkload.cs', 'tests/CozNet.LinuxPerf/InstructionMap.cs', 'tests/CozNet.LinuxPerf/OverheadWorkload.cs',
+    'tests/CozNet.LinuxPerf/TimerGcReach.cs', 'tests/CozNet.LinuxPerf/TimerGcReachChecks.cs',
+    'tests/CozNet.LinuxPerf/SampledGcStress.cs', 'tests/CozNet.LinuxPerf/SampledGcStressChecks.cs',
     'tests/CozNet.LinuxPerf/TargetLeaseReceipts.cs', 'tests/CozNet.LinuxPerf/TargetLeaseReceiptsChecks.cs',
     'tests/CozNet.LinuxPerf/ServiceReceiptTiming.cs', 'tests/CozNet.LinuxPerf/Program.cs',
     'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/VerifyTimerInterop.ps1', 'build/build.fs')
@@ -36,7 +40,8 @@ $binaries = @{}
 foreach ($path in $binaryPaths) { $binaries[[IO.Path]::GetFileName($path)] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
 @{ sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage;
     receiptBoundNanoseconds = 100000000; delayedReadMilliseconds = 150; watchdogSeconds = 20;
-    managedWorkload = [bool]$ManagedWorkload; fixedCreditSteps = 16; requestedChildBoundNanoseconds = 50000;
+    managedWorkload = [bool]$ManagedWorkload; forceGc = [bool]$ForceGc; gcCallBoundMilliseconds = 250;
+    fixedCreditSteps = 16; requestedChildBoundNanoseconds = 50000;
     handlerBoundNanoseconds = 5000000; leaseBudgetBoundNanoseconds = 2000000
 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
 $runtime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
@@ -53,7 +58,8 @@ if ($ManagedWorkload) {
         '--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1',
         '--mount', "type=bind,source=$native,target=/native,readonly", '--mount', "type=bind,source=$workload,target=/work,readonly",
         '--mount', "type=bind,source=$run,target=/output", $runtimeImage, 'timeout', '-k', '2s', '20s', 'dotnet', '/work/CozNet.LinuxPerf.dll')
-    & docker @managedRuntime --verify-timer-managed /output/managed.json *> (Join-Path $run 'managed.log')
+    $gcMode = if ($ForceGc) { 'gc' } else { 'no-gc' }
+    & docker @managedRuntime --verify-timer-managed /output/managed.json $gcMode *> (Join-Path $run 'managed.log')
     $outcomes += @{ mode = 'managed'; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run 'managed.json') }
 } else {
     foreach ($mode in @('receipt', 'late', 'clock-failure')) {

@@ -54,7 +54,8 @@ The outer watchdog bounds targets that park after failed retirement.
 The runner retains its readiness event after a join timeout and joins only successfully started threads.
 The [timer accounting adapter](timer-accounting.md) consumes accepted receipts and retains failed reservations.
 The [managed payment workload](timer-managed.md) checks actual paid journals during controlled arithmetic.
-General CLR safety, forced GC, sampled capacity, and physical prediction remain incomplete.
+The managed payment workload checks forced collection reach inside controller command intervals.
+General CLR safety, sampled capacity, and physical prediction remain incomplete.
 
 See [the human reference](../../docsSrc/Reference/timer-interop.md), [verification procedure](../../docsSrc/How_Tos/verify-timer-interop.md),
 [portable ownership](target-local-lease.md), and [the index](../lode-map.md).

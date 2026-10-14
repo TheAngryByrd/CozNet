@@ -9,6 +9,7 @@ if (args is ["--verify-timer-layout"])
     NativeTimerClient.VerifyLayout();
     TargetLeaseReceiptsChecks.Run();
     TimerAccountingAdapterChecks.Run();
+    TimerGcReachChecks.Run();
     return 0;
 }
 
@@ -17,6 +18,9 @@ if (args is ["--verify-timer-interop", var timerPath, var timerMode])
 
 if (args is ["--verify-timer-managed", var timerManagedPath])
     return TimerManagedWorkload.Run(timerManagedPath);
+
+if (args is ["--verify-timer-managed", var timerGcPath, var timerGcMode])
+    return TimerManagedWorkload.Run(timerGcPath, TimerGcReach.ParseMode(timerGcMode));
 
 if (args is ["--service-accounting-cost", var serviceCostPath])
     return ServiceAccountingCosts.Run(serviceCostPath);

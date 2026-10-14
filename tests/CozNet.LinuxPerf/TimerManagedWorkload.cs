@@ -6,7 +6,7 @@ using Microsoft.FSharp.Core;
 static class TimerManagedWorkload
 {
     private sealed record CommandRecord(int Step, ulong Generation, long Budget, long ProgressBefore, long ProgressAfter,
-        long Confirmed, bool Settled, TimerObservation[] Snapshots);
+        long Confirmed, bool Settled, TimerCommandInterval Interval, TimerObservation[] Snapshots);
 
     private static T Parsed<T>(FSharpResult<T, string> value) => value.IsOk ? value.ResultValue : throw new InvalidDataException(value.ErrorValue);
     private static void Require(bool condition, string message)
@@ -31,7 +31,7 @@ static class TimerManagedWorkload
         return PerfMapSnapshot.Read(output).UniqueRange(OverheadWorkload.SelectedSymbol);
     }
 
-    public static int Run(string path)
+    public static int Run(string path, bool forceGc = false)
     {
         var records = new List<CommandRecord>();
         var snapshots = new List<TimerObservation>();
@@ -39,12 +39,17 @@ static class TimerManagedWorkload
         NativeTimerClient? client = null;
         Thread? target = null;
         SignalAccounting? accounting = null;
+        SampledGcStress? gc = null;
+        GcStressObservation[]? collections = null;
+        string? gcError = null;
+        bool gcJoined = false, gcReleased = false, gcReachedCommand = false;
         Exception? targetFailure = null;
         string? failure = null;
         var ready = new ManualResetEventSlim();
         int stop = 0;
         long progress = 0;
         ulong outstanding = 0;
+        TimerCommandInterval? unfinishedInterval = null;
         ulong start = 0, size = 0;
         bool joined = false, closed = false, stableMap = false;
         int completedLeases = 0, chainedLeases = 0, paidChildren = 0;
@@ -88,6 +93,7 @@ static class TimerManagedWorkload
             var selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(50), SignalAccountingModule.create()));
             var peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
             accounting = peer.Item2;
+            if (forceGc) gc = SampledGcStress.Start();
             for (int step = 1; step <= 16; step++)
             {
                 Require(Volatile.Read(ref targetFailure) is null, "The managed timer target failed before submission.");
@@ -104,6 +110,13 @@ static class TimerManagedWorkload
                 long before = Interlocked.Read(ref progress);
                 snapshots.Clear();
                 outstanding = client.Submit(0, (ulong)step, checked((ulong)budget));
+                long submittedTimestamp = Stopwatch.GetTimestamp();
+                unfinishedInterval = new(outstanding, submittedTimestamp, 0);
+                if (gc is not null && !gcReleased)
+                {
+                    gc.Release();
+                    gcReleased = true;
+                }
                 accounting = Parsed(SignalAccountingModule.sentService(lease, accounting));
                 var adapter = new TimerAccountingAdapter(TimerAccountingBinding.Parse(lease, outstanding, (ulong)step, start, size));
                 var deadline = Stopwatch.StartNew();
@@ -130,6 +143,8 @@ static class TimerManagedWorkload
                     Thread.Yield();
                 }
                 var final = snapshots[^1];
+                long receivedTimestamp = Stopwatch.GetTimestamp();
+                unfinishedInterval = new(outstanding, submittedTimestamp, receivedTimestamp);
                 Require(adapter.IsTerminal && SignalAccountingModule.pendingCount(accounting) == 0,
                     "The retired managed timer journal did not settle exactly once.");
                 int paid = final.Received.Count(child => child.Raw.Waited > 0);
@@ -141,9 +156,11 @@ static class TimerManagedWorkload
                 if (final.Raw.Header.Stop == 1) completedLeases++;
                 if (final.Raw.Header.Stop == 1 && paid > 1) chainedLeases++;
                 paidChildren += paid;
-                records.Add(new(step, outstanding, budget, before, after, adapter.ConfirmedNanoseconds, adapter.IsTerminal, snapshots.ToArray()));
+                records.Add(new(step, outstanding, budget, before, after, adapter.ConfirmedNanoseconds, adapter.IsTerminal,
+                    new(outstanding, submittedTimestamp, receivedTimestamp), snapshots.ToArray()));
                 client.ReleaseAfterRetiredCopy(0);
                 outstanding = 0;
+                unfinishedInterval = null;
                 snapshots.Clear();
             }
             stableMap = CaptureMap(path + ".final.perf.map") == (start, size);
@@ -154,6 +171,14 @@ static class TimerManagedWorkload
         catch (Exception error) { failure = error.ToString(); }
         finally
         {
+            try
+            {
+                gcJoined = gc is null || gc.StopAndJoin(TimeSpan.FromSeconds(2));
+                if (gc is not null && gcJoined) (collections, gcError) = gc.Snapshot();
+                if (!gcJoined) failure ??= "The GC worker did not join. Its observations remain unavailable.";
+                if (gcError is not null) failure ??= gcError;
+            }
+            catch (Exception error) { failure ??= error.ToString(); }
             Volatile.Write(ref stop, 1);
             joined = target is null || target.Join(TimeSpan.FromSeconds(2));
             if (joined) ready.Dispose();
@@ -171,12 +196,20 @@ static class TimerManagedWorkload
                 catch (Exception error) { failure ??= error.ToString(); }
             }
         }
-        bool passed = failure is null && joined && closed;
+        if (forceGc)
+        {
+            gcReachedCommand = collections is not null && TimerGcReach.ReachedCommand(collections, records.Select(record => record.Interval));
+            if (!gcReachedCommand) failure ??= "No complete forced collection occurred inside a recorded timer command interval.";
+            if (collections is null || !SampledGcStress.WithinBounds(collections, Stopwatch.Frequency))
+                failure ??= "Forced collection timing did not satisfy the 250 ms call bound.";
+        }
+        bool passed = failure is null && joined && closed && gcJoined;
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
             passed, failure, joined, closed, start, size, stableMap, completedLeases, chainedLeases, paidChildren,
             completedArithmeticCalls = Interlocked.Read(ref progress), fixedCreditSteps = 16, syntheticCredit = true,
-            skippedSteps, records, unfinishedSnapshots = snapshots, lastRaw = client?.LastRaw, lastSubmission = client?.LastSubmission,
+            forceGc, gcReleased, gcJoined, gcReachedCommand, gcError, collections, stopwatchFrequency = Stopwatch.Frequency,
+            skippedSteps, records, unfinishedInterval, unfinishedSnapshots = snapshots, lastRaw = client?.LastRaw, lastSubmission = client?.LastSubmission,
             cleanup = client?.LastCleanup, pendingAccounting = accounting is null ? (int?)null : SignalAccountingModule.pendingCount(accounting),
             generalClrSafetyEstablished = false, sampledCapacityEstablished = false, predictionAccuracyEstablished = false
         }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));

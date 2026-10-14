@@ -4,8 +4,10 @@
 `TimerLayoutVerify` checks managed ABI sizes and offsets on the host without loading the Linux library.
 `LinuxTimerInterop` checks first managed receipt preservation, late receipt rejection, and wrong-thread clock rejection on Linux x64.
 `LinuxTimerManaged` uses the same runner with `-ManagedWorkload` and checks paid journals during controlled managed arithmetic.
+`LinuxTimerManagedGc` also passes `-ForceGc` and requires a complete collection inside a recorded command interval.
+Its evidence uses `artifacts/timer-managed-gc/` and retains the shared 250 ms GC call bound.
 It retains source and binary hashes, runtime perf maps, and raw results under `artifacts/timer-managed/`.
-All three managed targets depend on `LinuxPerfWorkload` inside the FAKE target graph.
+All four managed targets depend on `LinuxPerfWorkload` inside the FAKE target graph.
 The Linux runners retain unique directories under `artifacts/timer-api/` and `artifacts/timer-interop/`.
 See [timer interop](../profiling/timer-interop.md) for scope and ownership.
 

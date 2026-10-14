@@ -527,6 +527,8 @@ let linuxTimerInterop _ = nativeScript "VerifyTimerInterop.ps1"
 
 let linuxTimerManaged _ = nativeScriptWithArgs "VerifyTimerInterop.ps1" [ "-ManagedWorkload" ]
 
+let linuxTimerManagedGc _ = nativeScriptWithArgs "VerifyTimerInterop.ps1" [ "-ManagedWorkload"; "-ForceGc" ]
+
 let timerLayoutVerify _ =
     CreateProcess.fromRawCommand "dotnet" [
         rootDirectory </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
@@ -1064,6 +1066,7 @@ let initTargets () =
     Target.create "LinuxTimerApi" linuxTimerApi
     Target.create "LinuxTimerInterop" linuxTimerInterop
     Target.create "LinuxTimerManaged" linuxTimerManaged
+    Target.create "LinuxTimerManagedGc" linuxTimerManagedGc
     Target.create "TimerLayoutVerify" timerLayoutVerify
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
@@ -1145,6 +1148,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxTimerManaged"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxTimerManagedGc"
     |> ignore
 
     "LinuxPerfWorkload"

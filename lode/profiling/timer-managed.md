@@ -32,6 +32,21 @@ Requested child wait stays at most 50,000 ns, handler interval at most 5 ms, fir
 Raw snapshots survive accounting failure. Failed retirement keeps the target alive and prevents close.
 The [retained run](../../reliability/features/native-signal/timer-managed.md) passes with 15 reused generations and 42 paid children.
 Independent debt arithmetic explains its skipped credit step through preserved overshoot.
-Forced GC, runtime transitions, sampled capacity, and prediction accuracy remain unverified.
+Runtime-transition coverage, sampled capacity, and prediction accuracy remain unverified.
+
+`LinuxTimerManagedGc` selects the same workload with `gc` mode.
+It starts the existing `SampledGcStress` worker and releases it only after the first accepted native submission.
+Each command records a Stopwatch interval from submission return to final receipt processing.
+`TimerGcReach` requires one complete positive-index collection inside one recorded command interval.
+Collections spanning commands or occurring between them do not establish reach.
+All collection calls retain the existing 250 ms bound.
+The GC worker must join before its observations are read. A failed join retains unavailable-observation status and fails the run.
+Unfinished timer intervals and raw snapshots remain available on failure.
+This reach check does not prove overlap with an individual native wait or a runtime suspension.
+Portable checks cover parsing, exact boundaries, invalid intervals, outside collections, and the shared GC lifetime and duration rules.
+The [retained GC run](../../reliability/features/native-signal/timer-managed-gc.md) passes with 16 generations and three collection calls.
+Two complete calls fit inside command intervals. The largest call is 3.776224 ms.
+Fourteen leases complete with multiple paid children. Two defer and preserve their unpaid debt.
+The no-GC regression run also passes. General CLR safety remains unverified.
 
 See [timer accounting](timer-accounting.md), [interop](timer-interop.md), and [the index](../lode-map.md).
