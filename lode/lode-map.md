@@ -19,6 +19,7 @@ For allocation in the full controller's accounting read, read [accounting read](
 For native sleep and spin measurements, read [the wait comparison](../reliability/features/native-signal/wait-comparison.md).
 For spin runtime transitions and sampled forced GC, read [spin reliability](../reliability/features/native-signal/spin-reliability.md).
 For diagnostic clock markers and runtime suspension events, read [runtime suspension traces](profiling/runtime-suspension-trace.md).
+For explicit failed-run boundaries and deterministic failure capture, read [abort trace evidence](../reliability/features/native-signal/abort-trace.md).
 For request CPU bounds and pending requests while the controller runs, read [controller CPU intervals](../reliability/features/native-signal/controller-cpu.md).
 For optional target CPU capture and native clock ownership, read [target CPU observations](profiling/target-cpu-observations.md).
 For native clock read cost and sleeping-target checks, read [target clock measurement](../reliability/features/native-signal/target-cpu-clock.md).

@@ -400,6 +400,11 @@ static class SampledSignalWorkload
         {
             failureBoundary = Snapshot();
             failures.Add(error.ToString());
+            if (trace is not null)
+            {
+                try { trace.Abort(failureBoundary.Timestamp, failureBoundary.Stage); }
+                catch (Exception traceError) { failures.Add(traceError.ToString()); }
+            }
         }
         finally
         {
@@ -466,6 +471,7 @@ static class SampledSignalWorkload
             boundaries, maxDebtNanoseconds = maxDebt, debtBoundNanoseconds = 2000000,
             stopwatchFrequency = Stopwatch.Frequency, longestServiceInterval, peakDebt,
             traceAnchors = trace?.Anchors, diagnosticTrace = trace is not null,
+            traceAbort = trace?.AbortBoundary,
             controllerCpuTiming = trace is not null,
             targetCpuTiming = captureTargetCpu,
             controllerCpuNanoseconds = controllerCpu, samplingPauses = pauses, records, samples, requests,

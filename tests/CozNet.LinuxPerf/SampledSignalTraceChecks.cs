@@ -30,6 +30,7 @@ internal static class SampledSignalTraceChecks
         TargetCpuSnapshotPreservesBrackets();
         DisabledProviderFails();
         EnabledMarkersMatchBrackets();
+        AbortMarkerRetainsFailureBoundary();
         DisabledProviderFails();
     }
 
@@ -97,6 +98,36 @@ internal static class SampledSignalTraceChecks
                 || marker.Timestamp < anchor.BeforeTimestamp || marker.Timestamp > anchor.AfterTimestamp
                 || (i > 0 && anchor.BeforeTimestamp < trace.Anchors[i - 1].AfterTimestamp))
                 throw new InvalidOperationException($"Marker {i} does not match its ordered clock bracket.");
+        }
+    }
+
+    private static void AbortMarkerRetainsFailureBoundary()
+    {
+        using var listener = new MarkerListener();
+        var trace = new SampledSignalTrace();
+        trace.Mark("run-start");
+        trace.Mark("measurement-start");
+        long failure = Stopwatch.GetTimestamp();
+        trace.Abort(failure, "measurement");
+        trace.Mark("run-end");
+        if (trace.AbortBoundary != new SignalTraceAbort(2, failure, "measurement")
+            || trace.Anchors[2].Phase != "run-abort" || trace.Anchors[2].BeforeTimestamp < failure
+            || listener.Markers.Count != 4 || listener.Markers[2].Phase != "run-abort")
+            throw new InvalidOperationException("The abort marker must retain the failed stage and its timestamp.");
+        bool rejected = false;
+        try { trace.Abort(Stopwatch.GetTimestamp(), "measurement"); }
+        catch (InvalidOperationException) { rejected = true; }
+        if (!rejected || trace.Anchors.Count != 4)
+            throw new InvalidOperationException("A repeated abort must not emit another marker.");
+        foreach (long invalid in new[] { -1L, long.MaxValue })
+        {
+            var pending = new SampledSignalTrace();
+            pending.Mark("run-start");
+            rejected = false;
+            try { pending.Abort(invalid, "setup"); }
+            catch (InvalidOperationException) { rejected = true; }
+            if (!rejected || pending.AbortBoundary is not null || pending.Anchors.Count != 1)
+                throw new InvalidOperationException("An invalid failure timestamp must not emit an abort marker.");
         }
     }
 }

@@ -4,6 +4,9 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-signal-trace-abort", var abortPath, var abortStartup])
+    return SampledSignalAbortChecks.Run(abortPath, abortStartup);
+
 if (args is ["--verify-signal-trace"])
 {
     SampledSignalTraceChecks.Run();

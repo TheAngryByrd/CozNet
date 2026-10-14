@@ -10,15 +10,16 @@ def boundary(identifier, time, instance=0):
             "processId": 42, "payload": {"ClrInstanceID": instance, "Reason": 6, "Count": 12}}
 
 
-def fixture():
-    phases = ["run-start", "measurement-start", "measurement-end", "run-end"]
+def fixture(phases=None, warmup=0):
+    if phases is None:
+        phases = ["run-start", "measurement-start", "measurement-end", "run-end"]
     anchors, events = [], []
     for index, phase in enumerate(phases):
         anchors.append({"Id": index, "Phase": phase, "BeforeTimestamp": 1000 + index * 100,
                         "AfterTimestamp": 1004 + index * 100})
         events.append({"provider": MARKERS, "id": 1, "version": 0, "milliseconds": Decimal(index * 100),
                        "processId": 42, "payload": {"id": index, "phase": phase}})
-    workload = {"stopwatchFrequency": 1000, "warmupMilliseconds": 0, "traceAnchors": anchors,
+    workload = {"stopwatchFrequency": 1000, "warmupMilliseconds": warmup, "traceAnchors": anchors,
                 "requests": [], "peakDebt": []}
     return workload, {"eventsLost": 0, "events": events}
 

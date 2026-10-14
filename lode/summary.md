@@ -43,6 +43,8 @@ Spin increases measured process CPU.
 The [spin reliability run](../reliability/features/native-signal/spin-reliability.md) passes all runtime transitions and sampled protocol checks.
 Two forced-GC treatments fail capacity. Physical-change prediction remains unverified.
 An explicit [diagnostic trace path](profiling/runtime-suspension-trace.md) records bracketed EventPipe clock markers.
+An explicit abort marker permits correlation of recorded failed runs while preserving workload failure.
+Deterministic warmup and measurement failure fixtures pass through Linux EventPipe and on Windows.
 Its first local capture has consistent clock alignment and zero reported event loss.
 The correlation finds 104 complete suspension episodes and 53 overlapping measurement requests. It does not explain the earlier capacity failures.
 The subsequent traced comparison retains four failed treatments. A long acknowledgment-observation delay has no runtime suspension overlap.

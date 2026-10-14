@@ -11,6 +11,22 @@ The output includes `diagnosticTrace`, `traceAnchors`, and the existing `stopwat
 The first anchor can include EventSource initialization cost. It precedes the measured stages.
 Trace overhead remains part of the diagnostic run. Diagnostic success does not replace retained capacity failures.
 
+The workload records `run-abort` after an exception and its failure snapshot.
+`traceAbort` identifies the marker, failed stage, and snapshot timestamp.
+The trace still closes with `run-end` after cleanup.
+Abort-marker failure adds a workload failure and does not invent an anchor.
+The analyzer accepts an aborted trace only with a matching failed workload and an ordered prefix of the normal markers.
+The abort timestamp must follow the last prefix marker and precede its own marker bracket.
+An abort does not excuse missing events, event loss, inconsistent clock alignment, or incomplete suspension episodes.
+When measurement completion is absent, the analyzer also checks collection counters at the failure snapshot.
+Correlation output reports workload success and abort status separately from correlation validity.
+`AbortTraceChecks.py` checks startup, warmup, measurement, and settlement aborts plus missing-evidence rejection.
+`SampledSignalAbortChecks` injects a controller clock failure into the real workload with deterministic backend and sampler fixtures.
+It verifies failed output, the marker sequence, and target cleanup for warmup and measurement failures.
+Those checks pass on Windows and through Linux EventPipe capture and correlation.
+The fixture uses no native signal delivery and establishes no handler safety.
+`LinuxAbortTraceVerify` runs the Linux fixtures and requires valid correlation with failed workload status.
+
 ```text
 dotnet CozNet.LinuxPerf.dll --sampled-signal-trace workload.json 50 qualified-sample warm spin gc
 ```

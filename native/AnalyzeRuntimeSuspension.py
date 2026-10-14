@@ -30,7 +30,31 @@ class ClockAlignment:
         if workload["warmupMilliseconds"] > 0:
             phases += ["warmup-start", "warmup-end"]
         phases += ["measurement-start", "measurement-end", "run-end"]
-        if [a["Phase"] for a in anchors] != phases:
+        actual = [a["Phase"] for a in anchors]
+        abort = workload.get("traceAbort")
+        if abort is not None:
+            prefix = actual[:-2]
+            if (actual[-2:] != ["run-abort", "run-end"] or not prefix or prefix != phases[:len(prefix)]
+                    or len(prefix) >= len(phases)):
+                raise ValueError("The aborted trace has an incomplete or invalid marker prefix.")
+            boundary = workload.get("failureBoundary")
+            if (not boundary or workload.get("protocolPassed") is not False or workload.get("passed") is not False
+                    or not isinstance(workload.get("failures"), list) or not workload["failures"]
+                    or type(abort["AnchorId"]) is not int or abort["AnchorId"] != len(prefix)
+                    or type(boundary["Timestamp"]) is not int
+                    or abort["FailureTimestamp"] != boundary["Timestamp"]
+                    or abort["Stage"] != boundary["Stage"]):
+                raise ValueError("The abort marker does not identify a recorded workload failure.")
+            timestamp = abort["FailureTimestamp"]
+            allowed_stages = {"run-start": ("setup",), "warmup-start": ("warmup",),
+                              "warmup-end": ("warmup", "warmup-settlement"), "measurement-start": ("measurement",),
+                              "measurement-end": ("measurement", "settlement")}
+            if abort["Stage"] not in allowed_stages[prefix[-1]]:
+                raise ValueError("The abort stage does not match the last completed marker transition.")
+            if (type(timestamp) is not int or timestamp < anchors[-3]["AfterTimestamp"]
+                    or timestamp > anchors[-2]["BeforeTimestamp"]):
+                raise ValueError("The failure boundary is outside the abort marker interval.")
+        elif actual != phases:
             raise ValueError("The anchor phases are incomplete or out of order.")
         markers = [e for e in decoded["events"] if e["provider"] == MARKERS]
         if len(markers) != len(anchors):
@@ -132,7 +156,7 @@ def analyze(workload, decoded):
         else:
             anomalies.append({"kind": "forced-collection-without-suspension", "observation": observation})
     initial = workload.get("runtimeCountersStart")
-    final = (workload.get("measurement") or {}).get("RuntimeCounters")
+    final = (workload.get("measurement") or workload.get("failureBoundary") or {}).get("RuntimeCounters")
     if initial and final and final["Gen0Collections"] > initial["Gen0Collections"]:
         if not correlate(initial["StartedTimestamp"], final["FinishedTimestamp"], gc_episodes, alignment):
             anomalies.append({"kind": "collection-counter-without-suspension", "initial": initial, "final": final})
@@ -151,7 +175,9 @@ def analyze(workload, decoded):
             interval = peak["Interval"]
             peaks.append({"slot": peak["Slot"], "boundary": peak["Boundary"],
                           "overlaps": correlate(interval["StartedTimestamp"], interval["FinishedTimestamp"], episodes, alignment)})
-    return {"valid": not anomalies, "eventsLost": decoded["eventsLost"],
+    return {"valid": not anomalies, "workloadPassed": workload.get("passed"),
+            "workloadProtocolPassed": workload.get("protocolPassed"),
+            "workloadAborted": workload.get("traceAbort") is not None, "eventsLost": decoded["eventsLost"],
             "offsetLowerTicks": alignment.lower, "offsetUpperTicks": alignment.upper,
             "alignmentWidthNanoseconds": (alignment.upper - alignment.lower) * 1_000_000_000 / alignment.frequency,
             "episodes": episodes, "anomalies": anomalies, "requestCount": len(workload["requests"]),

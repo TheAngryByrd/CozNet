@@ -30,6 +30,8 @@ $files = @('tests/CozNet.LinuxPerf/SampledSignalTrace.cs', 'tests/CozNet.LinuxPe
 $files += @('tests/CozNet.LinuxPerf/TargetCpuSnapshot.cs', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs', 'native/signal/TargetCpuChecks.cpp', 'native/signal/CMakeLists.txt')
 $files += @('native/AnalyzeTargetCpu.py', 'native/TargetCpuChecks.py', 'native/CollectLinuxTargetCpu.ps1',
     'artifacts/native-signal/TargetCpuChecks')
+$files += @('native/AbortTraceChecks.py')
+$files += @('tests/CozNet.LinuxPerf/SampledSignalAbortChecks.cs')
 $route = if ($TargetCpu) { '--sampled-signal-target-cpu' } else { '--sampled-signal-trace' }
 $hashes = @{}
 foreach ($file in $files) {
