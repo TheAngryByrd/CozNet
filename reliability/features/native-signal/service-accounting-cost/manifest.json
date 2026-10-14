@@ -1,0 +1,12 @@
+{
+  "baseRevision": "f6b007dad218487d6831409ca96a9f50b37d9ad3",
+  "hashCapture": "After both runs; workload and adapter sources unchanged between runs",
+  "hashes": {
+    "tests/CozNet.LinuxPerf/ServiceAccountingCosts.cs": "67DC6D7361CB0B9D101F60FF341417A8CCC842D3AC251A33C7E867966ABFD5B3",
+    "tests/CozNet.LinuxPerf/ServiceAccountingAdapter.cs": "EE83E7C6CEA98D6CA2568D1A05BAC74CEBAF6F481388E0581017F6FFF97BCCEC",
+    "src/CozNet/SignalAccounting.fs": "5FA9080B080341462D615DF6888732CDD3468BCCAD6114AC7306A005E067EAB4",
+    "src/CozNet/SignalService.fs": "5A02FBA192231870AE0A7289B5CB8B68784A37CD8DBEC821C792AE4AAD4FCB6D",
+    "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll": "034091A5934220F7D73E4153AE68A1B445C5FFD240FB81CB690AC9450ABB2F77",
+    "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.dll": "96A8D28092CCFFE559AE4DB77C6C3FC5E17A5C7E18348EA2A8F5E9AFE57FA3A1"
+  }
+}

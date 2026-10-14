@@ -58,4 +58,6 @@ It reserves 110,000 ns from a synthetic selected sample and binds the same ident
 Its late-receipt fixture must retain the ledger reservation while native quiescence permits process teardown.
 That fixture cannot produce an accepted profiling observation.
 
+The [cost workload](service-accounting-cost.md) measures fixed journal processing and accepted-array copying.
+
 See [the native debt plan](../plans/native-debt-service.md) and [the index](../lode-map.md).

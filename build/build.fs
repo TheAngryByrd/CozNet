@@ -482,6 +482,20 @@ let serviceAccountingVerify _ =
         if result.ExitCode <> 0 then
             failwith "Service accounting checks failed."
 
+let serviceAccountingCost _ =
+    let directory = rootDirectory </> "artifacts/service-accounting-cost"
+    System.IO.Directory.CreateDirectory directory |> ignore
+    let output = directory </> (System.DateTime.UtcNow.ToString("yyyyMMddTHHmmssfff") + ".json")
+    CreateProcess.fromRawCommand "dotnet" [
+        rootDirectory </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
+        "--service-accounting-cost"
+        output
+    ]
+    |> Proc.run
+    |> fun result ->
+        if result.ExitCode <> 0 then
+            failwithf "Service accounting cost workload failed. Retain %s." output
+
 let nativeWorkload _ =
     DotNet.build
         (fun options -> {
@@ -921,6 +935,7 @@ let initTargets () =
     Target.create "LinuxSignalServiceVerify" linuxSignalServiceVerify
     Target.create "LinuxServiceInteropVerify" linuxServiceInteropVerify
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
+    Target.create "ServiceAccountingCost" serviceAccountingCost
     Target.create "NativeWorkload" nativeWorkload
     Target.create "NativeVerify" nativeVerify
     Target.create "NativeMapWorkload" nativeMapWorkload
@@ -993,6 +1008,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "ServiceAccountingVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "ServiceAccountingCost"
     |> ignore
 
     "LinuxPerfWorkload"

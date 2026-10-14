@@ -137,7 +137,8 @@ Do not treat a passing protocol comparison as prediction accuracy.
 
 ## Next implementation boundary
 
-Measure snapshot and adapter allocation and copy costs before the sampled capacity comparison.
+The [fixed journal workload](../profiling/service-accounting-cost.md) measures adapter allocation and accepted-array copying.
+Measure native snapshot and receipt-cache costs before the sampled capacity comparison.
 Then connect the native owner to the sampled workload and retain every child acknowledgment in the workload record.
 Only after replay and lifetime checks pass, compare managed and native service with the same workload and limits.
 Retain all outcomes. Do not rerun unchanged timing cases to obtain a pass.

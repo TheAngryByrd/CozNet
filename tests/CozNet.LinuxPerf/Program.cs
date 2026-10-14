@@ -4,6 +4,9 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--service-accounting-cost", var serviceCostPath])
+    return ServiceAccountingCosts.Run(serviceCostPath);
+
 if (args is ["--verify-service-accounting"])
 {
     ServiceAccountingAdapterChecks.Run();
