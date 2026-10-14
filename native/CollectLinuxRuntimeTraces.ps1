@@ -20,6 +20,7 @@ $kernel = & docker run --rm --pull never --network none --cap-drop ALL --read-on
 if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the Linux kernel.' }
 $files = @('tests/CozNet.LinuxPerf/SampledSignalTrace.cs', 'tests/CozNet.LinuxPerf/SampledSignalTraceChecks.cs',
     'tests/CozNet.LinuxPerf/SampledSignalWorkload.cs', 'tests/CozNet.LinuxPerf/Program.cs',
+    'tests/CozNet.LinuxPerf/ControllerCpuSnapshot.cs', 'native/AnalyzeControllerCpu.py', 'native/ControllerCpuChecks.py',
     'native/CollectLinuxRuntimeTraces.ps1', 'native/RuntimeTraceReader.cs', 'native/AnalyzeRuntimeSuspension.py',
     'native/RuntimeSuspensionChecks.py', 'native/ExportRuntimeTrace.ps1',
     'native/signal/Signal.LinuxX64.cpp', 'native/signal/Signal.h',
@@ -46,7 +47,7 @@ $cases = @(for ($block = 1; $block -le $Repetitions; $block++) {
     $items
 })
 @{ imageId=$imageId; kernel=$kernel; hashes=$hashes; order=$cases; seed=$seed;
-   bufferMiB=64; watchdogSeconds=30; diagnosticOnly=$true;
+   bufferMiB=64; watchdogSeconds=30; diagnosticOnly=$true; controllerCpuTiming=$true;
    collectorHash=(Get-FileHash (Join-Path $tool 'dotnet-trace.dll') -Algorithm SHA256).Hash } |
     ConvertTo-Json -Depth 6 | Set-Content (Join-Path $run 'environment.json')
 & docker run --rm --pull never --network none --cap-drop ALL --read-only `

@@ -26,9 +26,32 @@ internal static class SampledSignalTraceChecks
 
     public static void Run()
     {
+        ControllerCpuBracketsEncloseRead();
         DisabledProviderFails();
         EnabledMarkersMatchBrackets();
         DisabledProviderFails();
+    }
+
+    private sealed class RecordedClock(long value) : IThreadCpuClock
+    {
+        public long Timestamp { get; private set; }
+        public long ReadNanoseconds()
+        {
+            Timestamp = Stopwatch.GetTimestamp();
+            return value;
+        }
+    }
+
+    private static void ControllerCpuBracketsEncloseRead()
+    {
+        var clock = new RecordedClock(123);
+        var snapshot = ControllerCpuSnapshot.Capture(clock);
+        if (snapshot.CpuNanoseconds != 123 || snapshot.BeforeTimestamp > clock.Timestamp || snapshot.AfterTimestamp < clock.Timestamp)
+            throw new InvalidOperationException("Controller CPU timestamps must enclose the clock read.");
+        bool rejected = false;
+        try { ControllerCpuSnapshot.Capture(new RecordedClock(-1)); }
+        catch (InvalidOperationException) { rejected = true; }
+        if (!rejected) throw new InvalidOperationException("A negative controller CPU observation must fail.");
     }
 
     private static void DisabledProviderFails()

@@ -98,13 +98,14 @@ Selected requests show different delay locations:
 
 | Case and peer request | Request duration | Native wait | Main delay | Suspension overlap |
 | --- | --- | --- | --- | --- |
-| Block 1, no forced GC, 4877 | 17.41 ms | 0.05 ms | 17.35 ms after handler completion | None |
-| Block 1, forced GC, 11867 | 10.80 ms | 0.05 ms | 8.55 ms after handler completion | Envelope overlap between 2.294274 and 2.312810 ms |
+| Block 1, no forced GC, 4877 | 17.41 ms | 0.05 ms | 17.35 ms after the last handler clock reading | None |
+| Block 1, forced GC, 11867 | 10.80 ms | 0.05 ms | 8.55 ms after the last handler clock reading | Envelope overlap between 2.294274 and 2.312810 ms |
 | Block 3, forced GC, 4538 | 7.03 ms | 0.05 ms | 5.31 ms before the first handler clock reading | None |
 
 These are completed request intervals, not per-thread suspension intervals.
 The overlap bounds use managed timestamps and the marker alignment.
 The native phase durations use their separate clock contract.
+The last handler clock reading precedes result publication and return.
 No peak-debt service interval in these three completed failed treatments overlaps a suspension envelope.
 The preceding request can still overlap one, as request 11867 demonstrates.
 These records do not justify subtracting GC time from debt accounting.

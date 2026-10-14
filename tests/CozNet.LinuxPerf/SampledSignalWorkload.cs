@@ -37,10 +37,12 @@ sealed class SampledSignalPlan
 
 static class SampledSignalWorkload
 {
-    private sealed record Pending(SignalDelayRequest Request, ulong Sequence, long Started, string Stage);
+    private sealed record Pending(SignalDelayRequest Request, ulong Sequence, long Started, string Stage,
+        ControllerCpuSnapshot? CpuStart);
     private sealed record RequestRecord(int Slot, ulong Sequence, long RequestedNanoseconds,
         double AcknowledgmentMilliseconds, SignalAcknowledgment Result, bool DuringMeasurement, string Stage,
-        long StartedTimestamp, long CompletedTimestamp, string StartedStage);
+        long StartedTimestamp, long CompletedTimestamp, string StartedStage,
+        ControllerCpuSnapshot? ControllerCpuStart, ControllerCpuSnapshot? ControllerCpuEnd);
     private sealed record SampleRecord(CpuSample Sample, ulong Epoch, bool Accepted, long CreditNanoseconds,
         double ConsumedMilliseconds, string Stage, long ConsumedTimestamp);
     private sealed record PendingRecord(int Slot, ulong Sequence, long RequestedNanoseconds, long StartedTimestamp, string StartedStage);
@@ -177,8 +179,16 @@ static class SampledSignalWorkload
                 return;
             }
             nativeOutstanding[slot] = false;
-            requests.Add(new(slot, operation.Sequence, SignalDelayRequestModule.nanoseconds(operation.Request), elapsed, result, measuring, stage,
-                operation.Started, completed, operation.Stage));
+            ControllerCpuSnapshot? cpuEnd = null;
+            try
+            {
+                if (trace is not null) cpuEnd = ControllerCpuSnapshot.Capture(controllerClock);
+            }
+            finally
+            {
+                requests.Add(new(slot, operation.Sequence, SignalDelayRequestModule.nanoseconds(operation.Request), elapsed, result, measuring, stage,
+                    operation.Started, completed, operation.Stage, operation.CpuStart, cpuEnd));
+            }
             if (elapsed > 100 || result.MeasuredHandlerNanoseconds > 5000000 || result.Outcome == 4
                 || result.Sequence != operation.Sequence || result.Outcome is < 1 or > 3
                 || (result.Outcome == 1 && result.WaitNanoseconds != 0)
@@ -215,10 +225,11 @@ static class SampledSignalWorkload
                 pauses++;
             }
             if (requests.Count >= 100000) throw new InvalidOperationException("The signal request capture limit was exceeded.");
+            var cpuStart = trace is null ? null : ControllerCpuSnapshot.Capture(controllerClock);
             long started = Stopwatch.GetTimestamp();
             nativeOutstanding[slot] = true;
             ulong nativeSequence = backend!.Request(slot, SignalPlan.FromRequest(request));
-            pending[slot] = new(request, nativeSequence, started, stage);
+            pending[slot] = new(request, nativeSequence, started, stage, cpuStart);
             state = Parsed(SignalAccountingModule.sent(request, nativeSequence, state));
             return false;
         }
@@ -449,6 +460,7 @@ static class SampledSignalWorkload
             boundaries, maxDebtNanoseconds = maxDebt, debtBoundNanoseconds = 2000000,
             stopwatchFrequency = Stopwatch.Frequency, longestServiceInterval, peakDebt,
             traceAnchors = trace?.Anchors, diagnosticTrace = trace is not null,
+            controllerCpuTiming = trace is not null,
             controllerCpuNanoseconds = controllerCpu, samplingPauses = pauses, records, samples, requests,
             failures, capacityViolations, joined, restored, protocolPassed, capacityPassed, passed = protocolPassed && capacityPassed,
             forcedGc = plan.ForceGc, gcObservations, gcJoined, measurementStartedTimestamp, gcCallBoundMilliseconds = 250,
