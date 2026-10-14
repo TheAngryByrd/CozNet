@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-14",
+  "baseline": "a9df6e54c36985247cbb1ace2519dff5cee50185",
+  "command": "dotnet run --project build -t LinuxSignalServiceVerify",
+  "image": "sha256:c27e64a12aad901398696208b037059a1a48946d1c1b425c89f08bff5ec1ccea",
+  "compiler": "Clang 18.1.3",
+  "platform": "Linux x64",
+  "exitCode": 0,
+  "ctestPassed": 12,
+  "ctestFailed": 0,
+  "binaries": {
+    "libCozNet.Signal.so": "3a0bdaeb989cc0674eda0ddfd92199f8811ab90b57380b24e72032d2a2ea6849",
+    "SignalServiceChecks": "ca97bb31d95f61e3501efb6250de1591c610986939bcda1e2ebf72d0a216c7a5"
+  },
+  "sources": {
+    "native/signal/Signal.LinuxX64.cpp": "3f448624bab87f18955b89e32d985909f9432575502eb7be40a8f06746d94ec7",
+    "native/service/SignalWorkload.LinuxX64.S": "5bacf7b5086c56613f724a3d1b9c58c608184b0251bb0c0a7eba450e11ded68f",
+    "native/service/ServiceOwner.cpp": "d6054be6300a3c685dffa5cba9ab00ec0e89129ca5b49b93678363348847d07d",
+    "native/service/SignalServiceChecks.cpp": "e98b54766220d68b5934f8f1f8ab8f8048ef8d56026e7a879706abba0f212c28",
+    "native/service/CMakeLists.txt": "b4051f92565d31aae003ff04f5a88b6ea2cc1c6eb0a099fbfd1036b8ec7e3d79",
+    "native/service/SignalTransport.Linux.h": "0935cf59e6aa1357001b4778eb7265b09e15fb10340f63fdb45cf6982b2b07d2",
+    "native/service/ServiceOwner.h": "1891a55e2dda71bbf38ccadf1ad2b41a8c6b203944f6e2b218649c42e28b0613",
+    "native/service/SignalTransport.Linux.cpp": "352efe711e79b8612fd806a0dff544f0a9886699e4bd691a4a5ed6fcbeefa20d",
+    "native/signal/Signal.h": "81453c3dab80cd5d9c94c49ad07c049ac96587adba4514fbfc36a3e2ebe6a3f9"
+  }
+}

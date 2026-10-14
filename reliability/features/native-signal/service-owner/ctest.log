@@ -1,0 +1,183 @@
+Start testing: Oct 14 06:33 UTC
+----------------------------------------------------------
+1/12 Testing: service-owner
+1/12 Test: service-owner
+Command: "/build/ServiceOwnerChecks"
+Directory: /build
+"service-owner" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"service-owner" end time: Oct 14 06:33 UTC
+"service-owner" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/12 Testing: service-owner-ambiguous-reused
+2/12 Test: service-owner-ambiguous-reused
+Command: "/build/ServiceOwnerChecks" "ambiguous-reused"
+Directory: /build
+"service-owner-ambiguous-reused" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"service-owner-ambiguous-reused" end time: Oct 14 06:33 UTC
+"service-owner-ambiguous-reused" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/12 Testing: service-owner-ambiguous-zero
+3/12 Test: service-owner-ambiguous-zero
+Command: "/build/ServiceOwnerChecks" "ambiguous-zero"
+Directory: /build
+"service-owner-ambiguous-zero" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"service-owner-ambiguous-zero" end time: Oct 14 06:33 UTC
+"service-owner-ambiguous-zero" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/12 Testing: service-owner-sent-reused
+4/12 Test: service-owner-sent-reused
+Command: "/build/ServiceOwnerChecks" "sent-reused"
+Directory: /build
+"service-owner-sent-reused" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"service-owner-sent-reused" end time: Oct 14 06:33 UTC
+"service-owner-sent-reused" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/12 Testing: service-owner-rejected-limit
+5/12 Test: service-owner-rejected-limit
+Command: "/build/ServiceOwnerChecks" "rejected-limit"
+Directory: /build
+"service-owner-rejected-limit" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"service-owner-rejected-limit" end time: Oct 14 06:33 UTC
+"service-owner-rejected-limit" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/12 Testing: signal-service-lease-spin
+6/12 Test: signal-service-lease-spin
+Command: "/build/SignalServiceChecks" "lease-spin" "/build/lease-spin.tsv"
+Directory: /build
+"signal-service-lease-spin" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"signal-service-lease-spin" end time: Oct 14 06:33 UTC
+"signal-service-lease-spin" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/12 Testing: signal-service-lease-sleep
+7/12 Test: signal-service-lease-sleep
+Command: "/build/SignalServiceChecks" "lease-sleep" "/build/lease-sleep.tsv"
+Directory: /build
+"signal-service-lease-sleep" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"signal-service-lease-sleep" end time: Oct 14 06:33 UTC
+"signal-service-lease-sleep" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/12 Testing: signal-service-selected
+8/12 Test: signal-service-selected
+Command: "/build/SignalServiceChecks" "selected" "/build/selected.tsv"
+Directory: /build
+"signal-service-selected" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"signal-service-selected" end time: Oct 14 06:33 UTC
+"signal-service-selected" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/12 Testing: signal-service-pending-cancel
+9/12 Test: signal-service-pending-cancel
+Command: "/build/SignalServiceChecks" "pending-cancel" "/build/pending-cancel.tsv"
+Directory: /build
+"signal-service-pending-cancel" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"signal-service-pending-cancel" end time: Oct 14 06:33 UTC
+"signal-service-pending-cancel" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/12 Testing: signal-service-restore-live
+10/12 Test: signal-service-restore-live
+Command: "/build/SignalServiceChecks" "restore-live" "/build/restore-live.tsv"
+Directory: /build
+"signal-service-restore-live" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"signal-service-restore-live" end time: Oct 14 06:33 UTC
+"signal-service-restore-live" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/12 Testing: signal-service-occupied
+11/12 Test: signal-service-occupied
+Command: "/build/SignalServiceChecks" "occupied" "/build/occupied.tsv"
+Directory: /build
+"signal-service-occupied" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"signal-service-occupied" end time: Oct 14 06:33 UTC
+"signal-service-occupied" time elapsed: 00:00:00
+----------------------------------------------------------
+
+12/12 Testing: signal-service-range
+12/12 Test: signal-service-range
+Command: "/build/SignalServiceChecks" "range" "/build/range.tsv"
+Directory: /build
+"signal-service-range" start time: Oct 14 06:33 UTC
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"signal-service-range" end time: Oct 14 06:33 UTC
+"signal-service-range" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 14 06:33 UTC

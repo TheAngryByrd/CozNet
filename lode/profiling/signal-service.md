@@ -3,7 +3,8 @@
 `SignalService.fs` defines parsed lease and child values for the internal accounting model.
 `SignalAccounting` reserves the unsampled peer while it accepts a bounded child journal.
 The [native service owner](native-service-owner.md) has portable fake-transport checks.
-Its Linux transport and workload adapter are not implemented.
+Its [Linux transport](linux-service-transport.md) passes controlled native delivery and lifetime checks.
+Its managed workload adapter is not implemented.
 The current sampled workload still uses individual requests.
 
 ## Reservation and submission
