@@ -10,6 +10,7 @@ type internal SignalDelayRequest = private {
 
 [<RequireQualifiedAccess>]
 module internal SignalDelayRequest =
+    let identity request = request.Identity
     let thread request = request.Thread
     let nanoseconds request = request.Nanoseconds
 
@@ -24,9 +25,15 @@ type private SignalThreadAccounting = {
     LastNativeSequence: uint64
 }
 
+[<RequireQualifiedAccess>]
+type private SignalSubmission =
+    | Reserved
+    | Submitted
+    | Sequenced of uint64
+
 type private PendingSignal = {
     Request: SignalDelayRequest
-    NativeSequence: uint64 option
+    Submission: SignalSubmission
 }
 
 type private PendingService = {
@@ -188,7 +195,7 @@ module internal SignalAccounting =
                                             thread
                                             {
                                                 Request = request
-                                                NativeSequence = None
+                                                Submission = SignalSubmission.Reserved
                                             }
                                             state.Pending
                             }
@@ -206,7 +213,11 @@ module internal SignalAccounting =
         |> Result.bind (fun pending ->
             let entry = state.Threads[request.Thread]
 
-            if pending.NativeSequence.IsSome then
+            if
+                (match pending.Submission with
+                 | SignalSubmission.Sequenced _ -> true
+                 | _ -> false)
+            then
                 Error "The signal request already has a native sequence."
             elif
                 nativeSequence
@@ -229,10 +240,30 @@ module internal SignalAccounting =
                                 request.Thread
                                 {
                                     pending with
-                                        NativeSequence = Some nativeSequence
+                                        Submission = SignalSubmission.Sequenced nativeSequence
                                 }
                                 state.Pending
                 }
+        )
+
+    let submitted request state =
+        findPending request state
+        |> Result.bind (fun pending ->
+            match pending.Submission with
+            | SignalSubmission.Reserved ->
+                Ok {
+                    state with
+                        Pending =
+                            Map.add
+                                request.Thread
+                                {
+                                    pending with
+                                        Submission = SignalSubmission.Submitted
+                                }
+                                state.Pending
+                }
+            | SignalSubmission.Submitted
+            | SignalSubmission.Sequenced _ -> Error "The signal request was already submitted."
         )
 
     let private settle request actual state =
@@ -246,17 +277,19 @@ module internal SignalAccounting =
     let rejectedBeforeSend request state =
         findPending request state
         |> Result.bind (fun pending ->
-            match pending.NativeSequence with
-            | Some _ -> Error "A sent signal requires its acknowledgment."
-            | None -> settle request DelayTicks.zero state
+            match pending.Submission with
+            | SignalSubmission.Submitted
+            | SignalSubmission.Sequenced _ ->
+                Error "A submitted signal requires its acknowledgment."
+            | SignalSubmission.Reserved -> settle request DelayTicks.zero state
         )
 
     let complete request nativeSequence settlement state =
         findPending request state
         |> Result.bind (fun pending ->
             if
-                pending.NativeSequence
-                <> Some nativeSequence
+                pending.Submission
+                <> SignalSubmission.Sequenced nativeSequence
             then
                 Error "The acknowledgment does not match the pending native sequence."
             else

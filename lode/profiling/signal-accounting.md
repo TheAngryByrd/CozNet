@@ -31,9 +31,13 @@ let request, state = SignalAccounting.prepare peer state |> Result.defaultWith f
 ## Request ownership
 
 `sent` binds a reserved request to a positive, increasing native sequence for that registration.
+`submitted` retains ownership when the native service accepts a request before its sequence is available.
+It requires a reserved request and rejects duplicate submission.
+`sent` can later bind that submitted request to the acknowledged native sequence.
+The request identity supplies the native command correlation token.
 `complete` requires both the request token and its bound sequence.
 Duplicate, foreign, stale, and mismatched acknowledgments fail without a state transition.
-`rejectedBeforeSend` releases a reservation with zero settlement only before sequence binding.
+`rejectedBeforeSend` releases a reservation with zero settlement only before submission or sequence binding.
 The adapter must call it only after an enqueue rejection that guarantees no delivery.
 An ambiguous native result must retain ownership and fail the isolated run.
 
@@ -49,6 +53,8 @@ stateDiagram-v2
     Runnable --> Reserved: Prepare unpaid debt
     Reserved --> Runnable: Guaranteed enqueue rejection
     Reserved --> Sent: Bind native sequence
+    Reserved --> Submitted: Native service accepts command
+    Submitted --> Sent: Observe and bind native sequence
     Sent --> Runnable: Matching acknowledgment
     Sent --> Sent: Invalid acknowledgment
     Runnable --> Retired: Unregister when settled
@@ -67,7 +73,9 @@ It must not assign a new epoch to queued observations to bypass this check.
 The accounting layer cannot prove that sampling stopped or that an instruction address is eligible.
 It does not infer blocking, dependency wakes, or operating-system thread lifetime.
 
-The 14 deterministic replay checks in `SignalAccountingTests.fs` verify accounting transitions.
+The deterministic checks in `SignalAccountingTests.fs` verify accounting transitions.
+Submission cases pass on Windows and Linux with the 73-test library suite.
+They cover selected sampling exclusion, registration ownership, delayed sequence binding, and credit arriving during submission.
 They do not prove service capacity, native integration, or prediction accuracy.
 The [sampled signal workload](sampled-signals.md) connects the live sampler and signal controller through this model.
 Its first capacity run fails the observed debt limit.

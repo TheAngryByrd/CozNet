@@ -96,6 +96,140 @@ module SignalAccountingTests =
     [<Tests>]
     let tests =
         testList "Signal accounting" [
+            testCase "Submitted selected request retains ownership until sequence binding"
+            <| fun _ ->
+                let selected, peer, state = credited 80000UL
+                let peerRequest, state = required peer state
+
+                let state =
+                    sent peerRequest 1UL state
+                    |> complete peerRequest 1UL 70000L
+
+                let _, state = prepare peer state
+                let request, reserved = required selected state
+
+                let epoch =
+                    SignalAccounting.requiredEpoch selected reserved
+                    |> parsed
+
+                let submitted =
+                    SignalAccounting.submitted request reserved
+                    |> parsed
+
+                Expect.notEqual
+                    (SignalDelayRequest.identity request)
+                    Guid.Empty
+                    "Native correlation requires a request identity."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount submitted)
+                    1
+                    "Submission retains the selected reservation."
+
+                Expect.isError
+                    (SignalAccounting.rejectedBeforeSend request submitted)
+                    "Submission can deliver work before its sequence is observed."
+
+                Expect.isError
+                    (SignalAccounting.submitted request submitted)
+                    "A second submission cannot claim the same request."
+
+                Expect.isError
+                    (SignalAccounting.complete request 2UL SignalSettlement.Deferred submitted)
+                    "An unbound sequence cannot complete a request."
+
+                Expect.isError
+                    (SignalAccounting.unregister selected submitted)
+                    "Submission retains the registration."
+
+                Expect.isError
+                    (observe selected 2UL 100000UL epoch submitted)
+                    "The selected target cannot earn credit during service."
+
+                Expect.isError
+                    (SignalAccounting.sent request 0UL submitted)
+                    "A zero native sequence cannot bind submission."
+
+                let bound = sent request 2UL submitted
+
+                Expect.isError
+                    (SignalAccounting.submitted request bound)
+                    "A bound request cannot be submitted again."
+
+                let settled = complete request 2UL 30000L bound
+
+                Expect.equal
+                    (SignalAccounting.pendingCount settled)
+                    0
+                    "The matched acknowledgment releases ownership."
+
+                let request, settled = prepare selected settled
+                Expect.isNone request "The measured wait pays the selected debt."
+
+                let credit, _ =
+                    observe selected 2UL 100000UL epoch settled
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value credit)
+                    0L
+                    "The first resumed sample establishes the new epoch baseline."
+
+            testCase "Submitted request rejects foreign and reused sequence bindings"
+            <| fun _ ->
+                let selected, peer, state = credited 80000UL
+                let first, state = required peer state
+
+                let state =
+                    sent first 7UL state
+                    |> complete first 7UL 20000L
+
+                let request, reserved = required peer state
+
+                let submitted =
+                    SignalAccounting.submitted request reserved
+                    |> parsed
+
+                Expect.isError
+                    (SignalAccounting.submitted first reserved)
+                    "A stale request cannot submit the current reservation."
+
+                Expect.isError
+                    (SignalAccounting.sent request 7UL submitted)
+                    "Submission cannot reuse a native sequence."
+
+                Expect.isError
+                    (SignalAccounting.sent request 6UL submitted)
+                    "Submission cannot move the native sequence backward."
+
+                let _, otherPeer, other = credited 80000UL
+                let foreign, _ = required otherPeer other
+
+                Expect.isError
+                    (SignalAccounting.submitted foreign reserved)
+                    "Foreign requests cannot submit another experiment's reservation."
+
+                let _, advanced =
+                    observe selected 2UL 100000UL 0UL submitted
+                    |> parsed
+
+                let _, advanced = prepare selected advanced
+
+                let settled =
+                    sent request 8UL advanced
+                    |> complete request 8UL 20000L
+
+                let remaining, _ = required peer settled
+
+                Expect.equal
+                    (SignalDelayRequest.nanoseconds remaining)
+                    10000L
+                    "Submission preserves credit that arrives before sequence binding."
+
+                Expect.isOk
+                    (SignalAccounting.rejectedBeforeSend request reserved)
+                    "A never-submitted reservation still permits guaranteed rejection."
+
             testCase "Peer service journal retains new credit and settles its aggregate once"
             <| fun _ ->
                 let selected, peer, state = credited 220000UL
