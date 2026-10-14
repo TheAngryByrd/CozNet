@@ -15,6 +15,7 @@ For request timing and peak-debt evidence, read [service timing](../reliability/
 For native queue, handler, and observation phases, read [native phase timing](../reliability/features/native-signal/phase-timing.md).
 For controller allocation and ring snapshot reuse, read [the GC comparison](../reliability/features/native-signal/gc-and-ring-cache.md).
 For unchanged-state peer checks and retained failures, read [peer cadence](../reliability/features/native-signal/peer-cadence.md).
+For allocation in the full controller's accounting read, read [accounting read](../reliability/features/native-signal/accounting-read.md).
 For native Coz's check ordering and perf boundary behavior, read [signal sample cadence](../docsSrc/Research/signal-sample-cadence.md).
 For build targets and CI, read [the MiniScaffold build](build/summary.md).
 For scope expansion, read [the roadmap](plans/roadmap.md).

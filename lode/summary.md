@@ -36,6 +36,8 @@ The [native phase records](../reliability/features/native-signal/phase-timing.md
 The [allocation comparison](../reliability/features/native-signal/gc-and-ring-cache.md) removes empty-drain allocation but still exposes gigabytes of controller allocation and a capacity failure.
 The [peer cadence](../reliability/features/native-signal/peer-cadence.md) skips redundant accounting preparation and reduces allocation in completed cases.
 Its retained run still fails handler or debt limits in every 50-percent case.
+The [direct accounting read](../reliability/features/native-signal/accounting-read.md) removes a wrapper allocation from the full controller's generated code.
+Zero-percent allocation falls to about 5.17 MiB. Two treatment cases still exceed the handler limit during native waits.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

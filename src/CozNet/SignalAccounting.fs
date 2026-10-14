@@ -44,8 +44,7 @@ module internal SignalAccounting =
     }
 
     let globalNanoseconds state =
-        DelayLedger.globalDelay state.Ledger
-        |> DelayTicks.value
+        DelayLedger.globalTicks state.Ledger
 
     let pendingCount state = Map.count state.Pending
 

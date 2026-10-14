@@ -51,6 +51,7 @@ module internal DelayLedger =
     }
 
     let globalDelay ledger = DelayTicks ledger.Global
+    let globalTicks ledger = ledger.Global
 
     let private add left right =
         if

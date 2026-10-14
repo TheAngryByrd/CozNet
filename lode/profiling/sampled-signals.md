@@ -4,6 +4,9 @@
 Platform calls stay behind those interfaces and `IThreadCpuClock`.
 Only the Linux x64 adapters currently supply the required operations.
 The controller runs on the OS thread that installs the native signal backend.
+`SignalAccounting.globalNanoseconds` reads the private ledger's integer directly for controller measurements.
+It avoids a temporary `DelayTicks` wrapper in the full controller's generated code.
+The typed ledger accessor remains available for domain operations. Ledger updates retain their existing parsed values and overflow checks.
 It alone owns the accounting state and reads the perf ring.
 The selected worker creates its event session and transfers ownership through the readiness event.
 

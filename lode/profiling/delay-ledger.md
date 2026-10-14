@@ -10,6 +10,10 @@ Each ledger represents one experiment with zero initial global delay.
 Thread handles belong to that ledger and cannot identify later registrations.
 Durations enter through `DelayTicks.tryCreate`. Negative ticks fail.
 Overflow returns an error and leaves the previous state intact.
+`globalDelay` exposes the typed duration for domain operations.
+`globalTicks` exposes the same private counter for measurement without constructing a duration wrapper.
+The adapter defines the tick unit. Signal accounting uses nanoseconds.
+Neither accessor changes ledger state or accepts raw input.
 
 ```fsharp
 let ledger = DelayLedger.create ()
