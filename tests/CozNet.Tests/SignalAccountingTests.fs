@@ -450,6 +450,192 @@ module SignalAccountingTests =
                     Int64.MaxValue
                     "A failed commit cannot change global delay."
 
+            testCase "Service cancellation retains ownership until a matching stop receipt"
+            <| fun _ ->
+                let _, peer, state = credited 220000UL
+                let lease, reserved = service peer state
+
+                Expect.isError
+                    (SignalAccounting.requestServiceCancellation lease reserved)
+                    "Unsubmitted leases use guaranteed rejection."
+
+                let submitted =
+                    SignalAccounting.sentService lease reserved
+                    |> parsed
+
+                let empty =
+                    SignalServiceStopReceipt.tryCreate
+                        (SignalServiceLease.identity lease)
+                        0L
+                        0UL
+                        0L
+                        0
+                    |> parsed
+
+                Expect.isError
+                    (SignalAccounting.confirmServiceStopped lease empty submitted)
+                    "An unsolicited stop cannot release a lease."
+
+                let stopping =
+                    SignalAccounting.requestServiceCancellation lease submitted
+                    |> parsed
+
+                Expect.equal
+                    (SignalAccounting.requestServiceCancellation lease stopping
+                     |> parsed)
+                    stopping
+                    "Repeated cancellation does not alter ownership."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount stopping)
+                    1
+                    "Requesting cancellation does not settle unobserved work."
+
+                Expect.isError
+                    (SignalAccounting.unregister peer stopping)
+                    "Cancellation intent does not permit target retirement."
+
+                let total, released =
+                    SignalAccounting.confirmServiceStopped lease empty stopping
+                    |> parsed
+
+                Expect.equal (DelayTicks.value total) 0L "A stopped empty journal pays no debt."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount released)
+                    0
+                    "A matching empty stop releases ownership."
+
+                Expect.isError
+                    (SignalAccounting.confirmServiceStopped lease empty released)
+                    "Stop receipts cannot release a lease twice."
+
+                let next, _ = service peer released
+
+                Expect.equal
+                    (SignalServiceLease.nanoseconds next)
+                    110000L
+                    "Cancellation without a child preserves the complete debt."
+
+            testCase
+                "Service cancellation accepts the final in-flight child before committing its prefix"
+            <| fun _ ->
+                let _, peer, state = credited 220000UL
+                let lease, state = service peer state
+
+                let state =
+                    SignalAccounting.sentService lease state
+                    |> parsed
+                    |> accept lease 1L 8UL 50000L 50000L 2
+
+                let stopping =
+                    SignalAccounting.requestServiceCancellation lease state
+                    |> parsed
+
+                let final = accept lease 2L 9UL 50000L 50000L 2 stopping
+
+                let stop =
+                    SignalServiceStopReceipt.tryCreate
+                        (SignalServiceLease.identity lease)
+                        2L
+                        9UL
+                        100000L
+                        0
+                    |> parsed
+
+                Expect.isError
+                    (SignalAccounting.confirmServiceStopped lease stop stopping)
+                    "The stop cannot skip a child that the managed owner has not accepted."
+
+                let measured, released =
+                    SignalAccounting.confirmServiceStopped lease stop final
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value measured)
+                    100000L
+                    "The final in-flight wait remains in the committed journal."
+
+                Expect.isError
+                    (SignalAccounting.acceptServiceChild
+                        lease
+                        (child lease 3L 10UL 10000L 10000L 2)
+                        released)
+                    "A closed lease cannot accept more work."
+
+                let next, _ = service peer released
+
+                Expect.equal
+                    (SignalServiceLease.nanoseconds next)
+                    10000L
+                    "Cancellation leaves only the unpaid remainder."
+
+            testCase "Service stop receipt must match every accepted journal field"
+            <| fun _ ->
+                let _, peer, state = credited 220000UL
+                let lease, state = service peer state
+
+                let state =
+                    SignalAccounting.sentService lease state
+                    |> parsed
+                    |> accept lease 1L 12UL 50000L 50000L 2
+
+                let stopping =
+                    SignalAccounting.requestServiceCancellation lease state
+                    |> parsed
+
+                let identity = SignalServiceLease.identity lease
+
+                for id, count, sequence, measured in
+                    [
+                        (Guid.NewGuid(), 1L, 12UL, 50000L)
+                        (identity, 2L, 12UL, 50000L)
+                        (identity, 1L, 13UL, 50000L)
+                        (identity, 1L, 12UL, 50001L)
+                    ] do
+                    let receipt =
+                        SignalServiceStopReceipt.tryCreate id count sequence measured 0
+                        |> parsed
+
+                    Expect.isError
+                        (SignalAccounting.confirmServiceStopped lease receipt stopping)
+                        "Mismatched evidence cannot release the reservation."
+
+                Expect.equal
+                    (SignalAccounting.confirmedServiceNanoseconds lease stopping
+                     |> parsed)
+                    50000L
+                    "Rejected stop receipts preserve the accepted prefix."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount stopping)
+                    1
+                    "Rejected stop receipts retain ownership."
+
+            testCase "Service stop parser rejects pending children and inconsistent empty journals"
+            <| fun _ ->
+                let identity = Guid.NewGuid()
+
+                for id, count, sequence, measured, outstanding in
+                    [
+                        (Guid.Empty, 0L, 0UL, 0L, 0)
+                        (identity, -1L, 0UL, 0L, 0)
+                        (identity, 100001L, 1UL, 0L, 0)
+                        (identity, 0L, 1UL, 0L, 0)
+                        (identity, 0L, 0UL, 1L, 0)
+                        (identity, 1L, 0UL, 0L, 0)
+                        (identity, 1L, 1UL, -1L, 0)
+                        (identity, 0L, 0UL, 0L, 1)
+                        (identity, 0L, 0UL, 0L, -1)
+                    ] do
+                    Expect.isError
+                        (SignalServiceStopReceipt.tryCreate id count sequence measured outstanding)
+                        "Only a consistent journal with no outstanding child can report a stop."
+
+                Expect.isOk
+                    (SignalServiceStopReceipt.tryCreate identity 100000L UInt64.MaxValue 0L 0)
+                    "A nonempty zero-wait journal remains representable."
+
             testCase "Sample credit becomes global only when published"
             <| fun _ ->
                 let selected, peer, state = start 50

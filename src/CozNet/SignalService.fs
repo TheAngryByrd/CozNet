@@ -101,3 +101,48 @@ module internal SignalServiceChild =
     let internal requested child = child.Requested
     let internal measured child = child.Measured
     let internal stops child = child.Stops
+
+type internal SignalServiceStopReceipt = private {
+    LeaseIdentity: Guid
+    Count: int64
+    Sequence: uint64
+    Measured: int64
+}
+
+[<RequireQualifiedAccess>]
+module internal SignalServiceStopReceipt =
+    let tryCreate leaseIdentity count sequence measured outstanding =
+        if
+            leaseIdentity = Guid.Empty
+            || count < 0L
+            || count > 100000L
+            || measured < 0L
+        then
+            Error "The service stop receipt is invalid."
+        elif
+            outstanding
+            <> 0
+        then
+            Error "The service owner still has an outstanding child."
+        elif
+            (count = 0L
+             && (sequence
+                 <> 0UL
+                 || measured
+                    <> 0L))
+            || (count > 0L
+                && sequence = 0UL)
+        then
+            Error "The service stop receipt does not identify its journal."
+        else
+            Ok {
+                LeaseIdentity = leaseIdentity
+                Count = count
+                Sequence = sequence
+                Measured = measured
+            }
+
+    let internal leaseIdentity receipt = receipt.LeaseIdentity
+    let internal count receipt = receipt.Count
+    let internal sequence receipt = receipt.Sequence
+    let internal measured receipt = receipt.Measured

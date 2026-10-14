@@ -2,7 +2,7 @@
 
 ## Status and purpose
 
-The [portable accounting model](../profiling/signal-service.md) implements reservation, submission binding, journal checks, and aggregate settlement.
+The [portable accounting model](../profiling/signal-service.md) implements reservation, submission binding, journal checks, cancellation receipts, and aggregate settlement.
 The live workload still uses one managed controller for every bounded signal request.
 The next experiment will test whether a native service owner reduces those controller round trips.
 It will not change the public serial engine or claim general CLR signal safety.
@@ -132,7 +132,7 @@ Do not treat a passing protocol comparison as prediction accuracy.
 
 ## Next implementation boundary
 
-Implement the native transport, cancellation handshake, and lifetime checks next.
+Implement the native transport and its cancellation and lifetime checks next.
 Then connect the native owner and retain every child acknowledgment in the workload record.
 Only after replay and lifetime checks pass, compare managed and native service with the same workload and limits.
 Retain all outcomes. Do not rerun unchanged timing cases to obtain a pass.

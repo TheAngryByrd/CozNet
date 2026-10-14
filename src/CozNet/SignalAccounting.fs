@@ -35,6 +35,7 @@ type private PendingService = {
     Count: int64
     Measured: int64
     Stopped: bool
+    CancellationRequested: bool
 }
 
 type internal SignalAccounting = private {
@@ -287,6 +288,7 @@ module internal SignalAccounting =
                                                 Count = 0L
                                                 Measured = 0L
                                                 Stopped = false
+                                                CancellationRequested = false
                                             }
                                             state.Services
                             }
@@ -410,6 +412,54 @@ module internal SignalAccounting =
                 || not service.Stopped
             then
                 Error "The service journal has no terminal child."
+            else
+                releaseService lease service state
+        )
+
+    let requestServiceCancellation lease state =
+        findService lease state
+        |> Result.bind (fun service ->
+            if not service.Sent then
+                Error "An unsubmitted service lease requires guaranteed rejection."
+            else
+                Ok {
+                    state with
+                        Services =
+                            Map.add
+                                (SignalServiceLease.thread lease)
+                                {
+                                    service with
+                                        CancellationRequested = true
+                                }
+                                state.Services
+                }
+        )
+
+    let confirmServiceStopped lease receipt state =
+        findService lease state
+        |> Result.bind (fun service ->
+            let expectedSequence =
+                if service.Count = 0L then
+                    0UL
+                else
+                    state.Threads[SignalServiceLease.thread lease].LastNativeSequence
+
+            if
+                not service.Sent
+                || not service.CancellationRequested
+            then
+                Error "The service lease has no submitted cancellation."
+            elif
+                SignalServiceStopReceipt.leaseIdentity receipt
+                <> SignalServiceLease.identity lease
+                || SignalServiceStopReceipt.count receipt
+                   <> service.Count
+                || SignalServiceStopReceipt.sequence receipt
+                   <> expectedSequence
+                || SignalServiceStopReceipt.measured receipt
+                   <> service.Measured
+            then
+                Error "The service stop receipt does not match the accepted journal."
             else
                 releaseService lease service state
         )

@@ -16,7 +16,9 @@ Individual requests and retirement therefore fail while service owns the peer.
 `sentService` binds submission once.
 `rejectedServiceBeforeSend` releases an unsubmitted reservation with zero settlement.
 It rejects submitted leases because submission can have delivered work.
-There is no cancellation-after-submission API yet. Ambiguous delivery must retain ownership.
+`requestServiceCancellation` records cancellation intent after submission without releasing ownership.
+Repeated requests are idempotent. The model still accepts child acknowledgments that arrive before the confirmed stop.
+Ambiguous delivery must retain ownership.
 
 ```fsharp
 let leaseOption, state = SignalAccounting.prepareService peer state |> Result.defaultWith failwith
@@ -56,6 +58,9 @@ stateDiagram-v2
     Reserved --> Released: Guaranteed rejection
     Submitted --> Submitted: Accept next bounded child
     Submitted --> Terminal: Deferred, interrupted, or budget serviced
+    Submitted --> Stopping: Request cancellation
+    Stopping --> Stopping: Accept final child records
+    Stopping --> Released: Match stop receipt and settle journal
     Terminal --> Released: Complete aggregate once
     Terminal --> Terminal: Aggregate overflow
 ```
@@ -72,5 +77,20 @@ Eight service cases in `SignalAccountingTests.fs` exercise the real accounting f
 They cover concurrent credit, ownership, journal rejection, partial outcomes, capacity, overshoot, parser bounds, and aggregate overflow.
 Two `DelayLedgerTests.fs` cases separately compare aggregate and individual settlement for fixed journals.
 These checks do not run a native pump, establish target lifetime, or prove service capacity or prediction accuracy.
+
+## Cancellation receipt
+
+`SignalServiceStopReceipt.tryCreate` requires a nonempty lease identity, bounded child count, nonnegative measured total, and zero outstanding children.
+An empty journal must have zero sequence and measured wait. A nonempty journal needs a positive final native sequence.
+`confirmServiceStopped` requires prior cancellation and exact agreement with the accepted child count, final sequence, and measured sum.
+It rejects a receipt that skips a child which the managed owner has not accepted.
+Successful confirmation settles the complete prefix once and removes the reservation.
+An empty confirmed stop pays zero and preserves the original debt.
+Foreign, duplicate, and inconsistent receipts leave the original state intact.
+
+Four cancellation cases cover retained ownership, a late child, matching journal fields, and invalid stop receipts.
+The native transport must stop new submissions and resolve every outstanding child before producing this receipt.
+Parsing a reported zero cannot prove that native service has stopped.
+The lifetime adapter must also preserve target registration until the native owner confirms that stop.
 
 See [the service plan](../plans/native-debt-service.md), [signal accounting](signal-accounting.md), and [the delay ledger](delay-ledger.md).
