@@ -4,6 +4,12 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-signal-timing"])
+{
+    SignalPhaseTimingChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-signal-cadence"])
 {
     SelectedSignalCadenceChecks.Run();

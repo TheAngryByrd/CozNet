@@ -375,7 +375,7 @@ static class SampledSignalWorkload
             .Select(slot => $"Slot {slot} exceeded the 2000000 ns observed debt limit: {maxDebt[slot]} ns.").ToArray();
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
-            backend = backend?.Name, percent = plan.Percent, selectedCadence = plan.Cadence.ToString(), selectedChecks,
+            backend = backend?.Name, backendDetails = backend?.Describe(), percent = plan.Percent, selectedCadence = plan.Cadence.ToString(), selectedChecks,
             runtime = Environment.Version.ToString(),
             warmupMilliseconds = plan.WarmupMilliseconds, warmup, measurement, settled, failureBoundary, measurementStartRecords,
             boundaries, maxDebtNanoseconds = maxDebt, debtBoundNanoseconds = 2000000,

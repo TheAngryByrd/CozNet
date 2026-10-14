@@ -103,15 +103,23 @@ int main(int argc, char** argv) {
     SignalResult result{};
     require(coz_signal_read(0, sequence + 1, &result) == EINVAL, 22);
     require(coz_signal_read(0, sequence, &result) == EAGAIN, 23);
+    SignalTiming timing{};
+    require(coz_signal_read_timed(0, sequence, &result, nullptr) == EINVAL, 54);
+    require(coz_signal_read_timed(0, sequence + 1, &result, &timing) == EINVAL, 55);
+    require(coz_signal_read_timed(0, sequence, &result, &timing) == EAGAIN, 56);
     require(coz_signal_restore() == EBUSY, 24);
     phase.store(2);
     int status;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
     do {
-        status = coz_signal_read(0, sequence, &result);
+        status = coz_signal_read_timed(0, sequence, &result, &timing);
         if (status == EAGAIN) std::this_thread::yield();
     } while (status == EAGAIN && std::chrono::steady_clock::now() < deadline);
     require(status == 0 && result.sequence == sequence && result.outcome == 1 && result.wait_ns == 0, 25);
+    require(timing.request_started_ns > 0 && timing.queue_returned_ns >= timing.request_started_ns, 57);
+    require(timing.handler_started_ns >= timing.queue_returned_ns && timing.handler_finished_ns >= timing.handler_started_ns, 58);
+    require(timing.observed_ns >= timing.handler_finished_ns && timing.handler_finished_ns - timing.handler_started_ns == result.residence_ns, 59);
+    require(coz_signal_read_timed(0, sequence, &result, &timing) == EINVAL, 60);
     require(coz_signal_read(0, sequence, &result) == EINVAL, 26);
     require(coz_signal_request(0, 0, &duplicate) == 0 && duplicate > sequence, 27);
     deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);

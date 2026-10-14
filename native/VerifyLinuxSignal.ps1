@@ -17,6 +17,7 @@ $assemblyHash = (Get-FileHash $assembly -Algorithm SHA256).Hash
 $contractHash = (Get-FileHash (Join-Path $native 'SignalContractChecks') -Algorithm SHA256).Hash
 $sourceFiles = @('native/signal/Signal.LinuxX64.cpp', 'native/signal/Signal.h', 'native/signal/ContractChecks.cpp',
     'native/signal/CMakeLists.txt', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs',
+    'tests/CozNet.LinuxPerf/SignalPhaseTiming.cs', 'tests/CozNet.LinuxPerf/SignalPhaseTimingChecks.cs',
     'tests/CozNet.LinuxPerf/SignalWorkload.cs', 'tests/CozNet.LinuxPerf/InstructionMap.cs', 'tests/CozNet.LinuxPerf/Program.cs')
 $sourceHashes = @{}
 foreach ($file in $sourceFiles) { $sourceHashes[$file] = (Get-FileHash (Join-Path $root $file) -Algorithm SHA256).Hash }
@@ -35,6 +36,9 @@ for ($i = $cases.Length - 1; $i -gt 0; $i--) {
 Copy-Item -LiteralPath (Join-Path $native 'disassembly.txt') -Destination $run
 Copy-Item -LiteralPath (Join-Path $native 'handler-disassembly.txt') -Destination $run
 $outcomes = [Collections.Generic.List[object]]::new()
+& docker run --rm --pull never --network none --cap-drop ALL --read-only `
+    --mount "type=bind,source=$workload,target=/work,readonly" $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --verify-signal-timing *> (Join-Path $run 'phase-timing.log')
+$outcomes.Add(@{ case = 'phase-timing'; exitCode = $LASTEXITCODE; recordExists = $true })
 foreach ($case in @('occupied', 'blocked', 'lifetime')) {
     & docker run --rm --pull never --network none --cap-drop ALL --read-only --env LD_LIBRARY_PATH=/native `
         --mount "type=bind,source=$native,target=/native,readonly" $imageId timeout -k 2s 30s /native/SignalContractChecks $case *> (Join-Path $run "$case.log")

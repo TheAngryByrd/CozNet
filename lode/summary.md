@@ -29,9 +29,10 @@ An internal [signal accounting model](profiling/signal-accounting.md) connects s
 Its deterministic replay checks cover debt settlement and sampling epochs.
 The [live sampled signal workload](profiling/sampled-signals.md) connects these components, but its first run fails the observed debt limit.
 Sample-driven selected checks recover credit. The first warmup run then fails the handler-duration bound.
-The three-block warm comparison passes one of three 50-percent capacity cases and all protocol checks.
+The native phase comparison passes two of three 50-percent capacity cases and all protocol checks.
 Wait overshoot and service stability remain unresolved.
 The [service timing records](../reliability/features/native-signal/service-timing.md) expose long pending requests that perform no native wait.
+The [native phase records](../reliability/features/native-signal/phase-timing.md) place most of one long request before the first handler clock reading.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

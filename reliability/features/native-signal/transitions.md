@@ -2,6 +2,7 @@
 
 The Linux x64 transition experiment passes five native lifecycle cases and eight managed workload cases.
 Three shared target-lifetime checks also pass on Windows and Linux.
+The [native phase run](phase-timing.md) repeats all fourteen process outcomes with the timed-read backend and passes.
 It captures signal interruptions inside JIT compiler code, blocked waits, selected managed work, and the native fixture.
 Ineligible interruptions apply no delay. These results do not establish general CLR safety or causal prediction accuracy.
 

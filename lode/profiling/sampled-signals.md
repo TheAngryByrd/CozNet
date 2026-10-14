@@ -40,6 +40,11 @@ Peak snapshots include pending request sequences, request start times, and the l
 Sample indices identify observations consumed during the associated service iteration.
 The first interval starts before worker release. Later intervals include diagnostics from the preceding iteration.
 These observations add controller overhead. They do not measure native handler entry time or prove scheduler causation.
+Linux acknowledgments also contain parsed native phase timing and identify its separate monotonic clock in `backendDetails`.
+The native phases separate time before the first handler clock observation, the measured handler interval, and time before native result observation.
+The first phase includes queue submission and scheduling. The last includes result publication and controller polling.
+Queue syscall duration can overlap handler execution. It is a separate diagnostic, not an additional phase to sum.
+The records do not equate native time with process `Stopwatch` timestamps or perf timestamps.
 
 Before a selected-thread request, the controller disables sampling and discards records that remain after reservation.
 It resumes sampling only after the matching acknowledgment.
@@ -56,14 +61,17 @@ The first run fails this limit despite completing its protocol checks.
 The selected worker repeatedly pays overshoot and pauses sampling.
 The cold sample-cadence run recovers most sample credit but still fails the startup debt limit.
 The first warm sample-cadence run fails the handler-duration limit after startup backlog is removed from its early snapshots.
-The three-block warm comparison passes all protocol checks and all zero-percent capacity checks.
+The three-block warm comparison without native phase timing passes all protocol checks and all zero-percent capacity checks.
 One 50-percent case passes capacity. The other two exceed the unchanged 2 ms observed debt limit.
 Their peak peer debts are 0.933666, 2.020031, and 2.748001 ms.
 These mixed results do not establish stable capacity or prediction accuracy.
 The [service timing run](../../reliability/features/native-signal/service-timing.md) links one selected debt peak to a 3.743108 ms peer wait.
 Another peer peak occurs while a request remains pending for 6.980643 ms and later completes with zero wait.
 The long pending request performs no native sleep. The effect of another actuator remains untested.
-Measure native handler entry and completion times to separate delivery delay from delayed controller observation.
+The [native phase run](../../reliability/features/native-signal/phase-timing.md) passes two of three 50-percent capacity cases and all protocol checks.
+Its failed block retains a deferred request with 8.773081 ms before the first handler clock reading and 0.038099 ms after the last reading.
+Scheduling, delivery, and handler entry checks remain unresolved within that first phase.
+Inspect target scheduling and CLR suspension before selecting a delivery or wait-actuator change.
 Keep wait overshoot and service stability unresolved before prediction tests.
 See [the retained failed runs](../../reliability/features/native-signal/sampled.md).
 See [the primary-source cadence comparison](../../docsSrc/Research/signal-sample-cadence.md).

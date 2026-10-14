@@ -32,7 +32,9 @@ The first 250 ms warmup experiment fails the handler-duration bound. Keep this f
 The three-block warm comparison passes all protocol checks but fails capacity in two of three 50-percent cases.
 Measure wait overshoot, service gaps, and debt age before selecting another intervention actuator.
 The [service timing run](../../reliability/features/native-signal/service-timing.md) exposes both wait overshoot and long pending requests that perform no wait.
-Add native handler timestamps before choosing between delivery and actuator changes.
+The [native phase run](../../reliability/features/native-signal/phase-timing.md) places most of one long acknowledgment before the first handler clock reading.
+Investigate target scheduling and CLR suspension before choosing between delivery and actuator changes.
+Two of its three 50-percent cases pass capacity. A separate delay case still exceeds the 5 ms handler limit.
 The original signal and transition experiments generate no causal credits.
 See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal research](../../docsSrc/Research/native-signal-intervention.md).
 See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).

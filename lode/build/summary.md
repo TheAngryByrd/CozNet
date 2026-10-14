@@ -43,6 +43,7 @@ It verifies injected probes and known-credit intervention. Linux stack-snapshot 
 `LinuxPerfVerify` builds the Linux capability workload and runs its Docker checks.
 `LinuxSignalVerify` builds a separate Linux x64 signal library and the shared capability workload.
 It runs three native contract cases and six managed signal/GC cases with a 30-second process watchdog.
+It also runs five portable phase-timing parser checks. The sampled runner repeats these checks beside its cadence checks.
 Evidence remains under `artifacts/linux-signal/`. The target requires the existing native compiler image.
 `LinuxSignalTransitionsVerify` uses the same build chain and a separate native workload fixture.
 It runs five native lifecycle cases, eight managed transition cases, and three shared target-lifetime checks.

@@ -10,6 +10,7 @@
 
 namespace {
 static_assert(sizeof(SignalResult) == 48);
+static_assert(sizeof(SignalTiming) == 40);
 static_assert(sizeof(sigval_t) == sizeof(uint64_t));
 static_assert(std::atomic<uint64_t>::is_always_lock_free);
 enum class State : uint64_t { unused, ready, publishing, pending, complete, retired };
@@ -17,6 +18,7 @@ struct Slot {
     std::atomic<State> state{State::unused};
     int tid{};
     uint64_t begin{}, end{}, sequence{}, delay_ns{};
+    uint64_t request_started_ns{}, queue_returned_ns{}, handler_started_ns{}, handler_finished_ns{};
     SignalResult result{};
 };
 static_assert(std::atomic<State>::is_always_lock_free);
@@ -67,6 +69,8 @@ void handler(int number, siginfo_t* info, void* context) {
         const auto end = monotonic();
         if (end < start || end == 0) result.outcome = 4;
         else result.residence_ns = end - start;
+        slot.handler_started_ns = start;
+        slot.handler_finished_ns = end;
         slot.result = result;
         slot.state.store(State::complete, std::memory_order_release);
         return;
@@ -123,8 +127,14 @@ EXPORT int coz_signal_request(int index, uint64_t delay_ns, uint64_t* sequence) 
     info.si_pid = process_id;
     info.si_uid = owner_uid;
     info.si_value.sival_ptr = reinterpret_cast<void*>(slot.sequence);
+    slot.request_started_ns = monotonic();
+    if (slot.request_started_ns == 0) {
+        slot.state.store(State::ready, std::memory_order_release);
+        return EIO;
+    }
     slot.state.store(State::pending, std::memory_order_release);
     auto result = direct_call(SYS_rt_tgsigqueueinfo, process_id, slot.tid, signal_number, reinterpret_cast<long>(&info));
+    slot.queue_returned_ns = monotonic();
     if (result != 0) {
         slot.state.store(State::ready, std::memory_order_release);
         return static_cast<int>(-result);
@@ -133,16 +143,27 @@ EXPORT int coz_signal_request(int index, uint64_t delay_ns, uint64_t* sequence) 
     return 0;
 }
 
-EXPORT int coz_signal_read(int index, uint64_t sequence, SignalResult* result) {
+static int read_result(int index, uint64_t sequence, SignalResult* result, SignalTiming* timing) {
     if (!controller() || index < 0 || index >= 2 || result == nullptr) return EINVAL;
     auto& slot = slots[index];
     auto state = slot.state.load(std::memory_order_acquire);
     if (state != State::pending && state != State::complete) return EINVAL;
     if (slot.sequence != sequence) return EINVAL;
     if (state == State::pending) return EAGAIN;
+    if (timing != nullptr) {
+        *timing = {slot.request_started_ns, slot.queue_returned_ns, slot.handler_started_ns,
+            slot.handler_finished_ns, monotonic()};
+    }
     *result = slot.result;
     slot.state.store(State::ready, std::memory_order_release);
     return 0;
+}
+EXPORT int coz_signal_read(int index, uint64_t sequence, SignalResult* result) {
+    return read_result(index, sequence, result, nullptr);
+}
+EXPORT int coz_signal_read_timed(int index, uint64_t sequence, SignalResult* result, SignalTiming* timing) {
+    if (timing == nullptr) return EINVAL;
+    return read_result(index, sequence, result, timing);
 }
 
 EXPORT int coz_signal_retire(int index) {

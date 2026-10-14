@@ -15,6 +15,7 @@ $hashes = @{}
 foreach ($file in @('native/signal/Signal.LinuxX64.cpp', 'native/signal/Signal.h', 'native/signal/ContractChecks.cpp',
     'native/signal/Workload.LinuxX64.cpp', 'native/signal/CMakeLists.txt', 'tests/CozNet.LinuxPerf/SignalTransitionWorkload.cs',
     'tests/CozNet.LinuxPerf/SignalTransitionOperations.cs', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs',
+    'tests/CozNet.LinuxPerf/SignalPhaseTiming.cs', 'tests/CozNet.LinuxPerf/SignalPhaseTimingChecks.cs',
     'tests/CozNet.LinuxPerf/SignalTargetLifetime.cs', 'tests/CozNet.LinuxPerf/SignalTargetChecks.cs', 'tests/CozNet.LinuxPerf/SignalWorkload.cs',
     'tests/CozNet.LinuxPerf/InstructionMap.cs', 'tests/CozNet.LinuxPerf/Program.cs',
     'artifacts/native-signal/libCozNet.Signal.so', 'artifacts/native-signal/libCozNet.SignalWorkload.so',
