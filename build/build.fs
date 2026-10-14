@@ -522,6 +522,7 @@ let linuxOverheadVerify _ = nativeScript "VerifyLinuxOverhead.ps1"
 let linuxSignalBuild _ = nativeScript "BuildLinuxSignal.ps1"
 
 let linuxSignalVerify _ = nativeScript "VerifyLinuxSignal.ps1"
+let linuxSignalWaitCompare _ = nativeScript "CompareLinuxSignalWaits.ps1"
 
 let linuxSignalTransitionsVerify _ =
     nativeScript "VerifyLinuxSignalTransitions.ps1"
@@ -896,6 +897,7 @@ let initTargets () =
     Target.create "LinuxSignalBuild" linuxSignalBuild
     Target.create "LinuxSignalWorkload" linuxPerfWorkload
     Target.create "LinuxSignalVerify" linuxSignalVerify
+    Target.create "LinuxSignalWaitCompare" linuxSignalWaitCompare
     Target.create "LinuxSignalTransitionsVerify" linuxSignalTransitionsVerify
     Target.create "LinuxSampledSignalsVerify" linuxSampledSignalsVerify
     Target.create "LinuxSampleCadenceVerify" linuxSampleCadenceVerify
@@ -1003,6 +1005,10 @@ let initTargets () =
 
     "LinuxSignalWorkload"
     ==> "LinuxWarmSampleCadenceVerify"
+    |> ignore
+
+    "LinuxSignalWorkload"
+    ==> "LinuxSignalWaitCompare"
     |> ignore
 
     "NativeBuild"

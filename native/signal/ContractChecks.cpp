@@ -61,6 +61,16 @@ int main(int argc, char** argv) {
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGRTMIN + 6);
+    if (std::strcmp(argv[1], "wait-modes") == 0) {
+        require(coz_signal_install_with_wait(-1) == EINVAL, 61);
+        require(coz_signal_install_with_wait(2) == EINVAL, 62);
+        require(coz_signal_install_with_wait(1) == 0, 63);
+        require(coz_signal_install_with_wait(0) == EALREADY, 64);
+        require(coz_signal_install() == EALREADY, 65);
+        require(coz_signal_restore() == 0, 66);
+        require(coz_signal_install_with_wait(1) == EALREADY, 67);
+        return 0;
+    }
     if (std::strcmp(argv[1], "occupied") == 0) {
         struct sigaction action{};
         action.sa_handler = SIG_IGN;

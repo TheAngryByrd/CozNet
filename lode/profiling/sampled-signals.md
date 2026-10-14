@@ -67,6 +67,8 @@ Periodic, peak-debt, measurement, settlement, and failure boundaries also record
 `ControllerAllocatedBytes` measures cumulative managed allocation on the controller thread. It excludes native allocation and worker allocation.
 Generation collection counts and `GcPauseTicks` are cumulative process values. Pause ticks use `TimeSpan` units of 100 ns.
 Each counter snapshot has a `Stopwatch` interval because its fields are read sequentially, not atomically.
+`ProcessCpuTicks` records cumulative `Environment.CpuUsage.TotalTime` in 100 ns units.
+It includes all process threads and kernel CPU work. It does not isolate spin cost or prove runtime suspension latency.
 Warmup and measurement retain separate starting counters. Counter windows include sample enablement and boundary diagnostics.
 The output records server-GC mode, latency mode, and available processor count after teardown.
 Counter changes can show GC activity between observations. They cannot assign a GC pause to a specific signal request.
@@ -123,4 +125,6 @@ flowchart LR
 
 Forced-GC, matched baseline, zero-delay signal overhead, debt-age analysis, and physical-change comparisons remain incomplete.
 The two-percentage-point prediction gate remains unchanged.
+The [wait comparison](../../reliability/features/native-signal/wait-comparison.md) passes three sampled spin treatments with higher process CPU than completed sleep treatments.
+All three sleep treatments fail a debt or handler limit. Sampled forced-GC behavior and physical-change prediction remain unverified.
 See [accounting](signal-accounting.md), [signal lifetime](signal-intervention.md), [Linux sampling](linux-perf.md), and [the roadmap](../plans/roadmap.md).

@@ -1,7 +1,7 @@
 param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-sampled-signals'),
     [ValidateSet('continuous', 'qualified-sample')][string]$Cadence = 'continuous',
     [ValidateSet('cold', 'warm')][string]$Startup = 'cold',
-    [ValidateRange(1, 10)][int]$Repetitions = 1)
+    [ValidateRange(1, 10)][int]$Repetitions = 1, [switch]$CompareWaitModes)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $workload = Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0'
@@ -17,6 +17,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the Linux kernel.' }
 $hashes = @{}
 foreach ($file in @('src/CozNet/SignalAccounting.fs', 'src/CozNet/DelayLedger.fs', 'src/CozNet/SampleCredits.fs',
     'tests/CozNet.LinuxPerf/SampledSignalWorkload.cs', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs',
+    'tests/CozNet.LinuxPerf/SignalWaitMode.cs',
     'tests/CozNet.LinuxPerf/SignalPhaseTiming.cs', 'tests/CozNet.LinuxPerf/SignalPhaseTimingChecks.cs',
     'tests/CozNet.LinuxPerf/SelectedSignalCadence.cs', 'tests/CozNet.LinuxPerf/SelectedSignalCadenceChecks.cs',
     'tests/CozNet.LinuxPerf/RingReaderChecks.cs',
@@ -30,10 +31,18 @@ foreach ($file in @('src/CozNet/SignalAccounting.fs', 'src/CozNet/DelayLedger.fs
     'tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.dll')) {
     $hashes[$file] = (Get-FileHash (Join-Path $root $file) -Algorithm SHA256).Hash
 }
+$seed = 20261018
+$random = [Random]::new($seed)
 $cases = @(for ($iteration = 1; $iteration -le $Repetitions; $iteration++) {
-    foreach ($percent in @(0, 50)) { @{ iteration = $iteration; percent = $percent } }
+    $block = @(foreach ($wait in $(if ($CompareWaitModes) { @('sleep', 'spin') } else { @('sleep') })) {
+        foreach ($percent in @(0, 50)) { @{ iteration = $iteration; percent = $percent; waitMode = $wait } }
+    })
+    if ($CompareWaitModes) {
+        for ($i = $block.Length - 1; $i -gt 0; $i--) { $j = $random.Next($i + 1); $block[$i], $block[$j] = $block[$j], $block[$i] }
+    }
+    $block
 })
-@{ imageId = $imageId; kernel = $kernel; hashes = $hashes; order = $cases; selectedCadence = $Cadence; startup = $Startup;
+@{ imageId = $imageId; kernel = $kernel; hashes = $hashes; order = $cases; orderSeed = $(if ($CompareWaitModes) { $seed } else { $null }); selectedCadence = $Cadence; startup = $Startup;
     debtBoundNanoseconds = 2000000; measurementMilliseconds = 2000; watchdogSeconds = 30;
     seccomp = 'unconfined'; forcedGc = $false } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $run 'environment.json')
 $outcomes = [Collections.Generic.List[object]]::new()
@@ -52,6 +61,7 @@ $outcomes.Add(@{ case = 'peer-cadence'; exitCode = $LASTEXITCODE; recordExists =
 foreach ($case in $cases) {
     $percent = $case.percent
     $file = if ($Repetitions -eq 1) { "speedup-$percent.json" } else { "block-$($case.iteration)-speedup-$percent.json" }
+    if ($CompareWaitModes) { $file = "block-$($case.iteration)-$($case.waitMode)-speedup-$percent.json" }
     $arguments = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
         '--security-opt', 'seccomp=unconfined', '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m',
         '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0',
@@ -60,8 +70,8 @@ foreach ($case in $cases) {
         '--mount', "type=bind,source=$workload,target=/work,readonly",
         '--mount', "type=bind,source=$native,target=/native,readonly",
         '--mount', "type=bind,source=$run,target=/output")
-    & docker @arguments $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --sampled-signal "/output/$file" "$percent" $Cadence $Startup *> (Join-Path $run "$file.log")
-    $outcomes.Add(@{ iteration = $case.iteration; percent = $percent; file = $file; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run $file) })
+    & docker @arguments $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --sampled-signal "/output/$file" "$percent" $Cadence $Startup $case.waitMode *> (Join-Path $run "$file.log")
+    $outcomes.Add(@{ iteration = $case.iteration; percent = $percent; waitMode = $case.waitMode; file = $file; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run $file) })
     $outcomes | ConvertTo-Json | Set-Content (Join-Path $run 'outcomes.json')
 }
 $unchanged = $true

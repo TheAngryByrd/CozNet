@@ -40,7 +40,9 @@ Inspect repeated accounting work during idle polling. Keep GC causation and samp
 The [peer-cadence run](../../reliability/features/native-signal/peer-cadence.md) skips unchanged-state preparation and lowers allocation in completed cases.
 It still fails one warmup handler bound and both completed 50-percent debt checks.
 The [direct accounting read](../../reliability/features/native-signal/accounting-read.md) removes the full controller's per-iteration duration wrapper allocation.
-Two treatment cases still exceed the handler limit during native waits. Compare wait mechanisms under the unchanged limits next.
+Two treatment cases still exceed the handler limit during native waits.
+The [wait comparison](../../reliability/features/native-signal/wait-comparison.md) passes three sampled spin treatments at higher process CPU cost.
+Test sampled forced GC and runtime transitions with spin next. Then compare predictions with physical changes under matched controls.
 Keep acknowledgment polling continuous and distinguish signal delivery time from native wait time.
 The original signal and transition experiments generate no causal credits.
 See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal research](../../docsSrc/Research/native-signal-intervention.md).

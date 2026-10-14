@@ -38,6 +38,8 @@ The [peer cadence](../reliability/features/native-signal/peer-cadence.md) skips 
 Its retained run still fails handler or debt limits in every 50-percent case.
 The [direct accounting read](../reliability/features/native-signal/accounting-read.md) removes a wrapper allocation from the full controller's generated code.
 Zero-percent allocation falls to about 5.17 MiB. Two treatment cases still exceed the handler limit during native waits.
+The [wait comparison](../reliability/features/native-signal/wait-comparison.md) passes three sampled spin treatments but fails all three sleep treatments.
+Spin increases measured process CPU. Sampled forced-GC and physical-change prediction remain unverified.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

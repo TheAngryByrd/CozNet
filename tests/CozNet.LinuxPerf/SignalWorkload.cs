@@ -23,6 +23,7 @@ static class SignalWorkload
         Thread? gc = null;
         bool drained = true, joined = false, restored = false;
         double measurementMilliseconds = 0;
+        long? processCpuStartTicks = null, processCpuEndTicks = null;
         try
         {
             if (Environment.GetEnvironmentVariable("DOTNET_TieredCompilation") != "0" ||
@@ -76,6 +77,7 @@ static class SignalWorkload
                 }) { IsBackground = true };
                 gc.Start();
             }
+            processCpuStartTicks = Environment.CpuUsage.TotalTime.Ticks;
             var timer = Stopwatch.StartNew();
             start.Set();
             while (timer.ElapsedMilliseconds < 2000)
@@ -101,8 +103,13 @@ static class SignalWorkload
                 Thread.Sleep(10);
             }
             measurementMilliseconds = timer.Elapsed.TotalMilliseconds;
+            processCpuEndTicks = Environment.CpuUsage.TotalTime.Ticks;
         }
-        catch (Exception error) { failures.Add(error.ToString()); }
+        catch (Exception error)
+        {
+            if (processCpuStartTicks is not null) processCpuEndTicks = Environment.CpuUsage.TotalTime.Ticks;
+            failures.Add(error.ToString());
+        }
         finally
         {
             deliveryStopped.Set();
@@ -146,6 +153,7 @@ static class SignalWorkload
             nativeRange = backend?.Describe(), runtime = Environment.Version.ToString(),
             platform = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
             forcedGc = forceGc, measurementMilliseconds, completedBatches = joined ? batches : null,
+            processCpuStartTicks, processCpuEndTicks,
             requests, collections = joined ? collections : null, failures, passed = failures.Count == 0,
             joined, drained, restored, causalCredit = 0, cpuSamplesCollected = false,
             generalClrSafetyEstablished = false, handlerBoundNanoseconds = 5000000,

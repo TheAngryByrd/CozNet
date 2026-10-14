@@ -4,6 +4,12 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-signal-wait"])
+{
+    SignalWaitModeChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-peer-cadence"])
 {
     PeerSignalCadenceChecks.Run();
@@ -26,6 +32,25 @@ if (args is ["--verify-signal-cadence"])
 {
     SelectedSignalCadenceChecks.Run();
     return 0;
+}
+
+if (args is ["--sampled-signal", var modePath, var modePercent, var modeCadence, var modeStartup, var waitMode])
+{
+    var parsedWait = SignalWaitMode.Parse(waitMode);
+    return SampledSignalWorkload.Run(modePath, SampledSignalPlan.Parse(modePercent, modeCadence, modeStartup),
+        () => new LinuxSignalBackend(parsedWait), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock());
+}
+
+if (args is ["--signal-wait", var waitPath, var waitPlan, var waitGc, var waitKind])
+{
+    var parsedWait = SignalWaitMode.Parse(waitKind);
+    bool forceGc = waitGc switch
+    {
+        "gc" => true,
+        "no-gc" => false,
+        _ => throw new ArgumentException("Select gc or no-gc signal measurement.")
+    };
+    return SignalWorkload.Run(waitPath, SignalPlan.Parse(waitPlan), forceGc, () => new LinuxSignalBackend(parsedWait));
 }
 
 if (args is ["--sampled-signal", var sampledSignalPath, var sampledSignalPercent])

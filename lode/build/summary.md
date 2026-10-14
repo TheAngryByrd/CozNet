@@ -42,7 +42,10 @@ The Linux build uses the pinned runtime source checkout and an isolated Clang/CM
 It verifies injected probes and known-credit intervention. Linux stack-snapshot requests fail explicitly with `E_NOTIMPL`.
 `LinuxPerfVerify` builds the Linux capability workload and runs its Docker checks.
 `LinuxSignalVerify` builds a separate Linux x64 signal library and the shared capability workload.
-It runs three native contract cases and six managed signal/GC cases with a 30-second process watchdog.
+It runs four native contract cases and six managed signal/GC cases with a 30-second process watchdog.
+`LinuxSignalWaitCompare` uses the same build chain and compares sleep and spin in isolated processes.
+It runs twelve basic signal/GC cases in seeded order and twelve sampled cases in three seeded blocks.
+The basic and sampled suites both run even when one fails. Their outcomes remain separate in the parent report.
 It also runs five portable phase-timing parser checks. The sampled runner repeats these checks beside its cadence checks.
 Evidence remains under `artifacts/linux-signal/`. The target requires the existing native compiler image.
 `LinuxSignalTransitionsVerify` uses the same build chain and a separate native workload fixture.

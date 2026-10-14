@@ -34,18 +34,23 @@ interface IBoundedInterventionBackend
 sealed class LinuxSignalBackend : IBoundedInterventionBackend
 {
     private readonly ulong start, size;
+    private readonly SignalWaitMode waitMode;
     public string Name => "linux-x64-signal";
     public object Describe() => new { nativeStart = start, nativeSize = size, symbol = OverheadWorkload.SelectedSymbol,
-        timingClock = "linux-clock-monotonic", timingUnit = "nanoseconds" };
+        timingClock = "linux-clock-monotonic", timingUnit = "nanoseconds", waitMode = waitMode.Name };
     public bool IsEligibleAddress(ulong address) => address >= start && address - start < size;
-    public LinuxSignalBackend()
+    public LinuxSignalBackend() : this(SignalWaitMode.Sleep) { }
+
+    public LinuxSignalBackend(SignalWaitMode waitMode)
     {
+        ArgumentNullException.ThrowIfNull(waitMode);
+        this.waitMode = waitMode;
         if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
             throw new PlatformNotSupportedException("The signal backend requires Linux x64.");
         (start, size) = PerfMapSnapshot.Read($"/tmp/perf-{Environment.ProcessId}.map").UniqueRange(OverheadWorkload.SelectedSymbol);
         if (Marshal.SizeOf<NativeResult>() != 48) throw new InvalidOperationException("The native signal result layout differs.");
         if (Marshal.SizeOf<NativeTiming>() != 40) throw new InvalidOperationException("The native signal timing layout differs.");
-        Check(Install(), "install");
+        Check(Install(waitMode.NativeValue), "install");
     }
     public void RegisterCurrentThread(int slot) => Check(Register(slot, start, size), "register");
     public ulong Request(int slot, SignalPlan plan)
@@ -90,8 +95,8 @@ sealed class LinuxSignalBackend : IBoundedInterventionBackend
     {
         public ulong RequestStarted, QueueReturned, HandlerStarted, HandlerFinished, Observed;
     }
-    [DllImport("CozNet.Signal", EntryPoint = "coz_signal_install", CallingConvention = CallingConvention.Cdecl)]
-    private static extern int Install();
+    [DllImport("CozNet.Signal", EntryPoint = "coz_signal_install_with_wait", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int Install(int mode);
     [DllImport("CozNet.Signal", EntryPoint = "coz_signal_register", CallingConvention = CallingConvention.Cdecl)]
     private static extern int Register(int slot, ulong start, ulong size);
     [DllImport("CozNet.Signal", EntryPoint = "coz_signal_request", CallingConvention = CallingConvention.Cdecl)]

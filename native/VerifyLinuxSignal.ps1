@@ -1,4 +1,4 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-signal'))
+param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-signal'), [switch]$CompareWaitModes)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $workload = Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0'
@@ -18,12 +18,14 @@ $contractHash = (Get-FileHash (Join-Path $native 'SignalContractChecks') -Algori
 $sourceFiles = @('native/signal/Signal.LinuxX64.cpp', 'native/signal/Signal.h', 'native/signal/ContractChecks.cpp',
     'native/signal/CMakeLists.txt', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs',
     'tests/CozNet.LinuxPerf/SignalPhaseTiming.cs', 'tests/CozNet.LinuxPerf/SignalPhaseTimingChecks.cs',
-    'tests/CozNet.LinuxPerf/SignalWorkload.cs', 'tests/CozNet.LinuxPerf/InstructionMap.cs', 'tests/CozNet.LinuxPerf/Program.cs')
+    'tests/CozNet.LinuxPerf/SignalWorkload.cs', 'tests/CozNet.LinuxPerf/SignalWaitMode.cs', 'tests/CozNet.LinuxPerf/InstructionMap.cs', 'tests/CozNet.LinuxPerf/Program.cs')
 $sourceHashes = @{}
+$sourceFiles += @('tests/CozNet.LinuxPerf/SignalWaitModeChecks.cs', 'native/VerifyLinuxSignal.ps1', 'native/CompareLinuxSignalWaits.ps1')
 foreach ($file in $sourceFiles) { $sourceHashes[$file] = (Get-FileHash (Join-Path $root $file) -Algorithm SHA256).Hash }
 $seed = 20261016
 $random = [Random]::new($seed)
 $cases = @('baseline:no-gc', 'zero:no-gc', 'delay:no-gc', 'baseline:gc', 'zero:gc', 'delay:gc')
+if ($CompareWaitModes) { $cases = @(foreach ($wait in @('sleep', 'spin')) { foreach ($case in $cases) { "$wait`:$case" } }) }
 for ($i = $cases.Length - 1; $i -gt 0; $i--) {
     $j = $random.Next($i + 1)
     $cases[$i], $cases[$j] = $cases[$j], $cases[$i]
@@ -37,24 +39,27 @@ Copy-Item -LiteralPath (Join-Path $native 'disassembly.txt') -Destination $run
 Copy-Item -LiteralPath (Join-Path $native 'handler-disassembly.txt') -Destination $run
 $outcomes = [Collections.Generic.List[object]]::new()
 & docker run --rm --pull never --network none --cap-drop ALL --read-only `
+    --mount "type=bind,source=$workload,target=/work,readonly" $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --verify-signal-wait *> (Join-Path $run 'wait-parser.log')
+$outcomes.Add(@{ case = 'wait-parser'; exitCode = $LASTEXITCODE; recordExists = $true })
+& docker run --rm --pull never --network none --cap-drop ALL --read-only `
     --mount "type=bind,source=$workload,target=/work,readonly" $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --verify-signal-timing *> (Join-Path $run 'phase-timing.log')
 $outcomes.Add(@{ case = 'phase-timing'; exitCode = $LASTEXITCODE; recordExists = $true })
-foreach ($case in @('occupied', 'blocked', 'lifetime')) {
+foreach ($case in @('occupied', 'blocked', 'lifetime', 'wait-modes')) {
     & docker run --rm --pull never --network none --cap-drop ALL --read-only --env LD_LIBRARY_PATH=/native `
         --mount "type=bind,source=$native,target=/native,readonly" $imageId timeout -k 2s 30s /native/SignalContractChecks $case *> (Join-Path $run "$case.log")
     $outcomes.Add(@{ case = $case; exitCode = $LASTEXITCODE; recordExists = $true })
     $outcomes | ConvertTo-Json | Set-Content (Join-Path $run 'outcomes.json')
 }
 foreach ($case in $cases) {
-    $mode, $gc = $case.Split(':')
-    $file = "$mode-$gc.json"
+    if ($CompareWaitModes) { $wait, $mode, $gc = $case.Split(':') } else { $wait = 'sleep'; $mode, $gc = $case.Split(':') }
+    $file = if ($CompareWaitModes) { "$wait-$mode-$gc.json" } else { "$mode-$gc.json" }
     $arguments = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
         '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m', '--env', 'DOTNET_TieredCompilation=0',
         '--env', 'DOTNET_ReadyToRun=0', '--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1',
         '--env', 'LD_LIBRARY_PATH=/native', '--env', 'CORECLR_ENABLE_PROFILING=0',
         '--mount', "type=bind,source=$workload,target=/work,readonly",
         '--mount', "type=bind,source=$native,target=/native,readonly", '--mount', "type=bind,source=$run,target=/output")
-    & docker @arguments $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --signal "/output/$file" $mode $gc *> (Join-Path $run "$file.log")
+    & docker @arguments $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --signal-wait "/output/$file" $mode $gc $wait *> (Join-Path $run "$file.log")
     $exitCode = $LASTEXITCODE
     $outcomes.Add(@{ case = $case; file = $file; exitCode = $exitCode; recordExists = Test-Path -LiteralPath (Join-Path $run $file) })
     $outcomes | ConvertTo-Json | Set-Content (Join-Path $run 'outcomes.json')

@@ -4,6 +4,15 @@ The separate `native/signal` library implements a Linux x64 signal experiment wi
 `IBoundedInterventionBackend` separates the shared workload from native delivery, registration, mapping, and teardown.
 Other platforms require an implementation of that interface. The Linux factory rejects unsupported platforms before native loading.
 The public causal engine does not use this backend.
+`SignalWaitMode` parses `sleep` and `spin` before installation. The mode cannot change after installation.
+`coz_signal_install_with_wait` accepts native modes zero and one. Invalid modes do not consume installation ownership.
+The old `coz_signal_install` export retains sleep behavior.
+Spin waiting reads the direct monotonic clock until the same absolute deadline, with at most 4,096 iterations.
+Clock errors and iteration exhaustion produce failed native results. The iteration bound does not guarantee wall-clock completion under descheduling.
+The [wait-mode comparison](../../reliability/features/native-signal/wait-comparison.md) passes all basic signal/GC cases in both modes.
+All three sampled spin treatments pass. All three sleep treatments fail a debt or handler limit.
+Spin consumes more process CPU in the completed sampled treatments. General safety and prediction accuracy remain unverified.
+Sleep remains the default. Existing timing limits still apply.
 
 The native library reserves `SIGRTMIN + 6` only when its disposition is default.
 Two fixed slots retain native state for the process lifetime. Registration rejects a blocked signal.

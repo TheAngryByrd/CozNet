@@ -38,7 +38,7 @@ static class SampledSignalWorkload
         double ConsumedMilliseconds, string Stage, long ConsumedTimestamp);
     private sealed record PendingRecord(int Slot, ulong Sequence, long RequestedNanoseconds, long StartedTimestamp, string StartedStage);
     private readonly record struct RuntimeCounters(string Stage, long StartedTimestamp, long FinishedTimestamp,
-        long ControllerAllocatedBytes, int Gen0Collections, int Gen1Collections, int Gen2Collections, long GcPauseTicks);
+        long ControllerAllocatedBytes, int Gen0Collections, int Gen1Collections, int Gen2Collections, long GcPauseTicks, long ProcessCpuTicks);
     private sealed record Boundary(string Stage, double Milliseconds, long GlobalNanoseconds, long CreditNanoseconds,
         long[] WaitNanoseconds, long[] DebtNanoseconds, bool[] Registered, int Pending, long[] Batches,
         long Timestamp, PendingRecord[] PendingRequests, RuntimeCounters RuntimeCounters);
@@ -107,7 +107,8 @@ static class SampledSignalWorkload
             long allocated = GC.GetAllocatedBytesForCurrentThread();
             int gen0 = GC.CollectionCount(0), gen1 = GC.CollectionCount(1), gen2 = GC.CollectionCount(2);
             long paused = GC.GetTotalPauseDuration().Ticks;
-            return new(stage, started, Stopwatch.GetTimestamp(), allocated, gen0, gen1, gen2, paused);
+            long cpu = Environment.CpuUsage.TotalTime.Ticks;
+            return new(stage, started, Stopwatch.GetTimestamp(), allocated, gen0, gen1, gen2, paused, cpu);
         }
 
         Boundary Snapshot()

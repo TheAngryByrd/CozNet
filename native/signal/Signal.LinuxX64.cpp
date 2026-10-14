@@ -14,6 +14,8 @@ static_assert(sizeof(SignalTiming) == 40);
 static_assert(sizeof(sigval_t) == sizeof(uint64_t));
 static_assert(std::atomic<uint64_t>::is_always_lock_free);
 enum class State : uint64_t { unused, ready, publishing, pending, complete, retired };
+enum class WaitMode { sleep, spin };
+WaitMode wait_mode{WaitMode::sleep};
 struct Slot {
     std::atomic<State> state{State::unused};
     int tid{};
@@ -41,6 +43,16 @@ inline uint64_t monotonic() {
     if (direct_call(SYS_clock_gettime, CLOCK_MONOTONIC, reinterpret_cast<long>(&time)) != 0) return 0;
     return static_cast<uint64_t>(time.tv_sec) * 1000000000ULL + time.tv_nsec;
 }
+__attribute__((always_inline)) inline long spin_until(uint64_t deadline, uint64_t previous) {
+    for (int iteration = 0; iteration < 4096; ++iteration) {
+        const auto now = monotonic();
+        if (now == 0 || now < previous) return -EIO;
+        if (now >= deadline) return 0;
+        previous = now;
+        asm volatile("pause");
+    }
+    return -ETIMEDOUT;
+}
 
 void handler(int number, siginfo_t* info, void* context) {
     if (number != signal_number || info->si_code != SI_QUEUE || info->si_pid != process_id || info->si_uid != owner_uid) return;
@@ -58,7 +70,9 @@ void handler(int number, siginfo_t* info, void* context) {
                 const auto deadline_ns = start + slot.delay_ns;
                 timespec deadline{static_cast<time_t>(deadline_ns / 1000000000ULL), static_cast<long>(deadline_ns % 1000000000ULL)};
                 const auto before_wait = monotonic();
-                result.wait_result = direct_call(SYS_clock_nanosleep, CLOCK_MONOTONIC, TIMER_ABSTIME, reinterpret_cast<long>(&deadline), 0);
+                result.wait_result = wait_mode == WaitMode::sleep
+                    ? direct_call(SYS_clock_nanosleep, CLOCK_MONOTONIC, TIMER_ABSTIME, reinterpret_cast<long>(&deadline), 0)
+                    : spin_until(deadline_ns, before_wait);
                 const auto after_wait = monotonic();
                 if (before_wait == 0 || after_wait < before_wait) result.outcome = 4;
                 else result.wait_ns = after_wait - before_wait;
@@ -81,6 +95,10 @@ bool controller() { return installed && direct_call(SYS_gettid) == owner_tid; }
 }
 
 EXPORT int coz_signal_install() {
+    return coz_signal_install_with_wait(0);
+}
+EXPORT int coz_signal_install_with_wait(int mode) {
+    if (mode != 0 && mode != 1) return EINVAL;
     if (used) return EALREADY;
     const int candidate = SIGRTMIN + 6;
     if (candidate > SIGRTMAX) return ENOTSUP;
@@ -90,6 +108,7 @@ EXPORT int coz_signal_install() {
     process_id = getpid();
     owner_uid = getuid();
     owner_tid = static_cast<int>(direct_call(SYS_gettid));
+    wait_mode = mode == 0 ? WaitMode::sleep : WaitMode::spin;
     struct sigaction action{};
     action.sa_sigaction = handler;
     action.sa_flags = SA_SIGINFO;
