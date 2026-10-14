@@ -3,6 +3,7 @@
 The Linux x64 experiment passes three native contract cases and six managed workload cases.
 It uses a separate native library without IL rewriting or CLR startup profiling.
 These results establish feasibility for one fixed arithmetic method. They do not establish general CLR safety or causal prediction accuracy.
+The separate [sampled signal experiment](sampled.md) connects CPU events to requests, but fails its observed unpaid-debt limit.
 
 ## Protocol
 

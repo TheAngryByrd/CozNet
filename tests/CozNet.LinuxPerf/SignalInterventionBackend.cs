@@ -1,10 +1,12 @@
 using System.Runtime.InteropServices;
+using CozNet;
 
 sealed class SignalPlan
 {
     public bool Send { get; }
     public ulong DelayNanoseconds { get; }
     private SignalPlan(bool send, ulong delay) => (Send, DelayNanoseconds) = (send, delay);
+    public static SignalPlan FromRequest(SignalDelayRequest request) => new(true, checked((ulong)SignalDelayRequestModule.nanoseconds(request)));
     public static SignalPlan Parse(string value) => value switch
     {
         "baseline" => new(false, 0),

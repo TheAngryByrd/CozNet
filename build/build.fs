@@ -526,6 +526,9 @@ let linuxSignalVerify _ = nativeScript "VerifyLinuxSignal.ps1"
 let linuxSignalTransitionsVerify _ =
     nativeScript "VerifyLinuxSignalTransitions.ps1"
 
+let linuxSampledSignalsVerify _ =
+    nativeScript "VerifyLinuxSampledSignals.ps1"
+
 let windowsOverheadVerify _ =
     nativeScript "VerifyWindowsOverhead.ps1"
 
@@ -878,6 +881,7 @@ let initTargets () =
     Target.create "LinuxSignalWorkload" linuxPerfWorkload
     Target.create "LinuxSignalVerify" linuxSignalVerify
     Target.create "LinuxSignalTransitionsVerify" linuxSignalTransitionsVerify
+    Target.create "LinuxSampledSignalsVerify" linuxSampledSignalsVerify
     Target.create "WindowsOverheadWorkload" linuxPerfWorkload
     Target.create "WindowsOverheadVerify" windowsOverheadVerify
     Target.create "LinuxCountdownPredictionVerify" linuxCountdownPredictionVerify
@@ -969,6 +973,10 @@ let initTargets () =
 
     "LinuxSignalWorkload"
     ==> "LinuxSignalTransitionsVerify"
+    |> ignore
+
+    "LinuxSignalWorkload"
+    ==> "LinuxSampledSignalsVerify"
     |> ignore
 
     "NativeBuild"

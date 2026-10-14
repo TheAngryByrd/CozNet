@@ -47,6 +47,9 @@ Evidence remains under `artifacts/linux-signal/`. The target requires the existi
 `LinuxSignalTransitionsVerify` uses the same build chain and a separate native workload fixture.
 It runs five native lifecycle cases, eight managed transition cases, and three shared target-lifetime checks.
 Evidence remains under `artifacts/linux-signal-transitions/`.
+`LinuxSampledSignalsVerify` connects selected CPU samples to bounded signal requests at zero and 50 percent.
+It retains raw samples, acknowledgments, and boundary snapshots under `artifacts/linux-sampled-signals/`.
+Its observed debt limit is 2 ms per thread in a two-second window. Capacity failures fail the target after evidence is written.
 `LinuxInjectedVerify` builds the native profiler and compares manual and injected probes with the same wait backend.
 It retains unique evidence directories under `artifacts/linux-injected/` and reports the zero-speedup cost ratio.
 `LinuxCountdownVerify` uses the same native build and Linux workload chain.

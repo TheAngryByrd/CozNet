@@ -4,6 +4,10 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--sampled-signal", var sampledSignalPath, var sampledSignalPercent])
+    return SampledSignalWorkload.Run(sampledSignalPath, SampledSignalPlan.Parse(sampledSignalPercent),
+        () => new LinuxSignalBackend(), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock());
+
 if (args is ["--verify-signal-targets"])
 {
     SignalTargetChecks.Run();

@@ -22,10 +22,12 @@ Investigate a lower-cost intervention mechanism before changing sampled accounti
 A native signal experiment must measure GC effects and bound handler work before any claim of CLR safety.
 The [bounded signal workload](../profiling/signal-intervention.md) passes the initial arithmetic and forced-GC checks.
 The [transition workload](../profiling/signal-transitions.md) passes JIT, blocked-wait, managed/native-call, and pending-shutdown checks.
-Next, connect independent CPU events to bounded signal delay accounting. Keep abnormal target exit as an explicit process-lifetime limit.
+Keep abnormal target exit as an explicit process-lifetime limit.
 The [signal accounting model](../profiling/signal-accounting.md) supplies bounded requests, matched acknowledgments, and required sampling epochs.
-Connect this model to the live controller before measuring service capacity or prediction accuracy.
-The current signal experiment generates no causal credits and does not test prediction accuracy.
+The [live sampled signal controller](../profiling/sampled-signals.md) connects CPU events to bounded requests.
+Its first run generates causal credit and completes protocol checks, but fails the observed unpaid-debt limit.
+Investigate overshoot settlement and sampling exclusions before adding physical-prediction checks.
+The original signal and transition experiments generate no causal credits.
 See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal research](../../docsSrc/Research/native-signal-intervention.md).
 See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).
 Keep mixed boundaries and debugger limitations explicit. See [the attribution investigation](../../docsSrc/Research/injected-cpu-attribution.md).

@@ -66,8 +66,9 @@ It does not infer blocking, dependency wakes, or operating-system thread lifetim
 
 The 14 deterministic replay checks in `SignalAccountingTests.fs` verify accounting transitions.
 They do not prove service capacity, native integration, or prediction accuracy.
-The live sampler and signal controller remain separate prototypes.
-Next, connect them through this model and measure debt age, unpaid boundary debt, and controller overhead.
+The [sampled signal workload](sampled-signals.md) connects the live sampler and signal controller through this model.
+Its first capacity run fails the observed debt limit.
+Investigate repeated overshoot settlement and sampling exclusions before prediction measurements.
 Keep final settlement outside the prediction window and retain the two-percentage-point accuracy gate.
 
 See [sample credits](sample-credits.md), [delay ledger](delay-ledger.md), [signal intervention](signal-intervention.md), and [the roadmap](../plans/roadmap.md).
