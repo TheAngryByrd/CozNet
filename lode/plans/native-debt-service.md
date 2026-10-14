@@ -6,7 +6,8 @@ The [portable accounting model](../profiling/signal-service.md) implements reser
 The live workload still uses one managed controller for every bounded signal request.
 The [portable native owner](../profiling/native-service-owner.md) passes fake-transport checks on Windows and Linux.
 The [Linux transport](../profiling/linux-service-transport.md) passes controlled native delivery and lifetime checks.
-Managed integration remains unimplemented.
+The [C ABI and managed client](../profiling/service-interop.md) pass controlled receipt and lifetime checks.
+The ledger adapter and sampled workload integration remain unimplemented.
 The next experiment will test whether a native service owner reduces those controller round trips.
 It will not change the public serial engine or claim general CLR signal safety.
 
@@ -135,7 +136,7 @@ Do not treat a passing protocol comparison as prediction accuracy.
 
 ## Next implementation boundary
 
-Implement the C ABI and managed adapter next, including conservative first managed receipt timing.
+Connect validated service children to the managed accounting model and measure snapshot allocation and copy costs.
 Then connect the native owner to the sampled workload and retain every child acknowledgment in the workload record.
 Only after replay and lifetime checks pass, compare managed and native service with the same workload and limits.
 Retain all outcomes. Do not rerun unchanged timing cases to obtain a pass.

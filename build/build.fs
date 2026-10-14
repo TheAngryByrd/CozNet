@@ -468,6 +468,9 @@ let linuxSignalServiceVerify _ =
         "-LinuxSignal"
     ]
 
+let linuxServiceInteropVerify _ =
+    nativeScript "VerifyServiceInterop.ps1"
+
 let nativeWorkload _ =
     DotNet.build
         (fun options -> {
@@ -905,6 +908,7 @@ let initTargets () =
     Target.create "ServiceOwnerVerify" (serviceOwnerVerify "Host")
     Target.create "LinuxServiceOwnerVerify" (serviceOwnerVerify "LinuxContainer")
     Target.create "LinuxSignalServiceVerify" linuxSignalServiceVerify
+    Target.create "LinuxServiceInteropVerify" linuxServiceInteropVerify
     Target.create "NativeWorkload" nativeWorkload
     Target.create "NativeVerify" nativeVerify
     Target.create "NativeMapWorkload" nativeMapWorkload
@@ -969,6 +973,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxPerfVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxServiceInteropVerify"
     |> ignore
 
     "LinuxPerfWorkload"

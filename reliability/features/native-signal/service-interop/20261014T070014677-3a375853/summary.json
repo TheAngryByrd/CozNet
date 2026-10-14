@@ -1,0 +1,30 @@
+{
+  "generalClrSafetyEstablished": false,
+  "outcomes": [
+    {
+      "name": "native",
+      "exitCode": 0,
+      "recordExists": true
+    },
+    {
+      "name": "receipt-parser",
+      "exitCode": 0,
+      "recordExists": true
+    },
+    {
+      "name": "receipt",
+      "exitCode": 0,
+      "recordExists": true
+    },
+    {
+      "name": "late",
+      "exitCode": 0,
+      "recordExists": true
+    }
+  ],
+  "binariesUnchanged": true,
+  "sampledCapacityEstablished": false,
+  "sourcesUnchanged": true,
+  "predictionAccuracyEstablished": false,
+  "passed": true
+}

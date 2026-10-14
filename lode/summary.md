@@ -38,7 +38,8 @@ An internal [signal accounting model](profiling/signal-accounting.md) connects s
 An internal [peer service model](profiling/signal-service.md) adds finite leases and exact-once aggregate settlement of bounded child journals.
 Its [portable native owner](profiling/native-service-owner.md) passes fake-transport checks on Windows and Linux.
 Its [Linux transport](profiling/linux-service-transport.md) passes controlled native delivery and lifetime checks.
-Its managed adapter and sampled workload integration remain unimplemented.
+Its [C ABI and managed client](profiling/service-interop.md) pass controlled receipt and lifetime checks.
+Its ledger adapter and sampled workload integration remain unimplemented.
 Its deterministic replay checks cover debt settlement and sampling epochs.
 The [live sampled signal workload](profiling/sampled-signals.md) connects these components, but its first run fails the observed debt limit.
 Sample-driven selected checks recover credit. The first warmup run then fails the handler-duration bound.

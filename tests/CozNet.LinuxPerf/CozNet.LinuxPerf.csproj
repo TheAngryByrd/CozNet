@@ -5,6 +5,7 @@
     <IsTestProject>false</IsTestProject>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/CozNet/CozNet.fsproj" />

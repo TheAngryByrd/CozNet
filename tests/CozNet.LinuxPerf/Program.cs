@@ -4,6 +4,23 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-service-interop", var servicePath, var receiptMode])
+{
+    bool delayed = receiptMode switch
+    {
+        "receipt" => false,
+        "late" => true,
+        _ => throw new ArgumentException("Select receipt or late for service interop.")
+    };
+    return ServiceInteropChecks.Run(servicePath, delayed);
+}
+
+if (args is ["--verify-service-receipt"])
+{
+    ServiceReceiptTimingChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-scheduler-cost-startup", var schedulerCostCheckPath])
 {
     SchedulerCostWorkloadChecks.FailedStartsRetainEvidence(schedulerCostCheckPath);

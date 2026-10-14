@@ -3,7 +3,8 @@
 `native/service/ServiceOwner.cpp` implements a portable C++20 coordinator behind `Transport`.
 The coordinator has no Linux or CLR calls.
 The [Linux transport](linux-service-transport.md) connects the coordinator to the bounded signal library.
-The C ABI, managed adapter, and sampled workload integration remain unimplemented.
+The [C ABI and managed client](service-interop.md) pass controlled receipt and lifetime checks.
+The ledger adapter and sampled workload integration remain unimplemented.
 The [peer accounting model](signal-service.md) defines the managed reservation and settlement boundary.
 
 ## Ownership and service
