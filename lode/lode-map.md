@@ -20,6 +20,7 @@ For native sleep and spin measurements, read [the wait comparison](../reliabilit
 For spin runtime transitions and sampled forced GC, read [spin reliability](../reliability/features/native-signal/spin-reliability.md).
 For diagnostic clock markers and runtime suspension events, read [runtime suspension traces](profiling/runtime-suspension-trace.md).
 For request CPU bounds and pending requests while the controller runs, read [controller CPU intervals](../reliability/features/native-signal/controller-cpu.md).
+For optional target CPU capture and native clock ownership, read [target CPU observations](profiling/target-cpu-observations.md).
 For native Coz's check ordering and perf boundary behavior, read [signal sample cadence](../docsSrc/Research/signal-sample-cadence.md).
 For build targets and CI, read [the MiniScaffold build](build/summary.md).
 For scope expansion, read [the roadmap](plans/roadmap.md).

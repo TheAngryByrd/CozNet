@@ -10,13 +10,15 @@ if (args is ["--verify-signal-trace"])
     return 0;
 }
 
-if (args is ["--sampled-signal-trace", var tracePath, var tracePercent, var traceCadence, var traceStartup, var traceWait, var traceGc])
+if (args is [var traceMode, var tracePath, var tracePercent, var traceCadence, var traceStartup, var traceWait, var traceGc]
+    && traceMode is "--sampled-signal-trace" or "--sampled-signal-target-cpu")
 {
     var parsedWait = SignalWaitMode.Parse(traceWait);
     var plan = SampledSignalPlan.Parse(tracePercent, traceCadence, traceStartup, traceGc);
+    bool targetCpu = traceMode == "--sampled-signal-target-cpu";
     return SampledSignalWorkload.Run(tracePath, plan,
-        () => new LinuxSignalBackend(parsedWait), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(),
-        new SampledSignalTrace());
+        () => new LinuxSignalBackend(parsedWait, targetCpu), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(),
+        new SampledSignalTrace(), targetCpu);
 }
 
 if (args is ["--verify-sampled-gc"])

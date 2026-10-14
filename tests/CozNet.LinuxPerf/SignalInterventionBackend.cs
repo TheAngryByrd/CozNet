@@ -31,28 +31,39 @@ interface IBoundedInterventionBackend
     void RestoreAfterThreadJoin();
 }
 
-sealed class LinuxSignalBackend : IBoundedInterventionBackend
+sealed class LinuxSignalBackend : IBoundedInterventionBackend, ITargetCpuObservationBackend
 {
     private readonly ulong start, size;
     private readonly SignalWaitMode waitMode;
+    private readonly bool captureTargetCpu;
     public string Name => "linux-x64-signal";
     public object Describe() => new { nativeStart = start, nativeSize = size, symbol = OverheadWorkload.SelectedSymbol,
-        timingClock = "linux-clock-monotonic", timingUnit = "nanoseconds", waitMode = waitMode.Name };
+        timingClock = "linux-clock-monotonic", timingUnit = "nanoseconds", waitMode = waitMode.Name, targetCpuTiming = captureTargetCpu };
     public bool IsEligibleAddress(ulong address) => address >= start && address - start < size;
     public LinuxSignalBackend() : this(SignalWaitMode.Sleep) { }
 
-    public LinuxSignalBackend(SignalWaitMode waitMode)
+    public LinuxSignalBackend(SignalWaitMode waitMode, bool captureTargetCpu = false)
     {
         ArgumentNullException.ThrowIfNull(waitMode);
         this.waitMode = waitMode;
+        this.captureTargetCpu = captureTargetCpu;
         if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
             throw new PlatformNotSupportedException("The signal backend requires Linux x64.");
         (start, size) = PerfMapSnapshot.Read($"/tmp/perf-{Environment.ProcessId}.map").UniqueRange(OverheadWorkload.SelectedSymbol);
         if (Marshal.SizeOf<NativeResult>() != 48) throw new InvalidOperationException("The native signal result layout differs.");
         if (Marshal.SizeOf<NativeTiming>() != 40) throw new InvalidOperationException("The native signal timing layout differs.");
+        if (Marshal.SizeOf<NativeTargetCpu>() != 40) throw new InvalidOperationException("The native target CPU layout differs.");
         Check(Install(waitMode.NativeValue), "install");
     }
-    public void RegisterCurrentThread(int slot) => Check(Register(slot, start, size), "register");
+    public void RegisterCurrentThread(int slot) => Check(captureTargetCpu ? RegisterWithCpu(slot, start, size) : Register(slot, start, size), "register");
+    public TargetCpuSnapshot ReadTargetCpu(int slot)
+    {
+        if (!captureTargetCpu) throw new InvalidOperationException("Target CPU observations were not enabled at registration.");
+        Check(TargetCpu(slot, out var value), "target CPU read");
+        if (value.Registration != checked((ulong)slot + 1))
+            throw new InvalidDataException("The target CPU observation names a different registration.");
+        return TargetCpuSnapshot.Parse(value.Before, value.Cpu, value.After, value.Resolution, value.Registration);
+    }
     public ulong Request(int slot, SignalPlan plan)
     {
         if (!plan.Send) throw new InvalidOperationException("The baseline does not send requests.");
@@ -97,6 +108,12 @@ sealed class LinuxSignalBackend : IBoundedInterventionBackend
     }
     [DllImport("CozNet.Signal", EntryPoint = "coz_signal_install_with_wait", CallingConvention = CallingConvention.Cdecl)]
     private static extern int Install(int mode);
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeTargetCpu { public ulong Before, Cpu, After, Resolution, Registration; }
+    [DllImport("CozNet.Signal", EntryPoint = "coz_signal_register_with_cpu", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int RegisterWithCpu(int slot, ulong start, ulong size);
+    [DllImport("CozNet.Signal", EntryPoint = "coz_signal_target_cpu", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int TargetCpu(int slot, out NativeTargetCpu value);
     [DllImport("CozNet.Signal", EntryPoint = "coz_signal_register", CallingConvention = CallingConvention.Cdecl)]
     private static extern int Register(int slot, ulong start, ulong size);
     [DllImport("CozNet.Signal", EntryPoint = "coz_signal_request", CallingConvention = CallingConvention.Cdecl)]

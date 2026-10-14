@@ -1,6 +1,7 @@
 param(
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/runtime-suspension-comparison'),
-    [ValidateRange(1, 10)][int]$Repetitions = 3
+    [ValidateRange(1, 10)][int]$Repetitions = 3,
+    [switch]$TargetCpu
 )
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -26,6 +27,10 @@ $files = @('tests/CozNet.LinuxPerf/SampledSignalTrace.cs', 'tests/CozNet.LinuxPe
     'native/signal/Signal.LinuxX64.cpp', 'native/signal/Signal.h',
     'tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll',
     'tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.dll', 'artifacts/native-signal/libCozNet.Signal.so')
+$files += @('tests/CozNet.LinuxPerf/TargetCpuSnapshot.cs', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs', 'native/signal/TargetCpuChecks.cpp', 'native/signal/CMakeLists.txt')
+$files += @('native/AnalyzeTargetCpu.py', 'native/TargetCpuChecks.py', 'native/CollectLinuxTargetCpu.ps1',
+    'artifacts/native-signal/TargetCpuChecks')
+$route = if ($TargetCpu) { '--sampled-signal-target-cpu' } else { '--sampled-signal-trace' }
 $hashes = @{}
 foreach ($file in $files) {
     $path = Join-Path $root $file
@@ -54,6 +59,17 @@ $cases = @(for ($block = 1; $block -le $Repetitions; $block++) {
     --mount "type=bind,source=$workload,target=/work,readonly" $imageId `
     timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --verify-signal-trace *> (Join-Path $run 'marker-checks.log')
 $markerExit = $LASTEXITCODE
+$targetClockChecksPassed = $true
+if ($TargetCpu) {
+    foreach ($mode in @('enabled', 'disabled')) {
+        & docker run --rm --pull never --network none --cap-drop ALL --read-only --env LD_LIBRARY_PATH=/native `
+            --mount "type=bind,source=$native,target=/native,readonly" $imageId timeout -k 2s 30s /native/TargetCpuChecks $mode *> (Join-Path $run "target-cpu-$mode.log")
+        $code = $LASTEXITCODE
+        $targetClockChecksPassed = $targetClockChecksPassed -and $code -eq 0
+        @{ mode=$mode; exitCode=$code } | ConvertTo-Json | Set-Content (Join-Path $run "target-cpu-$mode.json")
+    }
+    if (-not $targetClockChecksPassed) { throw "Target CPU contract checks failed. Evidence: $run" }
+}
 $outcomes = [Collections.Generic.List[object]]::new()
 foreach ($case in $cases) {
     $name = "block-$($case.block)-$($case.gc)-$($case.percent)"
@@ -71,7 +87,7 @@ foreach ($case in $cases) {
         'timeout', '-k', '2s', '30s', 'dotnet', '/tool/dotnet-trace.dll', 'collect',
         '--providers', 'Microsoft-Windows-DotNETRuntime:0x1:4,CozNet-SampledSignals:0x0:4',
         '--buffersize', '64', '--rundown', 'false', '--output', '/output/trace.nettrace', '--',
-        'dotnet', '/work/CozNet.LinuxPerf.dll', '--sampled-signal-trace', '/output/workload.json',
+        'dotnet', '/work/CozNet.LinuxPerf.dll', $route, '/output/workload.json',
         "$($case.percent)", 'qualified-sample', 'warm', 'spin', $case.gc)
     $started = [DateTime]::UtcNow
     & docker @arguments *> (Join-Path $directory 'collect.log')

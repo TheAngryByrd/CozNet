@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <csignal>
 #include <ctime>
+#include <pthread.h>
 #include <sys/syscall.h>
 #include <ucontext.h>
 #include <unistd.h>
@@ -11,6 +12,7 @@
 namespace {
 static_assert(sizeof(SignalResult) == 48);
 static_assert(sizeof(SignalTiming) == 40);
+static_assert(sizeof(SignalTargetCpu) == 40);
 static_assert(sizeof(sigval_t) == sizeof(uint64_t));
 static_assert(std::atomic<uint64_t>::is_always_lock_free);
 enum class State : uint64_t { unused, ready, publishing, pending, complete, retired };
@@ -25,6 +27,12 @@ struct Slot {
 };
 static_assert(std::atomic<State>::is_always_lock_free);
 Slot slots[2];
+struct TargetClock {
+    clockid_t id{};
+    uint64_t resolution_ns{};
+    bool enabled{};
+};
+TargetClock target_clocks[2];
 int signal_number{}, process_id{}, owner_tid{};
 uid_t owner_uid{};
 bool installed{}, used{};
@@ -118,7 +126,7 @@ EXPORT int coz_signal_install_with_wait(int mode) {
     return 0;
 }
 
-EXPORT int coz_signal_register(int index, uint64_t begin, uint64_t size) {
+static int register_target(int index, uint64_t begin, uint64_t size, bool capture_cpu) {
     if (!installed || index < 0 || index >= 2 || begin == 0 || size == 0 || size > UINT64_MAX - begin) return EINVAL;
     sigset_t mask;
     if (sigprocmask(SIG_SETMASK, nullptr, &mask) != 0) return errno;
@@ -126,10 +134,43 @@ EXPORT int coz_signal_register(int index, uint64_t begin, uint64_t size) {
     auto& slot = slots[index];
     auto expected = State::unused;
     if (!slot.state.compare_exchange_strong(expected, State::publishing)) return EBUSY;
+    if (capture_cpu) {
+        clockid_t clock{};
+        const int error = pthread_getcpuclockid(pthread_self(), &clock);
+        timespec resolution{};
+        const int status = error != 0 ? error : (clock_getres(clock, &resolution) == 0 ? 0 : errno);
+        if (status != 0) {
+            slot.state.store(State::unused, std::memory_order_release);
+            return status;
+        }
+        target_clocks[index] = {clock, static_cast<uint64_t>(resolution.tv_sec) * 1000000000ULL + resolution.tv_nsec, true};
+    }
     slot.tid = static_cast<int>(direct_call(SYS_gettid));
     slot.begin = begin;
     slot.end = begin + size;
     slot.state.store(State::ready, std::memory_order_release);
+    return 0;
+}
+EXPORT int coz_signal_register(int index, uint64_t begin, uint64_t size) {
+    return register_target(index, begin, size, false);
+}
+EXPORT int coz_signal_register_with_cpu(int index, uint64_t begin, uint64_t size) {
+    return register_target(index, begin, size, true);
+}
+EXPORT int coz_signal_target_cpu(int index, SignalTargetCpu* observation) {
+    if (!controller() || index < 0 || index >= 2 || observation == nullptr) return EINVAL;
+    const auto state = slots[index].state.load(std::memory_order_acquire);
+    if (state != State::ready && state != State::pending && state != State::complete) return EINVAL;
+    const auto& clock = target_clocks[index];
+    if (!clock.enabled) return ENOTSUP;
+    timespec cpu{};
+    const auto before = monotonic();
+    const auto status = direct_call(SYS_clock_gettime, clock.id, reinterpret_cast<long>(&cpu));
+    const auto after = monotonic();
+    if (status != 0) return static_cast<int>(-status);
+    if (before == 0 || after < before || cpu.tv_sec < 0 || cpu.tv_nsec < 0 || cpu.tv_nsec >= 1000000000) return EIO;
+    *observation = {before, static_cast<uint64_t>(cpu.tv_sec) * 1000000000ULL + cpu.tv_nsec, after,
+        clock.resolution_ns, static_cast<uint64_t>(index + 1)};
     return 0;
 }
 

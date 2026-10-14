@@ -27,6 +27,7 @@ internal static class SampledSignalTraceChecks
     public static void Run()
     {
         ControllerCpuBracketsEncloseRead();
+        TargetCpuSnapshotPreservesBrackets();
         DisabledProviderFails();
         EnabledMarkersMatchBrackets();
         DisabledProviderFails();
@@ -62,6 +63,22 @@ internal static class SampledSignalTraceChecks
         catch (InvalidOperationException) { rejected = true; }
         if (!rejected || trace.Anchors.Count != 0)
             throw new InvalidOperationException("A disabled marker provider must fail without recording an anchor.");
+    }
+
+    private static void TargetCpuSnapshotPreservesBrackets()
+    {
+        var value = TargetCpuSnapshot.Parse(100, 20, 105, 1, 2);
+        if (value.BeforeNanoseconds != 100 || value.CpuNanoseconds != 20 || value.AfterNanoseconds != 105
+            || value.ResolutionNanoseconds != 1 || value.Registration != 2)
+            throw new InvalidOperationException("Target CPU observations must preserve the native fields.");
+        foreach (var input in new (ulong Before, ulong After, ulong Resolution, ulong Registration)[]
+            { (0, 1, 1, 1), (2, 1, 1, 1), (1, 2, 0, 1), (1, 2, 1, 0) })
+        {
+            bool rejected = false;
+            try { TargetCpuSnapshot.Parse(input.Before, 0, input.After, input.Resolution, input.Registration); }
+            catch (InvalidDataException) { rejected = true; }
+            if (!rejected) throw new InvalidOperationException($"Invalid target CPU observation was accepted: {input}.");
+        }
     }
 
     private static void EnabledMarkersMatchBrackets()

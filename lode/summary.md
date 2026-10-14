@@ -51,5 +51,8 @@ A [controller CPU diagnostic](../reliability/features/native-signal/controller-c
 One peak-debt request spends 12.97 ms before the first handler clock reading while the controller remains active.
 Target scheduling, signal delivery, and handler-prefix execution or descheduling remain unresolved. Controller starvation does not explain that request.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
+An optional [target CPU diagnostic](profiling/target-cpu-observations.md) captures remote CPU readings around requests without changing the handler.
+Its native contract checks pass. The first capture retains two treatment failures and five inconsistent target CPU records.
+Clock accuracy, diagnostic overhead, and target execution bounds remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

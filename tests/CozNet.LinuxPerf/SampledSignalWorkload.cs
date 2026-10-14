@@ -38,11 +38,12 @@ sealed class SampledSignalPlan
 static class SampledSignalWorkload
 {
     private sealed record Pending(SignalDelayRequest Request, ulong Sequence, long Started, string Stage,
-        ControllerCpuSnapshot? CpuStart);
+        ControllerCpuSnapshot? CpuStart, TargetCpuSnapshot? TargetCpuStart);
     private sealed record RequestRecord(int Slot, ulong Sequence, long RequestedNanoseconds,
         double AcknowledgmentMilliseconds, SignalAcknowledgment Result, bool DuringMeasurement, string Stage,
         long StartedTimestamp, long CompletedTimestamp, string StartedStage,
-        ControllerCpuSnapshot? ControllerCpuStart, ControllerCpuSnapshot? ControllerCpuEnd);
+        ControllerCpuSnapshot? ControllerCpuStart, ControllerCpuSnapshot? ControllerCpuEnd,
+        TargetCpuSnapshot? TargetCpuStart, TargetCpuSnapshot? TargetCpuEnd);
     private sealed record SampleRecord(CpuSample Sample, ulong Epoch, bool Accepted, long CreditNanoseconds,
         double ConsumedMilliseconds, string Stage, long ConsumedTimestamp);
     private sealed record PendingRecord(int Slot, ulong Sequence, long RequestedNanoseconds, long StartedTimestamp, string StartedStage);
@@ -66,7 +67,7 @@ static class SampledSignalWorkload
     public static int Run(string path, SampledSignalPlan plan,
         Func<IBoundedInterventionBackend> backendFactory,
         Func<ICpuSampleSink, ICpuEventSession> sessionFactory, IThreadCpuClock controllerClock,
-        SampledSignalTrace? trace = null)
+        SampledSignalTrace? trace = null, bool captureTargetCpu = false)
     {
         var failures = new List<string>();
         var requests = new List<RequestRecord>();
@@ -180,14 +181,16 @@ static class SampledSignalWorkload
             }
             nativeOutstanding[slot] = false;
             ControllerCpuSnapshot? cpuEnd = null;
+            TargetCpuSnapshot? targetCpuEnd = null;
             try
             {
+                if (captureTargetCpu) targetCpuEnd = ((ITargetCpuObservationBackend)backend).ReadTargetCpu(slot);
                 if (trace is not null) cpuEnd = ControllerCpuSnapshot.Capture(controllerClock);
             }
             finally
             {
                 requests.Add(new(slot, operation.Sequence, SignalDelayRequestModule.nanoseconds(operation.Request), elapsed, result, measuring, stage,
-                    operation.Started, completed, operation.Stage, operation.CpuStart, cpuEnd));
+                    operation.Started, completed, operation.Stage, operation.CpuStart, cpuEnd, operation.TargetCpuStart, targetCpuEnd));
             }
             if (elapsed > 100 || result.MeasuredHandlerNanoseconds > 5000000 || result.Outcome == 4
                 || result.Sequence != operation.Sequence || result.Outcome is < 1 or > 3
@@ -226,10 +229,11 @@ static class SampledSignalWorkload
             }
             if (requests.Count >= 100000) throw new InvalidOperationException("The signal request capture limit was exceeded.");
             var cpuStart = trace is null ? null : ControllerCpuSnapshot.Capture(controllerClock);
+            var targetCpuStart = captureTargetCpu ? ((ITargetCpuObservationBackend)backend!).ReadTargetCpu(slot) : null;
             long started = Stopwatch.GetTimestamp();
             nativeOutstanding[slot] = true;
             ulong nativeSequence = backend!.Request(slot, SignalPlan.FromRequest(request));
-            pending[slot] = new(request, nativeSequence, started, stage, cpuStart);
+            pending[slot] = new(request, nativeSequence, started, stage, cpuStart, targetCpuStart);
             state = Parsed(SignalAccountingModule.sent(request, nativeSequence, state));
             return false;
         }
@@ -334,6 +338,8 @@ static class SampledSignalWorkload
                 throw new InvalidOperationException("Sampled signals require disabled tiering, ReadyToRun, and startup profiling.");
             if (CpuWorkload.Run() != 49995000L) throw new InvalidOperationException("The sampled signal warmup checksum differs.");
             backend = backendFactory();
+            if (captureTargetCpu && backend is not ITargetCpuObservationBackend)
+                throw new PlatformNotSupportedException("The intervention backend does not support target CPU observations.");
             workers = Enumerable.Range(0, 2).Select(slot => new Thread(() =>
             {
                 bool announced = false;
@@ -461,6 +467,7 @@ static class SampledSignalWorkload
             stopwatchFrequency = Stopwatch.Frequency, longestServiceInterval, peakDebt,
             traceAnchors = trace?.Anchors, diagnosticTrace = trace is not null,
             controllerCpuTiming = trace is not null,
+            targetCpuTiming = captureTargetCpu,
             controllerCpuNanoseconds = controllerCpu, samplingPauses = pauses, records, samples, requests,
             failures, capacityViolations, joined, restored, protocolPassed, capacityPassed, passed = protocolPassed && capacityPassed,
             forcedGc = plan.ForceGc, gcObservations, gcJoined, measurementStartedTimestamp, gcCallBoundMilliseconds = 250,
