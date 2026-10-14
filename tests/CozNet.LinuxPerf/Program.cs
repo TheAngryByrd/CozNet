@@ -4,6 +4,21 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-signal-trace"])
+{
+    SampledSignalTraceChecks.Run();
+    return 0;
+}
+
+if (args is ["--sampled-signal-trace", var tracePath, var tracePercent, var traceCadence, var traceStartup, var traceWait, var traceGc])
+{
+    var parsedWait = SignalWaitMode.Parse(traceWait);
+    var plan = SampledSignalPlan.Parse(tracePercent, traceCadence, traceStartup, traceGc);
+    return SampledSignalWorkload.Run(tracePath, plan,
+        () => new LinuxSignalBackend(parsedWait), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(),
+        new SampledSignalTrace());
+}
+
 if (args is ["--verify-sampled-gc"])
 {
     SampledGcStressChecks.Run();

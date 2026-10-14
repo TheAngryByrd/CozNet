@@ -63,7 +63,8 @@ static class SampledSignalWorkload
 
     public static int Run(string path, SampledSignalPlan plan,
         Func<IBoundedInterventionBackend> backendFactory,
-        Func<ICpuSampleSink, ICpuEventSession> sessionFactory, IThreadCpuClock controllerClock)
+        Func<ICpuSampleSink, ICpuEventSession> sessionFactory, IThreadCpuClock controllerClock,
+        SampledSignalTrace? trace = null)
     {
         var failures = new List<string>();
         var requests = new List<RequestRecord>();
@@ -225,6 +226,7 @@ static class SampledSignalWorkload
         Boundary RunStage(string name, int milliseconds)
         {
             stage = name;
+            trace?.Mark(name + "-start");
             if (name == "measurement") measurementStartedTimestamp = Stopwatch.GetTimestamp();
             runtimeCountersStart = ReadRuntimeCounters();
             measuring = name == "measurement";
@@ -283,6 +285,7 @@ static class SampledSignalWorkload
             var boundary = Snapshot();
             controllerCpu = controllerClock.ReadNanoseconds() - initialCpu;
             measuring = accept = runningStage = false;
+            trace?.Mark(name + "-end");
             return boundary;
         }
 
@@ -313,6 +316,7 @@ static class SampledSignalWorkload
 
         try
         {
+            trace?.Mark("run-start");
             if (Environment.GetEnvironmentVariable("DOTNET_TieredCompilation") != "0"
                 || Environment.GetEnvironmentVariable("DOTNET_ReadyToRun") != "0"
                 || Environment.GetEnvironmentVariable("CORECLR_ENABLE_PROFILING") == "1")
@@ -424,6 +428,11 @@ static class SampledSignalWorkload
             failures.Add("No forced collection completed inside the sampled measurement window.");
         if (gcObservations is not null && !SampledGcStress.WithinBounds(gcObservations, Stopwatch.Frequency))
             failures.Add("A forced collection exceeded 250 milliseconds or had invalid timestamps.");
+        if (trace is not null)
+        {
+            try { trace.Mark("run-end"); }
+            catch (Exception error) { failures.Add(error.ToString()); }
+        }
         bool protocolPassed = failures.Count == 0;
         bool capacityPassed = protocolPassed && maxDebt.All(value => value <= 2000000)
             && measurement!.DebtNanoseconds.All(value => value <= 2000000);
@@ -439,6 +448,7 @@ static class SampledSignalWorkload
             warmupMilliseconds = plan.WarmupMilliseconds, warmup, measurement, settled, failureBoundary, measurementStartRecords,
             boundaries, maxDebtNanoseconds = maxDebt, debtBoundNanoseconds = 2000000,
             stopwatchFrequency = Stopwatch.Frequency, longestServiceInterval, peakDebt,
+            traceAnchors = trace?.Anchors, diagnosticTrace = trace is not null,
             controllerCpuNanoseconds = controllerCpu, samplingPauses = pauses, records, samples, requests,
             failures, capacityViolations, joined, restored, protocolPassed, capacityPassed, passed = protocolPassed && capacityPassed,
             forcedGc = plan.ForceGc, gcObservations, gcJoined, measurementStartedTimestamp, gcCallBoundMilliseconds = 250,

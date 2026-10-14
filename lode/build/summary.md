@@ -48,6 +48,10 @@ It runs twelve basic signal/GC cases in seeded order and twelve sampled cases in
 The basic and sampled suites both run even when one fails. Their outcomes remain separate in the parent report.
 `LinuxSpinReliabilityVerify` runs spin transition cases and three sampled blocks with and without forced GC.
 It preserves both suite outcomes and continues to sampled cases after a transition failure.
+`LinuxRuntimeTraceCollect` uses the signal build chain and collects three seeded diagnostic blocks.
+Each block contains zero and 50 percent with and without forced GC. Every case uses spin and bracketed EventPipe markers.
+It retains every child exit code, trace, workload record, collection command, and source/binary snapshot.
+Failed workloads fail the target after all cases finish. Correlation runs separately and has its own validity result.
 It also runs five portable phase-timing parser checks. The sampled runner repeats these checks beside its cadence checks.
 Evidence remains under `artifacts/linux-signal/`. The target requires the existing native compiler image.
 `LinuxSignalTransitionsVerify` uses the same build chain and a separate native workload fixture.

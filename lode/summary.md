@@ -42,6 +42,11 @@ The [wait comparison](../reliability/features/native-signal/wait-comparison.md) 
 Spin increases measured process CPU.
 The [spin reliability run](../reliability/features/native-signal/spin-reliability.md) passes all runtime transitions and sampled protocol checks.
 Two forced-GC treatments fail capacity. Physical-change prediction remains unverified.
+An explicit [diagnostic trace path](profiling/runtime-suspension-trace.md) records bracketed EventPipe clock markers.
+Its first local capture has consistent clock alignment and zero reported event loss.
+The correlation finds 104 complete suspension episodes and 53 overlapping measurement requests. It does not explain the earlier capacity failures.
+The subsequent traced comparison retains four failed treatments. A long acknowledgment-observation delay has no runtime suspension overlap.
+Controller work and scheduling remain unresolved. One handler-bound failure has an incomplete marker sequence and fails correlation validity.
 General eligibility, source-line mapping, and prediction accuracy remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).

@@ -18,6 +18,7 @@ For unchanged-state peer checks and retained failures, read [peer cadence](../re
 For allocation in the full controller's accounting read, read [accounting read](../reliability/features/native-signal/accounting-read.md).
 For native sleep and spin measurements, read [the wait comparison](../reliability/features/native-signal/wait-comparison.md).
 For spin runtime transitions and sampled forced GC, read [spin reliability](../reliability/features/native-signal/spin-reliability.md).
+For diagnostic clock markers and runtime suspension events, read [runtime suspension traces](profiling/runtime-suspension-trace.md).
 For native Coz's check ordering and perf boundary behavior, read [signal sample cadence](../docsSrc/Research/signal-sample-cadence.md).
 For build targets and CI, read [the MiniScaffold build](build/summary.md).
 For scope expansion, read [the roadmap](plans/roadmap.md).
