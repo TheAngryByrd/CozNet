@@ -120,6 +120,9 @@ The portable checks exercise cancellation, stale identities, reader exclusion, g
 The [native reuse fixture](../How_Tos/run-target-lease-reuse.md) connects the mailbox to one Linux timer across 16 generations.
 It requires a retired core snapshot before reconstructing the lease after mailbox quiescence and reader release.
 No live .NET backend consumes the mailbox yet.
+The `cancel-before-delivery` fixture mode cancels odd generations before publication and arming.
+It requires zero wait and cancelled stop for those generations, followed by normal completion in each even generation.
+This mode does not exercise concurrent cancellation during handler execution.
 
 ## Managed receipt tracking
 

@@ -79,3 +79,5 @@ The portable `LeaseMailbox` implements generation claims, cancellation preservat
 The native reuse fixture supplies a disarm/drain proof, retires the core, and makes mailbox quiescence publication its final old-storage access.
 It exercises 16 generations with one child each, one timer, and one lease storage slot.
 Its next integration steps are concurrent cancellation, failed-arm recovery, and a live timer C ABI with managed receipt tracking.
+Cancellation before publication and arming is now covered by alternating cancelled and normal native generations.
+Cancellation during a handler remains a separate required case.

@@ -164,3 +164,25 @@ All 16 pinned reuse attempts are rejected. Retirement drains no pending signal.
 The measured wait range is 50,013–68,108 ns. Overshoot remains accepted measured wait.
 The maximum measured handler interval is 69,034 ns. The maximum first native receipt interval is 1,073,895 ns.
 These observations establish the tested native core lifecycle, not live managed receipt or general CLR safety.
+
+## Cancellation before delivery
+
+Run `artifacts/target-lease-reuse/20261014T192616164-53f2fd39` uses `cancel-before-delivery` mode.
+The controller cancels odd generations during configuration, before publication and timer arming.
+The portable suites and all 16 native generations pass with unchanged inputs.
+
+| Observation | Value |
+| --- | ---: |
+| Cancelled generations | 8 |
+| Accepted cancellations | 8 |
+| Total measured wait in cancelled generations | 0 ns |
+| Following normal generations | 8 |
+| Normal measured wait range | 50,016–434,378 ns |
+| Maximum measured handler interval | 438,354 ns |
+| Maximum first native receipt interval | 1,757,545 ns |
+
+Cancelled generations report stop value 3. Normal generations report stop value 1.
+All snapshots report retired visibility 3. The target deletes the timer. The process restores the handler after target join.
+The large normal wait overshoot remains in accepted measured time. No threshold was relaxed.
+The case demonstrates cancellation preservation before delivery and reset at the next generation.
+It does not test cancellation during an active handler, failed-arm recovery, sampled capacity, live managed receipt, or physical prediction accuracy.

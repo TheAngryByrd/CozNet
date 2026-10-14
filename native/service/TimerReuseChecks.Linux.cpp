@@ -5,6 +5,7 @@
 #include <chrono>
 #include <csignal>
 #include <fstream>
+#include <string_view>
 #include <thread>
 #include <sys/syscall.h>
 #include <ucontext.h>
@@ -17,6 +18,12 @@ namespace {
 using namespace coz::service;
 constexpr uint64_t cookie = 0x436f7a5265757365ULL, budget = 50000;
 constexpr uint32_t generations = 16;
+enum class FixtureMode { reuse, cancel_before_delivery };
+std::optional<FixtureMode> parseMode(std::string_view value) {
+    if (value == "reuse") return FixtureMode::reuse;
+    if (value == "cancel-before-delivery") return FixtureMode::cancel_before_delivery;
+    return std::nullopt;
+}
 LeaseMailbox mailbox;
 std::array<TargetLeaseChild, 4> journal{};
 std::optional<TargetLease> slot;
@@ -37,7 +44,7 @@ struct Observation {
     TargetLeaseSnapshot header{};
     std::array<TargetLeaseChild, 4> children{};
     uint64_t captured{}, receipt{}, progress{};
-    bool copied{}, reuse_rejected{}, receipt_observed{};
+    bool copied{}, reuse_rejected{}, receipt_observed{}, cancellation_requested{}, cancellation_accepted{};
 };
 std::array<Observation, generations> observations{};
 
@@ -124,7 +131,9 @@ template<class Predicate> bool await(Predicate predicate) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 2) return 2;
+    if (argc != 3) return 2;
+    const auto mode = parseMode(argv[1]);
+    if (!mode) return 2;
     signal_number = SIGRTMIN + 7;
     if (signal_number > SIGRTMAX || signal_number > 64) return 3;
     struct sigaction previous{}, action{};
@@ -175,6 +184,12 @@ int main(int argc, char** argv) {
             reinterpret_cast<uint64_t>(&coz_timer_workload_end) - reinterpret_cast<uint64_t>(&coz_timer_workload_begin));
         if (!plan) { valid = false; break; }
         slot.emplace(*plan, journal);
+        auto& observation = observations[generation - 1];
+        observation.cancellation_requested = *mode == FixtureMode::cancel_before_delivery && generation % 2 == 1;
+        if (observation.cancellation_requested) {
+            observation.cancellation_accepted = mailbox.cancel(generation);
+            if (!observation.cancellation_accepted) { valid = false; break; }
+        }
         const auto armed = now();
         valid = armed != 0 && slot->start(TimerArmResult::accepted(armed));
         announced.store(generation, std::memory_order_release);
@@ -186,7 +201,6 @@ int main(int argc, char** argv) {
         if (arm_error != 0) { valid = false; break; }
         auto reader = mailbox.read(generation);
         if (!reader) { valid = false; break; }
-        auto& observation = observations[generation - 1];
         valid = await([&] {
             std::size_t count = 0;
             const auto snapshot = slot->snapshot(observation.children, count);
@@ -208,8 +222,11 @@ int main(int argc, char** argv) {
         const auto& child = observation.children[0];
         valid = observation.reuse_rejected && observation.header.generation == generation
             && observation.header.command == generation && observation.header.children == 1
-            && observation.header.measured >= budget && observation.header.measured == child.waited
-            && !observation.header.may_have_delivery && observation.header.stop == TargetLeaseStop::completed
+            && observation.header.measured == child.waited
+            && (observation.cancellation_requested
+                ? observation.cancellation_accepted && observation.header.measured == 0 && observation.header.stop == TargetLeaseStop::cancelled
+                : observation.header.measured >= budget && observation.header.stop == TargetLeaseStop::completed)
+            && !observation.header.may_have_delivery
             && observation.header.error == TargetLeaseError::none && child.valid && child.ordinal == 1
             && child.requested == budget && child.finished >= child.started && child.started >= child.armed
             && child.finished - child.started <= 5000000 && child.waited <= child.finished - child.started
@@ -239,8 +256,8 @@ int main(int argc, char** argv) {
     if (!created || deleted) restored = sigaction(signal_number, &previous, nullptr) == 0;
     valid = valid && closed && completed == generations && target_error == 0 && arm_error == 0
         && handler_error.load(std::memory_order_acquire) == 0 && deleted && restored && retired_drained == 0;
-    std::ofstream output(argv[1]);
-    output << "{\"passed\":" << (valid ? "true" : "false") << ",\"completed\":" << completed
+    std::ofstream output(argv[2]);
+    output << "{\"passed\":" << (valid ? "true" : "false") << ",\"mode\":\"" << argv[1] << "\",\"completed\":" << completed
         << ",\"timerDeleted\":" << (deleted ? "true" : "false") << ",\"restored\":" << (restored ? "true" : "false")
         << ",\"closed\":" << (closed ? "true" : "false") << ",\"targetError\":" << target_error
         << ",\"handlerError\":" << handler_error.load() << ",\"armError\":" << arm_error
@@ -251,6 +268,8 @@ int main(int argc, char** argv) {
         if (index) output << ',';
         output << "{\"generation\":" << item.header.generation << ",\"command\":" << item.header.command
             << ",\"copied\":" << (item.copied ? "true" : "false") << ",\"reuseRejected\":" << (item.reuse_rejected ? "true" : "false")
+            << ",\"cancellationRequested\":" << (item.cancellation_requested ? "true" : "false")
+            << ",\"cancellationAccepted\":" << (item.cancellation_accepted ? "true" : "false")
             << ",\"children\":" << item.header.children << ",\"measured\":" << item.header.measured
             << ",\"visibility\":" << static_cast<uint64_t>(item.header.visibility)
             << ",\"stop\":" << static_cast<int>(item.header.stop) << ",\"error\":" << static_cast<int>(item.header.error)

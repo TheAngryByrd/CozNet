@@ -138,4 +138,5 @@ See [owner polling](../profiling/owner-polling.md).
 `LinuxTargetLeaseDelivery` builds the isolated Linux x64 timer fixture and retains chain, snapshot-chain, pending-retirement, and cancel-rearm cases.
 It uses the native compiler image and does not run .NET application workloads.
 `LinuxTargetLeaseReuse` runs portable mailbox and lease checks, then retains one native 16-generation timer reuse case.
+`LinuxTargetLeaseCancellation` uses the same runner with `-Mode cancel-before-delivery` and alternates cancelled and normal generations.
 See [target-local leases](../plans/target-local-lease.md).

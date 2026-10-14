@@ -1,4 +1,7 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/target-lease-reuse'))
+param(
+    [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/target-lease-reuse'),
+    [ValidateSet('reuse', 'cancel-before-delivery')][string]$Mode = 'reuse'
+)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -19,11 +22,11 @@ if ($LASTEXITCODE -ne 0) { throw "Timer reuse build failed. See $run/build.log."
 $binaryHash = (Get-FileHash -LiteralPath (Join-Path $run 'TimerReuseChecks') -Algorithm SHA256).Hash
 @{ sources = $hashes; binary = $binaryHash; image = $image; generations = 16; budgetNanoseconds = 50000;
     requestBoundNanoseconds = 50000; handlerBoundNanoseconds = 5000000; receiptBoundNanoseconds = 100000000;
-    intervalNanoseconds = 1000000; clrWorkload = $false
+    intervalNanoseconds = 1000000; mode = $Mode; clrWorkload = $false
 } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $run 'manifest.json')
 & docker @container ctest --test-dir /build -R '^(target-lease|lease-mailbox)$' --output-on-failure *> (Join-Path $run 'contracts.log')
 $contractResult = $LASTEXITCODE
-& docker @container timeout -k 2s 10s /build/TimerReuseChecks /build/reuse.json *> (Join-Path $run 'reuse.log')
+& docker @container timeout -k 2s 10s /build/TimerReuseChecks $Mode /build/reuse.json *> (Join-Path $run 'reuse.log')
 $reuseResult = $LASTEXITCODE
 $unchanged = (Get-FileHash -LiteralPath (Join-Path $run 'TimerReuseChecks') -Algorithm SHA256).Hash -eq $binaryHash
 foreach ($name in $hashes.Keys) {

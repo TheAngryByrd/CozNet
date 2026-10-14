@@ -99,6 +99,10 @@ Portable mailbox checks separately verify that exclusion after mailbox quiescenc
 After reader release and successful `begin`, the controller reconstructs the single-use lease before arming.
 The first native receipt timestamp follows the first successful child copy and remains fixed.
 No live managed backend consumes this core yet. Concurrent cancellation and injected transport failures remain unverified.
+The `cancel-before-delivery` mode cancels odd generations while configuring, before publication and timer arming.
+Those generations must retain cancellation through native delivery and retire with zero measured wait.
+Even generations must complete normally, proving the previous cancellation does not cross the generation boundary.
+The mode does not exercise cancellation during an active handler.
 Core retirement does not release storage or the target registration. Mailbox quiescence and reader release still gate storage reuse.
 Target-side deletion and drain outside the handler still gate registration retirement.
 

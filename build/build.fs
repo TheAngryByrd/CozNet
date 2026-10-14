@@ -470,7 +470,8 @@ let linuxSignalServiceVerify _ =
 
 let linuxServiceInteropVerify _ = nativeScript "VerifyServiceInterop.ps1"
 
-let linuxSampledServiceVerify _ = nativeScript "VerifyLinuxSampledService.ps1"
+let linuxSampledServiceVerify _ =
+    nativeScript "VerifyLinuxSampledService.ps1"
 
 let linuxSampledServicePhases _ =
     nativeScriptWithArgs "VerifyLinuxSampledService.ps1" [ "-CapturePhases" ]
@@ -492,6 +493,12 @@ let linuxTargetLeaseDelivery _ =
 
 let linuxTargetLeaseReuse _ =
     nativeScript "VerifyTargetLeaseReuse.ps1"
+
+let linuxTargetLeaseCancellation _ =
+    nativeScriptWithArgs "VerifyTargetLeaseReuse.ps1" [
+        "-Mode"
+        "cancel-before-delivery"
+    ]
 
 let linuxServiceOwnerPolling _ =
     nativeScriptWithArgs "VerifyLinuxSampledService.ps1" [ "-CompareOwnerPolling" ]
@@ -1009,6 +1016,7 @@ let initTargets () =
     Target.create "LinuxServiceOwnerPolling" linuxServiceOwnerPolling
     Target.create "LinuxTargetLeaseDelivery" linuxTargetLeaseDelivery
     Target.create "LinuxTargetLeaseReuse" linuxTargetLeaseReuse
+    Target.create "LinuxTargetLeaseCancellation" linuxTargetLeaseCancellation
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
