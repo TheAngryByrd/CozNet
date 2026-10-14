@@ -1,6 +1,6 @@
 param(
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/target-lease-reuse'),
-    [ValidateSet('reuse', 'cancel-before-delivery')][string]$Mode = 'reuse'
+    [ValidateSet('reuse', 'cancel-before-delivery', 'reject-initial-arm')][string]$Mode = 'reuse'
 )
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -15,6 +15,8 @@ foreach ($name in @('native/service/TimerReuseChecks.Linux.cpp', 'native/service
 $container = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
     '--tmpfs', '/tmp:rw,nosuid,size=64m', '--mount', "type=bind,source=$root,target=/source,readonly",
     '--mount', "type=bind,source=$run,target=/build", $image)
+& docker @container uname -a *> (Join-Path $run 'kernel.txt')
+if ($LASTEXITCODE -ne 0) { throw 'Kernel identity capture failed.' }
 & docker @container cmake -S /source/native/service -B /build -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DCOZ_SERVICE_LINUX_SIGNAL=ON *> (Join-Path $run 'configure.log')
 if ($LASTEXITCODE -ne 0) { throw "Timer reuse configuration failed. See $run/configure.log." }
 & docker @container cmake --build /build --target TimerReuseChecks TargetLeaseChecks LeaseMailboxChecks *> (Join-Path $run 'build.log')
@@ -22,7 +24,7 @@ if ($LASTEXITCODE -ne 0) { throw "Timer reuse build failed. See $run/build.log."
 $binaryHash = (Get-FileHash -LiteralPath (Join-Path $run 'TimerReuseChecks') -Algorithm SHA256).Hash
 @{ sources = $hashes; binary = $binaryHash; image = $image; generations = 16; budgetNanoseconds = 50000;
     requestBoundNanoseconds = 50000; handlerBoundNanoseconds = 5000000; receiptBoundNanoseconds = 100000000;
-    intervalNanoseconds = 1000000; mode = $Mode; clrWorkload = $false
+    intervalNanoseconds = 1000000; rejectedInitialArmNanoseconds = 1000000000; mode = $Mode; clrWorkload = $false
 } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $run 'manifest.json')
 & docker @container ctest --test-dir /build -R '^(target-lease|lease-mailbox)$' --output-on-failure *> (Join-Path $run 'contracts.log')
 $contractResult = $LASTEXITCODE

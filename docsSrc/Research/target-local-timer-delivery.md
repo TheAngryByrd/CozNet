@@ -154,6 +154,28 @@ Passing those checks would not establish physical prediction accuracy or general
 
 See [owner scheduling](native-owner-scheduling.md) and [the finite service contract](../../lode/plans/native-debt-service.md).
 
+## Recovering a rejected initial arm
+
+The `reject-initial-arm` fixture uses `it_value.tv_nsec = 1000000000` and requires the direct syscall result `-EINVAL`.
+Linux v6.6 checks the timespec before timer lookup and backend mutation. [15][16]
+Microsoft's `linux-msft-wsl-5.15.153.1` release source has the same rejection order. [17]
+That release name matches the retained run's kernel identity. Matching names do not verify the installed binary.
+This specific rejection cannot create a new expiration. It also cannot remove an old expiration.
+Thus recovery depends on prior target-side disarm and drain, with no intervening successful arm or other producer.
+An inactive value from `timer_gettime` does not by itself prove that the pending signal queue is empty.
+
+The controller must win the generation-specific mailbox recovery transition before changing the published lease.
+If target execution wins instead, the controller cannot claim recovery ownership.
+The failed lease retains zero children, zero measured wait, and the original transport error.
+Core retirement and final writer access precede mailbox quiescence. Reader guards still prevent storage reuse.
+Registration deletion and drain remain target-side operations outside the handler.
+
+This reasoning does not apply to every failed timer call.
+For example, Linux v6.6 can return `EFAULT` while copying `old_setting` after the timer has already changed. [15]
+The fixture passes a null `old_setting` pointer and retains kernel identity with each run.
+The inspected source path does not verify the installed kernel binary or establish general CLR safety.
+See [the recovery procedure](../How_Tos/run-target-lease-reuse.md#check-rejected-initial-arms).
+
 ## Primary sources
 
 [1] [Linux timer creation contract](https://man7.org/linux/man-pages/man2/timer_create.2.html).
@@ -183,3 +205,9 @@ See [owner scheduling](native-owner-scheduling.md) and [the finite service contr
 [13] [Linux v6.6 x86 kernel signal set](https://github.com/torvalds/linux/blob/v6.6/arch/x86/include/asm/signal.h#L10-L26).
 
 [14] [glibc-2.39 signal wait wrapper](https://github.com/bminor/glibc/blob/glibc-2.39/sysdeps/unix/sysv/linux/sigtimedwait.c).
+
+[15] [Linux v6.6 initial timer validation and result copy](https://github.com/torvalds/linux/blob/v6.6/kernel/time/posix-timers.c#L900-L959).
+
+[16] [Linux v6.6 timespec validation](https://github.com/torvalds/linux/blob/v6.6/include/linux/time64.h#L89-L101).
+
+[17] [Microsoft WSL2 release rejection path](https://github.com/microsoft/WSL2-Linux-Kernel/blob/33cad9854e0b15d9ee50b33a3f457ff31a37b291/kernel/time/posix-timers.c#L907-L967) and [timespec validation](https://github.com/microsoft/WSL2-Linux-Kernel/blob/33cad9854e0b15d9ee50b33a3f457ff31a37b291/include/linux/time64.h#L89-L98).

@@ -186,3 +186,30 @@ All snapshots report retired visibility 3. The target deletes the timer. The pro
 The large normal wait overshoot remains in accepted measured time. No threshold was relaxed.
 The case demonstrates cancellation preservation before delivery and reset at the next generation.
 It does not test cancellation during an active handler, failed-arm recovery, sampled capacity, live managed receipt, or physical prediction accuracy.
+
+## Rejected initial-arm recovery
+
+Run `artifacts/target-lease-reuse/20261014T194430826-e5a0a669` uses `reject-initial-arm` mode.
+Command: `dotnet run --project build/build.fsproj -- -t LinuxTargetLeaseArmRecovery`.
+The manifest retains source and binary hashes. `kernel.txt` identifies `5.15.153.1-microsoft-standard-WSL2` on x86-64.
+The portable mailbox and lease checks pass. All 16 native generations pass with unchanged inputs.
+
+| Observation | Value |
+| --- | ---: |
+| Rejected initial arms with raw result -22 | 8 |
+| Exclusive recovery claims | 8 |
+| Failed-generation children and measured wait | 0 |
+| Following normal generations | 8 |
+| Normal measured wait range | 50,007–50,084 ns |
+| Maximum measured handler interval | 52,340 ns |
+| Maximum first native receipt interval | 1,066,079 ns |
+
+Each rejected arm has zero remaining timer fields, failed stop 5, arm error 1, and original transport error 22.
+Each failed snapshot retains a positive header capture timestamp and no child receipt timestamp.
+All generations report retired visibility 3. Final closure, timer deletion, and handler restoration pass. Final drain finds no pending signal.
+The target disarms and drains before the first generation. Each normal generation repeats target-side disarm and drain before quiescence publication.
+Recovery relies on that prior quiescence plus the specific no-mutation rejection path described in [the source analysis](../../../../docsSrc/Research/target-local-timer-delivery.md#recovering-a-rejected-initial-arm).
+The run does not establish recovery from ambiguous timer errors, concurrent cancellation, managed receipt, CLR safety, or physical prediction accuracy.
+
+The updated runner also passes `reuse` in `20261014T194605869-d5643dec` and `cancel-before-delivery` in `20261014T194629986-cd1c3069`.
+Each run retains its own hashes, raw observations, and unchanged-input result. These cases exercise the shared initial disarm and drain change.

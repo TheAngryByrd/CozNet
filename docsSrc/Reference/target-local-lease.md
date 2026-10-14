@@ -55,8 +55,11 @@ Terminal accounting does not prove timer quiescence.
 `quiesced` is a backend notification, not an OS check performed by this portable class.
 `rejectInitialArm` retains possible delivery ownership until the backend provides that proof.
 It rejects zero or negative errors, later-child waits, and executing, prepared, terminal, or retired phases without mutation.
-The backend must exclude producers, block delivery, disarm the timer, and drain pending signals before calling it.
+Before `quiesced`, the backend must establish that no delivery remains.
+The normal path excludes producers, blocks delivery, disarms the timer, and drains pending signals.
 Deleting the timer followed by a complete drain also establishes this proof.
+The rejected-initial-arm fixture uses prior target-side quiescence and a specific no-mutation rejection path.
+It does not treat an inactive timer alone as proof that no signal is pending.
 Core retirement ends the lease lifecycle. It does not free journal storage or retire the target registration.
 Storage reuse also requires mailbox quiescence and release of every reader guard.
 Registration retirement still requires target-side timer deletion and drain outside the handler.
@@ -116,7 +119,8 @@ Readers must release every storage reference before destroying their guard.
 The guard protects lifetime only. Journal reads still require `TargetLease::snapshot` or equivalent synchronization.
 
 Before `publish`, the controller must finish configuration writes. It must publish before arming delivery.
-Before `quiesce`, the backend must exclude rearming, disarm delivery, drain pending events, and finish all old storage accesses.
+Before `quiesce`, the backend must prove delivery quiescence and finish all old storage accesses.
+The normal target path excludes rearming, disarms delivery, and drains pending events.
 The target must make no old storage access after successful quiescence publication.
 Before `abandonUndelivered`, the backend must prove that no delivery is armed, pending, or executing.
 Mailbox closure does not establish handler return or authorize registration destruction.
@@ -128,7 +132,16 @@ Existing reader guards remain valid and still prevent reuse after recovery quies
 The controller must finish core failure publication, delivery cleanup, core retirement, and every old storage access before recovery quiescence.
 `abandonUndelivered` does not grant a recovery token. It cannot authorize controller mutation of a published core.
 The recovery token controls writer ownership. It does not prove that the operating system rejected or drained delivery.
-Portable recovery checks pass on Windows and Linux. No live timer backend uses this recovery path yet.
+Portable recovery checks pass on Windows and Linux.
+The Linux `reject-initial-arm` fixture connects recovery to a rejected timer syscall.
+Odd generations use `it_value.tv_nsec = 1000000000` and require the raw result `-EINVAL`.
+The controller acquires recovery ownership before changing the lease.
+It records `timer_gettime`, requires an inactive timer, seals the arm failure, and retires the core before mailbox quiescence.
+The proof also requires prior target-side disarm and drain, with no intervening successful arm or other signal producer.
+The no-mutation argument relies on reviewed Linux v6.6 and Microsoft WSL2 `5.15.153.1` release sources.
+It does not verify installed binaries or cover every timer error. See [the source analysis](../Research/target-local-timer-delivery.md#recovering-a-rejected-initial-arm).
+Each following even generation must complete normally.
+Rejected generations have no children and no child receipt timestamp. `headerCaptured` records the separate header observation.
 
 The portable checks exercise cancellation, stale identities, reader exclusion, generation exhaustion, and read-versus-reuse races.
 The [native reuse fixture](../How_Tos/run-target-lease-reuse.md) connects the mailbox to one Linux timer across 16 generations.

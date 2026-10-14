@@ -18,10 +18,11 @@ namespace {
 using namespace coz::service;
 constexpr uint64_t cookie = 0x436f7a5265757365ULL, budget = 50000;
 constexpr uint32_t generations = 16;
-enum class FixtureMode { reuse, cancel_before_delivery };
+enum class FixtureMode { reuse, cancel_before_delivery, reject_initial_arm };
 std::optional<FixtureMode> parseMode(std::string_view value) {
     if (value == "reuse") return FixtureMode::reuse;
     if (value == "cancel-before-delivery") return FixtureMode::cancel_before_delivery;
+    if (value == "reject-initial-arm") return FixtureMode::reject_initial_arm;
     return std::nullopt;
 }
 LeaseMailbox mailbox;
@@ -38,12 +39,16 @@ struct TransportObservation {
     std::array<DrainRecord, 8> records{};
 };
 std::array<TransportObservation, generations> transports{};
+TransportObservation initial_transport{};
 std::array<DrainRecord, 8> retirement_records{};
 
 struct Observation {
     TargetLeaseSnapshot header{};
     std::array<TargetLeaseChild, 4> children{};
-    uint64_t captured{}, receipt{}, progress{};
+    uint64_t captured{}, receipt{}, progress{}, header_captured{};
+    long arm_result{}, gettime_result{};
+    itimerspec remaining{};
+    bool arm_attempted{}, rejection_requested{}, recovery_acquired{}, timer_checked{};
     bool copied{}, reuse_rejected{}, receipt_observed{}, cancellation_requested{}, cancellation_accepted{};
 };
 std::array<Observation, generations> observations{};
@@ -155,9 +160,16 @@ int main(int argc, char** argv) {
         event._sigev_un._tid = static_cast<pid_t>(syscall(SYS_gettid));
         if (syscall(SYS_timer_create, CLOCK_MONOTONIC, &event, &timer_id) != 0) target_error = errno;
         else created = true;
+        if (created) {
+            itimerspec disabled{};
+            initial_transport.disarm_error = static_cast<int>(-direct(SYS_timer_settime, timer_id, 0, reinterpret_cast<long>(&disabled)));
+            initial_transport.drain_error = initial_transport.disarm_error == 0
+                ? drain(initial_transport.drained, initial_transport.records) : initial_transport.disarm_error;
+            target_error = initial_transport.drain_error;
+        }
         ready.store(1, std::memory_order_release);
         if (!created) return;
-        target_error = pthread_sigmask(SIG_UNBLOCK, &mask, nullptr);
+        if (target_error == 0) target_error = pthread_sigmask(SIG_UNBLOCK, &mask, nullptr);
         if (target_error == 0) coz_timer_workload(&stop, &entered, &progress);
         const auto blocked = pthread_sigmask(SIG_BLOCK, &mask, nullptr);
         if (blocked != 0) { target_error = blocked; return; }
@@ -170,7 +182,8 @@ int main(int argc, char** argv) {
             if (!slot->quiesced() || !slot->retire()) target_error = EPROTO;
         }
     });
-    bool valid = await([] { return ready.load(std::memory_order_acquire) != 0; }) && created;
+    bool valid = await([] { return ready.load(std::memory_order_acquire) != 0; }) && created
+        && initial_transport.disarm_error == 0 && initial_transport.drain_error == 0 && initial_transport.drained == 0;
     if (valid) valid = await([] { return entered.load(std::memory_order_acquire) != 0; });
     uint32_t completed = 0;
     int arm_error = 0;
@@ -185,6 +198,7 @@ int main(int argc, char** argv) {
         if (!plan) { valid = false; break; }
         slot.emplace(*plan, journal);
         auto& observation = observations[generation - 1];
+        observation.rejection_requested = *mode == FixtureMode::reject_initial_arm && generation % 2 == 1;
         observation.cancellation_requested = *mode == FixtureMode::cancel_before_delivery && generation % 2 == 1;
         if (observation.cancellation_requested) {
             observation.cancellation_accepted = mailbox.cancel(generation);
@@ -196,9 +210,29 @@ int main(int argc, char** argv) {
         valid = valid && mailbox.publish(*submission);
         if (!valid) break;
         itimerspec next{};
-        next.it_value.tv_nsec = 1000000;
-        arm_error = static_cast<int>(-direct(SYS_timer_settime, timer_id, 0, reinterpret_cast<long>(&next)));
-        if (arm_error != 0) { valid = false; break; }
+        next.it_value.tv_nsec = observation.rejection_requested ? 1000000000 : 1000000;
+        observation.arm_attempted = true;
+        observation.arm_result = direct(SYS_timer_settime, timer_id, 0, reinterpret_cast<long>(&next));
+        if (observation.rejection_requested) {
+            if (observation.arm_result != -EINVAL) { valid = false; break; }
+            auto recovery = mailbox.recover(*submission);
+            observation.recovery_acquired = recovery.has_value();
+            if (!recovery) { valid = false; break; }
+            observation.timer_checked = true;
+            observation.gettime_result = direct(SYS_timer_gettime, timer_id, reinterpret_cast<long>(&observation.remaining));
+            const auto& remaining = observation.remaining;
+            valid = observation.gettime_result == 0
+                && remaining.it_value.tv_sec == 0 && remaining.it_value.tv_nsec == 0
+                && remaining.it_interval.tv_sec == 0 && remaining.it_interval.tv_nsec == 0;
+            if (!valid) break;
+            valid = slot->rejectInitialArm(EINVAL) && slot->quiesced() && slot->retire();
+            if (!valid) break;
+            valid = mailbox.quiesce(*recovery);
+            if (!valid) break;
+        } else {
+            arm_error = static_cast<int>(-observation.arm_result);
+            if (arm_error != 0) { valid = false; break; }
+        }
         auto reader = mailbox.read(generation);
         if (!reader) { valid = false; break; }
         valid = await([&] {
@@ -213,6 +247,7 @@ int main(int argc, char** argv) {
             }
             if (snapshot->visibility != TargetLeaseVisibility::retired) return false;
             observation.header = *snapshot;
+            observation.header_captured = captured;
             observation.copied = true;
             return true;
         });
@@ -220,6 +255,17 @@ int main(int argc, char** argv) {
         observation.progress = progress.load(std::memory_order_relaxed);
         if (!valid) break;
         const auto& child = observation.children[0];
+        if (observation.rejection_requested) {
+            valid = observation.reuse_rejected && observation.header.generation == generation
+                && observation.header.command == generation && observation.header.children == 0
+                && observation.header.measured == 0 && observation.header.stop == TargetLeaseStop::failed
+                && observation.header.error == TargetLeaseError::arm_failed && observation.header.transport_error == EINVAL
+                && !observation.header.may_have_delivery && observation.header_captured != 0
+                && !observation.receipt_observed && observation.captured == 0 && observation.receipt == 0
+                && handler_error.load(std::memory_order_acquire) == 0;
+            if (valid) ++completed;
+            continue;
+        }
         valid = observation.reuse_rejected && observation.header.generation == generation
             && observation.header.command == generation && observation.header.children == 1
             && observation.header.measured == child.waited
@@ -257,7 +303,9 @@ int main(int argc, char** argv) {
     valid = valid && closed && completed == generations && target_error == 0 && arm_error == 0
         && handler_error.load(std::memory_order_acquire) == 0 && deleted && restored && retired_drained == 0;
     std::ofstream output(argv[2]);
-    output << "{\"passed\":" << (valid ? "true" : "false") << ",\"mode\":\"" << argv[1] << "\",\"completed\":" << completed
+    output << "{\"initialDisarmError\":" << initial_transport.disarm_error << ",\"initialDrainError\":" << initial_transport.drain_error
+           << ",\"initialDrained\":" << initial_transport.drained << ',';
+    output << "\"passed\":" << (valid ? "true" : "false") << ",\"mode\":\"" << argv[1] << "\",\"completed\":" << completed
         << ",\"timerDeleted\":" << (deleted ? "true" : "false") << ",\"restored\":" << (restored ? "true" : "false")
         << ",\"closed\":" << (closed ? "true" : "false") << ",\"targetError\":" << target_error
         << ",\"handlerError\":" << handler_error.load() << ",\"armError\":" << arm_error
@@ -266,7 +314,14 @@ int main(int argc, char** argv) {
         const auto& item = observations[index];
         const auto& child = item.children[0];
         if (index) output << ',';
-        output << "{\"generation\":" << item.header.generation << ",\"command\":" << item.header.command
+        output << "{\"rejectionRequested\":" << (item.rejection_requested ? "true" : "false")
+               << ",\"armAttempted\":" << (item.arm_attempted ? "true" : "false") << ",\"armResult\":" << item.arm_result
+               << ",\"recoveryAcquired\":" << (item.recovery_acquired ? "true" : "false")
+               << ",\"timerChecked\":" << (item.timer_checked ? "true" : "false") << ",\"gettimeResult\":" << item.gettime_result
+               << ",\"remainingSeconds\":" << item.remaining.it_value.tv_sec << ",\"remainingNanoseconds\":" << item.remaining.it_value.tv_nsec
+               << ",\"intervalSeconds\":" << item.remaining.it_interval.tv_sec << ",\"intervalNanoseconds\":" << item.remaining.it_interval.tv_nsec
+               << ",\"headerCaptured\":" << item.header_captured << ",\"transportError\":" << item.header.transport_error << ',';
+        output << "\"generation\":" << item.header.generation << ",\"command\":" << item.header.command
             << ",\"copied\":" << (item.copied ? "true" : "false") << ",\"reuseRejected\":" << (item.reuse_rejected ? "true" : "false")
             << ",\"cancellationRequested\":" << (item.cancellation_requested ? "true" : "false")
             << ",\"cancellationAccepted\":" << (item.cancellation_accepted ? "true" : "false")

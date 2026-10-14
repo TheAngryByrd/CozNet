@@ -78,8 +78,11 @@ Its handler timing includes cancellation work. This controlled boundary does not
 The portable `LeaseMailbox` implements generation claims, cancellation preservation, and reader exclusion.
 The native reuse fixture supplies a disarm/drain proof, retires the core, and makes mailbox quiescence publication its final old-storage access.
 It exercises 16 generations with one child each, one timer, and one lease storage slot.
-Its next integration steps are concurrent cancellation, failed-arm recovery, and a live timer C ABI with managed receipt tracking.
+Its next integration steps are concurrent cancellation, cleanup failures, and a live timer C ABI with managed receipt tracking.
 Cancellation before publication and arming is now covered by alternating cancelled and normal native generations.
 Cancellation during a handler remains a separate required case.
 Portable exclusive recovery and rejected-initial-arm transitions are implemented and checked on Windows and Linux.
-The next failed-arm fixture must prove kernel rejection, acquire recovery ownership, resolve delivery, retire the core, and then permit another generation.
+The `reject-initial-arm` fixture alternates invalid initial arms and normal generations.
+It requires `-EINVAL`, exclusive recovery, inactive timer fields, zero children, zero wait, and retired failure snapshots before reuse.
+Delivery quiescence depends on prior target-side drain and the specific Linux no-mutation rejection path.
+It does not generalize recovery to ambiguous arm errors.

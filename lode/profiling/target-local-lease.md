@@ -113,7 +113,12 @@ The caller must own mailbox recovery and prove rejection before mutating the pub
 Core failure, cleanup, retirement, and final old-storage access precede recovery quiescence publication.
 The direct `abandonUndelivered` operation does not authorize published-core mutation.
 Portable checks cover exclusive recovery, 100 claim races, state/error boundaries, stale/foreign tokens, and reader retention.
-The native fixture does not yet consume recovery tokens.
+The Linux `reject-initial-arm` mode consumes recovery tokens after exact `-EINVAL` from an invalid nanosecond field.
+Prior target-side disarm and drain establish quiescence. No other producer can arm or send the reserved signal.
+The no-mutation rejection argument relies on reviewed Linux v6.6 and Microsoft WSL2 `5.15.153.1` sources, not installed-binary verification.
+The fixture records the kernel identity and inactive timer fields, but those fields alone do not prove an empty pending queue.
+Odd generations require zero children, zero wait, original arm error, and retired failure visibility.
+Each even generation must complete normally. Failed generations retain header capture time without claiming a child receipt.
 Target-side deletion and drain outside the handler still gate registration retirement.
 
 The Linux fixture's `cancel-rearm` case injects cancellation after successful rearm in the first handler.
