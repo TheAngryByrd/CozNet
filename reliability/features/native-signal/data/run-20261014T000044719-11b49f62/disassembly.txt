@@ -1,0 +1,751 @@
+
+/build/libCozNet.Signal.so:     file format elf64-x86-64
+
+
+Disassembly of section .init:
+
+0000000000001000 <_init>:
+    1000:	f3 0f 1e fa          	endbr64
+    1004:	48 83 ec 08          	sub    $0x8,%rsp
+    1008:	48 8b 05 c9 2f 00 00 	mov    0x2fc9(%rip),%rax        # 3fd8 <__gmon_start__@Base>
+    100f:	48 85 c0             	test   %rax,%rax
+    1012:	74 02                	je     1016 <_init+0x16>
+    1014:	ff d0                	call   *%rax
+    1016:	48 83 c4 08          	add    $0x8,%rsp
+    101a:	c3                   	ret
+
+Disassembly of section .plt:
+
+0000000000001020 <__errno_location@plt-0x10>:
+    1020:	ff 35 ca 2f 00 00    	push   0x2fca(%rip)        # 3ff0 <_GLOBAL_OFFSET_TABLE_+0x8>
+    1026:	ff 25 cc 2f 00 00    	jmp    *0x2fcc(%rip)        # 3ff8 <_GLOBAL_OFFSET_TABLE_+0x10>
+    102c:	0f 1f 40 00          	nopl   0x0(%rax)
+
+0000000000001030 <__errno_location@plt>:
+    1030:	ff 25 ca 2f 00 00    	jmp    *0x2fca(%rip)        # 4000 <__errno_location@GLIBC_2.2.5>
+    1036:	68 00 00 00 00       	push   $0x0
+    103b:	e9 e0 ff ff ff       	jmp    1020 <_init+0x20>
+
+0000000000001040 <sigprocmask@plt>:
+    1040:	ff 25 c2 2f 00 00    	jmp    *0x2fc2(%rip)        # 4008 <sigprocmask@GLIBC_2.2.5>
+    1046:	68 01 00 00 00       	push   $0x1
+    104b:	e9 d0 ff ff ff       	jmp    1020 <_init+0x20>
+
+0000000000001050 <getuid@plt>:
+    1050:	ff 25 ba 2f 00 00    	jmp    *0x2fba(%rip)        # 4010 <getuid@GLIBC_2.2.5>
+    1056:	68 02 00 00 00       	push   $0x2
+    105b:	e9 c0 ff ff ff       	jmp    1020 <_init+0x20>
+
+0000000000001060 <sigismember@plt>:
+    1060:	ff 25 b2 2f 00 00    	jmp    *0x2fb2(%rip)        # 4018 <sigismember@GLIBC_2.2.5>
+    1066:	68 03 00 00 00       	push   $0x3
+    106b:	e9 b0 ff ff ff       	jmp    1020 <_init+0x20>
+
+0000000000001070 <sigtimedwait@plt>:
+    1070:	ff 25 aa 2f 00 00    	jmp    *0x2faa(%rip)        # 4020 <sigtimedwait@GLIBC_2.2.5>
+    1076:	68 04 00 00 00       	push   $0x4
+    107b:	e9 a0 ff ff ff       	jmp    1020 <_init+0x20>
+
+0000000000001080 <__libc_current_sigrtmin@plt>:
+    1080:	ff 25 a2 2f 00 00    	jmp    *0x2fa2(%rip)        # 4028 <__libc_current_sigrtmin@GLIBC_2.2.5>
+    1086:	68 05 00 00 00       	push   $0x5
+    108b:	e9 90 ff ff ff       	jmp    1020 <_init+0x20>
+
+0000000000001090 <sigemptyset@plt>:
+    1090:	ff 25 9a 2f 00 00    	jmp    *0x2f9a(%rip)        # 4030 <sigemptyset@GLIBC_2.2.5>
+    1096:	68 06 00 00 00       	push   $0x6
+    109b:	e9 80 ff ff ff       	jmp    1020 <_init+0x20>
+
+00000000000010a0 <sigaction@plt>:
+    10a0:	ff 25 92 2f 00 00    	jmp    *0x2f92(%rip)        # 4038 <sigaction@GLIBC_2.2.5>
+    10a6:	68 07 00 00 00       	push   $0x7
+    10ab:	e9 70 ff ff ff       	jmp    1020 <_init+0x20>
+
+00000000000010b0 <getpid@plt>:
+    10b0:	ff 25 8a 2f 00 00    	jmp    *0x2f8a(%rip)        # 4040 <getpid@GLIBC_2.2.5>
+    10b6:	68 08 00 00 00       	push   $0x8
+    10bb:	e9 60 ff ff ff       	jmp    1020 <_init+0x20>
+
+00000000000010c0 <__libc_current_sigrtmax@plt>:
+    10c0:	ff 25 82 2f 00 00    	jmp    *0x2f82(%rip)        # 4048 <__libc_current_sigrtmax@GLIBC_2.2.5>
+    10c6:	68 09 00 00 00       	push   $0x9
+    10cb:	e9 50 ff ff ff       	jmp    1020 <_init+0x20>
+
+00000000000010d0 <sigaddset@plt>:
+    10d0:	ff 25 7a 2f 00 00    	jmp    *0x2f7a(%rip)        # 4050 <sigaddset@GLIBC_2.2.5>
+    10d6:	68 0a 00 00 00       	push   $0xa
+    10db:	e9 40 ff ff ff       	jmp    1020 <_init+0x20>
+
+Disassembly of section .plt.got:
+
+00000000000010e0 <__cxa_finalize@plt>:
+    10e0:	ff 25 e2 2e 00 00    	jmp    *0x2ee2(%rip)        # 3fc8 <__cxa_finalize@GLIBC_2.2.5>
+    10e6:	66 90                	xchg   %ax,%ax
+
+Disassembly of section .text:
+
+00000000000010f0 <deregister_tm_clones>:
+    10f0:	48 8d 3d 69 2f 00 00 	lea    0x2f69(%rip),%rdi        # 4060 <completed.0>
+    10f7:	48 8d 05 62 2f 00 00 	lea    0x2f62(%rip),%rax        # 4060 <completed.0>
+    10fe:	48 39 f8             	cmp    %rdi,%rax
+    1101:	74 15                	je     1118 <deregister_tm_clones+0x28>
+    1103:	48 8b 05 c6 2e 00 00 	mov    0x2ec6(%rip),%rax        # 3fd0 <_ITM_deregisterTMCloneTable@Base>
+    110a:	48 85 c0             	test   %rax,%rax
+    110d:	74 09                	je     1118 <deregister_tm_clones+0x28>
+    110f:	ff e0                	jmp    *%rax
+    1111:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+    1118:	c3                   	ret
+    1119:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+
+0000000000001120 <register_tm_clones>:
+    1120:	48 8d 3d 39 2f 00 00 	lea    0x2f39(%rip),%rdi        # 4060 <completed.0>
+    1127:	48 8d 35 32 2f 00 00 	lea    0x2f32(%rip),%rsi        # 4060 <completed.0>
+    112e:	48 29 fe             	sub    %rdi,%rsi
+    1131:	48 89 f0             	mov    %rsi,%rax
+    1134:	48 c1 ee 3f          	shr    $0x3f,%rsi
+    1138:	48 c1 f8 03          	sar    $0x3,%rax
+    113c:	48 01 c6             	add    %rax,%rsi
+    113f:	48 d1 fe             	sar    $1,%rsi
+    1142:	74 14                	je     1158 <register_tm_clones+0x38>
+    1144:	48 8b 05 95 2e 00 00 	mov    0x2e95(%rip),%rax        # 3fe0 <_ITM_registerTMCloneTable@Base>
+    114b:	48 85 c0             	test   %rax,%rax
+    114e:	74 08                	je     1158 <register_tm_clones+0x38>
+    1150:	ff e0                	jmp    *%rax
+    1152:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+    1158:	c3                   	ret
+    1159:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+
+0000000000001160 <__do_global_dtors_aux>:
+    1160:	f3 0f 1e fa          	endbr64
+    1164:	80 3d f5 2e 00 00 00 	cmpb   $0x0,0x2ef5(%rip)        # 4060 <completed.0>
+    116b:	75 2b                	jne    1198 <__do_global_dtors_aux+0x38>
+    116d:	55                   	push   %rbp
+    116e:	48 83 3d 52 2e 00 00 	cmpq   $0x0,0x2e52(%rip)        # 3fc8 <__cxa_finalize@GLIBC_2.2.5>
+    1175:	00
+    1176:	48 89 e5             	mov    %rsp,%rbp
+    1179:	74 0c                	je     1187 <__do_global_dtors_aux+0x27>
+    117b:	48 8b 3d d6 2e 00 00 	mov    0x2ed6(%rip),%rdi        # 4058 <__dso_handle>
+    1182:	e8 59 ff ff ff       	call   10e0 <__cxa_finalize@plt>
+    1187:	e8 64 ff ff ff       	call   10f0 <deregister_tm_clones>
+    118c:	c6 05 cd 2e 00 00 01 	movb   $0x1,0x2ecd(%rip)        # 4060 <completed.0>
+    1193:	5d                   	pop    %rbp
+    1194:	c3                   	ret
+    1195:	0f 1f 00             	nopl   (%rax)
+    1198:	c3                   	ret
+    1199:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+
+00000000000011a0 <frame_dummy>:
+    11a0:	f3 0f 1e fa          	endbr64
+    11a4:	e9 77 ff ff ff       	jmp    1120 <register_tm_clones>
+    11a9:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+
+00000000000011b0 <coz_signal_install>:
+    11b0:	41 56                	push   %r14
+    11b2:	53                   	push   %rbx
+    11b3:	48 81 ec 98 00 00 00 	sub    $0x98,%rsp
+    11ba:	41 be 72 00 00 00    	mov    $0x72,%r14d
+    11c0:	80 3d a9 2e 00 00 00 	cmpb   $0x0,0x2ea9(%rip)        # 4070 <(anonymous namespace)::used>
+    11c7:	75 47                	jne    1210 <coz_signal_install+0x60>
+    11c9:	e8 b2 fe ff ff       	call   1080 <__libc_current_sigrtmin@plt>
+    11ce:	89 c3                	mov    %eax,%ebx
+    11d0:	83 c3 06             	add    $0x6,%ebx
+    11d3:	e8 e8 fe ff ff       	call   10c0 <__libc_current_sigrtmax@plt>
+    11d8:	41 be 5f 00 00 00    	mov    $0x5f,%r14d
+    11de:	39 c3                	cmp    %eax,%ebx
+    11e0:	7f 2e                	jg     1210 <coz_signal_install+0x60>
+    11e2:	48 8d 15 8f 2e 00 00 	lea    0x2e8f(%rip),%rdx        # 4078 <(anonymous namespace)::previous_action>
+    11e9:	89 df                	mov    %ebx,%edi
+    11eb:	31 f6                	xor    %esi,%esi
+    11ed:	e8 ae fe ff ff       	call   10a0 <sigaction@plt>
+    11f2:	85 c0                	test   %eax,%eax
+    11f4:	74 0a                	je     1200 <coz_signal_install+0x50>
+    11f6:	e8 35 fe ff ff       	call   1030 <__errno_location@plt>
+    11fb:	44 8b 30             	mov    (%rax),%r14d
+    11fe:	eb 10                	jmp    1210 <coz_signal_install+0x60>
+    1200:	41 be 10 00 00 00    	mov    $0x10,%r14d
+    1206:	48 83 3d 6a 2e 00 00 	cmpq   $0x0,0x2e6a(%rip)        # 4078 <(anonymous namespace)::previous_action>
+    120d:	00
+    120e:	74 0e                	je     121e <coz_signal_install+0x6e>
+    1210:	44 89 f0             	mov    %r14d,%eax
+    1213:	48 81 c4 98 00 00 00 	add    $0x98,%rsp
+    121a:	5b                   	pop    %rbx
+    121b:	41 5e                	pop    %r14
+    121d:	c3                   	ret
+    121e:	89 1d ec 2e 00 00    	mov    %ebx,0x2eec(%rip)        # 4110 <(anonymous namespace)::signal_number>
+    1224:	e8 87 fe ff ff       	call   10b0 <getpid@plt>
+    1229:	89 05 e5 2e 00 00    	mov    %eax,0x2ee5(%rip)        # 4114 <(anonymous namespace)::process_id>
+    122f:	e8 1c fe ff ff       	call   1050 <getuid@plt>
+    1234:	89 05 de 2e 00 00    	mov    %eax,0x2ede(%rip)        # 4118 <(anonymous namespace)::owner_uid>
+    123a:	45 31 f6             	xor    %r14d,%r14d
+    123d:	b8 ba 00 00 00       	mov    $0xba,%eax
+    1242:	31 ff                	xor    %edi,%edi
+    1244:	31 f6                	xor    %esi,%esi
+    1246:	31 d2                	xor    %edx,%edx
+    1248:	45 31 d2             	xor    %r10d,%r10d
+    124b:	0f 05                	syscall
+    124d:	89 05 c9 2e 00 00    	mov    %eax,0x2ec9(%rip)        # 411c <(anonymous namespace)::owner_tid>
+    1253:	48 8d 7c 24 08       	lea    0x8(%rsp),%rdi
+    1258:	0f 57 c0             	xorps  %xmm0,%xmm0
+    125b:	0f 11 84 24 88 00 00 	movups %xmm0,0x88(%rsp)
+    1262:	00
+    1263:	0f 11 44 24 78       	movups %xmm0,0x78(%rsp)
+    1268:	0f 11 44 24 68       	movups %xmm0,0x68(%rsp)
+    126d:	0f 11 44 24 58       	movups %xmm0,0x58(%rsp)
+    1272:	0f 11 44 24 48       	movups %xmm0,0x48(%rsp)
+    1277:	0f 11 44 24 38       	movups %xmm0,0x38(%rsp)
+    127c:	0f 11 44 24 28       	movups %xmm0,0x28(%rsp)
+    1281:	0f 11 44 24 18       	movups %xmm0,0x18(%rsp)
+    1286:	0f 11 44 24 08       	movups %xmm0,0x8(%rsp)
+    128b:	48 8d 05 3e 00 00 00 	lea    0x3e(%rip),%rax        # 12d0 <(anonymous namespace)::handler(int, siginfo_t*, void*)>
+    1292:	48 89 04 24          	mov    %rax,(%rsp)
+    1296:	c7 84 24 88 00 00 00 	movl   $0x4,0x88(%rsp)
+    129d:	04 00 00 00
+    12a1:	e8 ea fd ff ff       	call   1090 <sigemptyset@plt>
+    12a6:	48 89 e6             	mov    %rsp,%rsi
+    12a9:	89 df                	mov    %ebx,%edi
+    12ab:	31 d2                	xor    %edx,%edx
+    12ad:	e8 ee fd ff ff       	call   10a0 <sigaction@plt>
+    12b2:	85 c0                	test   %eax,%eax
+    12b4:	0f 85 3c ff ff ff    	jne    11f6 <coz_signal_install+0x46>
+    12ba:	c6 05 af 2d 00 00 01 	movb   $0x1,0x2daf(%rip)        # 4070 <(anonymous namespace)::used>
+    12c1:	c6 05 58 2e 00 00 01 	movb   $0x1,0x2e58(%rip)        # 4120 <(anonymous namespace)::installed>
+    12c8:	e9 43 ff ff ff       	jmp    1210 <coz_signal_install+0x60>
+    12cd:	0f 1f 00             	nopl   (%rax)
+
+00000000000012d0 <(anonymous namespace)::handler(int, siginfo_t*, void*)>:
+    12d0:	39 3d 3a 2e 00 00    	cmp    %edi,0x2e3a(%rip)        # 4110 <(anonymous namespace)::signal_number>
+    12d6:	75 06                	jne    12de <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe>
+    12d8:	83 7e 08 ff          	cmpl   $0xffffffff,0x8(%rsi)
+    12dc:	74 01                	je     12df <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xf>
+    12de:	c3                   	ret
+    12df:	8b 46 10             	mov    0x10(%rsi),%eax
+    12e2:	3b 05 2c 2e 00 00    	cmp    0x2e2c(%rip),%eax        # 4114 <(anonymous namespace)::process_id>
+    12e8:	75 f4                	jne    12de <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe>
+    12ea:	8b 46 14             	mov    0x14(%rsi),%eax
+    12ed:	3b 05 25 2e 00 00    	cmp    0x2e25(%rip),%eax        # 4118 <(anonymous namespace)::owner_uid>
+    12f3:	75 e9                	jne    12de <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe>
+    12f5:	55                   	push   %rbp
+    12f6:	41 57                	push   %r15
+    12f8:	41 56                	push   %r14
+    12fa:	41 55                	push   %r13
+    12fc:	41 54                	push   %r12
+    12fe:	53                   	push   %rbx
+    12ff:	49 89 d0             	mov    %rdx,%r8
+    1302:	b8 ba 00 00 00       	mov    $0xba,%eax
+    1307:	31 ff                	xor    %edi,%edi
+    1309:	49 89 f1             	mov    %rsi,%r9
+    130c:	31 f6                	xor    %esi,%esi
+    130e:	31 d2                	xor    %edx,%edx
+    1310:	45 31 d2             	xor    %r10d,%r10d
+    1313:	0f 05                	syscall
+    1315:	4d 8b 49 18          	mov    0x18(%r9),%r9
+    1319:	48 8b 0d 10 2e 00 00 	mov    0x2e10(%rip),%rcx        # 4130 <(anonymous namespace)::slots>
+    1320:	48 83 f9 03          	cmp    $0x3,%rcx
+    1324:	75 1e                	jne    1344 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x74>
+    1326:	48 63 0d 0b 2e 00 00 	movslq 0x2e0b(%rip),%rcx        # 4138 <(anonymous namespace)::slots+0x8>
+    132d:	48 39 c8             	cmp    %rcx,%rax
+    1330:	75 12                	jne    1344 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x74>
+    1332:	4c 39 0d 17 2e 00 00 	cmp    %r9,0x2e17(%rip)        # 4150 <(anonymous namespace)::slots+0x20>
+    1339:	75 09                	jne    1344 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x74>
+    133b:	48 8d 1d ee 2d 00 00 	lea    0x2dee(%rip),%rbx        # 4130 <(anonymous namespace)::slots>
+    1342:	eb 35                	jmp    1379 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xa9>
+    1344:	48 8b 0d 45 2e 00 00 	mov    0x2e45(%rip),%rcx        # 4190 <(anonymous namespace)::slots+0x60>
+    134b:	48 83 f9 03          	cmp    $0x3,%rcx
+    134f:	0f 85 c6 00 00 00    	jne    141b <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x14b>
+    1355:	48 63 0d 3c 2e 00 00 	movslq 0x2e3c(%rip),%rcx        # 4198 <(anonymous namespace)::slots+0x68>
+    135c:	48 39 c8             	cmp    %rcx,%rax
+    135f:	0f 85 b6 00 00 00    	jne    141b <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x14b>
+    1365:	4c 39 0d 44 2e 00 00 	cmp    %r9,0x2e44(%rip)        # 41b0 <(anonymous namespace)::slots+0x80>
+    136c:	0f 85 a9 00 00 00    	jne    141b <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x14b>
+    1372:	48 8d 1d 17 2e 00 00 	lea    0x2e17(%rip),%rbx        # 4190 <(anonymous namespace)::slots+0x60>
+    1379:	0f 57 c0             	xorps  %xmm0,%xmm0
+    137c:	0f 29 44 24 d8       	movaps %xmm0,-0x28(%rsp)
+    1381:	48 8d 74 24 d8       	lea    -0x28(%rsp),%rsi
+    1386:	b8 e4 00 00 00       	mov    $0xe4,%eax
+    138b:	bf 01 00 00 00       	mov    $0x1,%edi
+    1390:	31 d2                	xor    %edx,%edx
+    1392:	45 31 d2             	xor    %r10d,%r10d
+    1395:	0f 05                	syscall
+    1397:	48 85 c0             	test   %rax,%rax
+    139a:	0f 84 86 00 00 00    	je     1426 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x156>
+    13a0:	4d 8b b0 a8 00 00 00 	mov    0xa8(%r8),%r14
+    13a7:	41 bc 04 00 00 00    	mov    $0x4,%r12d
+    13ad:	45 31 ff             	xor    %r15d,%r15d
+    13b0:	45 31 ed             	xor    %r13d,%r13d
+    13b3:	45 31 c0             	xor    %r8d,%r8d
+    13b6:	0f 29 44 24 d8       	movaps %xmm0,-0x28(%rsp)
+    13bb:	31 ed                	xor    %ebp,%ebp
+    13bd:	b8 e4 00 00 00       	mov    $0xe4,%eax
+    13c2:	31 d2                	xor    %edx,%edx
+    13c4:	45 31 d2             	xor    %r10d,%r10d
+    13c7:	0f 05                	syscall
+    13c9:	48 85 c0             	test   %rax,%rax
+    13cc:	75 0e                	jne    13dc <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x10c>
+    13ce:	48 69 6c 24 d8 00 ca 	imul   $0x3b9aca00,-0x28(%rsp),%rbp
+    13d5:	9a 3b
+    13d7:	48 03 6c 24 e0       	add    -0x20(%rsp),%rbp
+    13dc:	48 89 e8             	mov    %rbp,%rax
+    13df:	4c 29 f8             	sub    %r15,%rax
+    13e2:	0f 92 c1             	setb   %cl
+    13e5:	48 85 ed             	test   %rbp,%rbp
+    13e8:	0f 94 c2             	sete   %dl
+    13eb:	31 f6                	xor    %esi,%esi
+    13ed:	08 ca                	or     %cl,%dl
+    13ef:	b9 04 00 00 00       	mov    $0x4,%ecx
+    13f4:	4c 0f 45 e1          	cmovne %rcx,%r12
+    13f8:	48 0f 44 f0          	cmove  %rax,%rsi
+    13fc:	4c 89 4b 30          	mov    %r9,0x30(%rbx)
+    1400:	4c 89 63 38          	mov    %r12,0x38(%rbx)
+    1404:	4c 89 73 40          	mov    %r14,0x40(%rbx)
+    1408:	48 89 73 48          	mov    %rsi,0x48(%rbx)
+    140c:	4c 89 6b 50          	mov    %r13,0x50(%rbx)
+    1410:	4c 89 43 58          	mov    %r8,0x58(%rbx)
+    1414:	48 c7 03 04 00 00 00 	movq   $0x4,(%rbx)
+    141b:	5b                   	pop    %rbx
+    141c:	41 5c                	pop    %r12
+    141e:	41 5d                	pop    %r13
+    1420:	41 5e                	pop    %r14
+    1422:	41 5f                	pop    %r15
+    1424:	5d                   	pop    %rbp
+    1425:	c3                   	ret
+    1426:	4c 69 7c 24 d8 00 ca 	imul   $0x3b9aca00,-0x28(%rsp),%r15
+    142d:	9a 3b
+    142f:	4d 8b b0 a8 00 00 00 	mov    0xa8(%r8),%r14
+    1436:	4c 03 7c 24 e0       	add    -0x20(%rsp),%r15
+    143b:	0f 84 ff 00 00 00    	je     1540 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x270>
+    1441:	41 bc 01 00 00 00    	mov    $0x1,%r12d
+    1447:	4c 3b 73 10          	cmp    0x10(%rbx),%r14
+    144b:	0f 82 5f ff ff ff    	jb     13b0 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe0>
+    1451:	4c 3b 73 18          	cmp    0x18(%rbx),%r14
+    1455:	0f 83 55 ff ff ff    	jae    13b0 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe0>
+    145b:	48 8b 4b 28          	mov    0x28(%rbx),%rcx
+    145f:	48 85 c9             	test   %rcx,%rcx
+    1462:	0f 84 e6 00 00 00    	je     154e <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x27e>
+    1468:	4c 01 f9             	add    %r15,%rcx
+    146b:	48 89 c8             	mov    %rcx,%rax
+    146e:	48 c1 e8 09          	shr    $0x9,%rax
+    1472:	48 ba 53 5a 9b a0 2f 	movabs $0x44b82fa09b5a53,%rdx
+    1479:	b8 44 00
+    147c:	48 f7 e2             	mul    %rdx
+    147f:	48 c1 ea 0b          	shr    $0xb,%rdx
+    1483:	48 89 54 24 f0       	mov    %rdx,-0x10(%rsp)
+    1488:	48 69 c2 00 ca 9a 3b 	imul   $0x3b9aca00,%rdx,%rax
+    148f:	48 29 c1             	sub    %rax,%rcx
+    1492:	48 89 4c 24 f8       	mov    %rcx,-0x8(%rsp)
+    1497:	0f 29 44 24 d8       	movaps %xmm0,-0x28(%rsp)
+    149c:	45 31 e4             	xor    %r12d,%r12d
+    149f:	b8 e4 00 00 00       	mov    $0xe4,%eax
+    14a4:	31 d2                	xor    %edx,%edx
+    14a6:	45 31 d2             	xor    %r10d,%r10d
+    14a9:	0f 05                	syscall
+    14ab:	48 85 c0             	test   %rax,%rax
+    14ae:	75 0e                	jne    14be <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x1ee>
+    14b0:	4c 69 64 24 d8 00 ca 	imul   $0x3b9aca00,-0x28(%rsp),%r12
+    14b7:	9a 3b
+    14b9:	4c 03 64 24 e0       	add    -0x20(%rsp),%r12
+    14be:	31 ed                	xor    %ebp,%ebp
+    14c0:	48 8d 54 24 f0       	lea    -0x10(%rsp),%rdx
+    14c5:	b8 e6 00 00 00       	mov    $0xe6,%eax
+    14ca:	be 01 00 00 00       	mov    $0x1,%esi
+    14cf:	45 31 d2             	xor    %r10d,%r10d
+    14d2:	0f 05                	syscall
+    14d4:	49 89 c0             	mov    %rax,%r8
+    14d7:	0f 29 44 24 d8       	movaps %xmm0,-0x28(%rsp)
+    14dc:	48 8d 74 24 d8       	lea    -0x28(%rsp),%rsi
+    14e1:	b8 e4 00 00 00       	mov    $0xe4,%eax
+    14e6:	31 d2                	xor    %edx,%edx
+    14e8:	45 31 d2             	xor    %r10d,%r10d
+    14eb:	0f 05                	syscall
+    14ed:	48 85 c0             	test   %rax,%rax
+    14f0:	75 0e                	jne    1500 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x230>
+    14f2:	48 69 6c 24 d8 00 ca 	imul   $0x3b9aca00,-0x28(%rsp),%rbp
+    14f9:	9a 3b
+    14fb:	48 03 6c 24 e0       	add    -0x20(%rsp),%rbp
+    1500:	48 89 e8             	mov    %rbp,%rax
+    1503:	4c 29 e0             	sub    %r12,%rax
+    1506:	49 ff cc             	dec    %r12
+    1509:	45 31 ed             	xor    %r13d,%r13d
+    150c:	31 c9                	xor    %ecx,%ecx
+    150e:	49 39 ec             	cmp    %rbp,%r12
+    1511:	0f 93 c1             	setae  %cl
+    1514:	48 8d 4c 09 02       	lea    0x2(%rcx,%rcx,1),%rcx
+    1519:	4c 0f 42 e8          	cmovb  %rax,%r13
+    151d:	49 83 f8 fc          	cmp    $0xfffffffffffffffc,%r8
+    1521:	b8 03 00 00 00       	mov    $0x3,%eax
+    1526:	48 0f 45 c1          	cmovne %rcx,%rax
+    152a:	41 bc 04 00 00 00    	mov    $0x4,%r12d
+    1530:	4c 0f 44 e0          	cmove  %rax,%r12
+    1534:	4d 85 c0             	test   %r8,%r8
+    1537:	4c 0f 44 e0          	cmove  %rax,%r12
+    153b:	e9 76 fe ff ff       	jmp    13b6 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe6>
+    1540:	45 31 ff             	xor    %r15d,%r15d
+    1543:	41 bc 04 00 00 00    	mov    $0x4,%r12d
+    1549:	e9 62 fe ff ff       	jmp    13b0 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe0>
+    154e:	41 bc 02 00 00 00    	mov    $0x2,%r12d
+    1554:	e9 57 fe ff ff       	jmp    13b0 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe0>
+    1559:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+
+0000000000001560 <coz_signal_register>:
+    1560:	48 89 d1             	mov    %rdx,%rcx
+    1563:	48 f7 d9             	neg    %rcx
+    1566:	b8 16 00 00 00       	mov    $0x16,%eax
+    156b:	48 39 f1             	cmp    %rsi,%rcx
+    156e:	0f 86 ce 00 00 00    	jbe    1642 <coz_signal_register+0xe2>
+    1574:	48 85 f6             	test   %rsi,%rsi
+    1577:	0f 84 c5 00 00 00    	je     1642 <coz_signal_register+0xe2>
+    157d:	83 ff 01             	cmp    $0x1,%edi
+    1580:	0f 87 bc 00 00 00    	ja     1642 <coz_signal_register+0xe2>
+    1586:	f6 05 93 2b 00 00 01 	testb  $0x1,0x2b93(%rip)        # 4120 <(anonymous namespace)::installed>
+    158d:	0f 84 af 00 00 00    	je     1642 <coz_signal_register+0xe2>
+    1593:	55                   	push   %rbp
+    1594:	41 57                	push   %r15
+    1596:	41 56                	push   %r14
+    1598:	53                   	push   %rbx
+    1599:	48 81 ec 88 00 00 00 	sub    $0x88,%rsp
+    15a0:	89 fd                	mov    %edi,%ebp
+    15a2:	49 89 f6             	mov    %rsi,%r14
+    15a5:	48 89 d3             	mov    %rdx,%rbx
+    15a8:	48 8d 54 24 08       	lea    0x8(%rsp),%rdx
+    15ad:	bf 02 00 00 00       	mov    $0x2,%edi
+    15b2:	31 f6                	xor    %esi,%esi
+    15b4:	e8 87 fa ff ff       	call   1040 <sigprocmask@plt>
+    15b9:	85 c0                	test   %eax,%eax
+    15bb:	74 09                	je     15c6 <coz_signal_register+0x66>
+    15bd:	e8 6e fa ff ff       	call   1030 <__errno_location@plt>
+    15c2:	8b 00                	mov    (%rax),%eax
+    15c4:	eb 6f                	jmp    1635 <coz_signal_register+0xd5>
+    15c6:	8b 35 44 2b 00 00    	mov    0x2b44(%rip),%esi        # 4110 <(anonymous namespace)::signal_number>
+    15cc:	48 8d 7c 24 08       	lea    0x8(%rsp),%rdi
+    15d1:	e8 8a fa ff ff       	call   1060 <sigismember@plt>
+    15d6:	89 c1                	mov    %eax,%ecx
+    15d8:	b8 0d 00 00 00       	mov    $0xd,%eax
+    15dd:	85 c9                	test   %ecx,%ecx
+    15df:	75 54                	jne    1635 <coz_signal_register+0xd5>
+    15e1:	89 e8                	mov    %ebp,%eax
+    15e3:	4c 8d 04 40          	lea    (%rax,%rax,2),%r8
+    15e7:	49 c1 e0 05          	shl    $0x5,%r8
+    15eb:	4c 8d 0d 3e 2b 00 00 	lea    0x2b3e(%rip),%r9        # 4130 <(anonymous namespace)::slots>
+    15f2:	b9 02 00 00 00       	mov    $0x2,%ecx
+    15f7:	31 c0                	xor    %eax,%eax
+    15f9:	f0 4b 0f b1 0c 08    	lock cmpxchg %rcx,(%r8,%r9,1)
+    15ff:	b8 10 00 00 00       	mov    $0x10,%eax
+    1604:	75 2f                	jne    1635 <coz_signal_register+0xd5>
+    1606:	4f 8d 3c 01          	lea    (%r9,%r8,1),%r15
+    160a:	b8 ba 00 00 00       	mov    $0xba,%eax
+    160f:	31 ff                	xor    %edi,%edi
+    1611:	31 f6                	xor    %esi,%esi
+    1613:	31 d2                	xor    %edx,%edx
+    1615:	45 31 d2             	xor    %r10d,%r10d
+    1618:	0f 05                	syscall
+    161a:	43 89 44 08 08       	mov    %eax,0x8(%r8,%r9,1)
+    161f:	4f 89 74 08 10       	mov    %r14,0x10(%r8,%r9,1)
+    1624:	4c 01 f3             	add    %r14,%rbx
+    1627:	4b 89 5c 08 18       	mov    %rbx,0x18(%r8,%r9,1)
+    162c:	49 c7 07 01 00 00 00 	movq   $0x1,(%r15)
+    1633:	31 c0                	xor    %eax,%eax
+    1635:	48 81 c4 88 00 00 00 	add    $0x88,%rsp
+    163c:	5b                   	pop    %rbx
+    163d:	41 5e                	pop    %r14
+    163f:	41 5f                	pop    %r15
+    1641:	5d                   	pop    %rbp
+    1642:	c3                   	ret
+    1643:	66 66 66 66 2e 0f 1f 	data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+    164a:	84 00 00 00 00 00
+
+0000000000001650 <coz_signal_request>:
+    1650:	41 57                	push   %r15
+    1652:	41 56                	push   %r14
+    1654:	53                   	push   %rbx
+    1655:	49 89 d0             	mov    %rdx,%r8
+    1658:	49 89 f1             	mov    %rsi,%r9
+    165b:	89 fb                	mov    %edi,%ebx
+    165d:	b1 01                	mov    $0x1,%cl
+    165f:	80 3d ba 2a 00 00 01 	cmpb   $0x1,0x2aba(%rip)        # 4120 <(anonymous namespace)::installed>
+    1666:	75 1d                	jne    1685 <coz_signal_request+0x35>
+    1668:	b8 ba 00 00 00       	mov    $0xba,%eax
+    166d:	31 ff                	xor    %edi,%edi
+    166f:	31 f6                	xor    %esi,%esi
+    1671:	31 d2                	xor    %edx,%edx
+    1673:	45 31 d2             	xor    %r10d,%r10d
+    1676:	0f 05                	syscall
+    1678:	48 63 0d 9d 2a 00 00 	movslq 0x2a9d(%rip),%rcx        # 411c <(anonymous namespace)::owner_tid>
+    167f:	48 39 c8             	cmp    %rcx,%rax
+    1682:	0f 95 c1             	setne  %cl
+    1685:	b8 16 00 00 00       	mov    $0x16,%eax
+    168a:	4d 85 c0             	test   %r8,%r8
+    168d:	0f 84 f5 00 00 00    	je     1788 <coz_signal_request+0x138>
+    1693:	49 81 f9 50 c3 00 00 	cmp    $0xc350,%r9
+    169a:	0f 87 e8 00 00 00    	ja     1788 <coz_signal_request+0x138>
+    16a0:	83 fb 01             	cmp    $0x1,%ebx
+    16a3:	0f 87 df 00 00 00    	ja     1788 <coz_signal_request+0x138>
+    16a9:	84 c9                	test   %cl,%cl
+    16ab:	0f 85 d7 00 00 00    	jne    1788 <coz_signal_request+0x138>
+    16b1:	48 83 3d 37 2b 00 00 	cmpq   $0xffffffffffffffff,0x2b37(%rip)        # 41f0 <(anonymous namespace)::next_sequence>
+    16b8:	ff
+    16b9:	0f 84 c9 00 00 00    	je     1788 <coz_signal_request+0x138>
+    16bf:	89 d8                	mov    %ebx,%eax
+    16c1:	48 8d 1c 40          	lea    (%rax,%rax,2),%rbx
+    16c5:	48 c1 e3 05          	shl    $0x5,%rbx
+    16c9:	4c 8d 35 60 2a 00 00 	lea    0x2a60(%rip),%r14        # 4130 <(anonymous namespace)::slots>
+    16d0:	b9 02 00 00 00       	mov    $0x2,%ecx
+    16d5:	b8 01 00 00 00       	mov    $0x1,%eax
+    16da:	f0 4a 0f b1 0c 33    	lock cmpxchg %rcx,(%rbx,%r14,1)
+    16e0:	b8 10 00 00 00       	mov    $0x10,%eax
+    16e5:	0f 85 9d 00 00 00    	jne    1788 <coz_signal_request+0x138>
+    16eb:	4d 8d 3c 1e          	lea    (%r14,%rbx,1),%r15
+    16ef:	48 8b 05 fa 2a 00 00 	mov    0x2afa(%rip),%rax        # 41f0 <(anonymous namespace)::next_sequence>
+    16f6:	48 ff c0             	inc    %rax
+    16f9:	48 89 05 f0 2a 00 00 	mov    %rax,0x2af0(%rip)        # 41f0 <(anonymous namespace)::next_sequence>
+    1700:	4a 89 44 33 20       	mov    %rax,0x20(%rbx,%r14,1)
+    1705:	4e 89 4c 33 28       	mov    %r9,0x28(%rbx,%r14,1)
+    170a:	0f 57 c0             	xorps  %xmm0,%xmm0
+    170d:	0f 29 44 24 80       	movaps %xmm0,-0x80(%rsp)
+    1712:	0f 29 44 24 90       	movaps %xmm0,-0x70(%rsp)
+    1717:	0f 29 44 24 f0       	movaps %xmm0,-0x10(%rsp)
+    171c:	0f 29 44 24 e0       	movaps %xmm0,-0x20(%rsp)
+    1721:	0f 29 44 24 d0       	movaps %xmm0,-0x30(%rsp)
+    1726:	0f 29 44 24 c0       	movaps %xmm0,-0x40(%rsp)
+    172b:	0f 29 44 24 b0       	movaps %xmm0,-0x50(%rsp)
+    1730:	0f 29 44 24 a0       	movaps %xmm0,-0x60(%rsp)
+    1735:	48 63 15 d4 29 00 00 	movslq 0x29d4(%rip),%rdx        # 4110 <(anonymous namespace)::signal_number>
+    173c:	89 54 24 80          	mov    %edx,-0x80(%rsp)
+    1740:	c7 44 24 88 ff ff ff 	movl   $0xffffffff,-0x78(%rsp)
+    1747:	ff
+    1748:	48 63 3d c5 29 00 00 	movslq 0x29c5(%rip),%rdi        # 4114 <(anonymous namespace)::process_id>
+    174f:	89 7c 24 90          	mov    %edi,-0x70(%rsp)
+    1753:	8b 0d bf 29 00 00    	mov    0x29bf(%rip),%ecx        # 4118 <(anonymous namespace)::owner_uid>
+    1759:	89 4c 24 94          	mov    %ecx,-0x6c(%rsp)
+    175d:	48 89 44 24 98       	mov    %rax,-0x68(%rsp)
+    1762:	49 c7 07 03 00 00 00 	movq   $0x3,(%r15)
+    1769:	4a 63 74 33 08       	movslq 0x8(%rbx,%r14,1),%rsi
+    176e:	4c 8d 54 24 80       	lea    -0x80(%rsp),%r10
+    1773:	b8 29 01 00 00       	mov    $0x129,%eax
+    1778:	0f 05                	syscall
+    177a:	48 85 c0             	test   %rax,%rax
+    177d:	74 0f                	je     178e <coz_signal_request+0x13e>
+    177f:	49 c7 07 01 00 00 00 	movq   $0x1,(%r15)
+    1786:	f7 d8                	neg    %eax
+    1788:	5b                   	pop    %rbx
+    1789:	41 5e                	pop    %r14
+    178b:	41 5f                	pop    %r15
+    178d:	c3                   	ret
+    178e:	4a 8d 04 33          	lea    (%rbx,%r14,1),%rax
+    1792:	48 83 c0 20          	add    $0x20,%rax
+    1796:	48 8b 00             	mov    (%rax),%rax
+    1799:	49 89 00             	mov    %rax,(%r8)
+    179c:	31 c0                	xor    %eax,%eax
+    179e:	5b                   	pop    %rbx
+    179f:	41 5e                	pop    %r14
+    17a1:	41 5f                	pop    %r15
+    17a3:	c3                   	ret
+    17a4:	66 66 66 2e 0f 1f 84 	data16 data16 cs nopw 0x0(%rax,%rax,1)
+    17ab:	00 00 00 00 00
+
+00000000000017b0 <coz_signal_read>:
+    17b0:	41 b8 16 00 00 00    	mov    $0x16,%r8d
+    17b6:	80 3d 63 29 00 00 01 	cmpb   $0x1,0x2963(%rip)        # 4120 <(anonymous namespace)::installed>
+    17bd:	0f 85 91 00 00 00    	jne    1854 <coz_signal_read+0xa4>
+    17c3:	41 56                	push   %r14
+    17c5:	53                   	push   %rbx
+    17c6:	49 89 d1             	mov    %rdx,%r9
+    17c9:	89 fb                	mov    %edi,%ebx
+    17cb:	49 89 f6             	mov    %rsi,%r14
+    17ce:	b8 ba 00 00 00       	mov    $0xba,%eax
+    17d3:	31 ff                	xor    %edi,%edi
+    17d5:	31 f6                	xor    %esi,%esi
+    17d7:	31 d2                	xor    %edx,%edx
+    17d9:	45 31 d2             	xor    %r10d,%r10d
+    17dc:	0f 05                	syscall
+    17de:	4d 85 c9             	test   %r9,%r9
+    17e1:	74 6e                	je     1851 <coz_signal_read+0xa1>
+    17e3:	83 fb 01             	cmp    $0x1,%ebx
+    17e6:	77 69                	ja     1851 <coz_signal_read+0xa1>
+    17e8:	48 63 0d 2d 29 00 00 	movslq 0x292d(%rip),%rcx        # 411c <(anonymous namespace)::owner_tid>
+    17ef:	48 39 c8             	cmp    %rcx,%rax
+    17f2:	75 5d                	jne    1851 <coz_signal_read+0xa1>
+    17f4:	89 d8                	mov    %ebx,%eax
+    17f6:	48 8d 04 40          	lea    (%rax,%rax,2),%rax
+    17fa:	48 c1 e0 05          	shl    $0x5,%rax
+    17fe:	48 8d 0d 2b 29 00 00 	lea    0x292b(%rip),%rcx        # 4130 <(anonymous namespace)::slots>
+    1805:	48 8b 14 08          	mov    (%rax,%rcx,1),%rdx
+    1809:	48 8d 72 fb          	lea    -0x5(%rdx),%rsi
+    180d:	48 83 fe fe          	cmp    $0xfffffffffffffffe,%rsi
+    1811:	72 3e                	jb     1851 <coz_signal_read+0xa1>
+    1813:	4c 39 74 08 20       	cmp    %r14,0x20(%rax,%rcx,1)
+    1818:	75 37                	jne    1851 <coz_signal_read+0xa1>
+    181a:	41 b8 0b 00 00 00    	mov    $0xb,%r8d
+    1820:	48 83 fa 03          	cmp    $0x3,%rdx
+    1824:	74 2b                	je     1851 <coz_signal_read+0xa1>
+    1826:	48 8d 14 01          	lea    (%rcx,%rax,1),%rdx
+    182a:	0f 10 44 08 30       	movups 0x30(%rax,%rcx,1),%xmm0
+    182f:	0f 10 4c 08 40       	movups 0x40(%rax,%rcx,1),%xmm1
+    1834:	0f 10 54 08 50       	movups 0x50(%rax,%rcx,1),%xmm2
+    1839:	41 0f 11 51 20       	movups %xmm2,0x20(%r9)
+    183e:	41 0f 11 49 10       	movups %xmm1,0x10(%r9)
+    1843:	41 0f 11 01          	movups %xmm0,(%r9)
+    1847:	48 c7 02 01 00 00 00 	movq   $0x1,(%rdx)
+    184e:	45 31 c0             	xor    %r8d,%r8d
+    1851:	5b                   	pop    %rbx
+    1852:	41 5e                	pop    %r14
+    1854:	44 89 c0             	mov    %r8d,%eax
+    1857:	c3                   	ret
+    1858:	0f 1f 84 00 00 00 00 	nopl   0x0(%rax,%rax,1)
+    185f:	00
+
+0000000000001860 <coz_signal_retire>:
+    1860:	41 b8 16 00 00 00    	mov    $0x16,%r8d
+    1866:	83 ff 01             	cmp    $0x1,%edi
+    1869:	0f 87 17 01 00 00    	ja     1986 <coz_signal_retire+0x126>
+    186f:	f6 05 aa 28 00 00 01 	testb  $0x1,0x28aa(%rip)        # 4120 <(anonymous namespace)::installed>
+    1876:	0f 84 0a 01 00 00    	je     1986 <coz_signal_retire+0x126>
+    187c:	41 56                	push   %r14
+    187e:	53                   	push   %rbx
+    187f:	48 81 ec 18 01 00 00 	sub    $0x118,%rsp
+    1886:	89 f8                	mov    %edi,%eax
+    1888:	4c 8d 0c 40          	lea    (%rax,%rax,2),%r9
+    188c:	49 c1 e1 05          	shl    $0x5,%r9
+    1890:	4c 8d 35 99 28 00 00 	lea    0x2899(%rip),%r14        # 4130 <(anonymous namespace)::slots>
+    1897:	4b 63 5c 31 08       	movslq 0x8(%r9,%r14,1),%rbx
+    189c:	b8 ba 00 00 00       	mov    $0xba,%eax
+    18a1:	31 ff                	xor    %edi,%edi
+    18a3:	31 f6                	xor    %esi,%esi
+    18a5:	31 d2                	xor    %edx,%edx
+    18a7:	45 31 d2             	xor    %r10d,%r10d
+    18aa:	0f 05                	syscall
+    18ac:	48 39 d8             	cmp    %rbx,%rax
+    18af:	0f 85 c7 00 00 00    	jne    197c <coz_signal_retire+0x11c>
+    18b5:	4d 01 ce             	add    %r9,%r14
+    18b8:	49 8b 06             	mov    (%r14),%rax
+    18bb:	41 b8 10 00 00 00    	mov    $0x10,%r8d
+    18c1:	48 83 f8 01          	cmp    $0x1,%rax
+    18c5:	0f 85 b1 00 00 00    	jne    197c <coz_signal_retire+0x11c>
+    18cb:	48 8d 9c 24 98 00 00 	lea    0x98(%rsp),%rbx
+    18d2:	00
+    18d3:	48 89 df             	mov    %rbx,%rdi
+    18d6:	e8 b5 f7 ff ff       	call   1090 <sigemptyset@plt>
+    18db:	8b 35 2f 28 00 00    	mov    0x282f(%rip),%esi        # 4110 <(anonymous namespace)::signal_number>
+    18e1:	48 89 df             	mov    %rbx,%rdi
+    18e4:	e8 e7 f7 ff ff       	call   10d0 <sigaddset@plt>
+    18e9:	31 ff                	xor    %edi,%edi
+    18eb:	48 89 de             	mov    %rbx,%rsi
+    18ee:	31 d2                	xor    %edx,%edx
+    18f0:	e8 4b f7 ff ff       	call   1040 <sigprocmask@plt>
+    18f5:	85 c0                	test   %eax,%eax
+    18f7:	74 0a                	je     1903 <coz_signal_retire+0xa3>
+    18f9:	e8 32 f7 ff ff       	call   1030 <__errno_location@plt>
+    18fe:	44 8b 00             	mov    (%rax),%r8d
+    1901:	eb 79                	jmp    197c <coz_signal_retire+0x11c>
+    1903:	0f 57 c0             	xorps  %xmm0,%xmm0
+    1906:	0f 29 04 24          	movaps %xmm0,(%rsp)
+    190a:	0f 29 84 24 80 00 00 	movaps %xmm0,0x80(%rsp)
+    1911:	00
+    1912:	0f 29 44 24 70       	movaps %xmm0,0x70(%rsp)
+    1917:	0f 29 44 24 60       	movaps %xmm0,0x60(%rsp)
+    191c:	0f 29 44 24 50       	movaps %xmm0,0x50(%rsp)
+    1921:	0f 29 44 24 40       	movaps %xmm0,0x40(%rsp)
+    1926:	0f 29 44 24 30       	movaps %xmm0,0x30(%rsp)
+    192b:	0f 29 44 24 20       	movaps %xmm0,0x20(%rsp)
+    1930:	0f 29 44 24 10       	movaps %xmm0,0x10(%rsp)
+    1935:	48 8d bc 24 98 00 00 	lea    0x98(%rsp),%rdi
+    193c:	00
+    193d:	48 8d 74 24 10       	lea    0x10(%rsp),%rsi
+    1942:	48 89 e2             	mov    %rsp,%rdx
+    1945:	e8 26 f7 ff ff       	call   1070 <sigtimedwait@plt>
+    194a:	41 b8 10 00 00 00    	mov    $0x10,%r8d
+    1950:	85 c0                	test   %eax,%eax
+    1952:	79 28                	jns    197c <coz_signal_retire+0x11c>
+    1954:	e8 d7 f6 ff ff       	call   1030 <__errno_location@plt>
+    1959:	44 8b 00             	mov    (%rax),%r8d
+    195c:	41 83 f8 0b          	cmp    $0xb,%r8d
+    1960:	75 1a                	jne    197c <coz_signal_retire+0x11c>
+    1962:	b9 05 00 00 00       	mov    $0x5,%ecx
+    1967:	b8 01 00 00 00       	mov    $0x1,%eax
+    196c:	45 31 c0             	xor    %r8d,%r8d
+    196f:	f0 49 0f b1 0e       	lock cmpxchg %rcx,(%r14)
+    1974:	41 0f 95 c0          	setne  %r8b
+    1978:	41 c1 e0 04          	shl    $0x4,%r8d
+    197c:	48 81 c4 18 01 00 00 	add    $0x118,%rsp
+    1983:	5b                   	pop    %rbx
+    1984:	41 5e                	pop    %r14
+    1986:	44 89 c0             	mov    %r8d,%eax
+    1989:	c3                   	ret
+    198a:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+
+0000000000001990 <coz_signal_restore>:
+    1990:	53                   	push   %rbx
+    1991:	48 81 ec a0 00 00 00 	sub    $0xa0,%rsp
+    1998:	bb 16 00 00 00       	mov    $0x16,%ebx
+    199d:	80 3d 7c 27 00 00 01 	cmpb   $0x1,0x277c(%rip)        # 4120 <(anonymous namespace)::installed>
+    19a4:	0f 85 a2 00 00 00    	jne    1a4c <coz_signal_restore+0xbc>
+    19aa:	b8 ba 00 00 00       	mov    $0xba,%eax
+    19af:	31 ff                	xor    %edi,%edi
+    19b1:	31 f6                	xor    %esi,%esi
+    19b3:	31 d2                	xor    %edx,%edx
+    19b5:	45 31 d2             	xor    %r10d,%r10d
+    19b8:	0f 05                	syscall
+    19ba:	48 63 0d 5b 27 00 00 	movslq 0x275b(%rip),%rcx        # 411c <(anonymous namespace)::owner_tid>
+    19c1:	48 39 c8             	cmp    %rcx,%rax
+    19c4:	0f 85 82 00 00 00    	jne    1a4c <coz_signal_restore+0xbc>
+    19ca:	bb 10 00 00 00       	mov    $0x10,%ebx
+    19cf:	48 8b 05 5a 27 00 00 	mov    0x275a(%rip),%rax        # 4130 <(anonymous namespace)::slots>
+    19d6:	48 83 f8 05          	cmp    $0x5,%rax
+    19da:	74 05                	je     19e1 <coz_signal_restore+0x51>
+    19dc:	48 85 c0             	test   %rax,%rax
+    19df:	75 6b                	jne    1a4c <coz_signal_restore+0xbc>
+    19e1:	48 8b 05 a8 27 00 00 	mov    0x27a8(%rip),%rax        # 4190 <(anonymous namespace)::slots+0x60>
+    19e8:	48 83 f8 05          	cmp    $0x5,%rax
+    19ec:	74 05                	je     19f3 <coz_signal_restore+0x63>
+    19ee:	48 85 c0             	test   %rax,%rax
+    19f1:	75 59                	jne    1a4c <coz_signal_restore+0xbc>
+    19f3:	0f 57 c0             	xorps  %xmm0,%xmm0
+    19f6:	0f 29 84 24 80 00 00 	movaps %xmm0,0x80(%rsp)
+    19fd:	00
+    19fe:	0f 29 44 24 70       	movaps %xmm0,0x70(%rsp)
+    1a03:	0f 29 44 24 60       	movaps %xmm0,0x60(%rsp)
+    1a08:	0f 29 44 24 50       	movaps %xmm0,0x50(%rsp)
+    1a0d:	0f 29 44 24 40       	movaps %xmm0,0x40(%rsp)
+    1a12:	0f 29 44 24 30       	movaps %xmm0,0x30(%rsp)
+    1a17:	0f 29 44 24 20       	movaps %xmm0,0x20(%rsp)
+    1a1c:	0f 29 44 24 10       	movaps %xmm0,0x10(%rsp)
+    1a21:	0f 29 04 24          	movaps %xmm0,(%rsp)
+    1a25:	48 c7 84 24 90 00 00 	movq   $0x0,0x90(%rsp)
+    1a2c:	00 00 00 00 00
+    1a31:	8b 3d d9 26 00 00    	mov    0x26d9(%rip),%edi        # 4110 <(anonymous namespace)::signal_number>
+    1a37:	48 89 e2             	mov    %rsp,%rdx
+    1a3a:	31 f6                	xor    %esi,%esi
+    1a3c:	e8 5f f6 ff ff       	call   10a0 <sigaction@plt>
+    1a41:	85 c0                	test   %eax,%eax
+    1a43:	74 12                	je     1a57 <coz_signal_restore+0xc7>
+    1a45:	e8 e6 f5 ff ff       	call   1030 <__errno_location@plt>
+    1a4a:	8b 18                	mov    (%rax),%ebx
+    1a4c:	89 d8                	mov    %ebx,%eax
+    1a4e:	48 81 c4 a0 00 00 00 	add    $0xa0,%rsp
+    1a55:	5b                   	pop    %rbx
+    1a56:	c3                   	ret
+    1a57:	f6 84 24 88 00 00 00 	testb  $0x4,0x88(%rsp)
+    1a5e:	04
+    1a5f:	bb 10 00 00 00       	mov    $0x10,%ebx
+    1a64:	74 e6                	je     1a4c <coz_signal_restore+0xbc>
+    1a66:	48 8d 05 63 f8 ff ff 	lea    -0x79d(%rip),%rax        # 12d0 <(anonymous namespace)::handler(int, siginfo_t*, void*)>
+    1a6d:	48 39 04 24          	cmp    %rax,(%rsp)
+    1a71:	75 d9                	jne    1a4c <coz_signal_restore+0xbc>
+    1a73:	8b 3d 97 26 00 00    	mov    0x2697(%rip),%edi        # 4110 <(anonymous namespace)::signal_number>
+    1a79:	48 8d 35 f8 25 00 00 	lea    0x25f8(%rip),%rsi        # 4078 <(anonymous namespace)::previous_action>
+    1a80:	31 db                	xor    %ebx,%ebx
+    1a82:	31 d2                	xor    %edx,%edx
+    1a84:	e8 17 f6 ff ff       	call   10a0 <sigaction@plt>
+    1a89:	85 c0                	test   %eax,%eax
+    1a8b:	75 b8                	jne    1a45 <coz_signal_restore+0xb5>
+    1a8d:	c6 05 8c 26 00 00 00 	movb   $0x0,0x268c(%rip)        # 4120 <(anonymous namespace)::installed>
+    1a94:	89 d8                	mov    %ebx,%eax
+    1a96:	48 81 c4 a0 00 00 00 	add    $0xa0,%rsp
+    1a9d:	5b                   	pop    %rbx
+    1a9e:	c3                   	ret
+
+Disassembly of section .fini:
+
+0000000000001aa0 <_fini>:
+    1aa0:	f3 0f 1e fa          	endbr64
+    1aa4:	48 83 ec 08          	sub    $0x8,%rsp
+    1aa8:	48 83 c4 08          	add    $0x8,%rsp
+    1aac:	c3                   	ret

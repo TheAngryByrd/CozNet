@@ -1,0 +1,4271 @@
+{
+  "backend": "linux-x64-signal",
+  "sendSignals": true,
+  "requestedDelayNanoseconds": 0,
+  "nativeRange": {
+    "nativeStart": 140640469559744,
+    "nativeSize": 26,
+    "symbol": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+  },
+  "runtime": "10.0.0",
+  "platform": "Ubuntu 24.04.3 LTS",
+  "forcedGc": false,
+  "measurementMilliseconds": 2006.9376,
+  "completedBatches": [
+    640248,
+    635743
+  ],
+  "requests": [
+    {
+      "Slot": 0,
+      "Sequence": 1,
+      "AcknowledgmentMilliseconds": 0.5626,
+      "Result": {
+        "Sequence": 1,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 481,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 2,
+      "AcknowledgmentMilliseconds": 1.0671,
+      "Result": {
+        "Sequence": 2,
+        "Outcome": 1,
+        "InstructionPointer": 140642591456625,
+        "MeasuredHandlerNanoseconds": 410,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 3,
+      "AcknowledgmentMilliseconds": 1.0725,
+      "Result": {
+        "Sequence": 3,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 778,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 4,
+      "AcknowledgmentMilliseconds": 1.0595,
+      "Result": {
+        "Sequence": 4,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 229,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 5,
+      "AcknowledgmentMilliseconds": 1.0618,
+      "Result": {
+        "Sequence": 5,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 333,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 6,
+      "AcknowledgmentMilliseconds": 1.0574,
+      "Result": {
+        "Sequence": 6,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 206,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 7,
+      "AcknowledgmentMilliseconds": 1.07,
+      "Result": {
+        "Sequence": 7,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 823,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 8,
+      "AcknowledgmentMilliseconds": 1.0586,
+      "Result": {
+        "Sequence": 8,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 405,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 9,
+      "AcknowledgmentMilliseconds": 1.0697,
+      "Result": {
+        "Sequence": 9,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 435,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 10,
+      "AcknowledgmentMilliseconds": 1.056,
+      "Result": {
+        "Sequence": 10,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 973,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 11,
+      "AcknowledgmentMilliseconds": 1.0649,
+      "Result": {
+        "Sequence": 11,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 448,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 12,
+      "AcknowledgmentMilliseconds": 1.1293,
+      "Result": {
+        "Sequence": 12,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 312,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 13,
+      "AcknowledgmentMilliseconds": 1.065,
+      "Result": {
+        "Sequence": 13,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 789,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 14,
+      "AcknowledgmentMilliseconds": 1.0569,
+      "Result": {
+        "Sequence": 14,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 466,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 15,
+      "AcknowledgmentMilliseconds": 1.059,
+      "Result": {
+        "Sequence": 15,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 939,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 16,
+      "AcknowledgmentMilliseconds": 1.0573,
+      "Result": {
+        "Sequence": 16,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 225,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 17,
+      "AcknowledgmentMilliseconds": 1.0608,
+      "Result": {
+        "Sequence": 17,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 943,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 18,
+      "AcknowledgmentMilliseconds": 1.0548,
+      "Result": {
+        "Sequence": 18,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 220,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 19,
+      "AcknowledgmentMilliseconds": 1.0607,
+      "Result": {
+        "Sequence": 19,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 378,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 20,
+      "AcknowledgmentMilliseconds": 1.0566,
+      "Result": {
+        "Sequence": 20,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 217,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 21,
+      "AcknowledgmentMilliseconds": 1.0744,
+      "Result": {
+        "Sequence": 21,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 646,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 22,
+      "AcknowledgmentMilliseconds": 1.0752,
+      "Result": {
+        "Sequence": 22,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 482,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 23,
+      "AcknowledgmentMilliseconds": 1.0767,
+      "Result": {
+        "Sequence": 23,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 819,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 24,
+      "AcknowledgmentMilliseconds": 1.0796,
+      "Result": {
+        "Sequence": 24,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 492,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 25,
+      "AcknowledgmentMilliseconds": 1.0675,
+      "Result": {
+        "Sequence": 25,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 891,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 26,
+      "AcknowledgmentMilliseconds": 1.0554,
+      "Result": {
+        "Sequence": 26,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 454,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 27,
+      "AcknowledgmentMilliseconds": 1.0588,
+      "Result": {
+        "Sequence": 27,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 841,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 28,
+      "AcknowledgmentMilliseconds": 1.0544,
+      "Result": {
+        "Sequence": 28,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 219,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 29,
+      "AcknowledgmentMilliseconds": 1.0745,
+      "Result": {
+        "Sequence": 29,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 466,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 30,
+      "AcknowledgmentMilliseconds": 1.0562,
+      "Result": {
+        "Sequence": 30,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 200,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 31,
+      "AcknowledgmentMilliseconds": 1.0614,
+      "Result": {
+        "Sequence": 31,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 407,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 32,
+      "AcknowledgmentMilliseconds": 1.0562,
+      "Result": {
+        "Sequence": 32,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 200,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 33,
+      "AcknowledgmentMilliseconds": 1.0718,
+      "Result": {
+        "Sequence": 33,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 877,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 34,
+      "AcknowledgmentMilliseconds": 1.0567,
+      "Result": {
+        "Sequence": 34,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 423,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 35,
+      "AcknowledgmentMilliseconds": 1.0584,
+      "Result": {
+        "Sequence": 35,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 914,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 36,
+      "AcknowledgmentMilliseconds": 1.0545,
+      "Result": {
+        "Sequence": 36,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 217,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 37,
+      "AcknowledgmentMilliseconds": 1.0894,
+      "Result": {
+        "Sequence": 37,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 867,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 38,
+      "AcknowledgmentMilliseconds": 1.0559,
+      "Result": {
+        "Sequence": 38,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 955,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 39,
+      "AcknowledgmentMilliseconds": 1.0801,
+      "Result": {
+        "Sequence": 39,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 859,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 40,
+      "AcknowledgmentMilliseconds": 1.0641,
+      "Result": {
+        "Sequence": 40,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 305,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 41,
+      "AcknowledgmentMilliseconds": 1.1082,
+      "Result": {
+        "Sequence": 41,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 317,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 42,
+      "AcknowledgmentMilliseconds": 1.0793,
+      "Result": {
+        "Sequence": 42,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 589,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 43,
+      "AcknowledgmentMilliseconds": 1.0696,
+      "Result": {
+        "Sequence": 43,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 735,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 44,
+      "AcknowledgmentMilliseconds": 1.0563,
+      "Result": {
+        "Sequence": 44,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 565,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 45,
+      "AcknowledgmentMilliseconds": 2.1241,
+      "Result": {
+        "Sequence": 45,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 530,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 46,
+      "AcknowledgmentMilliseconds": 1.0703,
+      "Result": {
+        "Sequence": 46,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 291,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 47,
+      "AcknowledgmentMilliseconds": 1.0748,
+      "Result": {
+        "Sequence": 47,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 1084,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 48,
+      "AcknowledgmentMilliseconds": 1.0622,
+      "Result": {
+        "Sequence": 48,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 381,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 49,
+      "AcknowledgmentMilliseconds": 1.0679,
+      "Result": {
+        "Sequence": 49,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 1088,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 50,
+      "AcknowledgmentMilliseconds": 1.0641,
+      "Result": {
+        "Sequence": 50,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559760,
+        "MeasuredHandlerNanoseconds": 425,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 51,
+      "AcknowledgmentMilliseconds": 1.0728,
+      "Result": {
+        "Sequence": 51,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 814,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 52,
+      "AcknowledgmentMilliseconds": 1.0575,
+      "Result": {
+        "Sequence": 52,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 450,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 53,
+      "AcknowledgmentMilliseconds": 1.0711,
+      "Result": {
+        "Sequence": 53,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 782,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 54,
+      "AcknowledgmentMilliseconds": 1.0591,
+      "Result": {
+        "Sequence": 54,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 507,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 55,
+      "AcknowledgmentMilliseconds": 1.0701,
+      "Result": {
+        "Sequence": 55,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 639,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 56,
+      "AcknowledgmentMilliseconds": 1.0561,
+      "Result": {
+        "Sequence": 56,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 537,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 57,
+      "AcknowledgmentMilliseconds": 1.0762,
+      "Result": {
+        "Sequence": 57,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 687,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 58,
+      "AcknowledgmentMilliseconds": 1.0618,
+      "Result": {
+        "Sequence": 58,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 806,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 59,
+      "AcknowledgmentMilliseconds": 1.0735,
+      "Result": {
+        "Sequence": 59,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 973,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 60,
+      "AcknowledgmentMilliseconds": 1.0563,
+      "Result": {
+        "Sequence": 60,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 893,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 61,
+      "AcknowledgmentMilliseconds": 1.0646,
+      "Result": {
+        "Sequence": 61,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 309,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 62,
+      "AcknowledgmentMilliseconds": 1.0582,
+      "Result": {
+        "Sequence": 62,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 418,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 63,
+      "AcknowledgmentMilliseconds": 1.0984,
+      "Result": {
+        "Sequence": 63,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 399,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 64,
+      "AcknowledgmentMilliseconds": 1.0903,
+      "Result": {
+        "Sequence": 64,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 584,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 65,
+      "AcknowledgmentMilliseconds": 1.0478,
+      "Result": {
+        "Sequence": 65,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 393,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 66,
+      "AcknowledgmentMilliseconds": 1.1061,
+      "Result": {
+        "Sequence": 66,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 520,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 67,
+      "AcknowledgmentMilliseconds": 1.1679,
+      "Result": {
+        "Sequence": 67,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 394,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 68,
+      "AcknowledgmentMilliseconds": 1.1412,
+      "Result": {
+        "Sequence": 68,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 686,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 69,
+      "AcknowledgmentMilliseconds": 1.1019,
+      "Result": {
+        "Sequence": 69,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 385,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 70,
+      "AcknowledgmentMilliseconds": 1.0693,
+      "Result": {
+        "Sequence": 70,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 742,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 71,
+      "AcknowledgmentMilliseconds": 1.0801,
+      "Result": {
+        "Sequence": 71,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 489,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 72,
+      "AcknowledgmentMilliseconds": 1.0967,
+      "Result": {
+        "Sequence": 72,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 246,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 73,
+      "AcknowledgmentMilliseconds": 1.0928,
+      "Result": {
+        "Sequence": 73,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 402,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 74,
+      "AcknowledgmentMilliseconds": 1.0728,
+      "Result": {
+        "Sequence": 74,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 476,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 75,
+      "AcknowledgmentMilliseconds": 1.1114,
+      "Result": {
+        "Sequence": 75,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 896,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 76,
+      "AcknowledgmentMilliseconds": 1.114,
+      "Result": {
+        "Sequence": 76,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 224,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 77,
+      "AcknowledgmentMilliseconds": 1.0826,
+      "Result": {
+        "Sequence": 77,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 310,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 78,
+      "AcknowledgmentMilliseconds": 1.0887,
+      "Result": {
+        "Sequence": 78,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 244,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 79,
+      "AcknowledgmentMilliseconds": 1.1207,
+      "Result": {
+        "Sequence": 79,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559760,
+        "MeasuredHandlerNanoseconds": 697,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 80,
+      "AcknowledgmentMilliseconds": 1.0723,
+      "Result": {
+        "Sequence": 80,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 175,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 81,
+      "AcknowledgmentMilliseconds": 1.1031,
+      "Result": {
+        "Sequence": 81,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 537,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 82,
+      "AcknowledgmentMilliseconds": 1.0753,
+      "Result": {
+        "Sequence": 82,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 406,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 83,
+      "AcknowledgmentMilliseconds": 1.1008,
+      "Result": {
+        "Sequence": 83,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 784,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 84,
+      "AcknowledgmentMilliseconds": 1.0904,
+      "Result": {
+        "Sequence": 84,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 349,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 85,
+      "AcknowledgmentMilliseconds": 1.2201,
+      "Result": {
+        "Sequence": 85,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 1673,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 86,
+      "AcknowledgmentMilliseconds": 1.1348,
+      "Result": {
+        "Sequence": 86,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 983,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 87,
+      "AcknowledgmentMilliseconds": 1.0991,
+      "Result": {
+        "Sequence": 87,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 985,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 88,
+      "AcknowledgmentMilliseconds": 1.1029,
+      "Result": {
+        "Sequence": 88,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 342,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 89,
+      "AcknowledgmentMilliseconds": 1.1151,
+      "Result": {
+        "Sequence": 89,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 650,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 90,
+      "AcknowledgmentMilliseconds": 1.0829,
+      "Result": {
+        "Sequence": 90,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 397,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 91,
+      "AcknowledgmentMilliseconds": 1.1523,
+      "Result": {
+        "Sequence": 91,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 974,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 92,
+      "AcknowledgmentMilliseconds": 1.11,
+      "Result": {
+        "Sequence": 92,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 421,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 93,
+      "AcknowledgmentMilliseconds": 1.1231,
+      "Result": {
+        "Sequence": 93,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 856,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 94,
+      "AcknowledgmentMilliseconds": 1.069,
+      "Result": {
+        "Sequence": 94,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 554,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 95,
+      "AcknowledgmentMilliseconds": 1.0888,
+      "Result": {
+        "Sequence": 95,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 734,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 96,
+      "AcknowledgmentMilliseconds": 1.1136,
+      "Result": {
+        "Sequence": 96,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 231,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 97,
+      "AcknowledgmentMilliseconds": 1.0863,
+      "Result": {
+        "Sequence": 97,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 375,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 98,
+      "AcknowledgmentMilliseconds": 1.1488,
+      "Result": {
+        "Sequence": 98,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 208,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 99,
+      "AcknowledgmentMilliseconds": 1.0791,
+      "Result": {
+        "Sequence": 99,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 733,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 100,
+      "AcknowledgmentMilliseconds": 1.0655,
+      "Result": {
+        "Sequence": 100,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 205,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 101,
+      "AcknowledgmentMilliseconds": 1.0765,
+      "Result": {
+        "Sequence": 101,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 428,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 102,
+      "AcknowledgmentMilliseconds": 1.2038,
+      "Result": {
+        "Sequence": 102,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 211,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 103,
+      "AcknowledgmentMilliseconds": 1.0866,
+      "Result": {
+        "Sequence": 103,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 404,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 104,
+      "AcknowledgmentMilliseconds": 1.0744,
+      "Result": {
+        "Sequence": 104,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 454,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 105,
+      "AcknowledgmentMilliseconds": 1.0901,
+      "Result": {
+        "Sequence": 105,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 619,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 106,
+      "AcknowledgmentMilliseconds": 1.288,
+      "Result": {
+        "Sequence": 106,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 370,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 107,
+      "AcknowledgmentMilliseconds": 1.1462,
+      "Result": {
+        "Sequence": 107,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 720,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 108,
+      "AcknowledgmentMilliseconds": 1.0817,
+      "Result": {
+        "Sequence": 108,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 503,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 109,
+      "AcknowledgmentMilliseconds": 1.0758,
+      "Result": {
+        "Sequence": 109,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 732,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 110,
+      "AcknowledgmentMilliseconds": 1.0692,
+      "Result": {
+        "Sequence": 110,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 302,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 111,
+      "AcknowledgmentMilliseconds": 1.131,
+      "Result": {
+        "Sequence": 111,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 377,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 112,
+      "AcknowledgmentMilliseconds": 1.0694,
+      "Result": {
+        "Sequence": 112,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 172,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 113,
+      "AcknowledgmentMilliseconds": 1.1376,
+      "Result": {
+        "Sequence": 113,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 403,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 114,
+      "AcknowledgmentMilliseconds": 1.0754,
+      "Result": {
+        "Sequence": 114,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 342,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 115,
+      "AcknowledgmentMilliseconds": 1.1125,
+      "Result": {
+        "Sequence": 115,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 461,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 116,
+      "AcknowledgmentMilliseconds": 0.035,
+      "Result": {
+        "Sequence": 116,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 181,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 117,
+      "AcknowledgmentMilliseconds": 1.1374,
+      "Result": {
+        "Sequence": 117,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 296,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 118,
+      "AcknowledgmentMilliseconds": 1.0744,
+      "Result": {
+        "Sequence": 118,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 425,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 119,
+      "AcknowledgmentMilliseconds": 0.0409,
+      "Result": {
+        "Sequence": 119,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 469,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 120,
+      "AcknowledgmentMilliseconds": 1.0568,
+      "Result": {
+        "Sequence": 120,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 333,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 121,
+      "AcknowledgmentMilliseconds": 1.0826,
+      "Result": {
+        "Sequence": 121,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 688,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 122,
+      "AcknowledgmentMilliseconds": 1.0778,
+      "Result": {
+        "Sequence": 122,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 290,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 123,
+      "AcknowledgmentMilliseconds": 1.0972,
+      "Result": {
+        "Sequence": 123,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 484,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 124,
+      "AcknowledgmentMilliseconds": 1.0797,
+      "Result": {
+        "Sequence": 124,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 390,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 125,
+      "AcknowledgmentMilliseconds": 1.1259,
+      "Result": {
+        "Sequence": 125,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 327,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 126,
+      "AcknowledgmentMilliseconds": 1.067,
+      "Result": {
+        "Sequence": 126,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 213,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 127,
+      "AcknowledgmentMilliseconds": 1.1161,
+      "Result": {
+        "Sequence": 127,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 636,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 128,
+      "AcknowledgmentMilliseconds": 1.1424,
+      "Result": {
+        "Sequence": 128,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 307,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 129,
+      "AcknowledgmentMilliseconds": 1.0937,
+      "Result": {
+        "Sequence": 129,
+        "Outcome": 1,
+        "InstructionPointer": 140640469624632,
+        "MeasuredHandlerNanoseconds": 1005,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 130,
+      "AcknowledgmentMilliseconds": 1.0841,
+      "Result": {
+        "Sequence": 130,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 367,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 131,
+      "AcknowledgmentMilliseconds": 1.1198,
+      "Result": {
+        "Sequence": 131,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 429,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 132,
+      "AcknowledgmentMilliseconds": 0.0551,
+      "Result": {
+        "Sequence": 132,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 547,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 133,
+      "AcknowledgmentMilliseconds": 1.083,
+      "Result": {
+        "Sequence": 133,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 398,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 134,
+      "AcknowledgmentMilliseconds": 1.0886,
+      "Result": {
+        "Sequence": 134,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 225,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 135,
+      "AcknowledgmentMilliseconds": 1.1264,
+      "Result": {
+        "Sequence": 135,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 600,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 136,
+      "AcknowledgmentMilliseconds": 1.1152,
+      "Result": {
+        "Sequence": 136,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 304,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 137,
+      "AcknowledgmentMilliseconds": 1.1054,
+      "Result": {
+        "Sequence": 137,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 403,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 138,
+      "AcknowledgmentMilliseconds": 1.0723,
+      "Result": {
+        "Sequence": 138,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 201,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 139,
+      "AcknowledgmentMilliseconds": 1.1143,
+      "Result": {
+        "Sequence": 139,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 398,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 140,
+      "AcknowledgmentMilliseconds": 1.0875,
+      "Result": {
+        "Sequence": 140,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 212,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 141,
+      "AcknowledgmentMilliseconds": 1.0922,
+      "Result": {
+        "Sequence": 141,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 857,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 142,
+      "AcknowledgmentMilliseconds": 1.0697,
+      "Result": {
+        "Sequence": 142,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 274,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 143,
+      "AcknowledgmentMilliseconds": 1.1082,
+      "Result": {
+        "Sequence": 143,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 570,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 144,
+      "AcknowledgmentMilliseconds": 1.0689,
+      "Result": {
+        "Sequence": 144,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 358,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 145,
+      "AcknowledgmentMilliseconds": 1.1239,
+      "Result": {
+        "Sequence": 145,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 590,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 146,
+      "AcknowledgmentMilliseconds": 1.1417,
+      "Result": {
+        "Sequence": 146,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 130,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 147,
+      "AcknowledgmentMilliseconds": 1.1126,
+      "Result": {
+        "Sequence": 147,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 389,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 148,
+      "AcknowledgmentMilliseconds": 1.0769,
+      "Result": {
+        "Sequence": 148,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 215,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 149,
+      "AcknowledgmentMilliseconds": 1.0769,
+      "Result": {
+        "Sequence": 149,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 633,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 150,
+      "AcknowledgmentMilliseconds": 1.1319,
+      "Result": {
+        "Sequence": 150,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 198,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 151,
+      "AcknowledgmentMilliseconds": 1.1024,
+      "Result": {
+        "Sequence": 151,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 418,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 152,
+      "AcknowledgmentMilliseconds": 1.0825,
+      "Result": {
+        "Sequence": 152,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 221,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 153,
+      "AcknowledgmentMilliseconds": 1.1677,
+      "Result": {
+        "Sequence": 153,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 469,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 154,
+      "AcknowledgmentMilliseconds": 1.1134,
+      "Result": {
+        "Sequence": 154,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 389,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 155,
+      "AcknowledgmentMilliseconds": 1.1456,
+      "Result": {
+        "Sequence": 155,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 537,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 156,
+      "AcknowledgmentMilliseconds": 1.0818,
+      "Result": {
+        "Sequence": 156,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 653,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 157,
+      "AcknowledgmentMilliseconds": 1.0747,
+      "Result": {
+        "Sequence": 157,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 405,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 158,
+      "AcknowledgmentMilliseconds": 1.0922,
+      "Result": {
+        "Sequence": 158,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 594,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 159,
+      "AcknowledgmentMilliseconds": 1.116,
+      "Result": {
+        "Sequence": 159,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 488,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 160,
+      "AcknowledgmentMilliseconds": 1.1021,
+      "Result": {
+        "Sequence": 160,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 246,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 161,
+      "AcknowledgmentMilliseconds": 1.0896,
+      "Result": {
+        "Sequence": 161,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 498,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 162,
+      "AcknowledgmentMilliseconds": 1.1092,
+      "Result": {
+        "Sequence": 162,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 189,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 163,
+      "AcknowledgmentMilliseconds": 1.0983,
+      "Result": {
+        "Sequence": 163,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 858,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 164,
+      "AcknowledgmentMilliseconds": 1.1035,
+      "Result": {
+        "Sequence": 164,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 217,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 165,
+      "AcknowledgmentMilliseconds": 1.0765,
+      "Result": {
+        "Sequence": 165,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 398,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 166,
+      "AcknowledgmentMilliseconds": 1.098,
+      "Result": {
+        "Sequence": 166,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 219,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 167,
+      "AcknowledgmentMilliseconds": 1.0697,
+      "Result": {
+        "Sequence": 167,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 450,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 168,
+      "AcknowledgmentMilliseconds": 1.0629,
+      "Result": {
+        "Sequence": 168,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 212,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 169,
+      "AcknowledgmentMilliseconds": 1.1156,
+      "Result": {
+        "Sequence": 169,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 502,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 170,
+      "AcknowledgmentMilliseconds": 1.0639,
+      "Result": {
+        "Sequence": 170,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 211,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 171,
+      "AcknowledgmentMilliseconds": 1.1719,
+      "Result": {
+        "Sequence": 171,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 423,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 172,
+      "AcknowledgmentMilliseconds": 1.1078,
+      "Result": {
+        "Sequence": 172,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 210,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 173,
+      "AcknowledgmentMilliseconds": 1.0807,
+      "Result": {
+        "Sequence": 173,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 528,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 174,
+      "AcknowledgmentMilliseconds": 1.1037,
+      "Result": {
+        "Sequence": 174,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 217,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 175,
+      "AcknowledgmentMilliseconds": 1.0937,
+      "Result": {
+        "Sequence": 175,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 740,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 176,
+      "AcknowledgmentMilliseconds": 1.0786,
+      "Result": {
+        "Sequence": 176,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 453,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 177,
+      "AcknowledgmentMilliseconds": 1.1005,
+      "Result": {
+        "Sequence": 177,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 836,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 178,
+      "AcknowledgmentMilliseconds": 1.1308,
+      "Result": {
+        "Sequence": 178,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 521,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 179,
+      "AcknowledgmentMilliseconds": 1.1156,
+      "Result": {
+        "Sequence": 179,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 363,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 180,
+      "AcknowledgmentMilliseconds": 1.0789,
+      "Result": {
+        "Sequence": 180,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 497,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 181,
+      "AcknowledgmentMilliseconds": 1.0805,
+      "Result": {
+        "Sequence": 181,
+        "Outcome": 1,
+        "InstructionPointer": 140640469624632,
+        "MeasuredHandlerNanoseconds": 856,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 182,
+      "AcknowledgmentMilliseconds": 1.0644,
+      "Result": {
+        "Sequence": 182,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 213,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 183,
+      "AcknowledgmentMilliseconds": 1.1481,
+      "Result": {
+        "Sequence": 183,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 396,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 184,
+      "AcknowledgmentMilliseconds": 1.1131,
+      "Result": {
+        "Sequence": 184,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 205,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 185,
+      "AcknowledgmentMilliseconds": 1.1038,
+      "Result": {
+        "Sequence": 185,
+        "Outcome": 1,
+        "InstructionPointer": 140640469624632,
+        "MeasuredHandlerNanoseconds": 858,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 186,
+      "AcknowledgmentMilliseconds": 1.1733,
+      "Result": {
+        "Sequence": 186,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 313,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 187,
+      "AcknowledgmentMilliseconds": 1.1154,
+      "Result": {
+        "Sequence": 187,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 592,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 188,
+      "AcknowledgmentMilliseconds": 1.0676,
+      "Result": {
+        "Sequence": 188,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 218,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 189,
+      "AcknowledgmentMilliseconds": 1.1154,
+      "Result": {
+        "Sequence": 189,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 382,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 190,
+      "AcknowledgmentMilliseconds": 1.0746,
+      "Result": {
+        "Sequence": 190,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 211,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 191,
+      "AcknowledgmentMilliseconds": 1.1059,
+      "Result": {
+        "Sequence": 191,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 386,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 192,
+      "AcknowledgmentMilliseconds": 1.0763,
+      "Result": {
+        "Sequence": 192,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 227,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 193,
+      "AcknowledgmentMilliseconds": 1.0793,
+      "Result": {
+        "Sequence": 193,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 597,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 194,
+      "AcknowledgmentMilliseconds": 1.0637,
+      "Result": {
+        "Sequence": 194,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 231,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 195,
+      "AcknowledgmentMilliseconds": 1.1409,
+      "Result": {
+        "Sequence": 195,
+        "Outcome": 1,
+        "InstructionPointer": 140640469624632,
+        "MeasuredHandlerNanoseconds": 317,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 196,
+      "AcknowledgmentMilliseconds": 1.0815,
+      "Result": {
+        "Sequence": 196,
+        "Outcome": 1,
+        "InstructionPointer": 140640469624632,
+        "MeasuredHandlerNanoseconds": 211,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 197,
+      "AcknowledgmentMilliseconds": 1.0838,
+      "Result": {
+        "Sequence": 197,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 392,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 198,
+      "AcknowledgmentMilliseconds": 1.1102,
+      "Result": {
+        "Sequence": 198,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 245,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 199,
+      "AcknowledgmentMilliseconds": 1.1026,
+      "Result": {
+        "Sequence": 199,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 490,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 200,
+      "AcknowledgmentMilliseconds": 1.0824,
+      "Result": {
+        "Sequence": 200,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 618,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 201,
+      "AcknowledgmentMilliseconds": 1.1143,
+      "Result": {
+        "Sequence": 201,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 816,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 202,
+      "AcknowledgmentMilliseconds": 1.0879,
+      "Result": {
+        "Sequence": 202,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 656,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 203,
+      "AcknowledgmentMilliseconds": 1.126,
+      "Result": {
+        "Sequence": 203,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 549,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 204,
+      "AcknowledgmentMilliseconds": 1.0842,
+      "Result": {
+        "Sequence": 204,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 771,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 205,
+      "AcknowledgmentMilliseconds": 1.1066,
+      "Result": {
+        "Sequence": 205,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 776,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 206,
+      "AcknowledgmentMilliseconds": 1.1206,
+      "Result": {
+        "Sequence": 206,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 414,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 207,
+      "AcknowledgmentMilliseconds": 1.0854,
+      "Result": {
+        "Sequence": 207,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 414,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 208,
+      "AcknowledgmentMilliseconds": 1.1182,
+      "Result": {
+        "Sequence": 208,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 201,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 209,
+      "AcknowledgmentMilliseconds": 1.2455,
+      "Result": {
+        "Sequence": 209,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 447,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 210,
+      "AcknowledgmentMilliseconds": 2.3022,
+      "Result": {
+        "Sequence": 210,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 451,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 211,
+      "AcknowledgmentMilliseconds": 1.1568,
+      "Result": {
+        "Sequence": 211,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 1095,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 212,
+      "AcknowledgmentMilliseconds": 1.1948,
+      "Result": {
+        "Sequence": 212,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 623,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 213,
+      "AcknowledgmentMilliseconds": 1.1303,
+      "Result": {
+        "Sequence": 213,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 504,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 214,
+      "AcknowledgmentMilliseconds": 1.0936,
+      "Result": {
+        "Sequence": 214,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 360,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 215,
+      "AcknowledgmentMilliseconds": 1.0934,
+      "Result": {
+        "Sequence": 215,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 462,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 216,
+      "AcknowledgmentMilliseconds": 1.033,
+      "Result": {
+        "Sequence": 216,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 259,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 217,
+      "AcknowledgmentMilliseconds": 1.1177,
+      "Result": {
+        "Sequence": 217,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 618,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 218,
+      "AcknowledgmentMilliseconds": 1.0947,
+      "Result": {
+        "Sequence": 218,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 134,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 219,
+      "AcknowledgmentMilliseconds": 1.1478,
+      "Result": {
+        "Sequence": 219,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 576,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 220,
+      "AcknowledgmentMilliseconds": 1.106,
+      "Result": {
+        "Sequence": 220,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 568,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 221,
+      "AcknowledgmentMilliseconds": 1.1009,
+      "Result": {
+        "Sequence": 221,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 554,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 222,
+      "AcknowledgmentMilliseconds": 1.1172,
+      "Result": {
+        "Sequence": 222,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 478,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 223,
+      "AcknowledgmentMilliseconds": 1.0824,
+      "Result": {
+        "Sequence": 223,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 627,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 224,
+      "AcknowledgmentMilliseconds": 1.0779,
+      "Result": {
+        "Sequence": 224,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 276,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 225,
+      "AcknowledgmentMilliseconds": 1.1422,
+      "Result": {
+        "Sequence": 225,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 309,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 226,
+      "AcknowledgmentMilliseconds": 1.079,
+      "Result": {
+        "Sequence": 226,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 533,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 227,
+      "AcknowledgmentMilliseconds": 1.0836,
+      "Result": {
+        "Sequence": 227,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 440,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 228,
+      "AcknowledgmentMilliseconds": 1.0878,
+      "Result": {
+        "Sequence": 228,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 215,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 229,
+      "AcknowledgmentMilliseconds": 1.0936,
+      "Result": {
+        "Sequence": 229,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 521,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 230,
+      "AcknowledgmentMilliseconds": 1.0764,
+      "Result": {
+        "Sequence": 230,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 474,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 231,
+      "AcknowledgmentMilliseconds": 1.1262,
+      "Result": {
+        "Sequence": 231,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 1013,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 232,
+      "AcknowledgmentMilliseconds": 1.0778,
+      "Result": {
+        "Sequence": 232,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 251,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 233,
+      "AcknowledgmentMilliseconds": 1.1185,
+      "Result": {
+        "Sequence": 233,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 441,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 234,
+      "AcknowledgmentMilliseconds": 1.1038,
+      "Result": {
+        "Sequence": 234,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 217,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 235,
+      "AcknowledgmentMilliseconds": 1.1155,
+      "Result": {
+        "Sequence": 235,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 433,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 236,
+      "AcknowledgmentMilliseconds": 1.1151,
+      "Result": {
+        "Sequence": 236,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 214,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 237,
+      "AcknowledgmentMilliseconds": 1.1245,
+      "Result": {
+        "Sequence": 237,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 431,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 238,
+      "AcknowledgmentMilliseconds": 1.0836,
+      "Result": {
+        "Sequence": 238,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 420,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 239,
+      "AcknowledgmentMilliseconds": 1.117,
+      "Result": {
+        "Sequence": 239,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 758,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 240,
+      "AcknowledgmentMilliseconds": 1.1029,
+      "Result": {
+        "Sequence": 240,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 195,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 241,
+      "AcknowledgmentMilliseconds": 1.0813,
+      "Result": {
+        "Sequence": 241,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 320,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 242,
+      "AcknowledgmentMilliseconds": 1.1148,
+      "Result": {
+        "Sequence": 242,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 201,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 243,
+      "AcknowledgmentMilliseconds": 1.1031,
+      "Result": {
+        "Sequence": 243,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 394,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 244,
+      "AcknowledgmentMilliseconds": 1.0925,
+      "Result": {
+        "Sequence": 244,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 455,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 245,
+      "AcknowledgmentMilliseconds": 1.1228,
+      "Result": {
+        "Sequence": 245,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 482,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 246,
+      "AcknowledgmentMilliseconds": 1.0882,
+      "Result": {
+        "Sequence": 246,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 314,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 247,
+      "AcknowledgmentMilliseconds": 1.1446,
+      "Result": {
+        "Sequence": 247,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 398,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 248,
+      "AcknowledgmentMilliseconds": 1.1095,
+      "Result": {
+        "Sequence": 248,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 680,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 249,
+      "AcknowledgmentMilliseconds": 1.1122,
+      "Result": {
+        "Sequence": 249,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 421,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 250,
+      "AcknowledgmentMilliseconds": 1.1007,
+      "Result": {
+        "Sequence": 250,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 540,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 251,
+      "AcknowledgmentMilliseconds": 1.1149,
+      "Result": {
+        "Sequence": 251,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 587,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 252,
+      "AcknowledgmentMilliseconds": 1.1168,
+      "Result": {
+        "Sequence": 252,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 335,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 253,
+      "AcknowledgmentMilliseconds": 1.1765,
+      "Result": {
+        "Sequence": 253,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 575,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 254,
+      "AcknowledgmentMilliseconds": 1.1158,
+      "Result": {
+        "Sequence": 254,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 221,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 255,
+      "AcknowledgmentMilliseconds": 1.0828,
+      "Result": {
+        "Sequence": 255,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 403,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 256,
+      "AcknowledgmentMilliseconds": 1.0874,
+      "Result": {
+        "Sequence": 256,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 221,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 257,
+      "AcknowledgmentMilliseconds": 1.1791,
+      "Result": {
+        "Sequence": 257,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 400,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 258,
+      "AcknowledgmentMilliseconds": 1.0858,
+      "Result": {
+        "Sequence": 258,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 223,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 259,
+      "AcknowledgmentMilliseconds": 1.1062,
+      "Result": {
+        "Sequence": 259,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559760,
+        "MeasuredHandlerNanoseconds": 411,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 260,
+      "AcknowledgmentMilliseconds": 1.1073,
+      "Result": {
+        "Sequence": 260,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 207,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 261,
+      "AcknowledgmentMilliseconds": 1.1241,
+      "Result": {
+        "Sequence": 261,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 879,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 262,
+      "AcknowledgmentMilliseconds": 1.1094,
+      "Result": {
+        "Sequence": 262,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 406,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 263,
+      "AcknowledgmentMilliseconds": 1.0876,
+      "Result": {
+        "Sequence": 263,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 463,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 264,
+      "AcknowledgmentMilliseconds": 1.1578,
+      "Result": {
+        "Sequence": 264,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 651,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 265,
+      "AcknowledgmentMilliseconds": 1.1703,
+      "Result": {
+        "Sequence": 265,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 395,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 266,
+      "AcknowledgmentMilliseconds": 1.1164,
+      "Result": {
+        "Sequence": 266,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 586,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 267,
+      "AcknowledgmentMilliseconds": 1.1637,
+      "Result": {
+        "Sequence": 267,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 680,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 268,
+      "AcknowledgmentMilliseconds": 1.1021,
+      "Result": {
+        "Sequence": 268,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 350,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 269,
+      "AcknowledgmentMilliseconds": 1.2094,
+      "Result": {
+        "Sequence": 269,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 401,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 270,
+      "AcknowledgmentMilliseconds": 1.248,
+      "Result": {
+        "Sequence": 270,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 244,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 271,
+      "AcknowledgmentMilliseconds": 1.1162,
+      "Result": {
+        "Sequence": 271,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 293,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 272,
+      "AcknowledgmentMilliseconds": 1.0836,
+      "Result": {
+        "Sequence": 272,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 225,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 273,
+      "AcknowledgmentMilliseconds": 1.1163,
+      "Result": {
+        "Sequence": 273,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 415,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 274,
+      "AcknowledgmentMilliseconds": 1.0659,
+      "Result": {
+        "Sequence": 274,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 215,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 275,
+      "AcknowledgmentMilliseconds": 1.1444,
+      "Result": {
+        "Sequence": 275,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 661,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 276,
+      "AcknowledgmentMilliseconds": 1.0705,
+      "Result": {
+        "Sequence": 276,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 383,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 277,
+      "AcknowledgmentMilliseconds": 1.0903,
+      "Result": {
+        "Sequence": 277,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 806,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 278,
+      "AcknowledgmentMilliseconds": 1.0955,
+      "Result": {
+        "Sequence": 278,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 219,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 279,
+      "AcknowledgmentMilliseconds": 1.1189,
+      "Result": {
+        "Sequence": 279,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 753,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 280,
+      "AcknowledgmentMilliseconds": 1.0665,
+      "Result": {
+        "Sequence": 280,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 216,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 281,
+      "AcknowledgmentMilliseconds": 1.0944,
+      "Result": {
+        "Sequence": 281,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 313,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 282,
+      "AcknowledgmentMilliseconds": 1.1102,
+      "Result": {
+        "Sequence": 282,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559760,
+        "MeasuredHandlerNanoseconds": 222,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 283,
+      "AcknowledgmentMilliseconds": 1.0734,
+      "Result": {
+        "Sequence": 283,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 389,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 284,
+      "AcknowledgmentMilliseconds": 1.0648,
+      "Result": {
+        "Sequence": 284,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 225,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 285,
+      "AcknowledgmentMilliseconds": 1.0958,
+      "Result": {
+        "Sequence": 285,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 804,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 286,
+      "AcknowledgmentMilliseconds": 1.0888,
+      "Result": {
+        "Sequence": 286,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 379,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 287,
+      "AcknowledgmentMilliseconds": 1.0859,
+      "Result": {
+        "Sequence": 287,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 589,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 288,
+      "AcknowledgmentMilliseconds": 1.1234,
+      "Result": {
+        "Sequence": 288,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 300,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 289,
+      "AcknowledgmentMilliseconds": 1.1527,
+      "Result": {
+        "Sequence": 289,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 317,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 290,
+      "AcknowledgmentMilliseconds": 1.1604,
+      "Result": {
+        "Sequence": 290,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 171,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 291,
+      "AcknowledgmentMilliseconds": 1.0963,
+      "Result": {
+        "Sequence": 291,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 706,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 292,
+      "AcknowledgmentMilliseconds": 1.0825,
+      "Result": {
+        "Sequence": 292,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 218,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 293,
+      "AcknowledgmentMilliseconds": 1.1105,
+      "Result": {
+        "Sequence": 293,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 534,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 294,
+      "AcknowledgmentMilliseconds": 1.1087,
+      "Result": {
+        "Sequence": 294,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 281,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 295,
+      "AcknowledgmentMilliseconds": 1.1334,
+      "Result": {
+        "Sequence": 295,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 300,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 296,
+      "AcknowledgmentMilliseconds": 1.1065,
+      "Result": {
+        "Sequence": 296,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 187,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 297,
+      "AcknowledgmentMilliseconds": 1.064,
+      "Result": {
+        "Sequence": 297,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 101,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 298,
+      "AcknowledgmentMilliseconds": 1.0625,
+      "Result": {
+        "Sequence": 298,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 119,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 299,
+      "AcknowledgmentMilliseconds": 1.0845,
+      "Result": {
+        "Sequence": 299,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 398,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 300,
+      "AcknowledgmentMilliseconds": 1.1186,
+      "Result": {
+        "Sequence": 300,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 219,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 301,
+      "AcknowledgmentMilliseconds": 1.0742,
+      "Result": {
+        "Sequence": 301,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 370,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 302,
+      "AcknowledgmentMilliseconds": 1.0627,
+      "Result": {
+        "Sequence": 302,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 216,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 303,
+      "AcknowledgmentMilliseconds": 1.1941,
+      "Result": {
+        "Sequence": 303,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 367,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 304,
+      "AcknowledgmentMilliseconds": 1.1814,
+      "Result": {
+        "Sequence": 304,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 221,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 305,
+      "AcknowledgmentMilliseconds": 1.1343,
+      "Result": {
+        "Sequence": 305,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 313,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 306,
+      "AcknowledgmentMilliseconds": 1.0889,
+      "Result": {
+        "Sequence": 306,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559755,
+        "MeasuredHandlerNanoseconds": 407,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 307,
+      "AcknowledgmentMilliseconds": 1.2028,
+      "Result": {
+        "Sequence": 307,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 405,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 308,
+      "AcknowledgmentMilliseconds": 1.0642,
+      "Result": {
+        "Sequence": 308,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 158,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 309,
+      "AcknowledgmentMilliseconds": 1.1058,
+      "Result": {
+        "Sequence": 309,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 695,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 310,
+      "AcknowledgmentMilliseconds": 1.1109,
+      "Result": {
+        "Sequence": 310,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 221,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 311,
+      "AcknowledgmentMilliseconds": 1.084,
+      "Result": {
+        "Sequence": 311,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 441,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 312,
+      "AcknowledgmentMilliseconds": 1.2717,
+      "Result": {
+        "Sequence": 312,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 234,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 313,
+      "AcknowledgmentMilliseconds": 1.0803,
+      "Result": {
+        "Sequence": 313,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 292,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 314,
+      "AcknowledgmentMilliseconds": 1.0974,
+      "Result": {
+        "Sequence": 314,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 767,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 315,
+      "AcknowledgmentMilliseconds": 1.107,
+      "Result": {
+        "Sequence": 315,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 308,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 316,
+      "AcknowledgmentMilliseconds": 1.1101,
+      "Result": {
+        "Sequence": 316,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 348,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 317,
+      "AcknowledgmentMilliseconds": 1.0817,
+      "Result": {
+        "Sequence": 317,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 347,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 318,
+      "AcknowledgmentMilliseconds": 1.0665,
+      "Result": {
+        "Sequence": 318,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 167,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 319,
+      "AcknowledgmentMilliseconds": 1.0742,
+      "Result": {
+        "Sequence": 319,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 382,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 320,
+      "AcknowledgmentMilliseconds": 1.1501,
+      "Result": {
+        "Sequence": 320,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 208,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 321,
+      "AcknowledgmentMilliseconds": 1.1096,
+      "Result": {
+        "Sequence": 321,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 577,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 322,
+      "AcknowledgmentMilliseconds": 1.1029,
+      "Result": {
+        "Sequence": 322,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559752,
+        "MeasuredHandlerNanoseconds": 203,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 323,
+      "AcknowledgmentMilliseconds": 1.1243,
+      "Result": {
+        "Sequence": 323,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 374,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 324,
+      "AcknowledgmentMilliseconds": 1.1104,
+      "Result": {
+        "Sequence": 324,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 210,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 0,
+      "Sequence": 325,
+      "AcknowledgmentMilliseconds": 1.0761,
+      "Result": {
+        "Sequence": 325,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 389,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    },
+    {
+      "Slot": 1,
+      "Sequence": 326,
+      "AcknowledgmentMilliseconds": 1.0728,
+      "Result": {
+        "Sequence": 326,
+        "Outcome": 2,
+        "InstructionPointer": 140640469559758,
+        "MeasuredHandlerNanoseconds": 205,
+        "WaitNanoseconds": 0,
+        "WaitResult": 0
+      }
+    }
+  ],
+  "collections": [],
+  "failures": [],
+  "passed": true,
+  "joined": true,
+  "drained": true,
+  "restored": true,
+  "causalCredit": 0,
+  "cpuSamplesCollected": false,
+  "generalClrSafetyEstablished": false,
+  "handlerBoundNanoseconds": 5000000,
+  "acknowledgmentBoundMilliseconds": 100,
+  "gcCallBoundMilliseconds": 250,
+  "gcCallDurationIsSuspensionLatency": false
+}

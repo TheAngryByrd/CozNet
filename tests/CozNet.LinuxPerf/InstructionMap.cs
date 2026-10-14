@@ -16,6 +16,16 @@ sealed class PerfMapSnapshot : IInstructionMap
 
     private PerfMapSnapshot(CodeRange[] ranges) => this.ranges = ranges;
 
+    public (ulong Start, ulong Size) UniqueRange(string symbol)
+    {
+        var selected = ranges.Where(range => range.Symbol == symbol).ToArray();
+        if (selected.Length != 1) throw new InvalidDataException("The selected symbol requires exactly one native range.");
+        var target = selected[0];
+        if (ranges.Any(range => !ReferenceEquals(range, target) && range.Start < target.Start + target.Size && target.Start < range.Start + range.Size))
+            throw new InvalidDataException("The selected native range overlaps another runtime map entry.");
+        return (target.Start, target.Size);
+    }
+
     public static PerfMapSnapshot Read(string path)
     {
         string snapshot = File.ReadAllText(path);

@@ -4,6 +4,17 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--signal", var signalPath, var signalMode, var signalGc])
+{
+    bool forceGc = signalGc switch
+    {
+        "gc" => true,
+        "no-gc" => false,
+        _ => throw new ArgumentException("Select gc or no-gc signal measurement.")
+    };
+    return SignalWorkload.Run(signalPath, SignalPlan.Parse(signalMode), forceGc, () => new LinuxSignalBackend());
+}
+
 CollectorChecks.Run();
 TimingChecks.CadenceBoundaries();
 InjectedProbeChecks.Run();

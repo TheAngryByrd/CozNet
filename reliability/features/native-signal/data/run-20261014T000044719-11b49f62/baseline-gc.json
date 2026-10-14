@@ -1,0 +1,825 @@
+{
+  "backend": "linux-x64-signal",
+  "sendSignals": false,
+  "requestedDelayNanoseconds": 0,
+  "nativeRange": {
+    "nativeStart": 139719105096128,
+    "nativeSize": 26,
+    "symbol": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+  },
+  "runtime": "10.0.0",
+  "platform": "Ubuntu 24.04.3 LTS",
+  "forcedGc": true,
+  "measurementMilliseconds": 2005.6146,
+  "completedBatches": [
+    645191,
+    645743
+  ],
+  "requests": [],
+  "collections": [
+    {
+      "CallMilliseconds": 0.9979,
+      "Index": 1,
+      "PauseMilliseconds": [
+        0.447,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2769,
+      "Index": 2,
+      "PauseMilliseconds": [
+        0.219,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2569,
+      "Index": 3,
+      "PauseMilliseconds": [
+        0.209,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2426,
+      "Index": 4,
+      "PauseMilliseconds": [
+        0.188,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.3053,
+      "Index": 5,
+      "PauseMilliseconds": [
+        0.242,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.254,
+      "Index": 6,
+      "PauseMilliseconds": [
+        0.199,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2705,
+      "Index": 7,
+      "PauseMilliseconds": [
+        0.212,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2459,
+      "Index": 8,
+      "PauseMilliseconds": [
+        0.188,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2557,
+      "Index": 9,
+      "PauseMilliseconds": [
+        0.199,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2509,
+      "Index": 10,
+      "PauseMilliseconds": [
+        0.19,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2687,
+      "Index": 11,
+      "PauseMilliseconds": [
+        0.212,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2066,
+      "Index": 12,
+      "PauseMilliseconds": [
+        0.159,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2747,
+      "Index": 13,
+      "PauseMilliseconds": [
+        0.221,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2392,
+      "Index": 14,
+      "PauseMilliseconds": [
+        0.184,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2201,
+      "Index": 15,
+      "PauseMilliseconds": [
+        0.168,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2303,
+      "Index": 16,
+      "PauseMilliseconds": [
+        0.177,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.3132,
+      "Index": 17,
+      "PauseMilliseconds": [
+        0.269,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2357,
+      "Index": 18,
+      "PauseMilliseconds": [
+        0.185,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2665,
+      "Index": 19,
+      "PauseMilliseconds": [
+        0.206,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.239,
+      "Index": 20,
+      "PauseMilliseconds": [
+        0.182,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2635,
+      "Index": 21,
+      "PauseMilliseconds": [
+        0.206,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2514,
+      "Index": 22,
+      "PauseMilliseconds": [
+        0.193,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2589,
+      "Index": 23,
+      "PauseMilliseconds": [
+        0.204,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2288,
+      "Index": 24,
+      "PauseMilliseconds": [
+        0.178,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2691,
+      "Index": 25,
+      "PauseMilliseconds": [
+        0.213,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2599,
+      "Index": 26,
+      "PauseMilliseconds": [
+        0.197,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2692,
+      "Index": 27,
+      "PauseMilliseconds": [
+        0.213,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2505,
+      "Index": 28,
+      "PauseMilliseconds": [
+        0.191,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2805,
+      "Index": 29,
+      "PauseMilliseconds": [
+        0.218,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2814,
+      "Index": 30,
+      "PauseMilliseconds": [
+        0.191,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.261,
+      "Index": 31,
+      "PauseMilliseconds": [
+        0.207,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2784,
+      "Index": 32,
+      "PauseMilliseconds": [
+        0.221,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2784,
+      "Index": 33,
+      "PauseMilliseconds": [
+        0.216,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2489,
+      "Index": 34,
+      "PauseMilliseconds": [
+        0.194,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2836,
+      "Index": 35,
+      "PauseMilliseconds": [
+        0.223,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2412,
+      "Index": 36,
+      "PauseMilliseconds": [
+        0.19,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2624,
+      "Index": 37,
+      "PauseMilliseconds": [
+        0.208,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2495,
+      "Index": 38,
+      "PauseMilliseconds": [
+        0.194,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2749,
+      "Index": 39,
+      "PauseMilliseconds": [
+        0.22,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2543,
+      "Index": 40,
+      "PauseMilliseconds": [
+        0.198,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2593,
+      "Index": 41,
+      "PauseMilliseconds": [
+        0.205,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.249,
+      "Index": 42,
+      "PauseMilliseconds": [
+        0.195,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2598,
+      "Index": 43,
+      "PauseMilliseconds": [
+        0.206,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2792,
+      "Index": 44,
+      "PauseMilliseconds": [
+        0.227,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2675,
+      "Index": 45,
+      "PauseMilliseconds": [
+        0.217,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2521,
+      "Index": 46,
+      "PauseMilliseconds": [
+        0.199,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2815,
+      "Index": 47,
+      "PauseMilliseconds": [
+        0.224,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2468,
+      "Index": 48,
+      "PauseMilliseconds": [
+        0.194,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2814,
+      "Index": 49,
+      "PauseMilliseconds": [
+        0.221,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2579,
+      "Index": 50,
+      "PauseMilliseconds": [
+        0.2,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2764,
+      "Index": 51,
+      "PauseMilliseconds": [
+        0.215,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2491,
+      "Index": 52,
+      "PauseMilliseconds": [
+        0.194,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2522,
+      "Index": 53,
+      "PauseMilliseconds": [
+        0.197,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2486,
+      "Index": 54,
+      "PauseMilliseconds": [
+        0.199,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.263,
+      "Index": 55,
+      "PauseMilliseconds": [
+        0.205,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.231,
+      "Index": 56,
+      "PauseMilliseconds": [
+        0.18,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.241,
+      "Index": 57,
+      "PauseMilliseconds": [
+        0.189,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2172,
+      "Index": 58,
+      "PauseMilliseconds": [
+        0.17,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.3836,
+      "Index": 59,
+      "PauseMilliseconds": [
+        0.344,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2454,
+      "Index": 60,
+      "PauseMilliseconds": [
+        0.191,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.3044,
+      "Index": 61,
+      "PauseMilliseconds": [
+        0.264,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.1793,
+      "Index": 62,
+      "PauseMilliseconds": [
+        0.135,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.23,
+      "Index": 63,
+      "PauseMilliseconds": [
+        0.18,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.25,
+      "Index": 64,
+      "PauseMilliseconds": [
+        0.202,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2828,
+      "Index": 65,
+      "PauseMilliseconds": [
+        0.221,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2486,
+      "Index": 66,
+      "PauseMilliseconds": [
+        0.208,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2405,
+      "Index": 67,
+      "PauseMilliseconds": [
+        0.191,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.1813,
+      "Index": 68,
+      "PauseMilliseconds": [
+        0.137,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2075,
+      "Index": 69,
+      "PauseMilliseconds": [
+        0.163,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2221,
+      "Index": 70,
+      "PauseMilliseconds": [
+        0.171,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2041,
+      "Index": 71,
+      "PauseMilliseconds": [
+        0.16,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.1969,
+      "Index": 72,
+      "PauseMilliseconds": [
+        0.15,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2665,
+      "Index": 73,
+      "PauseMilliseconds": [
+        0.214,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2433,
+      "Index": 74,
+      "PauseMilliseconds": [
+        0.184,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2694,
+      "Index": 75,
+      "PauseMilliseconds": [
+        0.207,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2221,
+      "Index": 76,
+      "PauseMilliseconds": [
+        0.174,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.234,
+      "Index": 77,
+      "PauseMilliseconds": [
+        0.185,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2542,
+      "Index": 78,
+      "PauseMilliseconds": [
+        0.196,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2604,
+      "Index": 79,
+      "PauseMilliseconds": [
+        0.205,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2392,
+      "Index": 80,
+      "PauseMilliseconds": [
+        0.187,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.3342,
+      "Index": 81,
+      "PauseMilliseconds": [
+        0.286,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2583,
+      "Index": 82,
+      "PauseMilliseconds": [
+        0.214,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2676,
+      "Index": 83,
+      "PauseMilliseconds": [
+        0.21,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2183,
+      "Index": 84,
+      "PauseMilliseconds": [
+        0.17,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.3393,
+      "Index": 85,
+      "PauseMilliseconds": [
+        0.293,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2357,
+      "Index": 86,
+      "PauseMilliseconds": [
+        0.17,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2486,
+      "Index": 87,
+      "PauseMilliseconds": [
+        0.196,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.185,
+      "Index": 88,
+      "PauseMilliseconds": [
+        0.142,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2312,
+      "Index": 89,
+      "PauseMilliseconds": [
+        0.179,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2377,
+      "Index": 90,
+      "PauseMilliseconds": [
+        0.192,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2172,
+      "Index": 91,
+      "PauseMilliseconds": [
+        0.165,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.236,
+      "Index": 92,
+      "PauseMilliseconds": [
+        0.183,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2591,
+      "Index": 93,
+      "PauseMilliseconds": [
+        0.201,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2935,
+      "Index": 94,
+      "PauseMilliseconds": [
+        0.274,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2922,
+      "Index": 95,
+      "PauseMilliseconds": [
+        0.249,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2405,
+      "Index": 96,
+      "PauseMilliseconds": [
+        0.184,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2634,
+      "Index": 97,
+      "PauseMilliseconds": [
+        0.213,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.2234,
+      "Index": 98,
+      "PauseMilliseconds": [
+        0.185,
+        0
+      ]
+    },
+    {
+      "CallMilliseconds": 0.3584,
+      "Index": 99,
+      "PauseMilliseconds": [
+        0.308,
+        0
+      ]
+    }
+  ],
+  "failures": [],
+  "passed": true,
+  "joined": true,
+  "drained": true,
+  "restored": true,
+  "causalCredit": 0,
+  "cpuSamplesCollected": false,
+  "generalClrSafetyEstablished": false,
+  "handlerBoundNanoseconds": 5000000,
+  "acknowledgmentBoundMilliseconds": 100,
+  "gcCallBoundMilliseconds": 250,
+  "gcCallDurationIsSuspensionLatency": false
+}

@@ -1,0 +1,53 @@
+[
+  {
+    "exitCode": 0,
+    "case": "occupied",
+    "recordExists": true
+  },
+  {
+    "exitCode": 0,
+    "case": "blocked",
+    "recordExists": true
+  },
+  {
+    "exitCode": 0,
+    "case": "lifetime",
+    "recordExists": true
+  },
+  {
+    "exitCode": 0,
+    "recordExists": true,
+    "case": "zero:no-gc",
+    "file": "zero-no-gc.json"
+  },
+  {
+    "exitCode": 0,
+    "recordExists": true,
+    "case": "baseline:gc",
+    "file": "baseline-gc.json"
+  },
+  {
+    "exitCode": 0,
+    "recordExists": true,
+    "case": "zero:gc",
+    "file": "zero-gc.json"
+  },
+  {
+    "exitCode": 0,
+    "recordExists": true,
+    "case": "delay:gc",
+    "file": "delay-gc.json"
+  },
+  {
+    "exitCode": 0,
+    "recordExists": true,
+    "case": "baseline:no-gc",
+    "file": "baseline-no-gc.json"
+  },
+  {
+    "exitCode": 0,
+    "recordExists": true,
+    "case": "delay:no-gc",
+    "file": "delay-no-gc.json"
+  }
+]

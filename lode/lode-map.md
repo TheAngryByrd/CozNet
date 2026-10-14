@@ -7,6 +7,7 @@ For live managed delay settlement, read [the cooperative runtime](profiling/coop
 For sample-to-ledger conversion, read [sample credits](profiling/sample-credits.md).
 For a Linux CPU-event source, read [Linux perf feasibility](profiling/linux-perf.md).
 For Windows and Linux CLR instrumentation, read [runtime probes](profiling/runtime-probes.md).
+For the bounded native signal experiment, read [signal intervention](profiling/signal-intervention.md).
 For build targets and CI, read [the MiniScaffold build](build/summary.md).
 For scope expansion, read [the roadmap](plans/roadmap.md).
 For the proposed runtime architecture, read [the Coz port and IL rewriting decision](../docsSrc/Research/coz-port-and-il-rewriting.md).

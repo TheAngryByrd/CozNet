@@ -41,6 +41,9 @@ Evidence goes under `artifacts/countdown/`, separated by platform runner and int
 The Linux build uses the pinned runtime source checkout and an isolated Clang/CMake Docker image.
 It verifies injected probes and known-credit intervention. Linux stack-snapshot requests fail explicitly with `E_NOTIMPL`.
 `LinuxPerfVerify` builds the Linux capability workload and runs its Docker checks.
+`LinuxSignalVerify` builds a separate Linux x64 signal library and the shared capability workload.
+It runs three native contract cases and six managed signal/GC cases with a 30-second process watchdog.
+Evidence remains under `artifacts/linux-signal/`. The target requires the existing native compiler image.
 `LinuxInjectedVerify` builds the native profiler and compares manual and injected probes with the same wait backend.
 It retains unique evidence directories under `artifacts/linux-injected/` and reports the zero-speedup cost ratio.
 `LinuxCountdownVerify` uses the same native build and Linux workload chain.

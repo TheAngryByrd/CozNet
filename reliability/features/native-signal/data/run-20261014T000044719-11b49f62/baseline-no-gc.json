@@ -1,0 +1,32 @@
+{
+  "backend": "linux-x64-signal",
+  "sendSignals": false,
+  "requestedDelayNanoseconds": 0,
+  "nativeRange": {
+    "nativeStart": 140390109981120,
+    "nativeSize": 26,
+    "symbol": "int64 [CozNet.LinuxPerf] CpuWorkload::Run()[Optimized]"
+  },
+  "runtime": "10.0.0",
+  "platform": "Ubuntu 24.04.3 LTS",
+  "forcedGc": false,
+  "measurementMilliseconds": 2004.4457,
+  "completedBatches": [
+    646380,
+    646216
+  ],
+  "requests": [],
+  "collections": [],
+  "failures": [],
+  "passed": true,
+  "joined": true,
+  "drained": true,
+  "restored": true,
+  "causalCredit": 0,
+  "cpuSamplesCollected": false,
+  "generalClrSafetyEstablished": false,
+  "handlerBoundNanoseconds": 5000000,
+  "acknowledgmentBoundMilliseconds": 100,
+  "gcCallBoundMilliseconds": 250,
+  "gcCallDurationIsSuspensionLatency": false
+}
