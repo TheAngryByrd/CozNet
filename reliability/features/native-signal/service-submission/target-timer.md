@@ -244,3 +244,31 @@ Earlier run `20261014T195155120-25ac531e` also passes and remains retained.
 It has a 557,657 ns maximum handshake and a 624,717 ns maximum measured handler interval.
 That run predates the explicit wait-interval assertion. The later run uses changed source and does not replace its timing observations.
 The existing `cancel-before-delivery` mode also passes in run `20261014T195311618-c0a720ad` with unchanged inputs.
+
+## Cleanup failure retains ownership
+
+The disarm and drain failure cases each complete one child and then reject a cleanup syscall.
+Both retained runs pass their portable contract checks and expected-failure assertions with unchanged inputs.
+
+| Mode | Run under `artifacts/target-lease-reuse` | Wait | Handler interval | First native receipt |
+| --- | --- | ---: | ---: | ---: |
+| `disarm-failure` | `20261014T200202499-fa1bca5b` | 50,070 ns | 50,900 ns | 1,059,271 ns |
+| `drain-failure` | `20261014T200241027-853178f7` | 50,105 ns | 53,273 ns | 1,065,576 ns |
+
+Commands: `dotnet run --project build/build.fsproj -- -t LinuxTargetLeaseDisarmFailure` and `LinuxTargetLeaseDrainFailure`.
+Each manifest retains source and binary hashes. Each kernel record identifies `5.15.153.1-microsoft-standard-WSL2` on x86-64.
+
+The disarm case records timer ID -1 and raw result -22. It does not attempt drain or report a drain error.
+The drain case records successful real disarm, signal-mask size zero, and raw drain result -22.
+Both record handler error 22 separately from the completed child's successful accounting result.
+Before final cleanup, each snapshot has terminal visibility 1, one child, and the measured wait shown above.
+After releasing the reader guard, each case rejects both storage reuse and mailbox closure.
+
+The target blocks delivery, deletes the timer, and drains successfully before retiring the core.
+The final snapshots have visibility 3 and preserve all child and accounting fields.
+Both runs restore the handler after target join. Neither final drain finds a pending signal.
+The mailbox stays unavailable after registration shutdown. `closed` is false and `finalCloseRejected` is true.
+A passing fixture confirms the expected failure-handling contract. It does not turn the injected cleanup error into a successful cleanup call.
+
+The normal 16-generation reuse mode also passes in run `20261014T200317371-64a15fc8` after the shared cleanup changes.
+These cases do not establish a real pending-signal race, final-cleanup failure handling, managed receipt, CLR safety, or prediction accuracy.

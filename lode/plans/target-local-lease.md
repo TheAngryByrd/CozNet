@@ -78,7 +78,9 @@ Its handler timing includes cancellation work. This controlled boundary does not
 The portable `LeaseMailbox` implements generation claims, cancellation preservation, and reader exclusion.
 The native reuse fixture supplies a disarm/drain proof, retires the core, and makes mailbox quiescence publication its final old-storage access.
 It exercises 16 generations with one child each, one timer, and one lease storage slot.
-Its next integration steps are cleanup failures and a live timer C ABI with managed receipt tracking.
+The native cleanup-failure modes require retained ownership after rejected disarm or drain and independent final target cleanup.
+The next integration step is a live timer C ABI with managed receipt tracking.
+Final cleanup failure and a real pending-record drain rejection remain separate reliability cases.
 Cancellation before publication and arming is now covered by alternating cancelled and normal native generations.
 The `cancel-active-handler` fixture now checks controller cancellation during execution after the measured child wait.
 It requires the handler to observe cancellation before preparation, preserve the child wait, and permit a normal following generation.

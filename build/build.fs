@@ -515,6 +515,18 @@ let linuxTargetLeaseActiveCancellation _ =
         "cancel-active-handler"
     ]
 
+let linuxTargetLeaseDisarmFailure _ =
+    nativeScriptWithArgs "VerifyTargetLeaseReuse.ps1" [
+        "-Mode"
+        "disarm-failure"
+    ]
+
+let linuxTargetLeaseDrainFailure _ =
+    nativeScriptWithArgs "VerifyTargetLeaseReuse.ps1" [
+        "-Mode"
+        "drain-failure"
+    ]
+
 let linuxSelectedServiceInteropVerify _ =
     nativeScriptWithArgs "VerifyServiceInterop.ps1" [ "-SelectedOnly" ]
 
@@ -1031,6 +1043,8 @@ let initTargets () =
     Target.create "LinuxTargetLeaseCancellation" linuxTargetLeaseCancellation
     Target.create "LinuxTargetLeaseArmRecovery" linuxTargetLeaseArmRecovery
     Target.create "LinuxTargetLeaseActiveCancellation" linuxTargetLeaseActiveCancellation
+    Target.create "LinuxTargetLeaseDisarmFailure" linuxTargetLeaseDisarmFailure
+    Target.create "LinuxTargetLeaseDrainFailure" linuxTargetLeaseDrainFailure
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify

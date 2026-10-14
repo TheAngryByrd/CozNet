@@ -1,6 +1,6 @@
 param(
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/target-lease-reuse'),
-    [ValidateSet('reuse', 'cancel-before-delivery', 'reject-initial-arm', 'cancel-active-handler')][string]$Mode = 'reuse'
+    [ValidateSet('reuse', 'cancel-before-delivery', 'reject-initial-arm', 'cancel-active-handler', 'disarm-failure', 'drain-failure')][string]$Mode = 'reuse'
 )
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -22,7 +22,8 @@ if ($LASTEXITCODE -ne 0) { throw "Timer reuse configuration failed. See $run/con
 & docker @container cmake --build /build --target TimerReuseChecks TargetLeaseChecks LeaseMailboxChecks *> (Join-Path $run 'build.log')
 if ($LASTEXITCODE -ne 0) { throw "Timer reuse build failed. See $run/build.log." }
 $binaryHash = (Get-FileHash -LiteralPath (Join-Path $run 'TimerReuseChecks') -Algorithm SHA256).Hash
-@{ sources = $hashes; binary = $binaryHash; image = $image; generations = 16; budgetNanoseconds = 50000;
+$generationCount = if ($Mode -in @('disarm-failure', 'drain-failure')) { 1 } else { 16 }
+@{ sources = $hashes; binary = $binaryHash; image = $image; generations = $generationCount; budgetNanoseconds = 50000;
     requestBoundNanoseconds = 50000; handlerBoundNanoseconds = 5000000; receiptBoundNanoseconds = 100000000;
     intervalNanoseconds = 1000000; rejectedInitialArmNanoseconds = 1000000000;
     cancellationHandshakeNanoseconds = 1000000; mode = $Mode; clrWorkload = $false

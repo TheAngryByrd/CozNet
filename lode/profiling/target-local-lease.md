@@ -127,6 +127,12 @@ The fixture records the kernel identity and inactive timer fields, but those fie
 Odd generations require zero children, zero wait, original arm error, and retired failure visibility.
 Each even generation must complete normally. Failed generations retain header capture time without claiming a child receipt.
 Target-side deletion and drain outside the handler still gate registration retirement.
+The `disarm-failure` and `drain-failure` modes complete one child, then reject cleanup through an invalid timer ID or signal-mask size.
+They require exact `-EINVAL`, terminal core visibility, preserved wait, and rejected reuse/closure after releasing the reader guard.
+Skipped drain calls have `drainAttempted` false, not a fabricated drain errno.
+Target-side deletion and valid drain precede core retirement. The final snapshot must preserve the original child and accounting fields.
+The mailbox remains unavailable after registration shutdown. These cases do not arm a deleted timer or claim a real pending-signal race.
+Handler restoration now requires a successful final drain as well as deletion and target join.
 
 The Linux fixture's `cancel-rearm` case injects cancellation after successful rearm in the first handler.
 It observes the pending blocked expiration, disarms the timer, and drains one matching record followed by `EAGAIN`.

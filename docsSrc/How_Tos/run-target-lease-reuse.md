@@ -60,6 +60,23 @@ This checks cancellation preservation and reset across native delivery. It does 
 The [active cancellation contract](../Reference/target-local-lease.md#lease-mailbox) defines the tested boundary and timing fields.
 Retain handshake and timing failures. Do not repeat an unchanged case to obtain a pass.
 
+## Check cleanup failures
+
+1. Run `dotnet run --project build/build.fsproj -- -t LinuxTargetLeaseDisarmFailure` from the repository root.
+2. Inspect the new `reuse.json`, `summary.json`, and `contracts.log`.
+3. Check that `completed` is 1, `handlerError` is 22, and the generation has terminal visibility 1.
+4. Check that `disarmTimer` is -1, `disarmResult` is -22, and `drainAttempted` is false.
+5. Check that `unguardedReuseRejected` and `closureRejected` are true.
+6. Check that `registrationDrained`, `finalCopied`, `finalPreserved`, and `finalCloseRejected` are true.
+7. Check that `finalVisibility` is 3 and `closed` is false.
+8. Compare `finalChild` and the final accounting fields with the original generation record.
+9. Run `dotnet run --project build/build.fsproj -- -t LinuxTargetLeaseDrainFailure`.
+10. Check the same lifecycle fields in the new evidence directory.
+11. Check that real disarm succeeded, `drainAttempted` is true, `drainMaskSize` is zero, and `drainResult` is -22.
+
+These cases intentionally reject cleanup syscalls. A passing fixture means that the [cleanup-failure contract](../Reference/target-local-lease.md#lease-mailbox) holds.
+The one-child timing bounds still apply. Retain failed runs without repeating unchanged cases to obtain a pass.
+
 ## Check rejected initial arms
 
 1. Run `dotnet run --project build/build.fsproj -- -t LinuxTargetLeaseArmRecovery` from the repository root.

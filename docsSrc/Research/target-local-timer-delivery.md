@@ -154,6 +154,31 @@ Passing those checks would not establish physical prediction accuracy or general
 
 See [owner scheduling](native-owner-scheduling.md) and [the finite service contract](../../lode/plans/native-debt-service.md).
 
+## Retaining ownership after cleanup failure
+
+A completed child and a quiescent transport are different facts.
+The cleanup-failure fixtures finish one measured child, then reject either disarm or drain.
+They require the child to remain terminal until target-side registration cleanup succeeds.
+Reuse and closure must fail even after the controller releases its reader guard.
+This checks transport ownership independently from the reader's storage protection.
+
+The disarm case passes timer ID -1. The pinned Microsoft source rejects that ID before timer mutation. [18]
+The drain case passes signal-mask size zero after a successful real disarm.
+The pinned source rejects that size before signal dequeue. [19]
+These are controlled invalid-argument failures, not observations of spontaneous kernel failure.
+Neither rejected call proves that the real timer or pending queue is empty.
+
+Final target cleanup blocks delivery, deletes the real timer, and drains with the correct signal-mask size.
+Only then can the core retire. The final snapshot must preserve the original child and accounting fields.
+The fixture leaves the mailbox unavailable after registration shutdown. It does not submit another lease to the deleted timer.
+Handler restoration requires successful final drain as well as deletion and target join.
+The expected cleanup error remains in the raw record when the failure-handling check passes.
+
+A completed one-shot commonly has no pending expiration.
+These cases therefore do not establish that a rejected drain preserves an actual pending signal.
+A separate pending-record case and final-cleanup failure checks remain necessary before broader recovery claims.
+See [the cleanup-failure procedure](../How_Tos/run-target-lease-reuse.md#check-cleanup-failures).
+
 ## Controller cancellation while a handler executes
 
 The `cancel-active-handler` fixture separates cancellation ownership from interruption of a physical wait.
@@ -225,3 +250,7 @@ See [the recovery procedure](../How_Tos/run-target-lease-reuse.md#check-rejected
 [16] [Linux v6.6 timespec validation](https://github.com/torvalds/linux/blob/v6.6/include/linux/time64.h#L89-L101).
 
 [17] [Microsoft WSL2 release rejection path](https://github.com/microsoft/WSL2-Linux-Kernel/blob/33cad9854e0b15d9ee50b33a3f457ff31a37b291/kernel/time/posix-timers.c#L907-L967) and [timespec validation](https://github.com/microsoft/WSL2-Linux-Kernel/blob/33cad9854e0b15d9ee50b33a3f457ff31a37b291/include/linux/time64.h#L89-L98).
+
+[18] [Microsoft invalid timer identifier rejection](https://github.com/microsoft/WSL2-Linux-Kernel/blob/33cad9854e0b15d9ee50b33a3f457ff31a37b291/kernel/time/posix-timers.c#L619-L643).
+
+[19] [Microsoft raw signal-wait size rejection](https://github.com/microsoft/WSL2-Linux-Kernel/blob/33cad9854e0b15d9ee50b33a3f457ff31a37b291/kernel/signal.c#L3656-L3686).

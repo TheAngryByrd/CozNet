@@ -18,12 +18,15 @@ namespace {
 using namespace coz::service;
 constexpr uint64_t cookie = 0x436f7a5265757365ULL, budget = 50000;
 constexpr uint32_t generations = 16;
-enum class FixtureMode { reuse, cancel_before_delivery, reject_initial_arm, cancel_active_handler };
+enum class FixtureMode { reuse, cancel_before_delivery, reject_initial_arm, cancel_active_handler, disarm_failure, drain_failure };
+enum class CleanupFault { none, disarm, drain };
 std::optional<FixtureMode> parseMode(std::string_view value) {
     if (value == "reuse") return FixtureMode::reuse;
     if (value == "cancel-before-delivery") return FixtureMode::cancel_before_delivery;
     if (value == "reject-initial-arm") return FixtureMode::reject_initial_arm;
     if (value == "cancel-active-handler") return FixtureMode::cancel_active_handler;
+    if (value == "disarm-failure") return FixtureMode::disarm_failure;
+    if (value == "drain-failure") return FixtureMode::drain_failure;
     return std::nullopt;
 }
 LeaseMailbox mailbox;
@@ -34,10 +37,14 @@ std::atomic<uint32_t> active_generation{};
 std::atomic<uint64_t> progress{};
 std::atomic<int> handler_error{};
 int timer_id{}, signal_number{}, target_error{}, retired_drained{};
-bool created{}, deleted{}, restored{};
+bool created{}, deleted{}, restored{}, registration_drained{};
 struct DrainRecord { int signal{}, code{}, timer{}; uint64_t cookie{}; };
 struct TransportObservation {
     int disarm_error{}, drain_error{}, drained{};
+    int disarm_timer{};
+    bool drain_attempted{};
+    uint64_t drain_mask_size{};
+    long disarm_result{}, drain_result{};
     std::array<DrainRecord, 8> records{};
 };
 std::array<TransportObservation, generations> transports{};
@@ -55,6 +62,8 @@ struct Observation {
     bool active_cancellation{}, handler_cancelled{};
     uint64_t wait_started{}, handshake_started{}, handshake_finished{}, cancel_before{}, cancel_after{};
     int handshake_error{};
+    CleanupFault cleanup_fault{CleanupFault::none};
+    bool unguarded_reuse_rejected{}, closure_rejected{};
 };
 std::array<Observation, generations> observations{};
 
@@ -70,13 +79,14 @@ uint64_t now() {
     if (direct(SYS_clock_gettime, CLOCK_MONOTONIC, reinterpret_cast<long>(&value)) != 0) return 0;
     return static_cast<uint64_t>(value.tv_sec) * 1000000000ULL + value.tv_nsec;
 }
-int drain(int& count, std::array<DrainRecord, 8>& records) {
+int drain(int& count, std::array<DrainRecord, 8>& records, uint64_t mask_size = sizeof(uint64_t), long* last_result = nullptr) {
     const uint64_t mask = uint64_t{1} << (signal_number - 1);
     timespec immediate{};
     for (unsigned attempt = 0; attempt < 8; ++attempt) {
         siginfo_t info{};
         const auto result = direct(SYS_rt_sigtimedwait, reinterpret_cast<long>(&mask),
-            reinterpret_cast<long>(&info), reinterpret_cast<long>(&immediate), sizeof(mask));
+            reinterpret_cast<long>(&info), reinterpret_cast<long>(&immediate), mask_size);
+        if (last_result) *last_result = result;
         if (result == -EINTR) continue;
         if (result == -EAGAIN) return 0;
         if (result < 0) return static_cast<int>(-result);
@@ -133,16 +143,23 @@ void handler(int number, siginfo_t* info, void* context) {
         error == 0 ? TargetWaitStatus::completed : TargetWaitStatus::failed, mailbox.cancelled(*execution));
     if (!completion) { handler_error.store(EPROTO, std::memory_order_release); return; }
     itimerspec disabled{};
-    const auto disarm = direct(SYS_timer_settime, timer_id, 0, reinterpret_cast<long>(&disabled));
     auto& transport = transports[execution->generation() - 1];
+    transport.disarm_timer = observation.cleanup_fault == CleanupFault::disarm ? -1 : timer_id;
+    const auto disarm = direct(SYS_timer_settime, transport.disarm_timer, 0, reinterpret_cast<long>(&disabled));
+    transport.disarm_result = disarm;
     transport.disarm_error = static_cast<int>(-disarm);
-    transport.drain_error = disarm == 0 ? drain(transport.drained, transport.records) : transport.disarm_error;
-    if (transport.drain_error != 0 || transport.drained != 0 || completion->shouldRearm())
-        error = transport.drain_error != 0 ? transport.drain_error : EPROTO;
+    if (disarm == 0) {
+        transport.drain_attempted = true;
+        transport.drain_mask_size = observation.cleanup_fault == CleanupFault::drain ? 0 : sizeof(uint64_t);
+        transport.drain_error = drain(transport.drained, transport.records, transport.drain_mask_size, &transport.drain_result);
+    }
+    if (transport.disarm_error != 0) error = transport.disarm_error;
+    else if (transport.drain_error != 0) error = transport.drain_error;
+    else if (transport.drained != 0 || completion->shouldRearm()) error = EPROTO;
     if (!lease.publish(*completion, now(), TimerArmResult::notRequested(), mailbox.cancelled(*execution))) error = EPROTO;
     if (lease.error() != TargetLeaseError::none && error == 0) error = EIO;
     if (error != 0) handler_error.store(error, std::memory_order_release);
-    if (transport.drain_error != 0) return;
+    if (transport.disarm_error != 0 || transport.drain_error != 0) return;
     if (!lease.quiesced() || !lease.retire()) {
         handler_error.store(EPROTO, std::memory_order_release);
         return;
@@ -163,6 +180,8 @@ int main(int argc, char** argv) {
     if (argc != 3) return 2;
     const auto mode = parseMode(argv[1]);
     if (!mode) return 2;
+    const bool cleanup_case = *mode == FixtureMode::disarm_failure || *mode == FixtureMode::drain_failure;
+    const uint32_t case_generations = cleanup_case ? 1 : generations;
     signal_number = SIGRTMIN + 7;
     if (signal_number > SIGRTMAX || signal_number > 64) return 3;
     struct sigaction previous{}, action{};
@@ -201,6 +220,7 @@ int main(int argc, char** argv) {
         deleted = true;
         const auto drained = drain(retired_drained, retirement_records);
         if (drained != 0) { target_error = drained; return; }
+        registration_drained = true;
         if (slot && slot->phase() != TargetLeasePhase::retired) {
             if (slot->phase() == TargetLeasePhase::waiting) slot->cancelPending();
             if (!slot->quiesced() || !slot->retire()) target_error = EPROTO;
@@ -211,7 +231,7 @@ int main(int argc, char** argv) {
     if (valid) valid = await([] { return entered.load(std::memory_order_acquire) != 0; });
     uint32_t completed = 0;
     int arm_error = 0;
-    for (uint32_t generation = 1; valid && generation <= generations; ++generation) {
+    for (uint32_t generation = 1; valid && generation <= case_generations; ++generation) {
         std::optional<LeaseMailbox::Submission> submission;
         valid = await([&] { submission = mailbox.begin(); return submission.has_value(); });
         if (!valid) break;
@@ -222,6 +242,8 @@ int main(int argc, char** argv) {
         if (!plan) { valid = false; break; }
         slot.emplace(*plan, journal);
         auto& observation = observations[generation - 1];
+        observation.cleanup_fault = *mode == FixtureMode::disarm_failure ? CleanupFault::disarm
+            : *mode == FixtureMode::drain_failure ? CleanupFault::drain : CleanupFault::none;
         observation.active_cancellation = *mode == FixtureMode::cancel_active_handler && generation % 2 == 1;
         observation.rejection_requested = *mode == FixtureMode::reject_initial_arm && generation % 2 == 1;
         observation.cancellation_requested = observation.active_cancellation
@@ -278,7 +300,9 @@ int main(int argc, char** argv) {
                 observation.captured = captured;
                 observation.receipt = now();
             }
-            if (snapshot->visibility != TargetLeaseVisibility::retired) return false;
+            if (cleanup_case) {
+                if (snapshot->visibility != TargetLeaseVisibility::terminal || handler_error.load(std::memory_order_acquire) == 0) return false;
+            } else if (snapshot->visibility != TargetLeaseVisibility::retired) return false;
             observation.header = *snapshot;
             observation.header_captured = captured;
             observation.copied = true;
@@ -320,12 +344,43 @@ int main(int argc, char** argv) {
             && child.finished - child.started <= 5000000 && child.waited <= child.finished - child.started
             && observation.receipt_observed && observation.captured != 0
             && observation.receipt >= observation.captured && observation.captured >= child.finished
-            && observation.receipt - child.armed <= 100000000 && handler_error.load(std::memory_order_acquire) == 0;
+            && observation.receipt - child.armed <= 100000000
+            && handler_error.load(std::memory_order_acquire) == (cleanup_case ? EINVAL : 0);
+        if (cleanup_case && valid) {
+            reader.reset();
+            observation.unguarded_reuse_rejected = !mailbox.begin().has_value();
+            observation.closure_rejected = !mailbox.close();
+            const auto& transport = transports[generation - 1];
+            valid = observation.unguarded_reuse_rejected && observation.closure_rejected && transport.drained == 0
+                && (observation.cleanup_fault == CleanupFault::disarm
+                    ? transport.disarm_timer == -1 && timer_id != -1 && transport.disarm_result == -EINVAL
+                        && transport.disarm_error == EINVAL && !transport.drain_attempted && transport.drain_error == 0
+                    : transport.disarm_timer == timer_id && transport.disarm_result == 0 && transport.disarm_error == 0
+                        && transport.drain_attempted && transport.drain_mask_size == 0 && transport.drain_result == -EINVAL
+                        && transport.drain_error == EINVAL);
+        }
         if (valid) ++completed;
     }
-    const bool closed = valid && await([] { return mailbox.close(); });
+    const bool closed = !cleanup_case && valid && await([] { return mailbox.close(); });
     stop.store(1, std::memory_order_release);
     target.join();
+    TargetLeaseSnapshot final_header{};
+    std::array<TargetLeaseChild, 4> final_children{};
+    bool final_copied = false, final_preserved = false, final_close_rejected = false;
+    if (cleanup_case && slot) {
+        std::size_t count = 0;
+        const auto snapshot = slot->snapshot(final_children, count);
+        if (snapshot) {
+            final_header = *snapshot;
+            final_copied = true;
+            const auto& prior = observations[0].header;
+            final_preserved = final_children == observations[0].children && final_header.generation == prior.generation
+                && final_header.command == prior.command && final_header.budget == prior.budget && final_header.children == prior.children
+                && final_header.measured == prior.measured && final_header.stop == prior.stop && final_header.error == prior.error
+                && final_header.transport_error == prior.transport_error;
+        }
+        final_close_rejected = !mailbox.close();
+    }
     const auto last = announced.load(std::memory_order_acquire);
     if (slot && last != 0 && last <= generations && !observations[last - 1].copied) {
         auto& observation = observations[last - 1];
@@ -341,22 +396,44 @@ int main(int argc, char** argv) {
             }
         }
     }
-    if (!created || deleted) restored = sigaction(signal_number, &previous, nullptr) == 0;
-    valid = valid && closed && completed == generations && target_error == 0 && arm_error == 0
-        && handler_error.load(std::memory_order_acquire) == 0 && deleted && restored && retired_drained == 0;
+    if (!created || (deleted && registration_drained)) restored = sigaction(signal_number, &previous, nullptr) == 0;
+    valid = valid && (cleanup_case
+        ? !closed && final_copied && final_preserved && final_close_rejected
+            && final_header.visibility == TargetLeaseVisibility::retired && !final_header.may_have_delivery
+        : closed) && completed == case_generations && target_error == 0 && arm_error == 0
+        && handler_error.load(std::memory_order_acquire) == (cleanup_case ? EINVAL : 0)
+        && deleted && registration_drained && restored && retired_drained == 0;
     std::ofstream output(argv[2]);
     output << "{\"initialDisarmError\":" << initial_transport.disarm_error << ",\"initialDrainError\":" << initial_transport.drain_error
            << ",\"initialDrained\":" << initial_transport.drained << ',';
+    output << "\"registrationDrained\":" << (registration_drained ? "true" : "false")
+           << ",\"finalCopied\":" << (final_copied ? "true" : "false") << ",\"finalPreserved\":" << (final_preserved ? "true" : "false")
+           << ",\"finalCloseRejected\":" << (final_close_rejected ? "true" : "false")
+           << ",\"finalVisibility\":" << static_cast<uint64_t>(final_header.visibility)
+           << ",\"finalGeneration\":" << final_header.generation << ",\"finalCommand\":" << final_header.command
+           << ",\"finalChildren\":" << final_header.children << ",\"finalMeasured\":" << final_header.measured
+           << ",\"finalStop\":" << static_cast<int>(final_header.stop) << ",\"finalError\":" << static_cast<int>(final_header.error)
+           << ",\"finalTransportError\":" << final_header.transport_error
+           << ",\"finalChild\":{\"ordinal\":" << final_children[0].ordinal << ",\"requested\":" << final_children[0].requested
+           << ",\"armed\":" << final_children[0].armed << ",\"started\":" << final_children[0].started
+           << ",\"finished\":" << final_children[0].finished << ",\"waited\":" << final_children[0].waited
+           << ",\"ip\":" << final_children[0].ip << ",\"waitStatus\":" << static_cast<int>(final_children[0].wait_status)
+           << ",\"valid\":" << (final_children[0].valid ? "true" : "false") << "},";
     output << "\"passed\":" << (valid ? "true" : "false") << ",\"mode\":\"" << argv[1] << "\",\"completed\":" << completed
         << ",\"timerDeleted\":" << (deleted ? "true" : "false") << ",\"restored\":" << (restored ? "true" : "false")
         << ",\"closed\":" << (closed ? "true" : "false") << ",\"targetError\":" << target_error
         << ",\"handlerError\":" << handler_error.load() << ",\"armError\":" << arm_error
         << ",\"retiredDrained\":" << retired_drained << ",\"timerId\":" << timer_id << ",\"generations\":[";
-    for (uint32_t index = 0; index < generations; ++index) {
+    for (uint32_t index = 0; index < case_generations; ++index) {
         const auto& item = observations[index];
         const auto& child = item.children[0];
         if (index) output << ',';
         output << "{\"rejectionRequested\":" << (item.rejection_requested ? "true" : "false")
+               << ",\"unguardedReuseRejected\":" << (item.unguarded_reuse_rejected ? "true" : "false")
+               << ",\"closureRejected\":" << (item.closure_rejected ? "true" : "false")
+               << ",\"disarmTimer\":" << transports[index].disarm_timer << ",\"disarmResult\":" << transports[index].disarm_result
+               << ",\"drainAttempted\":" << (transports[index].drain_attempted ? "true" : "false")
+               << ",\"drainMaskSize\":" << transports[index].drain_mask_size << ",\"drainResult\":" << transports[index].drain_result
                << ",\"activeCancellation\":" << (item.active_cancellation ? "true" : "false")
                << ",\"handlerCancelled\":" << (item.handler_cancelled ? "true" : "false")
                << ",\"waitStarted\":" << item.wait_started

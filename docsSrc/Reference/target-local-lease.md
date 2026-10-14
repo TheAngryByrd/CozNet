@@ -160,6 +160,19 @@ The fixture records the controller call interval and the handler's cancellation 
 The handler can finish before the controller reads its post-call clock. That clock need not precede child completion.
 This mode does not test interruption of a physical wait, cancellation during rearm, or CLR execution.
 
+The `disarm-failure` and `drain-failure` modes each complete one child, then inject a cleanup error.
+Disarm rejection uses timer ID -1. Drain rejection uses signal-mask size zero after a successful real disarm.
+Both require the exact raw result `-EINVAL`. A skipped drain has `drainAttempted` false and no reported drain error.
+The child retains its completed wait and terminal visibility. Cleanup failure does not establish delivery quiescence.
+The controller releases its reader guard before checking that both reuse and mailbox closure fail.
+The target then blocks delivery, deletes the real timer, and drains with the correct mask size.
+Only successful final cleanup permits core retirement. The final snapshot must preserve the child and accounting fields.
+These cases leave the mailbox unavailable after registration shutdown. They do not submit another lease to the deleted timer.
+`closed` remains false. `closureRejected`, `finalCloseRejected`, `registrationDrained`, and `finalPreserved` must be true.
+Handler restoration requires successful timer deletion and final drain, followed by target join.
+The expected cleanup error remains visible even when the fixture passes its failure-handling checks.
+These cases do not prove retention of a real pending signal or recovery from arbitrary cleanup errors.
+
 ## Managed receipt tracking
 
 `TargetLeaseReceipts` is an internal .NET receipt tracker owned by one controller.
