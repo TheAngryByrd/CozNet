@@ -25,6 +25,9 @@ The abandoned request retains ownership. New requests and signal restoration fai
 This is an explicit unsupported cleanup outcome, not a cancellation implementation.
 
 `LinuxSignalTransitionsVerify` retains all cases and failures with a 30-second process watchdog.
+The runner accepts `-WaitMode sleep` or `-WaitMode spin` for both native contracts and managed transitions.
+The default remains sleep. All fourteen [spin transition outcomes](../../reliability/features/native-signal/spin-reliability.md) pass.
+The separate sampled GC suite retains two debt-limit failures. Transition passes do not establish sampled capacity.
 The original handler, acknowledgment, and GC-call bounds remain unchanged.
 All five native contract cases and eight managed transition cases pass on the tested Linux x64 container.
 The JIT cases capture hundreds of interruptions inside executable compiler code. Both blocked-wait cases defer every request without delay.

@@ -57,7 +57,9 @@ static int pending_shutdown(const sigset_t& mask, bool exit_with_pending) {
 }
 
 int main(int argc, char** argv) {
-    require(argc == 2, 2);
+    require(argc == 2 || argc == 3, 2);
+    require(argc == 2 || std::strcmp(argv[2], "sleep") == 0 || std::strcmp(argv[2], "spin") == 0, 68);
+    const int mode = argc == 3 && std::strcmp(argv[2], "spin") == 0 ? 1 : 0;
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGRTMIN + 6);
@@ -76,12 +78,12 @@ int main(int argc, char** argv) {
         action.sa_handler = SIG_IGN;
         sigemptyset(&action.sa_mask);
         require(sigaction(SIGRTMIN + 6, &action, nullptr) == 0, 3);
-        require(coz_signal_install() == EBUSY, 4);
+        require((argc == 2 ? coz_signal_install() : coz_signal_install_with_wait(mode)) == EBUSY, 4);
         struct sigaction current{};
         require(sigaction(SIGRTMIN + 6, nullptr, &current) == 0 && current.sa_handler == SIG_IGN, 5);
         return 0;
     }
-    require(coz_signal_install() == 0, 6);
+    require((argc == 2 ? coz_signal_install() : coz_signal_install_with_wait(mode)) == 0, 6);
     if (std::strcmp(argv[1], "pending-shutdown") == 0) return pending_shutdown(mask, false);
     if (std::strcmp(argv[1], "exit-with-pending") == 0) return pending_shutdown(mask, true);
     if (std::strcmp(argv[1], "blocked") == 0) {

@@ -124,7 +124,15 @@ flowchart LR
 ```
 
 Forced-GC, matched baseline, zero-delay signal overhead, debt-age analysis, and physical-change comparisons remain incomplete.
+`SampledSignalPlan` now accepts `gc` and `no-gc`. Existing overloads retain `no-gc`.
+`SampledGcStress` runs a separate worker after the targets start. It remains active across warmup, measurement, and settlement.
+It records forced blocking collection calls and GC pause observations with process `Stopwatch` timestamps.
+The measurement must contain at least one complete forced collection. Calls above 250 ms fail the protocol.
+Teardown requests GC stop before joining targets. It reads observations only after the GC worker joins.
+An unjoined GC worker retains its event resources until process exit and fails the workload.
+The [spin reliability run](../../reliability/features/native-signal/spin-reliability.md) reaches forced collections inside all six GC measurement windows.
+All twelve sampled cases pass protocol checks. Two forced-GC treatments fail the observed debt bound.
 The two-percentage-point prediction gate remains unchanged.
 The [wait comparison](../../reliability/features/native-signal/wait-comparison.md) passes three sampled spin treatments with higher process CPU than completed sleep treatments.
-All three sleep treatments fail a debt or handler limit. Sampled forced-GC behavior and physical-change prediction remain unverified.
+All three sleep treatments fail a debt or handler limit. Sampled forced GC retains capacity failures. Physical-change prediction remains unverified.
 See [accounting](signal-accounting.md), [signal lifetime](signal-intervention.md), [Linux sampling](linux-perf.md), and [the roadmap](../plans/roadmap.md).

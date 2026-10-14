@@ -1,4 +1,5 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-signal-transitions'))
+param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-signal-transitions'),
+    [ValidateSet('sleep', 'spin')][string]$WaitMode = 'sleep')
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $workload = Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0'
@@ -12,6 +13,8 @@ if ($LASTEXITCODE -ne 0) { throw 'The Linux SDK image is unavailable.' }
 $kernel = & docker run --rm --pull never --network none --cap-drop ALL --read-only $imageId uname -r
 if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the Linux kernel.' }
 $hashes = @{}
+$modeFiles = @('tests/CozNet.LinuxPerf/SignalWaitMode.cs', 'native/VerifyLinuxSignalTransitions.ps1')
+foreach ($file in $modeFiles) { $hashes[$file] = (Get-FileHash (Join-Path $root $file) -Algorithm SHA256).Hash }
 foreach ($file in @('native/signal/Signal.LinuxX64.cpp', 'native/signal/Signal.h', 'native/signal/ContractChecks.cpp',
     'native/signal/Workload.LinuxX64.cpp', 'native/signal/CMakeLists.txt', 'tests/CozNet.LinuxPerf/SignalTransitionWorkload.cs',
     'tests/CozNet.LinuxPerf/SignalTransitionOperations.cs', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs',
@@ -30,7 +33,7 @@ for ($i = $cases.Length - 1; $i -gt 0; $i--) {
     $j = $random.Next($i + 1)
     $cases[$i], $cases[$j] = $cases[$j], $cases[$i]
 }
-@{ seed = $seed; imageId = $imageId; kernel = $kernel; hashes = $hashes; order = $cases;
+@{ seed = $seed; imageId = $imageId; kernel = $kernel; hashes = $hashes; order = $cases; waitMode = $WaitMode;
     requestedDelayNanoseconds = 50000; handlerBoundNanoseconds = 5000000; acknowledgmentBoundMilliseconds = 100;
     gcCallBoundMilliseconds = 250; watchdogSeconds = 30; measurementMilliseconds = 2000 } |
     ConvertTo-Json -Depth 4 | Set-Content (Join-Path $run 'environment.json')
@@ -41,7 +44,7 @@ $outcomes = [Collections.Generic.List[object]]::new()
 $outcomes.Add(@{ case = 'target-lifetime'; exitCode = $LASTEXITCODE; recordExists = $true })
 foreach ($case in @('occupied', 'blocked', 'lifetime', 'pending-shutdown', 'exit-with-pending')) {
     & docker run --rm --pull never --network none --cap-drop ALL --read-only --env LD_LIBRARY_PATH=/native `
-        --mount "type=bind,source=$native,target=/native,readonly" $imageId timeout -k 2s 30s /native/SignalContractChecks $case *> (Join-Path $run "$case.log")
+        --mount "type=bind,source=$native,target=/native,readonly" $imageId timeout -k 2s 30s /native/SignalContractChecks $case $WaitMode *> (Join-Path $run "$case.log")
     $outcomes.Add(@{ case = $case; exitCode = $LASTEXITCODE; recordExists = $true })
     $outcomes | ConvertTo-Json | Set-Content (Join-Path $run 'outcomes.json')
 }
@@ -54,7 +57,7 @@ foreach ($case in $cases) {
         '--env', 'LD_LIBRARY_PATH=/native', '--env', 'CORECLR_ENABLE_PROFILING=0',
         '--mount', "type=bind,source=$workload,target=/work,readonly",
         '--mount', "type=bind,source=$native,target=/native,readonly", '--mount', "type=bind,source=$run,target=/output")
-    & docker @arguments $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --signal-transition "/output/$file" $mode $gc *> (Join-Path $run "$file.log")
+    & docker @arguments $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --signal-transition-wait "/output/$file" $mode $gc $WaitMode *> (Join-Path $run "$file.log")
     $outcomes.Add(@{ case = $case; file = $file; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run $file) })
     $outcomes | ConvertTo-Json | Set-Content (Join-Path $run 'outcomes.json')
 }

@@ -46,6 +46,8 @@ It runs four native contract cases and six managed signal/GC cases with a 30-sec
 `LinuxSignalWaitCompare` uses the same build chain and compares sleep and spin in isolated processes.
 It runs twelve basic signal/GC cases in seeded order and twelve sampled cases in three seeded blocks.
 The basic and sampled suites both run even when one fails. Their outcomes remain separate in the parent report.
+`LinuxSpinReliabilityVerify` runs spin transition cases and three sampled blocks with and without forced GC.
+It preserves both suite outcomes and continues to sampled cases after a transition failure.
 It also runs five portable phase-timing parser checks. The sampled runner repeats these checks beside its cadence checks.
 Evidence remains under `artifacts/linux-signal/`. The target requires the existing native compiler image.
 `LinuxSignalTransitionsVerify` uses the same build chain and a separate native workload fixture.

@@ -8,11 +8,13 @@ sealed class SampledSignalPlan
     public int Percent { get; }
     public SelectedSignalCadenceMode Cadence { get; }
     public int WarmupMilliseconds { get; }
-    private SampledSignalPlan(int percent, SelectedSignalCadenceMode cadence, int warmup) =>
-        (Percent, Cadence, WarmupMilliseconds) = (percent, cadence, warmup);
+    public bool ForceGc { get; }
+    private SampledSignalPlan(int percent, SelectedSignalCadenceMode cadence, int warmup, bool forceGc) =>
+        (Percent, Cadence, WarmupMilliseconds, ForceGc) = (percent, cadence, warmup, forceGc);
     public static SampledSignalPlan Parse(string value) => Parse(value, "continuous");
     public static SampledSignalPlan Parse(string value, string cadence) => Parse(value, cadence, "cold");
-    public static SampledSignalPlan Parse(string value, string cadence, string startup) => new(value switch
+    public static SampledSignalPlan Parse(string value, string cadence, string startup) => Parse(value, cadence, startup, "no-gc");
+    public static SampledSignalPlan Parse(string value, string cadence, string startup, string gc) => new(value switch
     {
         "0" => 0, "50" => 50,
         _ => throw new ArgumentException("Select zero or 50 percent sampled signal speedup.")
@@ -25,6 +27,11 @@ sealed class SampledSignalPlan
     {
         "cold" => 0, "warm" => 250,
         _ => throw new ArgumentException("Select cold or warm sampled signal startup.")
+    }, gc switch
+    {
+        "no-gc" => false,
+        "gc" => true,
+        _ => throw new ArgumentException("Select gc or no-gc sampled signal measurement.")
     });
 }
 
@@ -78,6 +85,10 @@ static class SampledSignalWorkload
         IBoundedInterventionBackend? backend = null;
         ICpuEventSession? session = null;
         Thread[] workers = [];
+        SampledGcStress? gcStress = null;
+        bool gcJoined = true;
+        GcStressObservation[]? gcObservations = null;
+        long measurementStartedTimestamp = 0;
         bool enabled = false, accept = false, measuring = false, runningStage = false, joined = false, restored = false;
         string stage = "setup";
         ulong sequence = 0, represented = 0, epoch = 0;
@@ -214,6 +225,7 @@ static class SampledSignalWorkload
         Boundary RunStage(string name, int milliseconds)
         {
             stage = name;
+            if (name == "measurement") measurementStartedTimestamp = Stopwatch.GetTimestamp();
             runtimeCountersStart = ReadRuntimeCounters();
             measuring = name == "measurement";
             accept = runningStage = true;
@@ -223,6 +235,7 @@ static class SampledSignalWorkload
             timer.Restart();
             long previousServiceTimestamp = Stopwatch.GetTimestamp();
             start.Set();
+            gcStress?.Release();
             double nextBoundary = 10;
             while (timer.ElapsedMilliseconds < milliseconds)
             {
@@ -329,6 +342,7 @@ static class SampledSignalWorkload
             foreach (var worker in workers) worker.Start();
             if (!ready.Wait(TimeSpan.FromSeconds(5)) || errors.Any(error => error is not null))
                 throw new InvalidOperationException("The sampled signal workers failed to become ready.");
+            if (plan.ForceGc) gcStress = SampledGcStress.Start();
             if (plan.WarmupMilliseconds > 0)
             {
                 var warmBoundary = RunStage("warmup", plan.WarmupMilliseconds);
@@ -369,6 +383,7 @@ static class SampledSignalWorkload
         finally
         {
             accept = measuring = runningStage = false;
+            gcStress?.RequestStop();
             if (session is not null)
             {
                 try { session.Dispose(); }
@@ -379,6 +394,17 @@ static class SampledSignalWorkload
             start.Set();
             joined = true;
             foreach (var worker in workers) if (!worker.Join(TimeSpan.FromSeconds(1))) joined = false;
+            if (gcStress is not null)
+            {
+                gcJoined = gcStress.StopAndJoin(TimeSpan.FromSeconds(1));
+                if (gcJoined)
+                {
+                    var gcResult = gcStress.Snapshot();
+                    gcObservations = gcResult.Observations;
+                    if (gcResult.Error is not null) failures.Add(gcResult.Error);
+                }
+                else failures.Add("The sampled GC worker did not join.");
+            }
             if (backend is not null && joined && !nativeOutstanding.Any(value => value))
             {
                 try { backend.RestoreAfterThreadJoin(); restored = true; }
@@ -393,6 +419,11 @@ static class SampledSignalWorkload
         if (plan.Percent == 0 && (credited != 0 || requests.Count != 0)) failures.Add("Zero speedup created signal debt.");
         if (plan.Percent > 0 && (measurement?.CreditNanoseconds is not > 0 || measurement.WaitNanoseconds[1] == 0))
             failures.Add("Selected credit did not cause peer waits during measurement.");
+        if (plan.ForceGc && (gcObservations is null || measurement is null
+            || !SampledGcStress.ReachedMeasurement(gcObservations, measurementStartedTimestamp, measurement.Timestamp)))
+            failures.Add("No forced collection completed inside the sampled measurement window.");
+        if (gcObservations is not null && !SampledGcStress.WithinBounds(gcObservations, Stopwatch.Frequency))
+            failures.Add("A forced collection exceeded 250 milliseconds or had invalid timestamps.");
         bool protocolPassed = failures.Count == 0;
         bool capacityPassed = protocolPassed && maxDebt.All(value => value <= 2000000)
             && measurement!.DebtNanoseconds.All(value => value <= 2000000);
@@ -410,7 +441,8 @@ static class SampledSignalWorkload
             stopwatchFrequency = Stopwatch.Frequency, longestServiceInterval, peakDebt,
             controllerCpuNanoseconds = controllerCpu, samplingPauses = pauses, records, samples, requests,
             failures, capacityViolations, joined, restored, protocolPassed, capacityPassed, passed = protocolPassed && capacityPassed,
-            forcedGc = false, predictionAccuracyEstablished = false, generalClrSafetyEstablished = false,
+            forcedGc = plan.ForceGc, gcObservations, gcJoined, measurementStartedTimestamp, gcCallBoundMilliseconds = 250,
+            gcCallDurationIsSuspensionLatency = false, predictionAccuracyEstablished = false, generalClrSafetyEstablished = false,
             requestBoundNanoseconds = 50000, handlerBoundNanoseconds = 5000000, acknowledgmentBoundMilliseconds = 100
         }, new JsonSerializerOptions { WriteIndented = true }));
         return protocolPassed && capacityPassed ? 0 : 1;

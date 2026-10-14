@@ -42,7 +42,8 @@ It still fails one warmup handler bound and both completed 50-percent debt check
 The [direct accounting read](../../reliability/features/native-signal/accounting-read.md) removes the full controller's per-iteration duration wrapper allocation.
 Two treatment cases still exceed the handler limit during native waits.
 The [wait comparison](../../reliability/features/native-signal/wait-comparison.md) passes three sampled spin treatments at higher process CPU cost.
-Test sampled forced GC and runtime transitions with spin next. Then compare predictions with physical changes under matched controls.
+The [spin reliability run](../../reliability/features/native-signal/spin-reliability.md) passes all transition and sampled protocol checks but retains two forced-GC debt failures.
+Correlate runtime suspension events with request latency and debt growth next. Keep physical-change prediction as a separate unmet gate.
 Keep acknowledgment polling continuous and distinguish signal delivery time from native wait time.
 The original signal and transition experiments generate no causal credits.
 See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal research](../../docsSrc/Research/native-signal-intervention.md).

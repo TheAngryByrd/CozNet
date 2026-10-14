@@ -4,6 +4,12 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-sampled-gc"])
+{
+    SampledGcStressChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-signal-wait"])
 {
     SignalWaitModeChecks.Run();
@@ -32,6 +38,13 @@ if (args is ["--verify-signal-cadence"])
 {
     SelectedSignalCadenceChecks.Run();
     return 0;
+}
+
+if (args is ["--sampled-signal", var gcPath, var gcPercent, var gcCadence, var gcStartup, var gcWait, var sampledGc])
+{
+    var parsedWait = SignalWaitMode.Parse(gcWait);
+    return SampledSignalWorkload.Run(gcPath, SampledSignalPlan.Parse(gcPercent, gcCadence, gcStartup, sampledGc),
+        () => new LinuxSignalBackend(parsedWait), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock());
 }
 
 if (args is ["--sampled-signal", var modePath, var modePercent, var modeCadence, var modeStartup, var waitMode])
@@ -69,6 +82,19 @@ if (args is ["--verify-signal-targets"])
 {
     SignalTargetChecks.Run();
     return 0;
+}
+
+if (args is ["--signal-transition-wait", var transitionWaitPath, var transitionWaitMode, var transitionWaitGc, var transitionWaitKind])
+{
+    var parsedWait = SignalWaitMode.Parse(transitionWaitKind);
+    bool forceGc = transitionWaitGc switch
+    {
+        "gc" => true,
+        "no-gc" => false,
+        _ => throw new ArgumentException("Select gc or no-gc transition measurement.")
+    };
+    return SignalTransitionWorkload.Run(transitionWaitPath, SignalTransitionWorkload.Parse(transitionWaitMode), forceGc,
+        () => new LinuxSignalBackend(parsedWait), () => new LinuxSignalTransitionOperations());
 }
 
 if (args is ["--signal-transition", var transitionPath, var transitionMode, var transitionGc])

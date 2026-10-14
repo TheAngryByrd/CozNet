@@ -1,7 +1,8 @@
 param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/linux-sampled-signals'),
     [ValidateSet('continuous', 'qualified-sample')][string]$Cadence = 'continuous',
     [ValidateSet('cold', 'warm')][string]$Startup = 'cold',
-    [ValidateRange(1, 10)][int]$Repetitions = 1, [switch]$CompareWaitModes)
+    [ValidateRange(1, 10)][int]$Repetitions = 1, [switch]$CompareWaitModes,
+    [ValidateSet('sleep', 'spin')][string]$WaitMode = 'sleep', [switch]$CompareGcModes)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $workload = Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0'
@@ -18,6 +19,7 @@ $hashes = @{}
 foreach ($file in @('src/CozNet/SignalAccounting.fs', 'src/CozNet/DelayLedger.fs', 'src/CozNet/SampleCredits.fs',
     'tests/CozNet.LinuxPerf/SampledSignalWorkload.cs', 'tests/CozNet.LinuxPerf/SignalInterventionBackend.cs',
     'tests/CozNet.LinuxPerf/SignalWaitMode.cs',
+    'tests/CozNet.LinuxPerf/SampledGcStress.cs', 'tests/CozNet.LinuxPerf/SampledGcStressChecks.cs',
     'tests/CozNet.LinuxPerf/SignalPhaseTiming.cs', 'tests/CozNet.LinuxPerf/SignalPhaseTimingChecks.cs',
     'tests/CozNet.LinuxPerf/SelectedSignalCadence.cs', 'tests/CozNet.LinuxPerf/SelectedSignalCadenceChecks.cs',
     'tests/CozNet.LinuxPerf/RingReaderChecks.cs',
@@ -34,18 +36,23 @@ foreach ($file in @('src/CozNet/SignalAccounting.fs', 'src/CozNet/DelayLedger.fs
 $seed = 20261018
 $random = [Random]::new($seed)
 $cases = @(for ($iteration = 1; $iteration -le $Repetitions; $iteration++) {
-    $block = @(foreach ($wait in $(if ($CompareWaitModes) { @('sleep', 'spin') } else { @('sleep') })) {
-        foreach ($percent in @(0, 50)) { @{ iteration = $iteration; percent = $percent; waitMode = $wait } }
+    $block = @(foreach ($wait in $(if ($CompareWaitModes) { @('sleep', 'spin') } else { @($WaitMode) })) {
+        foreach ($gc in $(if ($CompareGcModes) { @('no-gc', 'gc') } else { @('no-gc') })) {
+            foreach ($percent in @(0, 50)) { @{ iteration = $iteration; percent = $percent; waitMode = $wait; gcMode = $gc } }
+        }
     })
-    if ($CompareWaitModes) {
+    if ($CompareWaitModes -or $CompareGcModes) {
         for ($i = $block.Length - 1; $i -gt 0; $i--) { $j = $random.Next($i + 1); $block[$i], $block[$j] = $block[$j], $block[$i] }
     }
     $block
 })
-@{ imageId = $imageId; kernel = $kernel; hashes = $hashes; order = $cases; orderSeed = $(if ($CompareWaitModes) { $seed } else { $null }); selectedCadence = $Cadence; startup = $Startup;
+@{ imageId = $imageId; kernel = $kernel; hashes = $hashes; order = $cases; orderSeed = $(if ($CompareWaitModes -or $CompareGcModes) { $seed } else { $null }); selectedCadence = $Cadence; startup = $Startup;
     debtBoundNanoseconds = 2000000; measurementMilliseconds = 2000; watchdogSeconds = 30;
-    seccomp = 'unconfined'; forcedGc = $false } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $run 'environment.json')
+    seccomp = 'unconfined'; compareGcModes = [bool]$CompareGcModes } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $run 'environment.json')
 $outcomes = [Collections.Generic.List[object]]::new()
+& docker run --rm --pull never --network none --cap-drop ALL --read-only `
+    --mount "type=bind,source=$workload,target=/work,readonly" $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --verify-sampled-gc *> (Join-Path $run 'gc-checks.log')
+$outcomes.Add(@{ case = 'gc-checks'; exitCode = $LASTEXITCODE; recordExists = $true })
 & docker run --rm --pull never --network none --cap-drop ALL --read-only `
     --mount "type=bind,source=$workload,target=/work,readonly" $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --verify-signal-cadence *> (Join-Path $run 'cadence-checks.log')
 $outcomes.Add(@{ case = 'cadence-checks'; exitCode = $LASTEXITCODE; recordExists = $true })
@@ -62,6 +69,7 @@ foreach ($case in $cases) {
     $percent = $case.percent
     $file = if ($Repetitions -eq 1) { "speedup-$percent.json" } else { "block-$($case.iteration)-speedup-$percent.json" }
     if ($CompareWaitModes) { $file = "block-$($case.iteration)-$($case.waitMode)-speedup-$percent.json" }
+    if ($CompareGcModes) { $file = "block-$($case.iteration)-$($case.waitMode)-$($case.gcMode)-speedup-$percent.json" }
     $arguments = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
         '--security-opt', 'seccomp=unconfined', '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m',
         '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0',
@@ -70,8 +78,8 @@ foreach ($case in $cases) {
         '--mount', "type=bind,source=$workload,target=/work,readonly",
         '--mount', "type=bind,source=$native,target=/native,readonly",
         '--mount', "type=bind,source=$run,target=/output")
-    & docker @arguments $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --sampled-signal "/output/$file" "$percent" $Cadence $Startup $case.waitMode *> (Join-Path $run "$file.log")
-    $outcomes.Add(@{ iteration = $case.iteration; percent = $percent; waitMode = $case.waitMode; file = $file; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run $file) })
+    & docker @arguments $imageId timeout -k 2s 30s dotnet /work/CozNet.LinuxPerf.dll --sampled-signal "/output/$file" "$percent" $Cadence $Startup $case.waitMode $case.gcMode *> (Join-Path $run "$file.log")
+    $outcomes.Add(@{ iteration = $case.iteration; percent = $percent; waitMode = $case.waitMode; gcMode = $case.gcMode; file = $file; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run $file) })
     $outcomes | ConvertTo-Json | Set-Content (Join-Path $run 'outcomes.json')
 }
 $unchanged = $true
