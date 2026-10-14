@@ -531,6 +531,7 @@ let linuxAbortTraceVerify _ = nativeScript "VerifyLinuxAbortTraces.ps1"
 let linuxSchedulerVerify _ = nativeScript "VerifyLinuxScheduler.ps1"
 let linuxSchedulerCollect _ = nativeScript "CollectLinuxScheduler.ps1"
 let linuxSchedulerCost _ = nativeScript "MeasureLinuxSchedulerCost.ps1"
+let linuxSchedulerTraceCollect _ = nativeScript "CollectLinuxSchedulerTraces.ps1"
 
 let linuxSignalTransitionsVerify _ =
     nativeScript "VerifyLinuxSignalTransitions.ps1"
@@ -914,6 +915,7 @@ let initTargets () =
     Target.create "LinuxSchedulerVerify" linuxSchedulerVerify
     Target.create "LinuxSchedulerCollect" linuxSchedulerCollect
     Target.create "LinuxSchedulerCost" linuxSchedulerCost
+    Target.create "LinuxSchedulerTraceCollect" linuxSchedulerTraceCollect
     Target.create "LinuxSignalTransitionsVerify" linuxSignalTransitionsVerify
     Target.create "LinuxSampledSignalsVerify" linuxSampledSignalsVerify
     Target.create "LinuxSampleCadenceVerify" linuxSampleCadenceVerify
@@ -1057,6 +1059,10 @@ let initTargets () =
 
     "LinuxSignalWorkload"
     ==> "LinuxSchedulerCost"
+    |> ignore
+
+    "LinuxSignalWorkload"
+    ==> "LinuxSchedulerTraceCollect"
     |> ignore
 
     "NativeBuild"

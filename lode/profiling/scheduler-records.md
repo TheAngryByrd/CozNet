@@ -2,6 +2,18 @@
 
 A standalone Linux x64 capability probe captures per-thread `PERF_RECORD_SWITCH` records.
 The optional `--sampled-signal-scheduler` route connects a Linux backend to the sampled signal controller.
+`--sampled-signal-scheduler-trace` also emits EventPipe clock anchors for runtime suspension correlation.
+`LinuxSchedulerTraceCollect` records one fixed-seed block with zero and 50 percent, with and without forced GC.
+It uses the existing trace collector and preserves failures before returning a failed target result.
+The combined analyzer joins runtime overlap by both slot and sequence after scheduler sorting.
+It requires the aligned EventPipe process to match every scheduler capture process.
+`SchedulerRuntimeChecks.py` exercises identity matching, duplicate rejection, process mismatch rejection, incomplete correlation, scheduler loss, and retained workload failure.
+Its command-line check requires an invalid case to fail analysis without discarding valid cases.
+Runtime overlap applies to the enclosing managed request. It does not identify overlap within a native phase or switched-out interval.
+The [combined trace](../../reliability/features/native-signal/scheduler-runtime.md) retains a forced-GC capacity failure with valid correlation and zero reported loss.
+One long peer request has no enclosing runtime suspension overlap.
+The executing product's source manifest verifies that runtime restart releases barriers without waiting for each worker to execute.
+Runtime restart cannot establish target service or clear intervention debt.
 The [retained evidence](../../reliability/features/native-signal/switch-probe.md) includes a normal run and deliberate ring overflow.
 The normal run has 102 complete observed switched-out intervals and zero final loss.
 The overflow run has 7,832 lost records but no emitted loss record.

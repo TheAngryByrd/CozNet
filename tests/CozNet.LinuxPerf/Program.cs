@@ -42,14 +42,16 @@ if (args is ["--verify-signal-trace"])
 }
 
 if (args is [var traceMode, var tracePath, var tracePercent, var traceCadence, var traceStartup, var traceWait, var traceGc]
-    && traceMode is "--sampled-signal-trace" or "--sampled-signal-target-cpu")
+    && traceMode is "--sampled-signal-trace" or "--sampled-signal-target-cpu" or "--sampled-signal-scheduler-trace")
 {
     var parsedWait = SignalWaitMode.Parse(traceWait);
     var plan = SampledSignalPlan.Parse(tracePercent, traceCadence, traceStartup, traceGc);
     bool targetCpu = traceMode == "--sampled-signal-target-cpu";
+    Func<ISchedulerEventSession>? schedulerFactory = traceMode == "--sampled-signal-scheduler-trace"
+        ? () => new LinuxSchedulerEventSession() : null;
     return SampledSignalWorkload.Run(tracePath, plan,
         () => new LinuxSignalBackend(parsedWait, targetCpu), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock(),
-        new SampledSignalTrace(), targetCpu);
+        new SampledSignalTrace(), targetCpu, schedulerFactory);
 }
 
 if (args is ["--verify-sampled-gc"])

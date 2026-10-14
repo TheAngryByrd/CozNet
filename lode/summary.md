@@ -30,6 +30,10 @@ Its overflow case requires the final loss counter to detect missing records.
 The optional scheduler route captures the controller and both targets with zero reported loss in four Linux cases.
 The GC treatment still fails the debt limit. Its delayed requests overlap observed target switch-out intervals.
 Blocking cause, observer cost, and prediction accuracy remain unresolved.
+The [combined scheduler and runtime trace](../reliability/features/native-signal/scheduler-runtime.md) preserves a forced-GC capacity failure with valid correlation.
+A long peer request has no enclosing runtime suspension overlap.
+The retained product maps to runtime sources where restart releases barriers without waiting for each worker to execute.
+Neither restart nor observed off-CPU time justifies debt forgiveness.
 An internal [signal accounting model](profiling/signal-accounting.md) connects sample credit to bounded requests and matched acknowledgments.
 Its deterministic replay checks cover debt settlement and sampling epochs.
 The [live sampled signal workload](profiling/sampled-signals.md) connects these components, but its first run fails the observed debt limit.

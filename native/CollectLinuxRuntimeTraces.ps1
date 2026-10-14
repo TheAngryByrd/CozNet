@@ -1,9 +1,11 @@
 param(
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/runtime-suspension-comparison'),
     [ValidateRange(1, 10)][int]$Repetitions = 3,
-    [switch]$TargetCpu
+    [switch]$TargetCpu,
+    [switch]$Scheduler
 )
 $ErrorActionPreference = 'Stop'
+if ($TargetCpu -and $Scheduler) { throw 'Select target CPU or scheduler capture for this trace runner.' }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $workload = Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0'
 $native = Join-Path $root 'artifacts/native-signal'
@@ -32,7 +34,10 @@ $files += @('native/AnalyzeTargetCpu.py', 'native/TargetCpuChecks.py', 'native/C
     'artifacts/native-signal/TargetCpuChecks')
 $files += @('native/AbortTraceChecks.py')
 $files += @('tests/CozNet.LinuxPerf/SampledSignalAbortChecks.cs')
-$route = if ($TargetCpu) { '--sampled-signal-target-cpu' } else { '--sampled-signal-trace' }
+$files += @('tests/CozNet.LinuxPerf/SchedulerEventSession.cs', 'tests/CozNet.LinuxPerf/LinuxSchedulerEventSession.cs',
+    'tests/CozNet.LinuxPerf/SchedulerRecordParser.cs', 'native/AnalyzeScheduler.py', 'native/AnalyzeSchedulerRuntime.py',
+    'native/CollectLinuxSchedulerTraces.ps1')
+$route = if ($TargetCpu) { '--sampled-signal-target-cpu' } elseif ($Scheduler) { '--sampled-signal-scheduler-trace' } else { '--sampled-signal-trace' }
 $hashes = @{}
 foreach ($file in $files) {
     $path = Join-Path $root $file

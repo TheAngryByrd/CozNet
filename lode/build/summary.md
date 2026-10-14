@@ -49,6 +49,9 @@ The basic and sampled suites both run even when one fails. Their outcomes remain
 `LinuxSpinReliabilityVerify` runs spin transition cases and three sampled blocks with and without forced GC.
 It preserves both suite outcomes and continues to sampled cases after a transition failure.
 `LinuxRuntimeTraceCollect` uses the signal build chain and collects three seeded diagnostic blocks.
+`LinuxSchedulerTraceCollect` uses that collector with scheduler capture for one four-case block.
+`AnalyzeSchedulerRuntime.py` combines decoded runtime events and scheduler records after capture.
+`python native/SchedulerRuntimeChecks.py` checks the combined analyzer without native APIs or timing workloads.
 `LinuxSchedulerVerify` runs portable record-decoder and capture-shutdown fixtures in Linux.
 `LinuxSchedulerCollect` retains four sampled workload cases with optional controller and target switch records.
 Scheduler runners retain every outcome, verify source and executable snapshot hashes, and run the snapshot's analyzer.

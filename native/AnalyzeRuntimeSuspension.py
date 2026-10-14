@@ -178,7 +178,7 @@ def analyze(workload, decoded):
     return {"valid": not anomalies, "workloadPassed": workload.get("passed"),
             "workloadProtocolPassed": workload.get("protocolPassed"),
             "workloadAborted": workload.get("traceAbort") is not None, "eventsLost": decoded["eventsLost"],
-            "offsetLowerTicks": alignment.lower, "offsetUpperTicks": alignment.upper,
+            "processId": alignment.process, "offsetLowerTicks": alignment.lower, "offsetUpperTicks": alignment.upper,
             "alignmentWidthNanoseconds": (alignment.upper - alignment.lower) * 1_000_000_000 / alignment.frequency,
             "episodes": episodes, "anomalies": anomalies, "requestCount": len(workload["requests"]),
             "overlappingRequests": requests, "measurementPeaks": peaks,
