@@ -21,6 +21,7 @@ interface IBoundedInterventionBackend
 {
     string Name { get; }
     object Describe();
+    bool IsEligibleAddress(ulong address);
     void RegisterCurrentThread(int slot);
     ulong Request(int slot, SignalPlan plan);
     SignalAcknowledgment? Read(int slot, ulong sequence);
@@ -33,6 +34,7 @@ sealed class LinuxSignalBackend : IBoundedInterventionBackend
     private readonly ulong start, size;
     public string Name => "linux-x64-signal";
     public object Describe() => new { nativeStart = start, nativeSize = size, symbol = OverheadWorkload.SelectedSymbol };
+    public bool IsEligibleAddress(ulong address) => address >= start && address - start < size;
     public LinuxSignalBackend()
     {
         if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)

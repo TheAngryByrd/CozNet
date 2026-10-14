@@ -79,6 +79,7 @@ An acknowledgment timeout abandons normal teardown. The process watchdog bounds 
 There is no cancellation, slot reuse, general signal chaining, or library-unload contract.
 
 Verify JIT, managed/native transitions, blocked waits, thread exit, and shutdown races before extending the workload scope.
+The [transition experiment](transitions.md) records bounded checks for those states and the remaining abnormal-exit limit.
 Use runtime traces to measure suspension effects separately from collection-call duration.
 Then connect independent CPU samples to bounded delay accounting and repeat physical-optimization prediction checks.
 The signal's interrupted instruction pointer is an eligibility check. It is not a CPU sample or causal credit.

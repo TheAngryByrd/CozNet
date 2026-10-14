@@ -17,6 +17,7 @@ static class SignalWorkload
         using var start = new ManualResetEventSlim();
         using var stop = new ManualResetEventSlim();
         using var gcStop = new ManualResetEventSlim();
+        using var deliveryStopped = new ManualResetEventSlim();
         IBoundedInterventionBackend? backend = null;
         Thread[] workers = [];
         Thread? gc = null;
@@ -32,11 +33,10 @@ static class SignalWorkload
             backend = factory();
             workers = Enumerable.Range(0, 2).Select(slot => new Thread(() =>
             {
-                bool registered = false;
-                try
+                bool announced = false;
+                SignalTargetLifetime.Run(backend, slot, deliveryStopped, () => drained, () =>
                 {
-                    backend.RegisterCurrentThread(slot);
-                    registered = true;
+                    announced = true;
                     ready.Signal();
                     start.Wait();
                     while (!stop.IsSet)
@@ -44,13 +44,11 @@ static class SignalWorkload
                         if (CpuWorkload.Run() != 49995000L) throw new InvalidOperationException("Signal work changed its checksum.");
                         batches[slot]++;
                     }
-                    if (drained) backend.RetireCurrentThread(slot);
-                }
-                catch (Exception error)
+                }, error =>
                 {
-                    workerErrors[slot] = error;
-                    if (!registered) ready.Signal();
-                }
+                    workerErrors[slot] = workerErrors[slot] is null ? error : new AggregateException(workerErrors[slot]!, error);
+                    if (!announced) ready.Signal();
+                });
             }) { IsBackground = true }).ToArray();
             foreach (var worker in workers) worker.Start();
             if (!ready.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Signal workers did not register.");
@@ -107,6 +105,7 @@ static class SignalWorkload
         catch (Exception error) { failures.Add(error.ToString()); }
         finally
         {
+            deliveryStopped.Set();
             gcStop.Set();
             stop.Set();
             start.Set();

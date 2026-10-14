@@ -1,0 +1,171 @@
+    12d0:	39 3d 3a 2e 00 00    	cmp    %edi,0x2e3a(%rip)        # 4110 <(anonymous namespace)::signal_number>
+    12d6:	75 06                	jne    12de <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe>
+    12d8:	83 7e 08 ff          	cmpl   $0xffffffff,0x8(%rsi)
+    12dc:	74 01                	je     12df <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xf>
+    12de:	c3                   	ret
+    12df:	8b 46 10             	mov    0x10(%rsi),%eax
+    12e2:	3b 05 2c 2e 00 00    	cmp    0x2e2c(%rip),%eax        # 4114 <(anonymous namespace)::process_id>
+    12e8:	75 f4                	jne    12de <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe>
+    12ea:	8b 46 14             	mov    0x14(%rsi),%eax
+    12ed:	3b 05 25 2e 00 00    	cmp    0x2e25(%rip),%eax        # 4118 <(anonymous namespace)::owner_uid>
+    12f3:	75 e9                	jne    12de <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe>
+    12f5:	55                   	push   %rbp
+    12f6:	41 57                	push   %r15
+    12f8:	41 56                	push   %r14
+    12fa:	41 55                	push   %r13
+    12fc:	41 54                	push   %r12
+    12fe:	53                   	push   %rbx
+    12ff:	49 89 d0             	mov    %rdx,%r8
+    1302:	b8 ba 00 00 00       	mov    $0xba,%eax
+    1307:	31 ff                	xor    %edi,%edi
+    1309:	49 89 f1             	mov    %rsi,%r9
+    130c:	31 f6                	xor    %esi,%esi
+    130e:	31 d2                	xor    %edx,%edx
+    1310:	45 31 d2             	xor    %r10d,%r10d
+    1313:	0f 05                	syscall
+    1315:	4d 8b 49 18          	mov    0x18(%r9),%r9
+    1319:	48 8b 0d 10 2e 00 00 	mov    0x2e10(%rip),%rcx        # 4130 <(anonymous namespace)::slots>
+    1320:	48 83 f9 03          	cmp    $0x3,%rcx
+    1324:	75 1e                	jne    1344 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x74>
+    1326:	48 63 0d 0b 2e 00 00 	movslq 0x2e0b(%rip),%rcx        # 4138 <(anonymous namespace)::slots+0x8>
+    132d:	48 39 c8             	cmp    %rcx,%rax
+    1330:	75 12                	jne    1344 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x74>
+    1332:	4c 39 0d 17 2e 00 00 	cmp    %r9,0x2e17(%rip)        # 4150 <(anonymous namespace)::slots+0x20>
+    1339:	75 09                	jne    1344 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x74>
+    133b:	48 8d 1d ee 2d 00 00 	lea    0x2dee(%rip),%rbx        # 4130 <(anonymous namespace)::slots>
+    1342:	eb 35                	jmp    1379 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xa9>
+    1344:	48 8b 0d 45 2e 00 00 	mov    0x2e45(%rip),%rcx        # 4190 <(anonymous namespace)::slots+0x60>
+    134b:	48 83 f9 03          	cmp    $0x3,%rcx
+    134f:	0f 85 c6 00 00 00    	jne    141b <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x14b>
+    1355:	48 63 0d 3c 2e 00 00 	movslq 0x2e3c(%rip),%rcx        # 4198 <(anonymous namespace)::slots+0x68>
+    135c:	48 39 c8             	cmp    %rcx,%rax
+    135f:	0f 85 b6 00 00 00    	jne    141b <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x14b>
+    1365:	4c 39 0d 44 2e 00 00 	cmp    %r9,0x2e44(%rip)        # 41b0 <(anonymous namespace)::slots+0x80>
+    136c:	0f 85 a9 00 00 00    	jne    141b <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x14b>
+    1372:	48 8d 1d 17 2e 00 00 	lea    0x2e17(%rip),%rbx        # 4190 <(anonymous namespace)::slots+0x60>
+    1379:	0f 57 c0             	xorps  %xmm0,%xmm0
+    137c:	0f 29 44 24 d8       	movaps %xmm0,-0x28(%rsp)
+    1381:	48 8d 74 24 d8       	lea    -0x28(%rsp),%rsi
+    1386:	b8 e4 00 00 00       	mov    $0xe4,%eax
+    138b:	bf 01 00 00 00       	mov    $0x1,%edi
+    1390:	31 d2                	xor    %edx,%edx
+    1392:	45 31 d2             	xor    %r10d,%r10d
+    1395:	0f 05                	syscall
+    1397:	48 85 c0             	test   %rax,%rax
+    139a:	0f 84 86 00 00 00    	je     1426 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x156>
+    13a0:	4d 8b b0 a8 00 00 00 	mov    0xa8(%r8),%r14
+    13a7:	41 bc 04 00 00 00    	mov    $0x4,%r12d
+    13ad:	45 31 ff             	xor    %r15d,%r15d
+    13b0:	45 31 ed             	xor    %r13d,%r13d
+    13b3:	45 31 c0             	xor    %r8d,%r8d
+    13b6:	0f 29 44 24 d8       	movaps %xmm0,-0x28(%rsp)
+    13bb:	31 ed                	xor    %ebp,%ebp
+    13bd:	b8 e4 00 00 00       	mov    $0xe4,%eax
+    13c2:	31 d2                	xor    %edx,%edx
+    13c4:	45 31 d2             	xor    %r10d,%r10d
+    13c7:	0f 05                	syscall
+    13c9:	48 85 c0             	test   %rax,%rax
+    13cc:	75 0e                	jne    13dc <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x10c>
+    13ce:	48 69 6c 24 d8 00 ca 	imul   $0x3b9aca00,-0x28(%rsp),%rbp
+    13d5:	9a 3b
+    13d7:	48 03 6c 24 e0       	add    -0x20(%rsp),%rbp
+    13dc:	48 89 e8             	mov    %rbp,%rax
+    13df:	4c 29 f8             	sub    %r15,%rax
+    13e2:	0f 92 c1             	setb   %cl
+    13e5:	48 85 ed             	test   %rbp,%rbp
+    13e8:	0f 94 c2             	sete   %dl
+    13eb:	31 f6                	xor    %esi,%esi
+    13ed:	08 ca                	or     %cl,%dl
+    13ef:	b9 04 00 00 00       	mov    $0x4,%ecx
+    13f4:	4c 0f 45 e1          	cmovne %rcx,%r12
+    13f8:	48 0f 44 f0          	cmove  %rax,%rsi
+    13fc:	4c 89 4b 30          	mov    %r9,0x30(%rbx)
+    1400:	4c 89 63 38          	mov    %r12,0x38(%rbx)
+    1404:	4c 89 73 40          	mov    %r14,0x40(%rbx)
+    1408:	48 89 73 48          	mov    %rsi,0x48(%rbx)
+    140c:	4c 89 6b 50          	mov    %r13,0x50(%rbx)
+    1410:	4c 89 43 58          	mov    %r8,0x58(%rbx)
+    1414:	48 c7 03 04 00 00 00 	movq   $0x4,(%rbx)
+    141b:	5b                   	pop    %rbx
+    141c:	41 5c                	pop    %r12
+    141e:	41 5d                	pop    %r13
+    1420:	41 5e                	pop    %r14
+    1422:	41 5f                	pop    %r15
+    1424:	5d                   	pop    %rbp
+    1425:	c3                   	ret
+    1426:	4c 69 7c 24 d8 00 ca 	imul   $0x3b9aca00,-0x28(%rsp),%r15
+    142d:	9a 3b
+    142f:	4d 8b b0 a8 00 00 00 	mov    0xa8(%r8),%r14
+    1436:	4c 03 7c 24 e0       	add    -0x20(%rsp),%r15
+    143b:	0f 84 ff 00 00 00    	je     1540 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x270>
+    1441:	41 bc 01 00 00 00    	mov    $0x1,%r12d
+    1447:	4c 3b 73 10          	cmp    0x10(%rbx),%r14
+    144b:	0f 82 5f ff ff ff    	jb     13b0 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe0>
+    1451:	4c 3b 73 18          	cmp    0x18(%rbx),%r14
+    1455:	0f 83 55 ff ff ff    	jae    13b0 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe0>
+    145b:	48 8b 4b 28          	mov    0x28(%rbx),%rcx
+    145f:	48 85 c9             	test   %rcx,%rcx
+    1462:	0f 84 e6 00 00 00    	je     154e <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x27e>
+    1468:	4c 01 f9             	add    %r15,%rcx
+    146b:	48 89 c8             	mov    %rcx,%rax
+    146e:	48 c1 e8 09          	shr    $0x9,%rax
+    1472:	48 ba 53 5a 9b a0 2f 	movabs $0x44b82fa09b5a53,%rdx
+    1479:	b8 44 00
+    147c:	48 f7 e2             	mul    %rdx
+    147f:	48 c1 ea 0b          	shr    $0xb,%rdx
+    1483:	48 89 54 24 f0       	mov    %rdx,-0x10(%rsp)
+    1488:	48 69 c2 00 ca 9a 3b 	imul   $0x3b9aca00,%rdx,%rax
+    148f:	48 29 c1             	sub    %rax,%rcx
+    1492:	48 89 4c 24 f8       	mov    %rcx,-0x8(%rsp)
+    1497:	0f 29 44 24 d8       	movaps %xmm0,-0x28(%rsp)
+    149c:	45 31 e4             	xor    %r12d,%r12d
+    149f:	b8 e4 00 00 00       	mov    $0xe4,%eax
+    14a4:	31 d2                	xor    %edx,%edx
+    14a6:	45 31 d2             	xor    %r10d,%r10d
+    14a9:	0f 05                	syscall
+    14ab:	48 85 c0             	test   %rax,%rax
+    14ae:	75 0e                	jne    14be <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x1ee>
+    14b0:	4c 69 64 24 d8 00 ca 	imul   $0x3b9aca00,-0x28(%rsp),%r12
+    14b7:	9a 3b
+    14b9:	4c 03 64 24 e0       	add    -0x20(%rsp),%r12
+    14be:	31 ed                	xor    %ebp,%ebp
+    14c0:	48 8d 54 24 f0       	lea    -0x10(%rsp),%rdx
+    14c5:	b8 e6 00 00 00       	mov    $0xe6,%eax
+    14ca:	be 01 00 00 00       	mov    $0x1,%esi
+    14cf:	45 31 d2             	xor    %r10d,%r10d
+    14d2:	0f 05                	syscall
+    14d4:	49 89 c0             	mov    %rax,%r8
+    14d7:	0f 29 44 24 d8       	movaps %xmm0,-0x28(%rsp)
+    14dc:	48 8d 74 24 d8       	lea    -0x28(%rsp),%rsi
+    14e1:	b8 e4 00 00 00       	mov    $0xe4,%eax
+    14e6:	31 d2                	xor    %edx,%edx
+    14e8:	45 31 d2             	xor    %r10d,%r10d
+    14eb:	0f 05                	syscall
+    14ed:	48 85 c0             	test   %rax,%rax
+    14f0:	75 0e                	jne    1500 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0x230>
+    14f2:	48 69 6c 24 d8 00 ca 	imul   $0x3b9aca00,-0x28(%rsp),%rbp
+    14f9:	9a 3b
+    14fb:	48 03 6c 24 e0       	add    -0x20(%rsp),%rbp
+    1500:	48 89 e8             	mov    %rbp,%rax
+    1503:	4c 29 e0             	sub    %r12,%rax
+    1506:	49 ff cc             	dec    %r12
+    1509:	45 31 ed             	xor    %r13d,%r13d
+    150c:	31 c9                	xor    %ecx,%ecx
+    150e:	49 39 ec             	cmp    %rbp,%r12
+    1511:	0f 93 c1             	setae  %cl
+    1514:	48 8d 4c 09 02       	lea    0x2(%rcx,%rcx,1),%rcx
+    1519:	4c 0f 42 e8          	cmovb  %rax,%r13
+    151d:	49 83 f8 fc          	cmp    $0xfffffffffffffffc,%r8
+    1521:	b8 03 00 00 00       	mov    $0x3,%eax
+    1526:	48 0f 45 c1          	cmovne %rcx,%rax
+    152a:	41 bc 04 00 00 00    	mov    $0x4,%r12d
+    1530:	4c 0f 44 e0          	cmove  %rax,%r12
+    1534:	4d 85 c0             	test   %r8,%r8
+    1537:	4c 0f 44 e0          	cmove  %rax,%r12
+    153b:	e9 76 fe ff ff       	jmp    13b6 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe6>
+    1540:	45 31 ff             	xor    %r15d,%r15d
+    1543:	41 bc 04 00 00 00    	mov    $0x4,%r12d
+    1549:	e9 62 fe ff ff       	jmp    13b0 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe0>
+    154e:	41 bc 02 00 00 00    	mov    $0x2,%r12d
+    1554:	e9 57 fe ff ff       	jmp    13b0 <(anonymous namespace)::handler(int, siginfo_t*, void*)+0xe0>
+    1559:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)

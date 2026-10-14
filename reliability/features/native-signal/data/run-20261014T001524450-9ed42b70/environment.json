@@ -1,0 +1,37 @@
+{
+  "watchdogSeconds": 30,
+  "hashes": {
+    "native/signal/Signal.h": "5249E140EF30DF4B0F78594354ED9590757CEE10A15D5206E270932109AE1CF7",
+    "native/signal/CMakeLists.txt": "0473B1CD6DC156061BFE31CBE71C7D480BE959C890ADB009FBFFD8817C0690A0",
+    "native/signal/Workload.LinuxX64.cpp": "F8527FB8D19067F9891052DAD0524EA7A3BB2BAF019CB64FFBC673C507B4D95B",
+    "tests/CozNet.LinuxPerf/SignalInterventionBackend.cs": "86CA46707F627507AB051B5D39B6822737435D70A72D73777625D6FA2F7BC1F2",
+    "native/signal/Signal.LinuxX64.cpp": "421786DD8823C0D4FA11967A383FC4D345D2184305E579A74691A9E5BDBB9249",
+    "artifacts/native-signal/libCozNet.SignalWorkload.so": "434C39E78B5EAC0610142CA0321EF5F81BCFE71D441DBE9F1FC61D676D89AA56",
+    "native/signal/ContractChecks.cpp": "0182DB875E09C55CB61656725FE3FD996E304F3FB50FB805268E7CC4A9453E8D",
+    "tests/CozNet.LinuxPerf/Program.cs": "681C63CFBEF3915AD3B909D552F3AB8A2E9D56FF782BDA18402CA9E36481D579",
+    "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll": "DB76EB36CD5885B4BCBA4930DBDF1C4FEE1E6F9ACF4CA13737FF5B23F46F9FA0",
+    "tests/CozNet.LinuxPerf/SignalTransitionOperations.cs": "0B1FB909483F1743ABC6D3BD0006F8B9A9C1840D307A22B5355C6EE5DA790588",
+    "artifacts/native-signal/SignalContractChecks": "959017BB2F4FD29C4D949C20F34425A87A432338D01F8CF103C49DD0BB2CC5AC",
+    "tests/CozNet.LinuxPerf/InstructionMap.cs": "9563CE9D8495FCF580A1298C7BB89763F831771D3BCCD7B9145CCA0397AC5DD0",
+    "artifacts/native-signal/libCozNet.Signal.so": "934511E4798D16CA6BBD0C28E3F595D370FD5837C72B11A6EC5023DB3CD0E622",
+    "tests/CozNet.LinuxPerf/SignalTransitionWorkload.cs": "6C254E4D2DD685D9953D55134DFD782A371F3AB30C67844D84A3131434B52213"
+  },
+  "kernel": "5.15.153.1-microsoft-standard-WSL2",
+  "imageId": "sha256:3db72bd242b5f26a45d74c2d49a7654740e75c732654658177e52aa498645c14",
+  "seed": 20261017,
+  "measurementMilliseconds": 2000,
+  "requestedDelayNanoseconds": 50000,
+  "order": [
+    "transitions:no-gc",
+    "jit:no-gc",
+    "jit:gc",
+    "native-wait:gc",
+    "managed-wait:gc",
+    "native-wait:no-gc",
+    "managed-wait:no-gc",
+    "transitions:gc"
+  ],
+  "gcCallBoundMilliseconds": 250,
+  "acknowledgmentBoundMilliseconds": 100,
+  "handlerBoundNanoseconds": 5000000
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "case": "target-lifetime"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "case": "occupied"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "case": "blocked"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "case": "lifetime"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "case": "pending-shutdown"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "case": "exit-with-pending"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "file": "transitions-no-gc.json",
+    "case": "transitions:no-gc"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "file": "jit-no-gc.json",
+    "case": "jit:no-gc"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "file": "jit-gc.json",
+    "case": "jit:gc"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "file": "native-wait-gc.json",
+    "case": "native-wait:gc"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "file": "managed-wait-gc.json",
+    "case": "managed-wait:gc"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "file": "native-wait-no-gc.json",
+    "case": "native-wait:no-gc"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "file": "managed-wait-no-gc.json",
+    "case": "managed-wait:no-gc"
+  },
+  {
+    "recordExists": true,
+    "exitCode": 0,
+    "file": "transitions-gc.json",
+    "case": "transitions:gc"
+  }
+]

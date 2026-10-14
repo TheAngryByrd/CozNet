@@ -1,0 +1,31 @@
+{
+  "assertionSourceSha256": "73AB22CB42247638AEFA8BEC60AB0FCAC3BA865D234E49532BF75234D4B8FA25",
+  "runtime": "10.0.12",
+  "baselineHelperSha256": "9A30D57309825199D142D6873B080942B3DFF1BF9E313175DAB06444E23E4E45",
+  "outcomes": [
+    {
+      "build": {
+        "exitCode": 0,
+        "timedOut": false
+      },
+      "execution": {
+        "exitCode": 0,
+        "timedOut": false
+      },
+      "variant": "baseline",
+      "helperSha256": "9A30D57309825199D142D6873B080942B3DFF1BF9E313175DAB06444E23E4E45"
+    },
+    {
+      "build": {
+        "exitCode": 0,
+        "timedOut": false
+      },
+      "execution": {
+        "exitCode": -532462766,
+        "timedOut": false
+      },
+      "variant": "no-sender-stop-gate",
+      "helperSha256": "34C5D1B616489ED774A43120662E9D7CCB0A711019F870BC5AF421435D94729E"
+    }
+  ]
+}

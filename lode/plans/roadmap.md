@@ -21,7 +21,8 @@ The stage comparison identifies injected probes as the largest measured cost in 
 Investigate a lower-cost intervention mechanism before changing sampled accounting.
 A native signal experiment must measure GC effects and bound handler work before any claim of CLR safety.
 The [bounded signal workload](../profiling/signal-intervention.md) passes the initial arithmetic and forced-GC checks.
-Next, verify runtime transition and shutdown cases, then connect independent CPU events to bounded signal delay accounting.
+The [transition workload](../profiling/signal-transitions.md) passes JIT, blocked-wait, managed/native-call, and pending-shutdown checks.
+Next, connect independent CPU events to bounded signal delay accounting. Keep abnormal target exit as an explicit process-lifetime limit.
 The current signal experiment generates no causal credits and does not test prediction accuracy.
 See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal research](../../docsSrc/Research/native-signal-intervention.md).
 See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).

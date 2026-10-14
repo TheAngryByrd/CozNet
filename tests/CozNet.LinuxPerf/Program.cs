@@ -4,6 +4,24 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-signal-targets"])
+{
+    SignalTargetChecks.Run();
+    return 0;
+}
+
+if (args is ["--signal-transition", var transitionPath, var transitionMode, var transitionGc])
+{
+    bool forceGc = transitionGc switch
+    {
+        "gc" => true,
+        "no-gc" => false,
+        _ => throw new ArgumentException("Select gc or no-gc transition measurement.")
+    };
+    return SignalTransitionWorkload.Run(transitionPath, SignalTransitionWorkload.Parse(transitionMode), forceGc,
+        () => new LinuxSignalBackend(), () => new LinuxSignalTransitionOperations());
+}
+
 if (args is ["--signal", var signalPath, var signalMode, var signalGc])
 {
     bool forceGc = signalGc switch

@@ -17,6 +17,8 @@ Its absolute sleep deadline permits at most 50 microseconds of requested delay. 
 The recorded handler interval excludes entry checks, publication, and return. It is not a complete signal residence measurement.
 Acknowledgment publishes the result. It does not prove that the handler has returned to managed execution.
 The controller stops sending before target-side retirement and thread join. Retirement blocks delivery and checks the target's pending queue.
+`SignalTargetLifetime` holds registered targets alive until the controller closes delivery, including after workload failures.
+This prevents requests from using an exited target's potentially reused native thread ID.
 Only then does the controller restore the disposition.
 An acknowledgment timeout abandons normal teardown. Static state and code remain loaded until the bounded child process exits.
 Slots cannot be reused. This experiment has no cancellation or general signal-chaining API.
@@ -30,6 +32,7 @@ The native contract cases check occupied signals, blocked registration, pending 
 The six managed cases and three native contract cases pass on the tested Linux x64 container.
 These checks do not establish general CLR safety or causal prediction accuracy.
 See [retained evidence](../../reliability/features/native-signal/README.md).
+The [transition workload](signal-transitions.md) checks JIT execution, blocked waits, managed/native calls, and pending-request shutdown limits.
 
 ```powershell
 dotnet run --project build/build.fsproj -- -t LinuxSignalVerify
