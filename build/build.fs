@@ -471,6 +471,9 @@ let linuxSignalServiceVerify _ =
 let linuxServiceInteropVerify _ =
     nativeScript "VerifyServiceInterop.ps1"
 
+let linuxServiceSnapshotCost _ =
+    nativeScriptWithArgs "VerifyServiceInterop.ps1" [ "-SnapshotCostOnly" ]
+
 let serviceAccountingVerify _ =
     CreateProcess.fromRawCommand "dotnet" [
         rootDirectory
@@ -934,6 +937,7 @@ let initTargets () =
     Target.create "LinuxServiceOwnerVerify" (serviceOwnerVerify "LinuxContainer")
     Target.create "LinuxSignalServiceVerify" linuxSignalServiceVerify
     Target.create "LinuxServiceInteropVerify" linuxServiceInteropVerify
+    Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
     Target.create "ServiceAccountingCost" serviceAccountingCost
     Target.create "NativeWorkload" nativeWorkload
@@ -1004,6 +1008,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxServiceInteropVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxServiceSnapshotCost"
     |> ignore
 
     "LinuxPerfWorkload"

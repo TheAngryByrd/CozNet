@@ -1,0 +1,104 @@
+{
+  "expectedReceiptRejection": false,
+  "receiptRejected": false,
+  "joined": true,
+  "closed": true,
+  "failure": null,
+  "observation": {
+    "Header": {
+      "IdentityFirst": 5663973675850926272,
+      "IdentitySecond": 15322840258773583494,
+      "Command": 1,
+      "Budget": 110000,
+      "Measured": 0,
+      "Phase": 2,
+      "Error": 0,
+      "TransportError": 0,
+      "Cancellation": 0,
+      "Outstanding": 0,
+      "Children": 1,
+      "Rejected": 0,
+      "Captured": 340976315661177
+    },
+    "Children": [
+      {
+        "Native": {
+          "Ordinal": 1,
+          "Requested": 50000,
+          "Acknowledgment": {
+            "Sequence": 1,
+            "Outcome": 1,
+            "Ip": 140061197978993,
+            "Handler": 298,
+            "Wait": 0,
+            "WaitResult": 0,
+            "Started": 340976314539876,
+            "Queued": 340976314568223,
+            "HandlerStarted": 340976314595249,
+            "HandlerFinished": 340976314595547,
+            "Observed": 340976314595942
+          }
+        },
+        "FirstSnapshotCaptured": 340976315661177,
+        "FirstManagedReceiptUpper": 340976315720751,
+        "ClockStatus": 0
+      }
+    ],
+    "Rejected": []
+  },
+  "accountingRejected": false,
+  "accountingSettled": true,
+  "accountingPending": 0,
+  "measureSnapshotCost": true,
+  "snapshotCosts": [
+    {
+      "Index": 0,
+      "Iterations": 2000,
+      "ElapsedTicks": 1165083,
+      "AllocatedBytes": 336000,
+      "Gen0": 0,
+      "Gen1": 0,
+      "Gen2": 0
+    },
+    {
+      "Index": 1,
+      "Iterations": 2000,
+      "ElapsedTicks": 1182415,
+      "AllocatedBytes": 336000,
+      "Gen0": 0,
+      "Gen1": 0,
+      "Gen2": 0
+    },
+    {
+      "Index": 2,
+      "Iterations": 2000,
+      "ElapsedTicks": 1172477,
+      "AllocatedBytes": 336000,
+      "Gen0": 0,
+      "Gen1": 0,
+      "Gen2": 0
+    },
+    {
+      "Index": 3,
+      "Iterations": 2000,
+      "ElapsedTicks": 1186914,
+      "AllocatedBytes": 336000,
+      "Gen0": 0,
+      "Gen1": 0,
+      "Gen2": 0
+    },
+    {
+      "Index": 4,
+      "Iterations": 2000,
+      "ElapsedTicks": 6943754,
+      "AllocatedBytes": 336000,
+      "Gen0": 0,
+      "Gen1": 0,
+      "Gen2": 0
+    }
+  ],
+  "stopwatchFrequency": 1000000000,
+  "managedReceiptBoundNanoseconds": 100000000,
+  "generalClrSafetyEstablished": false,
+  "predictionAccuracyEstablished": false
+}

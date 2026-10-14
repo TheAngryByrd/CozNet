@@ -1,0 +1,30 @@
+{
+  "generalClrSafetyEstablished": false,
+  "predictionAccuracyEstablished": false,
+  "outcomes": [
+    {
+      "recordExists": true,
+      "name": "native",
+      "exitCode": 0
+    },
+    {
+      "recordExists": true,
+      "name": "receipt-parser",
+      "exitCode": 0
+    },
+    {
+      "recordExists": true,
+      "name": "accounting-adapter",
+      "exitCode": 0
+    },
+    {
+      "recordExists": true,
+      "name": "snapshot-cost",
+      "exitCode": 0
+    }
+  ],
+  "sampledCapacityEstablished": false,
+  "binariesUnchanged": true,
+  "sourcesUnchanged": true,
+  "passed": true
+}

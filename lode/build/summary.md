@@ -10,6 +10,7 @@ Its timestamped output directories preserve each live run under `artifacts/servi
 It retains each run under `artifacts/service-interop/` and uses a 30-second process watchdog.
 `ServiceAccountingVerify` builds the managed workload and runs portable journal-to-ledger checks on the host.
 `ServiceAccountingCost` builds the managed workload and records [fixed journal costs](../profiling/service-accounting-cost.md).
+`LinuxServiceSnapshotCost` builds the native ABI and records [cached snapshot costs](../profiling/service-snapshot-cost.md).
 `LinuxServiceInteropVerify` also runs the `ServiceAccountingVerify` checks in Linux and verifies live journal settlement or rejection.
 
 `build/build.fs` owns the FAKE target graph. Its baseline is MiniScaffold's `v0.40.0-beta001` library template.

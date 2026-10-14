@@ -18,6 +18,7 @@ For the Linux signal adapter and target lifetime, read [Linux service transport]
 For the C ABI and first managed receipt bounds, read [service interop](profiling/service-interop.md).
 For native journal settlement in the managed ledger, read [the service accounting adapter](profiling/service-accounting-adapter.md).
 For fixed journal allocation and copy measurements, read [service accounting costs](profiling/service-accounting-cost.md).
+For the combined native snapshot and managed receipt-cache path, read [snapshot costs](profiling/service-snapshot-cost.md).
 For the live sampled signal controller and capacity limit, read [sampled signals](profiling/sampled-signals.md).
 For request timing and peak-debt evidence, read [service timing](../reliability/features/native-signal/service-timing.md).
 For native queue, handler, and observation phases, read [native phase timing](../reliability/features/native-signal/phase-timing.md).

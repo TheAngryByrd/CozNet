@@ -1,4 +1,4 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/service-interop'))
+param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/service-interop'), [switch]$SnapshotCostOnly)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -17,6 +17,7 @@ $sources = @('native/service/ServiceApi.h', 'native/service/ServiceApi.Linux.cpp
     'tests/CozNet.LinuxPerf/NativeServiceClient.cs', 'tests/CozNet.LinuxPerf/ServiceReceiptTiming.cs',
     'tests/CozNet.LinuxPerf/ServiceReceiptTimingChecks.cs', 'tests/CozNet.LinuxPerf/ServiceInteropChecks.cs',
     'tests/CozNet.LinuxPerf/ServiceAccountingAdapter.cs', 'tests/CozNet.LinuxPerf/ServiceAccountingAdapterChecks.cs',
+    'tests/CozNet.LinuxPerf/ServiceSnapshotCosts.cs',
     'tests/CozNet.LinuxPerf/Program.cs', 'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/VerifyServiceInterop.ps1')
 $hashes = @{}
 foreach ($source in $sources) { $hashes[$source] = (Get-FileHash -LiteralPath (Join-Path $root $source) -Algorithm SHA256).Hash }
@@ -46,8 +47,12 @@ $runtime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop'
 $outcomes.Add(@{ name = 'receipt-parser'; exitCode = $LASTEXITCODE; recordExists = $true })
 & docker @runtime --verify-service-accounting *> (Join-Path $run 'accounting-adapter.log')
 $outcomes.Add(@{ name = 'accounting-adapter'; exitCode = $LASTEXITCODE; recordExists = $true })
-foreach ($mode in @('receipt', 'late')) {
-    & docker @runtime --verify-service-interop "/output/$mode.json" $mode *> (Join-Path $run "$mode.log")
+foreach ($mode in $(if ($SnapshotCostOnly) { @('snapshot-cost') } else { @('receipt', 'late') })) {
+    if ($SnapshotCostOnly) {
+        & docker @runtime --service-snapshot-cost "/output/$mode.json" *> (Join-Path $run "$mode.log")
+    } else {
+        & docker @runtime --verify-service-interop "/output/$mode.json" $mode *> (Join-Path $run "$mode.log")
+    }
     $outcomes.Add(@{ name = $mode; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "$mode.json") })
     $outcomes | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $run 'outcomes.json')
 }

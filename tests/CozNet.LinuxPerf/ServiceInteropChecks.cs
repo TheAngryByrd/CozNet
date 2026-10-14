@@ -5,7 +5,7 @@ using Microsoft.FSharp.Core;
 
 static class ServiceInteropChecks
 {
-    public static int Run(string path, bool delayedReceipt)
+    public static int Run(string path, bool delayedReceipt, bool measureSnapshotCost = false)
     {
         NativeServiceClient? client = null;
         ServiceNativeObservation? observation = null;
@@ -15,6 +15,7 @@ static class ServiceInteropChecks
         SignalAccounting? accounting = null;
         SignalServiceLease? lease = null;
         bool accountingSettled = false, accountingRejected = false;
+        var snapshotCosts = new List<ServiceSnapshotCosts.Batch>();
         Thread? worker = null;
         var ready = new ManualResetEventSlim();
         var stop = new ManualResetEventSlim();
@@ -75,6 +76,8 @@ static class ServiceInteropChecks
                     && repeated.Children[0].FirstSnapshotCaptured == child.FirstSnapshotCaptured,
                     "A repeated snapshot replaced the first managed receipt.");
                 ParseReceipt(repeated.Children[0]);
+                if (measureSnapshotCost)
+                    ServiceSnapshotCosts.Measure(() => client.Read(1, identity), repeated, snapshotCosts);
             }
             client.Release(1, identity);
             released = true;
@@ -114,6 +117,7 @@ static class ServiceInteropChecks
                 expectedReceiptRejection = delayedReceipt, receiptRejected, joined, closed, failure, observation,
                 accountingRejected, accountingSettled,
                 accountingPending = accounting is null ? (int?)null : SignalAccountingModule.pendingCount(accounting),
+                measureSnapshotCost, snapshotCosts, stopwatchFrequency = Stopwatch.Frequency,
                 managedReceiptBoundNanoseconds = 100000000, generalClrSafetyEstablished = false, predictionAccuracyEstablished = false
             }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
         }

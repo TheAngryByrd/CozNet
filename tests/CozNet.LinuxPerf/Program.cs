@@ -7,6 +7,9 @@ using System.Runtime.CompilerServices;
 if (args is ["--service-accounting-cost", var serviceCostPath])
     return ServiceAccountingCosts.Run(serviceCostPath);
 
+if (args is ["--service-snapshot-cost", var snapshotCostPath])
+    return ServiceInteropChecks.Run(snapshotCostPath, false, true);
+
 if (args is ["--verify-service-accounting"])
 {
     ServiceAccountingAdapterChecks.Run();
