@@ -45,6 +45,21 @@ The controller cancels odd generations during configuration, before publication 
 Each even generation must complete normally after the preceding cancelled generation.
 This checks cancellation preservation and reset across native delivery. It does not test cancellation during an active handler.
 
+## Check cancellation during handler execution
+
+1. Run `dotnet run --project build/build.fsproj -- -t LinuxTargetLeaseActiveCancellation` from the repository root.
+2. Inspect `summary.json`, `contracts.log`, and `reuse.json` in the new evidence directory.
+3. Check that `mode` is `cancel-active-handler` and `completed` is 16.
+4. Check that odd generations have `activeCancellation`, `cancellationAccepted`, and `handlerCancelled` set to true.
+5. Check that their `handshakeError` is zero and the handshake interval does not exceed 1,000,000 ns.
+6. Check that each cancelled generation has one child, stop value 3, and at least 50,000 ns of measured wait.
+7. Check that its `waited` equals `handshakeStarted - waitStarted`.
+8. Check that every following even generation has stop value 1 and passes the existing timing bounds.
+9. Check retired visibility and final teardown fields as in the reuse procedure.
+
+The [active cancellation contract](../Reference/target-local-lease.md#lease-mailbox) defines the tested boundary and timing fields.
+Retain handshake and timing failures. Do not repeat an unchanged case to obtain a pass.
+
 ## Check rejected initial arms
 
 1. Run `dotnet run --project build/build.fsproj -- -t LinuxTargetLeaseArmRecovery` from the repository root.

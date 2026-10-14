@@ -151,6 +151,15 @@ The `cancel-before-delivery` fixture mode cancels odd generations before publica
 It requires zero wait and cancelled stop for those generations, followed by normal completion in each even generation.
 This mode does not exercise concurrent cancellation during handler execution.
 
+The `cancel-active-handler` mode cancels odd generations after a measured child wait, while the lease remains in its executing phase.
+The handler publishes the active generation. A valid run requires a cancellation observation within 1 ms.
+This handshake occurs before `prepare`. Its time counts toward the 5 ms handler bound, but not toward credited wait.
+The cancelled child retains its measured wait. Each following even generation must complete normally.
+Credited wait must equal `handshakeStarted - waitStarted`. This excludes handshake time from intervention accounting.
+The fixture records the controller call interval and the handler's cancellation observation.
+The handler can finish before the controller reads its post-call clock. That clock need not precede child completion.
+This mode does not test interruption of a physical wait, cancellation during rearm, or CLR execution.
+
 ## Managed receipt tracking
 
 `TargetLeaseReceipts` is an internal .NET receipt tracker owned by one controller.

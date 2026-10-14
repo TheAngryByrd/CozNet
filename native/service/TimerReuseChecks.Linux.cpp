@@ -18,17 +18,19 @@ namespace {
 using namespace coz::service;
 constexpr uint64_t cookie = 0x436f7a5265757365ULL, budget = 50000;
 constexpr uint32_t generations = 16;
-enum class FixtureMode { reuse, cancel_before_delivery, reject_initial_arm };
+enum class FixtureMode { reuse, cancel_before_delivery, reject_initial_arm, cancel_active_handler };
 std::optional<FixtureMode> parseMode(std::string_view value) {
     if (value == "reuse") return FixtureMode::reuse;
     if (value == "cancel-before-delivery") return FixtureMode::cancel_before_delivery;
     if (value == "reject-initial-arm") return FixtureMode::reject_initial_arm;
+    if (value == "cancel-active-handler") return FixtureMode::cancel_active_handler;
     return std::nullopt;
 }
 LeaseMailbox mailbox;
 std::array<TargetLeaseChild, 4> journal{};
 std::optional<TargetLease> slot;
 std::atomic<uint32_t> stop{}, entered{}, ready{}, announced{};
+std::atomic<uint32_t> active_generation{};
 std::atomic<uint64_t> progress{};
 std::atomic<int> handler_error{};
 int timer_id{}, signal_number{}, target_error{}, retired_drained{};
@@ -50,6 +52,9 @@ struct Observation {
     itimerspec remaining{};
     bool arm_attempted{}, rejection_requested{}, recovery_acquired{}, timer_checked{};
     bool copied{}, reuse_rejected{}, receipt_observed{}, cancellation_requested{}, cancellation_accepted{};
+    bool active_cancellation{}, handler_cancelled{};
+    uint64_t wait_started{}, handshake_started{}, handshake_finished{}, cancel_before{}, cancel_after{};
+    int handshake_error{};
 };
 std::array<Observation, generations> observations{};
 
@@ -104,6 +109,25 @@ void handler(int number, siginfo_t* info, void* context) {
         if (next == 0 || next < after) { error = EIO; break; }
         after = next;
         asm volatile("pause");
+    }
+    auto& observation = observations[execution->generation() - 1];
+    if (observation.active_cancellation && error == 0) {
+        observation.wait_started = before;
+        observation.handshake_started = after;
+        active_generation.store(execution->generation(), std::memory_order_release);
+        auto current = after;
+        for (unsigned attempt = 0; attempt < 65536; ++attempt) {
+            observation.handler_cancelled = mailbox.cancelled(*execution);
+            const auto next = now();
+            if (next == 0 || next < current) { error = EIO; break; }
+            current = next;
+            if (current - after > 1000000) { error = ETIMEDOUT; break; }
+            if (observation.handler_cancelled) break;
+            asm volatile("pause");
+        }
+        if (!observation.handler_cancelled && error == 0) error = ETIMEDOUT;
+        observation.handshake_finished = current;
+        observation.handshake_error = error;
     }
     const auto completion = lease.prepare(*admission, after >= before ? after - before : 0,
         error == 0 ? TargetWaitStatus::completed : TargetWaitStatus::failed, mailbox.cancelled(*execution));
@@ -198,9 +222,11 @@ int main(int argc, char** argv) {
         if (!plan) { valid = false; break; }
         slot.emplace(*plan, journal);
         auto& observation = observations[generation - 1];
+        observation.active_cancellation = *mode == FixtureMode::cancel_active_handler && generation % 2 == 1;
         observation.rejection_requested = *mode == FixtureMode::reject_initial_arm && generation % 2 == 1;
-        observation.cancellation_requested = *mode == FixtureMode::cancel_before_delivery && generation % 2 == 1;
-        if (observation.cancellation_requested) {
+        observation.cancellation_requested = observation.active_cancellation
+            || (*mode == FixtureMode::cancel_before_delivery && generation % 2 == 1);
+        if (observation.cancellation_requested && !observation.active_cancellation) {
             observation.cancellation_accepted = mailbox.cancel(generation);
             if (!observation.cancellation_accepted) { valid = false; break; }
         }
@@ -232,6 +258,13 @@ int main(int argc, char** argv) {
         } else {
             arm_error = static_cast<int>(-observation.arm_result);
             if (arm_error != 0) { valid = false; break; }
+        }
+        if (observation.active_cancellation) {
+            valid = await([&] { return active_generation.load(std::memory_order_acquire) == generation; });
+            if (!valid) break;
+            observation.cancel_before = now();
+            observation.cancellation_accepted = mailbox.cancel(generation);
+            observation.cancel_after = now();
         }
         auto reader = mailbox.read(generation);
         if (!reader) { valid = false; break; }
@@ -270,7 +303,16 @@ int main(int argc, char** argv) {
             && observation.header.command == generation && observation.header.children == 1
             && observation.header.measured == child.waited
             && (observation.cancellation_requested
-                ? observation.cancellation_accepted && observation.header.measured == 0 && observation.header.stop == TargetLeaseStop::cancelled
+                ? observation.cancellation_accepted && observation.header.stop == TargetLeaseStop::cancelled
+                    && (observation.active_cancellation
+                        ? observation.header.measured >= budget && observation.handler_cancelled && observation.handshake_error == 0
+                            && observation.wait_started >= child.started && observation.handshake_started >= observation.wait_started
+                            && child.waited == observation.handshake_started - observation.wait_started
+                            && observation.handshake_finished >= observation.handshake_started
+                            && observation.handshake_finished - observation.handshake_started <= 1000000
+                            && child.finished >= observation.handshake_finished && observation.cancel_before >= observation.handshake_started
+                            && observation.cancel_after >= observation.cancel_before && observation.handshake_finished >= observation.cancel_before
+                        : observation.header.measured == 0)
                 : observation.header.measured >= budget && observation.header.stop == TargetLeaseStop::completed)
             && !observation.header.may_have_delivery
             && observation.header.error == TargetLeaseError::none && child.valid && child.ordinal == 1
@@ -315,6 +357,11 @@ int main(int argc, char** argv) {
         const auto& child = item.children[0];
         if (index) output << ',';
         output << "{\"rejectionRequested\":" << (item.rejection_requested ? "true" : "false")
+               << ",\"activeCancellation\":" << (item.active_cancellation ? "true" : "false")
+               << ",\"handlerCancelled\":" << (item.handler_cancelled ? "true" : "false")
+               << ",\"waitStarted\":" << item.wait_started
+               << ",\"handshakeStarted\":" << item.handshake_started << ",\"handshakeFinished\":" << item.handshake_finished
+               << ",\"handshakeError\":" << item.handshake_error << ",\"cancelBefore\":" << item.cancel_before << ",\"cancelAfter\":" << item.cancel_after
                << ",\"armAttempted\":" << (item.arm_attempted ? "true" : "false") << ",\"armResult\":" << item.arm_result
                << ",\"recoveryAcquired\":" << (item.recovery_acquired ? "true" : "false")
                << ",\"timerChecked\":" << (item.timer_checked ? "true" : "false") << ",\"gettimeResult\":" << item.gettime_result

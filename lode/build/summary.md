@@ -139,6 +139,7 @@ See [owner polling](../profiling/owner-polling.md).
 It uses the native compiler image and does not run .NET application workloads.
 `LinuxTargetLeaseReuse` runs portable mailbox and lease checks, then retains one native 16-generation timer reuse case.
 `LinuxTargetLeaseCancellation` uses the same runner with `-Mode cancel-before-delivery` and alternates cancelled and normal generations.
+`LinuxTargetLeaseActiveCancellation` uses `-Mode cancel-active-handler` and checks controller cancellation while the handler owns an executing lease.
 `LinuxTargetLeaseArmRecovery` uses `-Mode reject-initial-arm` and alternates rejected initial arms with normal generations.
 The runner retains kernel identity and raw syscall results. Failed generations must retire without children or credited wait.
 See [target-local leases](../plans/target-local-lease.md).

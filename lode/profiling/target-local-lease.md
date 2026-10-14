@@ -103,6 +103,13 @@ The `cancel-before-delivery` mode cancels odd generations while configuring, bef
 Those generations must retain cancellation through native delivery and retire with zero measured wait.
 Even generations must complete normally, proving the previous cancellation does not cross the generation boundary.
 The mode does not exercise cancellation during an active handler.
+The `cancel-active-handler` mode publishes an active generation after the measured wait while the core remains executing.
+The controller cancels that generation. A bounded handler handshake observes cancellation before `prepare`.
+Handshake time counts toward the 5 ms handler bound, not credited wait. The handshake limit is 1 ms.
+The fixture requires credited wait to equal the recorded interval from `waitStarted` to `handshakeStarted`.
+The cancelled child retains its measured wait. Following even generations must complete without inherited cancellation.
+The controller's post-call clock can follow handler completion. The assertion uses interval ordering, not a false completion-before-receipt requirement.
+This mode does not interrupt a physical wait or exercise cancellation during rearm.
 Core retirement does not release storage or the target registration. Mailbox quiescence and reader release still gate storage reuse.
 `LeaseMailbox::recover` atomically competes with target execution and returns a private controller recovery token.
 The recovering phase excludes claim, cancellation, new readers, begin, close, and duplicate recovery.

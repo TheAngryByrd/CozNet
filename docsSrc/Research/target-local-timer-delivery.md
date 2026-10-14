@@ -154,6 +154,20 @@ Passing those checks would not establish physical prediction accuracy or general
 
 See [owner scheduling](native-owner-scheduling.md) and [the finite service contract](../../lode/plans/native-debt-service.md).
 
+## Controller cancellation while a handler executes
+
+The `cancel-active-handler` fixture separates cancellation ownership from interruption of a physical wait.
+The target first completes one measured child wait. It then publishes the active generation while the core remains executing.
+The controller cancels that generation through the mailbox. The target observes cancellation before preparing the child.
+This ordering checks that cancellation preserves completed work and prevents continuation of the lease.
+
+The handshake adds scheduling dependence. Its elapsed time belongs to the handler interval, not to the measured intervention wait.
+The fixture requires cancellation observation within 1 ms and retains the existing 5 ms handler bound.
+It records the controller call interval because the handler can finish before the controller reads its post-call clock.
+Each following normal generation checks that cancellation does not carry across reuse.
+The case does not establish physical-wait interruption, concurrent rearm cancellation, managed receipt, or CLR safety.
+See [the active cancellation procedure](../How_Tos/run-target-lease-reuse.md#check-cancellation-during-handler-execution).
+
 ## Recovering a rejected initial arm
 
 The `reject-initial-arm` fixture uses `it_value.tv_nsec = 1000000000` and requires the direct syscall result `-EINVAL`.

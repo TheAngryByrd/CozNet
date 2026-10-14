@@ -213,3 +213,34 @@ The run does not establish recovery from ambiguous timer errors, concurrent canc
 
 The updated runner also passes `reuse` in `20261014T194605869-d5643dec` and `cancel-before-delivery` in `20261014T194629986-cd1c3069`.
 Each run retains its own hashes, raw observations, and unchanged-input result. These cases exercise the shared initial disarm and drain change.
+
+## Controller cancellation during handler execution
+
+Run `artifacts/target-lease-reuse/20261014T195246334-0b03a4fb` uses `cancel-active-handler` mode.
+Command: `dotnet run --project build/build.fsproj -- -t LinuxTargetLeaseActiveCancellation`.
+The handler publishes the active generation after its measured wait, while the core remains executing.
+The controller cancels that generation. The handler observes cancellation before preparing and publishing the child.
+The fixture requires `waited == handshakeStarted - waitStarted`, so the handshake cannot increase credited wait.
+
+The portable mailbox and lease checks pass. All 16 native generations pass with unchanged inputs.
+The kernel is `5.15.153.1-microsoft-standard-WSL2` on x86-64. The manifest retains source and binary hashes.
+
+| Observation | Value |
+| --- | ---: |
+| Controller cancellations accepted and observed | 8 |
+| Cancelled child wait range | 50,014–50,114 ns |
+| Total credited wait in cancelled generations | 400,478 ns |
+| Following normal generations | 8 |
+| Maximum cancellation handshake interval | 11,818 ns |
+| Maximum measured handler interval | 62,874 ns |
+| Maximum first native receipt interval | 1,078,516 ns |
+
+All 16 snapshots have retired visibility 3. Closure, timer deletion, and handler restoration pass. Final drain finds no pending signal.
+The handshake limit remains 1 ms. The child request, handler, and receipt limits remain 50 microseconds, 5 ms, and 100 ms.
+The handshake is fixture coordination overhead. It is not a production cancellation design or credited intervention time.
+This case does not establish interruption of a physical wait, concurrent rearm cancellation, managed receipt, CLR safety, or sampled capacity.
+
+Earlier run `20261014T195155120-25ac531e` also passes and remains retained.
+It has a 557,657 ns maximum handshake and a 624,717 ns maximum measured handler interval.
+That run predates the explicit wait-interval assertion. The later run uses changed source and does not replace its timing observations.
+The existing `cancel-before-delivery` mode also passes in run `20261014T195311618-c0a720ad` with unchanged inputs.
