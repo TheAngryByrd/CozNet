@@ -35,5 +35,6 @@ Portable checks run through `TimerLayoutVerify` and the Linux interop layout pro
 They exercise immutable prefixes, overshoot with concurrent credit, cancellation, generation reuse, outcome bounds, and atomic rejection.
 The live receipt fixture reserves 50,000 ns from synthetic credit and consumes its actual deferred child.
 It requires a settled reservation with all debt unpaid. Rejected receipt modes retain the reservation with zero confirmed wait.
-Controlled native wait settlement and sampled integration remain unverified.
+The [managed payment workload](timer-managed.md) also settles actual paid journals during controlled arithmetic.
+Forced GC, general CLR safety, and sampled integration remain unverified.
 See [timer interop](timer-interop.md), [service accounting](signal-service.md), and [the index](../lode-map.md).

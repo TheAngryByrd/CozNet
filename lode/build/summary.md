@@ -3,7 +3,9 @@
 `LinuxTimerApi` checks the target-local timer C ABI in deferred and chained-wait modes.
 `TimerLayoutVerify` checks managed ABI sizes and offsets on the host without loading the Linux library.
 `LinuxTimerInterop` checks first managed receipt preservation, late receipt rejection, and wrong-thread clock rejection on Linux x64.
-Both managed targets depend on `LinuxPerfWorkload` inside the FAKE target graph.
+`LinuxTimerManaged` uses the same runner with `-ManagedWorkload` and checks paid journals during controlled managed arithmetic.
+It retains source and binary hashes, runtime perf maps, and raw results under `artifacts/timer-managed/`.
+All three managed targets depend on `LinuxPerfWorkload` inside the FAKE target graph.
 The Linux runners retain unique directories under `artifacts/timer-api/` and `artifacts/timer-interop/`.
 See [timer interop](../profiling/timer-interop.md) for scope and ownership.
 

@@ -1,5 +1,8 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/timer-interop'))
+param([string]$EvidenceDirectory, [switch]$ManagedWorkload)
 $ErrorActionPreference = 'Stop'
+if (-not $EvidenceDirectory) {
+    $EvidenceDirectory = Join-Path $PSScriptRoot $(if ($ManagedWorkload) { '../artifacts/timer-managed' } else { '../artifacts/timer-interop' })
+}
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 $native = Join-Path $run 'native'
@@ -16,6 +19,7 @@ $sources = @('native/service/TimerApi.h', 'native/service/TimerApi.Linux.cpp', '
     'native/service/TargetLease.h', 'native/service/TargetLease.cpp', 'native/service/CMakeLists.txt',
     'tests/CozNet.LinuxPerf/NativeTimerClient.cs', 'tests/CozNet.LinuxPerf/TimerInteropChecks.cs',
     'tests/CozNet.LinuxPerf/TimerAccountingAdapter.cs', 'tests/CozNet.LinuxPerf/TimerAccountingAdapterChecks.cs',
+    'tests/CozNet.LinuxPerf/TimerManagedWorkload.cs', 'tests/CozNet.LinuxPerf/InstructionMap.cs', 'tests/CozNet.LinuxPerf/OverheadWorkload.cs',
     'tests/CozNet.LinuxPerf/TargetLeaseReceipts.cs', 'tests/CozNet.LinuxPerf/TargetLeaseReceiptsChecks.cs',
     'tests/CozNet.LinuxPerf/ServiceReceiptTiming.cs', 'tests/CozNet.LinuxPerf/Program.cs',
     'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/VerifyTimerInterop.ps1', 'build/build.fs')
@@ -31,7 +35,9 @@ $binaryPaths = @((Join-Path $native 'libCozNet.Timer.so'), (Join-Path $workload 
 $binaries = @{}
 foreach ($path in $binaryPaths) { $binaries[[IO.Path]::GetFileName($path)] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
 @{ sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage;
-    receiptBoundNanoseconds = 100000000; delayedReadMilliseconds = 150; watchdogSeconds = 20
+    receiptBoundNanoseconds = 100000000; delayedReadMilliseconds = 150; watchdogSeconds = 20;
+    managedWorkload = [bool]$ManagedWorkload; fixedCreditSteps = 16; requestedChildBoundNanoseconds = 50000;
+    handlerBoundNanoseconds = 5000000; leaseBudgetBoundNanoseconds = 2000000
 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
 $runtime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
     '--tmpfs', '/tmp:rw,nosuid,size=64m', '--env', 'LD_LIBRARY_PATH=/native',
@@ -40,9 +46,20 @@ $runtime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop'
 $outcomes = @()
 & docker @runtime --verify-timer-layout *> (Join-Path $run 'layout.log')
 $outcomes += @{ mode = 'layout'; exitCode = $LASTEXITCODE; recordExists = $true }
-foreach ($mode in @('receipt', 'late', 'clock-failure')) {
-    & docker @runtime --verify-timer-interop "/output/$mode.json" $mode *> (Join-Path $run "$mode.log")
-    $outcomes += @{ mode = $mode; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "$mode.json") }
+if ($ManagedWorkload) {
+    $managedRuntime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
+        '--tmpfs', '/tmp:rw,nosuid,size=64m', '--env', 'LD_LIBRARY_PATH=/native',
+        '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0', '--env', 'CORECLR_ENABLE_PROFILING=0',
+        '--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1',
+        '--mount', "type=bind,source=$native,target=/native,readonly", '--mount', "type=bind,source=$workload,target=/work,readonly",
+        '--mount', "type=bind,source=$run,target=/output", $runtimeImage, 'timeout', '-k', '2s', '20s', 'dotnet', '/work/CozNet.LinuxPerf.dll')
+    & docker @managedRuntime --verify-timer-managed /output/managed.json *> (Join-Path $run 'managed.log')
+    $outcomes += @{ mode = 'managed'; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run 'managed.json') }
+} else {
+    foreach ($mode in @('receipt', 'late', 'clock-failure')) {
+        & docker @runtime --verify-timer-interop "/output/$mode.json" $mode *> (Join-Path $run "$mode.log")
+        $outcomes += @{ mode = $mode; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "$mode.json") }
+    }
 }
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash -eq $hashes[$name] }

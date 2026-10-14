@@ -15,6 +15,9 @@ if (args is ["--verify-timer-layout"])
 if (args is ["--verify-timer-interop", var timerPath, var timerMode])
     return TimerInteropChecks.Run(timerPath, timerMode);
 
+if (args is ["--verify-timer-managed", var timerManagedPath])
+    return TimerManagedWorkload.Run(timerManagedPath);
+
 if (args is ["--service-accounting-cost", var serviceCostPath])
     return ServiceAccountingCosts.Run(serviceCostPath);
 

@@ -15,6 +15,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check target-local timer delivery](How_Tos/run-target-lease-delivery.md).
 - [Check target-local timer reuse](How_Tos/run-target-lease-reuse.md).
 - [Verify timer interop](How_Tos/verify-timer-interop.md).
+- [Check timer payment during managed execution](How_Tos/run-managed-timer-payment.md).
 
 ## Reference
 

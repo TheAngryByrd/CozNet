@@ -64,5 +64,7 @@ Its actual native journal contains one deferred child with zero wait.
 Successful accounting releases the reservation and preserves all 50,000 ns of unpaid debt.
 Late receipts and failed clocks retain the original reservation with zero confirmed wait.
 
-These checks do not establish native wait settlement in managed code, CLR intervention safety, sampled capacity, or prediction accuracy.
+The separate [managed payment workload](../How_Tos/run-managed-timer-payment.md) consumes paid journals during controlled arithmetic.
+It checks repeated generations, exact accounting, stable instruction maps, and arithmetic progress.
+These checks do not establish general CLR safety, forced-GC behavior, sampled capacity, or prediction accuracy.
 See [timer interop](timer-interop.md) for the ABI and [the verification procedure](../How_Tos/verify-timer-interop.md) for commands.
