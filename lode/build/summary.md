@@ -7,6 +7,7 @@ They do not establish native delivery or prediction accuracy.
 `LinuxSignalServiceVerify` enables the Linux signal transport and isolated native delivery checks.
 Its timestamped output directories preserve each live run under `artifacts/service-owner-linuxcontainer-signal-*`.
 `LinuxServiceInteropVerify` builds the managed workload and native ABI, then checks native ownership and first managed receipt.
+`LinuxSelectedServiceInteropVerify` checks [selected native request settlement](../profiling/service-selected-adapter.md) and late-receipt rejection through slot 0.
 It retains each run under `artifacts/service-interop/` and uses a 30-second process watchdog.
 `ServiceAccountingVerify` builds the managed workload and runs portable journal-to-ledger checks on the host.
 `ServiceAccountingCost` builds the managed workload and records [fixed journal costs](../profiling/service-accounting-cost.md).

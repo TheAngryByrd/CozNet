@@ -5,7 +5,7 @@ using Microsoft.FSharp.Core;
 
 static class ServiceInteropChecks
 {
-    public static int Run(string path, bool delayedReceipt, bool measureSnapshotCost = false)
+    public static int Run(string path, bool delayedReceipt, bool measureSnapshotCost = false, bool selectedService = false)
     {
         NativeServiceClient? client = null;
         ServiceNativeObservation? observation = null;
@@ -14,6 +14,8 @@ static class ServiceInteropChecks
         bool submitted = false, released = false, joined = false, closed = false, receiptRejected = false, workerStarted = false;
         SignalAccounting? accounting = null;
         SignalServiceLease? lease = null;
+        SignalDelayRequest? selectedRequest = null;
+        int slot = selectedService ? 0 : 1;
         bool accountingSettled = false, accountingRejected = false;
         var snapshotCosts = new List<ServiceSnapshotCosts.Batch>();
         Thread? worker = null;
@@ -26,27 +28,31 @@ static class ServiceInteropChecks
             {
                 try
                 {
-                    client.RegisterCurrentThread(1);
+                    client.RegisterCurrentThread(slot);
                     ready.Set();
                     stop.Wait();
-                    client.RetireCurrentThread(1);
+                    client.RetireCurrentThread(slot);
                 }
                 catch (Exception error) { workerError = error; ready.Set(); }
             }) { IsBackground = true };
             worker.Start();
             workerStarted = true;
             Require(ready.Wait(TimeSpan.FromSeconds(2)) && workerError is null, "The service target did not register.");
-            (lease, accounting) = ReservePeer();
-            var identity = SignalServiceLeaseModule.identity(lease);
-            var adapter = new ServiceAccountingAdapter(lease, 1, client.IsEligibleAddress, client.IsValidOutcome);
-            client.Submit(1, identity, 1, checked((ulong)SignalServiceLeaseModule.nanoseconds(lease)));
+            if (selectedService) (selectedRequest, accounting) = ReserveSelected();
+            else (lease, accounting) = ReservePeer();
+            var identity = selectedService ? SignalDelayRequestModule.identity(selectedRequest!) : SignalServiceLeaseModule.identity(lease!);
+            long budget = selectedService ? SignalDelayRequestModule.nanoseconds(selectedRequest!) : SignalServiceLeaseModule.nanoseconds(lease!);
+            var adapter = selectedService ? null : new ServiceAccountingAdapter(lease!, 1, client.IsEligibleAddress, client.IsValidOutcome);
+            var selectedAdapter = selectedService ? new ServiceSelectedAdapter(selectedRequest!, 1, client.IsEligibleAddress, client.IsValidOutcome) : null;
+            client.Submit(slot, identity, 1, checked((ulong)budget));
             submitted = true;
-            accounting = Parsed(SignalAccountingModule.sentService(lease, accounting));
+            accounting = selectedService ? Parsed(SignalAccountingModule.submitted(selectedRequest!, accounting))
+                : Parsed(SignalAccountingModule.sentService(lease!, accounting));
             if (delayedReceipt) Thread.Sleep(150);
             var deadline = Stopwatch.StartNew();
             do
             {
-                observation = client.Read(1, identity);
+                observation = client.Read(slot, identity);
                 if (observation.Header.Phase != 1 && observation.Header.Outstanding == 0) break;
                 Thread.Yield();
             } while (deadline.Elapsed < TimeSpan.FromSeconds(2));
@@ -60,15 +66,24 @@ static class ServiceInteropChecks
             catch (InvalidDataException) { receiptRejected = true; }
             try
             {
-                var applied = adapter.Accept(observation, accounting);
-                accounting = applied.State;
-                accountingSettled = applied.Adapter.IsTerminal;
+                if (selectedService)
+                {
+                    var applied = selectedAdapter!.Accept(observation, accounting);
+                    accounting = applied.State;
+                    accountingSettled = applied.Adapter.IsTerminal;
+                }
+                else
+                {
+                    var applied = adapter!.Accept(observation, accounting);
+                    accounting = applied.State;
+                    accountingSettled = applied.Adapter.IsTerminal;
+                }
             }
             catch (InvalidDataException) { accountingRejected = true; }
             if (!delayedReceipt && !receiptRejected)
             {
                 Thread.Sleep(150);
-                var repeated = client.Read(1, identity);
+                var repeated = client.Read(slot, identity);
                 Require(repeated.Header.Captured >= child.FirstManagedReceiptUpper
                     && repeated.Header.Captured - child.FirstManagedReceiptUpper > 100000000,
                     "The repeated snapshot must contain a fresh native clock after the receipt bound.");
@@ -77,21 +92,30 @@ static class ServiceInteropChecks
                     "A repeated snapshot replaced the first managed receipt.");
                 ParseReceipt(repeated.Children[0]);
                 if (measureSnapshotCost)
-                    ServiceSnapshotCosts.Measure(() => client.Read(1, identity), repeated, snapshotCosts);
+                    ServiceSnapshotCosts.Measure(() => client.Read(slot, identity), repeated, snapshotCosts);
             }
-            client.Release(1, identity);
+            client.Release(slot, identity);
             released = true;
             Require(receiptRejected == delayedReceipt, "The managed receipt result differs from the fixture's expected result.");
             Require(accountingRejected == delayedReceipt && accountingSettled != delayedReceipt,
                 "The ledger adapter did not preserve the receipt gate.");
             Require(SignalAccountingModule.pendingCount(accounting) == (delayedReceipt ? 1 : 0),
                 "The ledger reservation did not match settlement or rejection.");
-            if (delayedReceipt)
-                Require(Parsed(SignalAccountingModule.confirmedServiceNanoseconds(lease, accounting)) == 0,
+            if (delayedReceipt && selectedService)
+                Require(Parsed(SignalAccountingModule.isAwaitingSequence(selectedRequest!, accounting)),
+                    "A rejected selected receipt must leave its native sequence unbound.");
+            else if (delayedReceipt)
+                Require(Parsed(SignalAccountingModule.confirmedServiceNanoseconds(lease!, accounting)) == 0,
                     "A rejected receipt must not publish measured wait.");
+            else if (selectedService)
+            {
+                var remaining = Parsed(SignalAccountingModule.prepare(SignalDelayRequestModule.thread(selectedRequest!), accounting));
+                Require(remaining.Item1 is not null && SignalDelayRequestModule.nanoseconds(remaining.Item1.Value) == 30000,
+                    "The deferred selected child must leave original debt unpaid.");
+            }
             else
             {
-                var remaining = Parsed(SignalAccountingModule.prepareService(SignalServiceLeaseModule.thread(lease), accounting));
+                var remaining = Parsed(SignalAccountingModule.prepareService(SignalServiceLeaseModule.thread(lease!), accounting));
                 Require(remaining.Item1 is not null && SignalServiceLeaseModule.nanoseconds(remaining.Item1.Value) == 110000,
                     "The deferred native child must leave the original debt unpaid.");
             }
@@ -114,7 +138,7 @@ static class ServiceInteropChecks
             if (joined) { ready.Dispose(); stop.Dispose(); }
             File.WriteAllText(path, JsonSerializer.Serialize(new
             {
-                expectedReceiptRejection = delayedReceipt, receiptRejected, joined, closed, failure, observation,
+                expectedReceiptRejection = delayedReceipt, selectedService, slot, receiptRejected, joined, closed, failure, observation,
                 accountingRejected, accountingSettled,
                 accountingPending = accounting is null ? (int?)null : SignalAccountingModule.pendingCount(accounting),
                 measureSnapshotCost, snapshotCosts, stopwatchFrequency = Stopwatch.Frequency,
@@ -138,6 +162,25 @@ static class ServiceInteropChecks
         state = Parsed(SignalAccountingModule.prepare(selected.Item1, state)).Item2;
         var service = Parsed(SignalAccountingModule.prepareService(peer.Item1, state));
         return (service.Item1.Value, service.Item2);
+    }
+
+    private static (SignalDelayRequest Request, SignalAccounting State) ReserveSelected()
+    {
+        var (lease, state) = ReservePeer();
+        var peer = SignalServiceLeaseModule.thread(lease);
+        state = Parsed(SignalAccountingModule.rejectedServiceBeforeSend(lease, state));
+        var selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(50), state));
+        var prepared = Parsed(SignalAccountingModule.prepare(peer, selected.Item2));
+        var request = prepared.Item1.Value;
+        state = Parsed(SignalAccountingModule.sent(request, 1, prepared.Item2));
+        state = Parsed(SignalAccountingModule.complete(request, 1,
+            SignalSettlement.NewMeasured(Parsed(DelayTicksModule.tryCreate(140000))), state));
+        state = Parsed(SignalAccountingModule.prepare(peer, state)).Item2;
+        prepared = Parsed(SignalAccountingModule.prepare(selected.Item1, state));
+        var selectedRequest = prepared.Item1?.Value ?? throw new InvalidOperationException("Synthetic peer overshoot did not create selected debt.");
+        Require(SignalDelayRequestModule.nanoseconds(selectedRequest) == 30000,
+            "Synthetic peer overshoot must establish selected debt.");
+        return (selectedRequest, prepared.Item2);
     }
 
     private static T Parsed<T>(FSharpResult<T, string> value) => value.IsOk ? value.ResultValue : throw new InvalidDataException(value.ErrorValue);

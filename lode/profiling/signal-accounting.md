@@ -35,6 +35,7 @@ let request, state = SignalAccounting.prepare peer state |> Result.defaultWith f
 It requires a reserved request and rejects duplicate submission.
 `sent` can later bind that submitted request to the acknowledged native sequence.
 The request identity supplies the native command correlation token.
+`isAwaitingSequence` lets the [selected service adapter](service-selected-adapter.md) reject stale reserved or bound states before interpreting a snapshot.
 `complete` requires both the request token and its bound sequence.
 Duplicate, foreign, stale, and mismatched acknowledgments fail without a state transition.
 `rejectedBeforeSend` releases a reservation with zero settlement only before submission or sequence binding.

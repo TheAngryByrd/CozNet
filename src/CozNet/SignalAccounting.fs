@@ -266,6 +266,10 @@ module internal SignalAccounting =
             | SignalSubmission.Sequenced _ -> Error "The signal request was already submitted."
         )
 
+    let isAwaitingSequence request state =
+        findPending request state
+        |> Result.map (fun pending -> pending.Submission = SignalSubmission.Submitted)
+
     let private settle request actual state =
         DelayLedger.completeDelay request.Thread actual state.Ledger
         |> Result.map (fun ledger -> {

@@ -1,5 +1,6 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/service-interop'), [switch]$SnapshotCostOnly)
+param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/service-interop'), [switch]$SnapshotCostOnly, [switch]$SelectedOnly)
 $ErrorActionPreference = 'Stop'
+if ($SnapshotCostOnly -and $SelectedOnly) { throw 'Select snapshot costs or selected interop, not both.' }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 $native = Join-Path $run 'native'
@@ -18,6 +19,8 @@ $sources = @('native/service/ServiceApi.h', 'native/service/ServiceApi.Linux.cpp
     'tests/CozNet.LinuxPerf/ServiceReceiptTimingChecks.cs', 'tests/CozNet.LinuxPerf/ServiceInteropChecks.cs',
     'tests/CozNet.LinuxPerf/ServiceAccountingAdapter.cs', 'tests/CozNet.LinuxPerf/ServiceAccountingAdapterChecks.cs',
     'tests/CozNet.LinuxPerf/ServiceSnapshotCosts.cs',
+    'tests/CozNet.LinuxPerf/ServiceSelectedAdapter.cs', 'tests/CozNet.LinuxPerf/ServiceSelectedAdapterChecks.cs',
+    'src/CozNet/SignalAccounting.fs', 'src/CozNet/SignalService.fs',
     'tests/CozNet.LinuxPerf/Program.cs', 'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/VerifyServiceInterop.ps1')
 $hashes = @{}
 foreach ($source in $sources) { $hashes[$source] = (Get-FileHash -LiteralPath (Join-Path $root $source) -Algorithm SHA256).Hash }
@@ -50,6 +53,8 @@ $outcomes.Add(@{ name = 'accounting-adapter'; exitCode = $LASTEXITCODE; recordEx
 foreach ($mode in $(if ($SnapshotCostOnly) { @('snapshot-cost') } else { @('receipt', 'late') })) {
     if ($SnapshotCostOnly) {
         & docker @runtime --service-snapshot-cost "/output/$mode.json" *> (Join-Path $run "$mode.log")
+    } elseif ($SelectedOnly) {
+        & docker @runtime --verify-selected-service-interop "/output/$mode.json" $mode *> (Join-Path $run "$mode.log")
     } else {
         & docker @runtime --verify-service-interop "/output/$mode.json" $mode *> (Join-Path $run "$mode.log")
     }

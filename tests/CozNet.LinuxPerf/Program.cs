@@ -10,9 +10,21 @@ if (args is ["--service-accounting-cost", var serviceCostPath])
 if (args is ["--service-snapshot-cost", var snapshotCostPath])
     return ServiceInteropChecks.Run(snapshotCostPath, false, true);
 
+if (args is ["--verify-selected-service-interop", var selectedServicePath, var selectedReceiptMode])
+{
+    bool delayed = selectedReceiptMode switch
+    {
+        "receipt" => false,
+        "late" => true,
+        _ => throw new ArgumentException("Select receipt or late for selected service interop.")
+    };
+    return ServiceInteropChecks.Run(selectedServicePath, delayed, selectedService: true);
+}
+
 if (args is ["--verify-service-accounting"])
 {
     ServiceAccountingAdapterChecks.Run();
+    ServiceSelectedAdapterChecks.Run();
     return 0;
 }
 

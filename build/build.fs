@@ -468,8 +468,10 @@ let linuxSignalServiceVerify _ =
         "-LinuxSignal"
     ]
 
-let linuxServiceInteropVerify _ =
-    nativeScript "VerifyServiceInterop.ps1"
+let linuxServiceInteropVerify _ = nativeScript "VerifyServiceInterop.ps1"
+
+let linuxSelectedServiceInteropVerify _ =
+    nativeScriptWithArgs "VerifyServiceInterop.ps1" [ "-SelectedOnly" ]
 
 let linuxServiceSnapshotCost _ =
     nativeScriptWithArgs "VerifyServiceInterop.ps1" [ "-SnapshotCostOnly" ]
@@ -482,21 +484,37 @@ let serviceAccountingVerify _ =
     ]
     |> Proc.run
     |> fun result ->
-        if result.ExitCode <> 0 then
+        if
+            result.ExitCode
+            <> 0
+        then
             failwith "Service accounting checks failed."
 
 let serviceAccountingCost _ =
-    let directory = rootDirectory </> "artifacts/service-accounting-cost"
-    System.IO.Directory.CreateDirectory directory |> ignore
-    let output = directory </> (System.DateTime.UtcNow.ToString("yyyyMMddTHHmmssfff") + ".json")
+    let directory =
+        rootDirectory
+        </> "artifacts/service-accounting-cost"
+
+    System.IO.Directory.CreateDirectory directory
+    |> ignore
+
+    let output =
+        directory
+        </> (System.DateTime.UtcNow.ToString("yyyyMMddTHHmmssfff")
+             + ".json")
+
     CreateProcess.fromRawCommand "dotnet" [
-        rootDirectory </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
+        rootDirectory
+        </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
         "--service-accounting-cost"
         output
     ]
     |> Proc.run
     |> fun result ->
-        if result.ExitCode <> 0 then
+        if
+            result.ExitCode
+            <> 0
+        then
             failwithf "Service accounting cost workload failed. Retain %s." output
 
 let nativeWorkload _ =
@@ -566,16 +584,35 @@ let linuxOverheadVerify _ = nativeScript "VerifyLinuxOverhead.ps1"
 let linuxSignalBuild _ = nativeScript "BuildLinuxSignal.ps1"
 
 let linuxSignalVerify _ = nativeScript "VerifyLinuxSignal.ps1"
-let linuxSignalWaitCompare _ = nativeScript "CompareLinuxSignalWaits.ps1"
-let linuxSpinReliabilityVerify _ = nativeScript "VerifyLinuxSpinReliability.ps1"
-let linuxRuntimeTraceCollect _ = nativeScript "CollectLinuxRuntimeTraces.ps1"
-let linuxTargetCpuCollect _ = nativeScript "CollectLinuxTargetCpu.ps1"
-let linuxTargetCpuMeasure _ = nativeScript "MeasureLinuxTargetCpu.ps1"
-let linuxAbortTraceVerify _ = nativeScript "VerifyLinuxAbortTraces.ps1"
+
+let linuxSignalWaitCompare _ =
+    nativeScript "CompareLinuxSignalWaits.ps1"
+
+let linuxSpinReliabilityVerify _ =
+    nativeScript "VerifyLinuxSpinReliability.ps1"
+
+let linuxRuntimeTraceCollect _ =
+    nativeScript "CollectLinuxRuntimeTraces.ps1"
+
+let linuxTargetCpuCollect _ =
+    nativeScript "CollectLinuxTargetCpu.ps1"
+
+let linuxTargetCpuMeasure _ =
+    nativeScript "MeasureLinuxTargetCpu.ps1"
+
+let linuxAbortTraceVerify _ =
+    nativeScript "VerifyLinuxAbortTraces.ps1"
+
 let linuxSchedulerVerify _ = nativeScript "VerifyLinuxScheduler.ps1"
-let linuxSchedulerCollect _ = nativeScript "CollectLinuxScheduler.ps1"
-let linuxSchedulerCost _ = nativeScript "MeasureLinuxSchedulerCost.ps1"
-let linuxSchedulerTraceCollect _ = nativeScript "CollectLinuxSchedulerTraces.ps1"
+
+let linuxSchedulerCollect _ =
+    nativeScript "CollectLinuxScheduler.ps1"
+
+let linuxSchedulerCost _ =
+    nativeScript "MeasureLinuxSchedulerCost.ps1"
+
+let linuxSchedulerTraceCollect _ =
+    nativeScript "CollectLinuxSchedulerTraces.ps1"
 
 let linuxSignalTransitionsVerify _ =
     nativeScript "VerifyLinuxSignalTransitions.ps1"
@@ -937,6 +974,7 @@ let initTargets () =
     Target.create "LinuxServiceOwnerVerify" (serviceOwnerVerify "LinuxContainer")
     Target.create "LinuxSignalServiceVerify" linuxSignalServiceVerify
     Target.create "LinuxServiceInteropVerify" linuxServiceInteropVerify
+    Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
     Target.create "ServiceAccountingCost" serviceAccountingCost
@@ -1008,6 +1046,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxServiceInteropVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxSelectedServiceInteropVerify"
     |> ignore
 
     "LinuxPerfWorkload"

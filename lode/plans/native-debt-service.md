@@ -39,7 +39,8 @@ Debt above the existing 2 ms gate remains a capacity failure. It does not author
 Selected service retains one bounded request per qualified sample batch.
 `SignalAccounting.submitted` retains the selected reservation before the native service exposes its request sequence.
 The controller must validate the native command identity and child before binding that sequence and completing the request.
-It must preserve selected sampling exclusion throughout this interval.
+The [selected adapter](../profiling/service-selected-adapter.md) implements that validation and immutable settlement boundary.
+The controller must preserve selected sampling exclusion throughout this interval.
 The native owner transports that selected request without extending its sampling exclusion across several waits.
 
 The native service thread owns install, request, acknowledgment read, and restore operations.

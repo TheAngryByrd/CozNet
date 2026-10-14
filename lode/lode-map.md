@@ -17,6 +17,7 @@ For the portable native coordinator and shutdown contract, read [native service 
 For the Linux signal adapter and target lifetime, read [Linux service transport](profiling/linux-service-transport.md).
 For the C ABI and first managed receipt bounds, read [service interop](profiling/service-interop.md).
 For native journal settlement in the managed ledger, read [the service accounting adapter](profiling/service-accounting-adapter.md).
+For single-child selected request settlement, read [the selected service adapter](profiling/service-selected-adapter.md).
 For fixed journal allocation and copy measurements, read [service accounting costs](profiling/service-accounting-cost.md).
 For the combined native snapshot and managed receipt-cache path, read [snapshot costs](profiling/service-snapshot-cost.md).
 For the live sampled signal controller and capacity limit, read [sampled signals](profiling/sampled-signals.md).

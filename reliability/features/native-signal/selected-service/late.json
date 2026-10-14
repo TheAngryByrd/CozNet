@@ -1,0 +1,60 @@
+{
+  "expectedReceiptRejection": true,
+  "selectedService": true,
+  "slot": 0,
+  "receiptRejected": true,
+  "joined": true,
+  "closed": true,
+  "failure": null,
+  "observation": {
+    "Header": {
+      "IdentityFirst": 4849968660801886224,
+      "IdentitySecond": 9647520658896071829,
+      "Command": 1,
+      "Budget": 30000,
+      "Measured": 0,
+      "Phase": 2,
+      "Error": 0,
+      "TransportError": 0,
+      "Cancellation": 0,
+      "Outstanding": 0,
+      "Children": 1,
+      "Rejected": 0,
+      "Captured": 341806510413465
+    },
+    "Children": [
+      {
+        "Native": {
+          "Ordinal": 1,
+          "Requested": 30000,
+          "Acknowledgment": {
+            "Sequence": 1,
+            "Outcome": 1,
+            "Ip": 140185315044721,
+            "Handler": 286,
+            "Wait": 0,
+            "WaitResult": 0,
+            "Started": 341806359237944,
+            "Queued": 341806359264675,
+            "HandlerStarted": 341806359337332,
+            "HandlerFinished": 341806359337618,
+            "Observed": 341806359337994
+          }
+        },
+        "FirstSnapshotCaptured": 341806510413465,
+        "FirstManagedReceiptUpper": 341806510473707,
+        "ClockStatus": 0
+      }
+    ],
+    "Rejected": []
+  },
+  "accountingRejected": true,
+  "accountingSettled": false,
+  "accountingPending": 1,
+  "measureSnapshotCost": false,
+  "snapshotCosts": [],
+  "stopwatchFrequency": 1000000000,
+  "managedReceiptBoundNanoseconds": 100000000,
+  "generalClrSafetyEstablished": false,
+  "predictionAccuracyEstablished": false
+}
