@@ -305,23 +305,50 @@ module internal SignalAccounting =
                 settle request actual state
         )
 
-    let prepareService thread state =
+    let private prepareServiceCore sampled thread state =
         find thread state
         |> Result.bind (fun entry ->
-            if entry.Samples.IsSome then
+            if
+                entry.Samples.IsSome
+                && not sampled
+            then
                 Error "Only an unsampled peer can reserve a service lease."
+            elif
+                sampled
+                && entry.Samples.IsNone
+            then
+                Error "Only a sampled thread can reserve a selected service lease."
             else
                 DelayLedger.catchUp thread state.Ledger
                 |> Result.bind (fun (action, ledger) ->
                     match action with
                     | DelayAction.Continue -> Ok(None, { state with Ledger = ledger })
                     | DelayAction.Wait debt ->
-                        SignalServiceLease.tryCreate thread (DelayTicks.value debt)
+                        (if
+                             sampled
+                             && entry.RequiredEpoch = UInt64.MaxValue
+                         then
+                             Error "The signal eligibility epoch cannot advance."
+                         else
+                             SignalServiceLease.tryCreate thread (DelayTicks.value debt))
                         |> Result.map (fun lease ->
                             Some lease,
                             {
                                 state with
                                     Ledger = ledger
+                                    Threads =
+                                        if sampled then
+                                            Map.add
+                                                thread
+                                                {
+                                                    entry with
+                                                        RequiredEpoch =
+                                                            entry.RequiredEpoch
+                                                            + 1UL
+                                                }
+                                                state.Threads
+                                        else
+                                            state.Threads
                                     Services =
                                         Map.add
                                             thread
@@ -338,6 +365,10 @@ module internal SignalAccounting =
                         )
                 )
         )
+
+    let prepareService thread state = prepareServiceCore false thread state
+
+    let prepareSelectedService thread state = prepareServiceCore true thread state
 
     let private findService lease state =
         match Map.tryFind (SignalServiceLease.thread lease) state.Services with

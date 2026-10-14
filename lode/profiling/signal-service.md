@@ -17,6 +17,13 @@ Each lease carries a new identity and the ledger's registration handle.
 The ledger remains delaying until the journal terminates and aggregate completion succeeds.
 Individual requests and retirement therefore fail while service owns the peer.
 
+`prepareSelectedService` reserves the same bounded snapshot debt for a sampled thread.
+It advances the required eligibility epoch only when it reserves a lease.
+Stale samples fail after settlement. The first fresh-epoch sample establishes a baseline without credit.
+Samples cannot credit a worker while its service lease owns the delaying state.
+The selected path shares journal, cancellation, deferral, and overshoot rules with peer service.
+The [managed timer workload](timer-managed.md) uses this path for selected-side debt recovery.
+
 `sentService` binds submission once.
 `rejectedServiceBeforeSend` releases an unsubmitted reservation with zero settlement.
 It rejects submitted leases because submission can have delivered work.

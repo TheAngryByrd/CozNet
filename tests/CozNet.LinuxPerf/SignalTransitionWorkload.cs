@@ -191,7 +191,7 @@ static class SignalTransitionWorkload
         }, new JsonSerializerOptions { WriteIndented = true }));
         return failures.Count == 0 ? 0 : 1;
     }
-    private static void CompileAndRun()
+    internal static void CompileAndRun()
     {
         var method = new DynamicMethod("SignalJit", typeof(int), [typeof(int)]);
         var il = method.GetILGenerator();

@@ -21,6 +21,12 @@ It is not a timestamp or CPU sample identity.
 Each registered target requires its own ledger thread.
 A new registration requires a new ledger thread.
 
+`SignalAccounting.prepareSelectedService` reserves up to 2 ms of debt for a sampled thread.
+It advances the sample eligibility epoch when it creates a lease.
+Samples cannot credit the delaying thread before settlement.
+The first sample in the new epoch establishes a baseline without adding credit.
+Selected leases use the same journal and settlement rules as peer leases.
+
 ## Accepted prefixes
 
 `TimerAccountingAdapter.Accept` returns a new adapter and accounting state.

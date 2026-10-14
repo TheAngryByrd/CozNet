@@ -16,6 +16,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check target-local timer reuse](How_Tos/run-target-lease-reuse.md).
 - [Verify timer interop](How_Tos/verify-timer-interop.md).
 - [Check timer payment during managed execution](How_Tos/run-managed-timer-payment.md).
+- [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
 
@@ -24,6 +25,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Target-local lease contract](Reference/target-local-lease.md): portable states, bounded children, and retirement ownership.
 - [Target-local timer interop](Reference/timer-interop.md): C ABI, managed receipt bounds, and cleanup ownership.
 - [Timer journal accounting](Reference/timer-accounting.md): ledger binding, accepted prefixes, and exact-once settlement.
+- [Timer transition workload](Reference/timer-transitions.md): scenario reach, records, bounds, and scope.
 
 ## Explanation
 

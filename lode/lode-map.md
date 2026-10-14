@@ -10,6 +10,7 @@ For repeated native timer generations, read [the reuse procedure](../docsSrc/How
 For the timer C ABI and first managed receipt, read [timer interop](profiling/timer-interop.md).
 For timer journal settlement, read [timer accounting](profiling/timer-accounting.md).
 For paid timer waits during managed arithmetic, read [the managed timer workload](profiling/timer-managed.md).
+For timer runtime transitions and the selected-debt limitation, read [the retained matrix](../reliability/features/native-signal/timer-transitions.md).
 Read [summary.md](summary.md), [terminology.md](terminology.md), and [practices.md](practices.md) at session start.
 For profiling changes, read [the serial engine](profiling/summary.md).
 For sampled experiment accounting, read [the delay ledger](profiling/delay-ledger.md).

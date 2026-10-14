@@ -22,10 +22,13 @@ You need the repository SDK, PowerShell, a Linux Docker engine, and these local 
 9. Check that `ProgressAfter` exceeds `ProgressBefore` for every submitted command.
 10. Check `pendingAccounting` is zero.
 
-The workload uses 16 fixed synthetic-credit steps and one target registration.
+The workload uses 16 fixed synthetic-credit steps and two target registrations.
+The second arithmetic target pays selected-side debt caused by peer overshoot.
+Check `selectedJoined` and `selectedReleased` are `true`.
+Check `selectedPayments` contains a positive confirmed wait and inspect its final child journals.
 Each step adds 110,000 ns of selected credit.
 If earlier wait overshoot covers the new credit, the workload records a skipped step instead of submitting another lease.
-For an independent budget check, add each step's credit and subtract each submitted command's confirmed wait.
+For an independent budget check, add each step's credit and all earlier selected payments, then subtract earlier peer payments.
 Each submitted budget must equal the positive balance before its wait.
 
 The runner disables tiering, ReadyToRun, and startup profiling.

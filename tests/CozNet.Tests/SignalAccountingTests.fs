@@ -96,6 +96,209 @@ module SignalAccountingTests =
     [<Tests>]
     let tests =
         testList "Signal accounting" [
+            testCase "Selected service pays peer overshoot and excludes stale samples"
+            <| fun _ ->
+                let selected, peer, state = credited 100000UL
+                let lease, state = service peer state
+
+                let state =
+                    SignalAccounting.sentService lease state
+                    |> parsed
+                    |> accept lease 1L 1UL 50000L 70000L 2
+
+                let _, state =
+                    SignalAccounting.completeService lease state
+                    |> parsed
+
+                let _, state =
+                    SignalAccounting.prepareService peer state
+                    |> parsed
+
+                let selectedLease, reserved =
+                    SignalAccounting.prepareSelectedService selected state
+                    |> parsed
+
+                let selectedLease = Option.get selectedLease
+
+                Expect.equal
+                    (SignalServiceLease.nanoseconds selectedLease)
+                    20000L
+                    "The selected worker owes the full peer overshoot."
+
+                Expect.equal
+                    (SignalAccounting.requiredEpoch selected reserved
+                     |> parsed)
+                    1UL
+                    "Reservation excludes the old sampling epoch."
+
+                Expect.isError
+                    (observe selected 2UL 120000UL 0UL reserved)
+                    "Old samples cannot credit a pending payment."
+
+                Expect.isError
+                    (observe selected 2UL 120000UL 1UL reserved)
+                    "Even fresh samples cannot credit a delaying worker."
+
+                Expect.isError
+                    (SignalAccounting.prepareSelectedService selected reserved)
+                    "A reservation cannot be replaced."
+
+                let settled =
+                    SignalAccounting.sentService selectedLease reserved
+                    |> parsed
+                    |> accept selectedLease 1L 1UL 20000L 21000L 2
+
+                let measured, settled =
+                    SignalAccounting.completeService selectedLease settled
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value measured)
+                    21000L
+                    "Settlement retains selected overshoot."
+
+                Expect.equal
+                    (SignalAccounting.globalNanoseconds settled)
+                    70000L
+                    "Settlement does not publish overshoot early."
+
+                let next, settled =
+                    SignalAccounting.prepareSelectedService selected settled
+                    |> parsed
+
+                Expect.isNone next "The selected worker has paid its debt."
+
+                Expect.equal
+                    (SignalAccounting.globalNanoseconds settled)
+                    71000L
+                    "Selected catch-up publishes actual wait."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount settled)
+                    0
+                    "The selected reservation settles exactly once."
+
+                Expect.isError
+                    (SignalAccounting.completeService selectedLease settled)
+                    "Repeated settlement must fail."
+
+                Expect.isError
+                    (observe selected 2UL 120000UL 0UL settled)
+                    "Stale samples remain invalid after settlement."
+
+                let baseline, settled =
+                    observe selected 2UL 120000UL 1UL settled
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value baseline)
+                    0L
+                    "The fresh epoch establishes a baseline."
+
+                let credit, _ =
+                    observe selected 3UL 140000UL 1UL settled
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value credit)
+                    10000L
+                    "Only CPU after the new baseline earns credit."
+
+            testCase "Selected service deferral and rejection preserve unpaid debt"
+            <| fun _ ->
+                let selected, peer, state = credited 100000UL
+                let request, state = required peer state
+
+                let state =
+                    sent request 1UL state
+                    |> complete request 1UL 70000L
+
+                let _, state = prepare peer state
+
+                let lease, state =
+                    SignalAccounting.prepareSelectedService selected state
+                    |> parsed
+
+                let lease = Option.get lease
+
+                let rejected =
+                    SignalAccounting.rejectedServiceBeforeSend lease state
+                    |> parsed
+
+                let retry, state =
+                    SignalAccounting.prepareSelectedService selected rejected
+                    |> parsed
+
+                let retry = Option.get retry
+
+                Expect.equal
+                    (SignalServiceLease.nanoseconds retry)
+                    20000L
+                    "Rejected delivery does not forgive debt."
+
+                let state =
+                    SignalAccounting.sentService retry state
+                    |> parsed
+                    |> accept retry 1L 1UL 20000L 0L 1
+
+                let measured, state =
+                    SignalAccounting.completeService retry state
+                    |> parsed
+
+                Expect.equal (DelayTicks.value measured) 0L "Deferral cannot credit a wait."
+
+                let retry, state =
+                    SignalAccounting.prepareSelectedService selected state
+                    |> parsed
+
+                Expect.equal
+                    (SignalServiceLease.nanoseconds (Option.get retry))
+                    20000L
+                    "Deferral preserves the full debt."
+
+                Expect.equal
+                    (SignalAccounting.requiredEpoch selected state
+                     |> parsed)
+                    3UL
+                    "Every reservation advances the epoch."
+
+            testCase "Selected service preserves role and debt bounds"
+            <| fun _ ->
+                let selected, peer, state = credited 100000UL
+
+                Expect.isError
+                    (SignalAccounting.prepareSelectedService peer state)
+                    "An unsampled peer cannot use the selected path."
+
+                let none, unchanged =
+                    SignalAccounting.prepareSelectedService selected state
+                    |> parsed
+
+                Expect.isNone none "A settled selected worker needs no lease."
+
+                Expect.equal
+                    (SignalAccounting.requiredEpoch selected unchanged
+                     |> parsed)
+                    0UL
+                    "No payment leaves the epoch unchanged."
+
+                let request, state = required peer state
+
+                let state =
+                    sent request 1UL state
+                    |> complete request 1UL 2050001L
+
+                let _, state = prepare peer state
+
+                Expect.isError
+                    (SignalAccounting.prepareSelectedService selected state)
+                    "Selected debt above 2 ms must fail instead of being clipped."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount state)
+                    0
+                    "An invalid budget cannot partially reserve the selected worker."
+
             testCase "Submitted selected request retains ownership until sequence binding"
             <| fun _ ->
                 let selected, peer, state = credited 80000UL
@@ -1264,6 +1467,10 @@ module SignalAccountingTests =
                 Expect.isError
                     (SignalAccounting.prepare selected state)
                     "A selected wait needs a fresh eligibility epoch."
+
+                Expect.isError
+                    (SignalAccounting.prepareSelectedService selected state)
+                    "A selected service also needs a fresh eligibility epoch."
 
                 Expect.equal
                     (SignalAccounting.pendingCount state)

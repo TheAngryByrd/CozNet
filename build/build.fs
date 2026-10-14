@@ -525,18 +525,30 @@ let linuxTimerApi _ = nativeScript "VerifyTimerApi.ps1"
 
 let linuxTimerInterop _ = nativeScript "VerifyTimerInterop.ps1"
 
-let linuxTimerManaged _ = nativeScriptWithArgs "VerifyTimerInterop.ps1" [ "-ManagedWorkload" ]
+let linuxTimerManaged _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [ "-ManagedWorkload" ]
 
-let linuxTimerManagedGc _ = nativeScriptWithArgs "VerifyTimerInterop.ps1" [ "-ManagedWorkload"; "-ForceGc" ]
+let linuxTimerManagedGc _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-ManagedWorkload"
+        "-ForceGc"
+    ]
+
+let linuxTimerTransitions _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [ "-TransitionMatrix" ]
 
 let timerLayoutVerify _ =
     CreateProcess.fromRawCommand "dotnet" [
-        rootDirectory </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
+        rootDirectory
+        </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
         "--verify-timer-layout"
     ]
     |> Proc.run
     |> fun result ->
-        if result.ExitCode <> 0 then
+        if
+            result.ExitCode
+            <> 0
+        then
             failwith "Timer layout and receipt checks failed."
 
 let linuxTargetLeaseDrainFailure _ =
@@ -1067,6 +1079,7 @@ let initTargets () =
     Target.create "LinuxTimerInterop" linuxTimerInterop
     Target.create "LinuxTimerManaged" linuxTimerManaged
     Target.create "LinuxTimerManagedGc" linuxTimerManagedGc
+    Target.create "LinuxTimerTransitions" linuxTimerTransitions
     Target.create "TimerLayoutVerify" timerLayoutVerify
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
@@ -1152,6 +1165,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxTimerManagedGc"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxTimerTransitions"
     |> ignore
 
     "LinuxPerfWorkload"

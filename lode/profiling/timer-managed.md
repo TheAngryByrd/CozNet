@@ -8,7 +8,8 @@ The workload preserves the exact initial and final perf-map bytes and requires t
 dotnet run --project build/build.fsproj -- -t LinuxTimerManaged
 ```
 
-One target registration runs the arithmetic method and checks every result against 49,995,000.
+Two target registrations run the arithmetic method and check every result against 49,995,000.
+The selected target pays overshoot debt. The peer target runs the chosen scenario.
 The controller uses one selected ledger thread and one peer ledger thread across 16 fixed synthetic-credit steps.
 Each step publishes 110,000 ns of credit. Existing overshoot can eliminate a new lease, which is recorded as a skipped step.
 Otherwise the controller submits the reserved debt, consumes immutable prefixes, settles once, and releases the retired result.
@@ -32,7 +33,25 @@ Requested child wait stays at most 50,000 ns, handler interval at most 5 ms, fir
 Raw snapshots survive accounting failure. Failed retirement keeps the target alive and prevents close.
 The [retained run](../../reliability/features/native-signal/timer-managed.md) passes with 15 reused generations and 42 paid children.
 Independent debt arithmetic explains its skipped credit step through preserved overshoot.
-Runtime-transition coverage, sampled capacity, and prediction accuracy remain unverified.
+The transition matrix extends this harness through `TimerWorkloadPlan` and `ISignalTransitionOperations`.
+Its four scenarios use 128 steps with 5,000 ns of selected credit per step and run with and without GC.
+JIT and wait scenarios require deferred journals with zero wait.
+The transition scenario requires both paid selected code and an interrupted native fixture address.
+The runner retains every outcome under `artifacts/timer-transitions/`.
+See [the transition reference](../../docsSrc/Reference/timer-transitions.md) for reach and cleanup contracts.
+General CLR safety, sampled capacity, and prediction accuracy remain unverified.
+The [retained transition matrix](../../reliability/features/native-signal/timer-transitions.md) passes seven cases.
+Its forced-GC transition case fails when peer overshoot exceeds the next synthetic selected credit.
+The retained failure came from a harness that rejected selected-side payment.
+`TimerSelectedWorker` now owns a second arithmetic target and pays selected debt through bounded timer leases.
+Its journals and unfinished snapshots remain separate from peer records.
+Both targets must join before native close. Failed retirement retains ownership.
+Each synthetic-credit step establishes the current epoch baseline before adding its CPU increment.
+After each completed peer lease, peer catch-up publishes overshoot and selected service pays it before the next credit step.
+Paid scenarios require a positive selected payment, so an unused recovery path cannot satisfy the live gate.
+The revised matrix passes all eight cases, including 52 selected payments without GC and 68 with GC in the transition scenarios.
+Arithmetic regressions pass with 16 selected payments in each mode.
+The separate selected worker changes CPU demand. These runs do not provide a controlled timing comparison with the single-target fixture.
 
 `LinuxTimerManagedGc` selects the same workload with `gc` mode.
 It starts the existing `SampledGcStress` worker and releases it only after the first accepted native submission.

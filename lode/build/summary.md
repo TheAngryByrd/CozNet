@@ -147,6 +147,8 @@ It compares yield and poll-64 at zero and 50 percent, retains every case, and fa
 See [owner polling](../profiling/owner-polling.md).
 
 `LinuxTargetLeaseDelivery` builds the isolated Linux x64 timer fixture and retains chain, snapshot-chain, pending-retirement, and cancel-rearm cases.
+`LinuxTimerTransitions` builds the timer and transition fixture and runs four scenarios with and without GC.
+It retains all eight outcomes before reporting failure. See [timer transitions](../../docsSrc/Reference/timer-transitions.md).
 It uses the native compiler image and does not run .NET application workloads.
 `LinuxTargetLeaseReuse` runs portable mailbox and lease checks, then retains one native 16-generation timer reuse case.
 `LinuxTargetLeaseCancellation` uses the same runner with `-Mode cancel-before-delivery` and alternates cancelled and normal generations.
