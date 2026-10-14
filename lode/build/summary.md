@@ -50,6 +50,9 @@ Evidence remains under `artifacts/linux-signal-transitions/`.
 `LinuxSampledSignalsVerify` connects selected CPU samples to bounded signal requests at zero and 50 percent.
 It retains raw samples, acknowledgments, and boundary snapshots under `artifacts/linux-sampled-signals/`.
 Its observed debt limit is 2 ms per thread in a two-second window. Capacity failures fail the target after evidence is written.
+`LinuxSampleCadenceVerify` checks selected debt after qualified samples while continuing peer service.
+`LinuxWarmSampleCadenceVerify` adds 250 ms of warmup and resets accounting before the measurement window.
+Both targets also execute the five portable cadence checks in the Linux workload.
 `LinuxInjectedVerify` builds the native profiler and compares manual and injected probes with the same wait backend.
 It retains unique evidence directories under `artifacts/linux-injected/` and reports the zero-speedup cost ratio.
 `LinuxCountdownVerify` uses the same native build and Linux workload chain.

@@ -16,6 +16,21 @@ Each process measures two arithmetic workers for two seconds.
 Only one worker supplies CPU samples.
 The controller continuously drains events and services both signal slots.
 It records raw samples, requests, acknowledgments, periodic boundaries, and controller CPU time.
+`continuous` preserves the original selected-thread check on each controller iteration.
+`qualified-sample` checks the selected thread once after a drained batch contains a complete interval in the current eligibility epoch.
+The first sample after an epoch change cannot trigger another selected pause.
+Qualified zero-credit intervals still permit checks. Zero-percent runs use the same rule.
+The peer continues bounded debt settlement independently.
+
+`LinuxSampleCadenceVerify` runs the sample-cadence mode without warmup.
+`LinuxWarmSampleCadenceVerify` adds a 250 ms warmup to both percentages.
+It runs three fixed blocks in zero-then-50-percent order and retains every outcome.
+Warmup uses the same registered native targets and the same controller paths.
+After warmup, the controller disables sampling, drains requests, and retires the warmup ledger handles.
+It creates a fresh ledger and sample stream while the native targets remain registered.
+The first measurement sample establishes a fresh epoch baseline because perf enable does not reset the remaining sample period.
+Raw records label warmup, warmup settlement, measurement, and final settlement separately.
+Measurement batch counters subtract their warmup baselines.
 
 Before a selected-thread request, the controller disables sampling and discards records that remain after reservation.
 It resumes sampling only after the matching acknowledgment.
@@ -30,9 +45,15 @@ The controller checks debt after each service iteration and at the measurement b
 This is an observed capacity limit, not a continuous bound or an accuracy proof.
 The first run fails this limit despite completing its protocol checks.
 The selected worker repeatedly pays overshoot and pauses sampling.
-The largest peer backlog occurs during startup. Controller warmup remains incomplete.
-Investigate startup cost, wait overshoot, and sampling exclusions before prediction tests.
+The cold sample-cadence run recovers most sample credit but still fails the startup debt limit.
+The first warm sample-cadence run fails the handler-duration limit after startup backlog is removed from its early snapshots.
+The three-block warm comparison passes all protocol checks and all zero-percent capacity checks.
+One 50-percent case passes capacity. The other two exceed the unchanged 2 ms observed debt limit.
+Their peak peer debts are 0.933666, 2.020031, and 2.748001 ms.
+These mixed results do not establish stable capacity or prediction accuracy.
+Investigate native wait overshoot and service stability before prediction tests.
 See [the retained failed runs](../../reliability/features/native-signal/sampled.md).
+See [the primary-source cadence comparison](../../docsSrc/Research/signal-sample-cadence.md).
 
 The measurement boundary precedes sampler shutdown and diagnostic settlement.
 Final settlement retires the selected ledger handle first, then its peer.

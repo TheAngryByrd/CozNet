@@ -27,6 +27,10 @@ The [signal accounting model](../profiling/signal-accounting.md) supplies bounde
 The [live sampled signal controller](../profiling/sampled-signals.md) connects CPU events to bounded requests.
 Its first run generates causal credit and completes protocol checks, but fails the observed unpaid-debt limit.
 Investigate overshoot settlement and sampling exclusions before adding physical-prediction checks.
+Sample-driven selected checks recover credit in the cold experiment but retain its startup debt failure.
+The first 250 ms warmup experiment fails the handler-duration bound. Keep this failure and investigate wait overshoot.
+The three-block warm comparison passes all protocol checks but fails capacity in two of three 50-percent cases.
+Measure wait overshoot, service gaps, and debt age before selecting another intervention actuator.
 The original signal and transition experiments generate no causal credits.
 See [component overhead](../../reliability/features/linux-perf/component-overhead.md) and [signal research](../../docsSrc/Research/native-signal-intervention.md).
 See [attribution sensitivity](../../reliability/features/linux-perf/attribution-sensitivity.md).

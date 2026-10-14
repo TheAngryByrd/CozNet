@@ -529,6 +529,22 @@ let linuxSignalTransitionsVerify _ =
 let linuxSampledSignalsVerify _ =
     nativeScript "VerifyLinuxSampledSignals.ps1"
 
+let linuxSampleCadenceVerify _ =
+    nativeScriptWithArgs "VerifyLinuxSampledSignals.ps1" [
+        "-Cadence"
+        "qualified-sample"
+    ]
+
+let linuxWarmSampleCadenceVerify _ =
+    nativeScriptWithArgs "VerifyLinuxSampledSignals.ps1" [
+        "-Cadence"
+        "qualified-sample"
+        "-Startup"
+        "warm"
+        "-Repetitions"
+        "3"
+    ]
+
 let windowsOverheadVerify _ =
     nativeScript "VerifyWindowsOverhead.ps1"
 
@@ -882,6 +898,8 @@ let initTargets () =
     Target.create "LinuxSignalVerify" linuxSignalVerify
     Target.create "LinuxSignalTransitionsVerify" linuxSignalTransitionsVerify
     Target.create "LinuxSampledSignalsVerify" linuxSampledSignalsVerify
+    Target.create "LinuxSampleCadenceVerify" linuxSampleCadenceVerify
+    Target.create "LinuxWarmSampleCadenceVerify" linuxWarmSampleCadenceVerify
     Target.create "WindowsOverheadWorkload" linuxPerfWorkload
     Target.create "WindowsOverheadVerify" windowsOverheadVerify
     Target.create "LinuxCountdownPredictionVerify" linuxCountdownPredictionVerify
@@ -977,6 +995,14 @@ let initTargets () =
 
     "LinuxSignalWorkload"
     ==> "LinuxSampledSignalsVerify"
+    |> ignore
+
+    "LinuxSignalWorkload"
+    ==> "LinuxSampleCadenceVerify"
+    |> ignore
+
+    "LinuxSignalWorkload"
+    ==> "LinuxWarmSampleCadenceVerify"
     |> ignore
 
     "NativeBuild"

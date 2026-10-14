@@ -4,8 +4,22 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-signal-cadence"])
+{
+    SelectedSignalCadenceChecks.Run();
+    return 0;
+}
+
 if (args is ["--sampled-signal", var sampledSignalPath, var sampledSignalPercent])
     return SampledSignalWorkload.Run(sampledSignalPath, SampledSignalPlan.Parse(sampledSignalPercent),
+        () => new LinuxSignalBackend(), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock());
+
+if (args is ["--sampled-signal", var sampledCadencePath, var sampledCadencePercent, var sampledCadence])
+    return SampledSignalWorkload.Run(sampledCadencePath, SampledSignalPlan.Parse(sampledCadencePercent, sampledCadence),
+        () => new LinuxSignalBackend(), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock());
+
+if (args is ["--sampled-signal", var sampledWarmPath, var sampledWarmPercent, var sampledWarmCadence, var sampledStartup])
+    return SampledSignalWorkload.Run(sampledWarmPath, SampledSignalPlan.Parse(sampledWarmPercent, sampledWarmCadence, sampledStartup),
         () => new LinuxSignalBackend(), sink => new LinuxCpuEventSession(sink), new LinuxThreadCpuClock());
 
 if (args is ["--verify-signal-targets"])

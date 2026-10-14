@@ -6,11 +6,25 @@ using Microsoft.FSharp.Core;
 sealed class SampledSignalPlan
 {
     public int Percent { get; }
-    private SampledSignalPlan(int percent) => Percent = percent;
-    public static SampledSignalPlan Parse(string value) => new(value switch
+    public SelectedSignalCadenceMode Cadence { get; }
+    public int WarmupMilliseconds { get; }
+    private SampledSignalPlan(int percent, SelectedSignalCadenceMode cadence, int warmup) =>
+        (Percent, Cadence, WarmupMilliseconds) = (percent, cadence, warmup);
+    public static SampledSignalPlan Parse(string value) => Parse(value, "continuous");
+    public static SampledSignalPlan Parse(string value, string cadence) => Parse(value, cadence, "cold");
+    public static SampledSignalPlan Parse(string value, string cadence, string startup) => new(value switch
     {
         "0" => 0, "50" => 50,
         _ => throw new ArgumentException("Select zero or 50 percent sampled signal speedup.")
+    }, cadence switch
+    {
+        "continuous" => SelectedSignalCadenceMode.Continuous,
+        "qualified-sample" => SelectedSignalCadenceMode.QualifiedSample,
+        _ => throw new ArgumentException("Select continuous or qualified-sample signal cadence.")
+    }, startup switch
+    {
+        "cold" => 0, "warm" => 250,
+        _ => throw new ArgumentException("Select cold or warm sampled signal startup.")
     });
 }
 
@@ -18,10 +32,13 @@ static class SampledSignalWorkload
 {
     private sealed record Pending(SignalDelayRequest Request, ulong Sequence, long Started);
     private sealed record RequestRecord(int Slot, ulong Sequence, long RequestedNanoseconds,
-        double AcknowledgmentMilliseconds, SignalAcknowledgment Result, bool DuringMeasurement);
-    private sealed record SampleRecord(CpuSample Sample, ulong Epoch, bool Accepted, long CreditNanoseconds);
-    private sealed record Boundary(double Milliseconds, long GlobalNanoseconds, long CreditNanoseconds,
+        double AcknowledgmentMilliseconds, SignalAcknowledgment Result, bool DuringMeasurement, string Stage);
+    private sealed record SampleRecord(CpuSample Sample, ulong Epoch, bool Accepted, long CreditNanoseconds,
+        double ConsumedMilliseconds, string Stage);
+    private sealed record Boundary(string Stage, double Milliseconds, long GlobalNanoseconds, long CreditNanoseconds,
         long[] WaitNanoseconds, long[] DebtNanoseconds, bool[] Registered, int Pending, long[] Batches);
+    private sealed record StageResult(Boundary Measurement, Boundary Settled, long ControllerCpuNanoseconds,
+        int SamplingPauses, long SelectedChecks, long[] MaxDebtNanoseconds);
     private sealed class Sink(Action<CpuSample> publish) : ICpuSampleSink
     {
         public void Publish(CpuSample sample) => publish(sample);
@@ -39,6 +56,7 @@ static class SampledSignalWorkload
         var boundaries = new List<Boundary>();
         var errors = new Exception?[2];
         long[] batches = new long[2], waits = new long[2], maxDebt = new long[2];
+        long[] batchBaseline = new long[2];
         Pending?[] pending = new Pending?[2];
         bool[] nativeOutstanding = new bool[2];
         bool[] registered = [true, true];
@@ -49,13 +67,18 @@ static class SampledSignalWorkload
         IBoundedInterventionBackend? backend = null;
         ICpuEventSession? session = null;
         Thread[] workers = [];
-        bool enabled = false, accept = false, measuring = false, joined = false, restored = false;
+        bool enabled = false, accept = false, measuring = false, runningStage = false, joined = false, restored = false;
+        string stage = "setup";
         ulong sequence = 0, represented = 0, epoch = 0;
         long credited = 0, controllerCpu = 0;
         int pauses = 0;
         SampleBatch? records = null;
-        Boundary? measurement = null, settled = null;
+        Boundary? measurement = null, settled = null, failureBoundary = null;
+        StageResult? warmup = null;
+        SampleBatch? measurementStartRecords = null;
         var timer = new Stopwatch();
+        var cadence = new SelectedSignalCadence(plan.Cadence);
+        long selectedChecks = 0;
         var state = SignalAccountingModule.create();
         var selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(plan.Percent), state));
         state = selected.Item2;
@@ -69,8 +92,9 @@ static class SampledSignalWorkload
             long global = SignalAccountingModule.globalNanoseconds(state);
             long[] debt = [registered[0] ? Math.Max(0, global - credited - waits[0]) : 0,
                 registered[1] ? Math.Max(0, global - waits[1]) : 0];
-            return new(timer.Elapsed.TotalMilliseconds, global, credited, (long[])waits.Clone(), debt,
-                (bool[])registered.Clone(), SignalAccountingModule.pendingCount(state), [Volatile.Read(ref batches[0]), Volatile.Read(ref batches[1])]);
+            return new(stage, timer.Elapsed.TotalMilliseconds, global, credited, (long[])waits.Clone(), debt,
+                (bool[])registered.Clone(), SignalAccountingModule.pendingCount(state),
+                [Volatile.Read(ref batches[0]) - batchBaseline[0], Volatile.Read(ref batches[1]) - batchBaseline[1]]);
         }
         void Publish(CpuSample sample)
         {
@@ -88,8 +112,9 @@ static class SampledSignalWorkload
                 amount = DelayTicksModule.value(transition.Item1);
                 state = transition.Item2;
                 credited = checked(credited + amount);
+                cadence.Observe(epoch);
             }
-            samples.Add(new(sample, epoch, accept, amount));
+            samples.Add(new(sample, epoch, accept, amount, timer.Elapsed.TotalMilliseconds, stage));
         }
         void Drain()
         {
@@ -109,7 +134,7 @@ static class SampledSignalWorkload
                 return;
             }
             nativeOutstanding[slot] = false;
-            requests.Add(new(slot, operation.Sequence, SignalDelayRequestModule.nanoseconds(operation.Request), elapsed, result, measuring));
+            requests.Add(new(slot, operation.Sequence, SignalDelayRequestModule.nanoseconds(operation.Request), elapsed, result, measuring, stage));
             if (elapsed > 100 || result.MeasuredHandlerNanoseconds > 5000000 || result.Outcome == 4
                 || result.Sequence != operation.Sequence || result.Outcome is < 1 or > 3
                 || (result.Outcome == 1 && result.WaitNanoseconds != 0)
@@ -120,7 +145,7 @@ static class SampledSignalWorkload
             state = Parsed(SignalAccountingModule.complete(operation.Request, operation.Sequence, settlement, state));
             waits[slot] = checked(waits[slot] + (long)result.WaitNanoseconds);
             pending[slot] = null;
-            if (slot == 0 && measuring)
+            if (slot == 0 && runningStage)
             {
                 session!.Enable();
                 enabled = true;
@@ -150,6 +175,69 @@ static class SampledSignalWorkload
             pending[slot] = new(request, nativeSequence, started);
             state = Parsed(SignalAccountingModule.sent(request, nativeSequence, state));
             return false;
+        }
+
+        Boundary RunStage(string name, int milliseconds)
+        {
+            stage = name;
+            measuring = name == "measurement";
+            accept = runningStage = true;
+            session!.Enable();
+            enabled = true;
+            long initialCpu = controllerClock.ReadNanoseconds();
+            timer.Restart();
+            start.Set();
+            double nextBoundary = 10;
+            while (timer.ElapsedMilliseconds < milliseconds)
+            {
+                Drain();
+                Complete(0);
+                Complete(1);
+                if (pending[0] is null && cadence.TryCheck())
+                {
+                    selectedChecks++;
+                    Prepare(0);
+                }
+                Prepare(1);
+                long global = SignalAccountingModule.globalNanoseconds(state);
+                maxDebt[0] = Math.Max(maxDebt[0], Math.Max(0, global - credited - waits[0]));
+                maxDebt[1] = Math.Max(maxDebt[1], Math.Max(0, global - waits[1]));
+                if (timer.Elapsed.TotalMilliseconds >= nextBoundary)
+                {
+                    var current = Snapshot();
+                    boundaries.Add(current);
+                    nextBoundary = current.Milliseconds + 10;
+                }
+            }
+            var boundary = Snapshot();
+            controllerCpu = controllerClock.ReadNanoseconds() - initialCpu;
+            measuring = accept = runningStage = false;
+            return boundary;
+        }
+
+        Boundary SettleStage(string name)
+        {
+            stage = name;
+            if (enabled) { session!.Disable(); enabled = false; }
+            Drain();
+            for (int slot = 0; slot < 2; slot++)
+            {
+                var deadline = Stopwatch.StartNew();
+                bool retired = false;
+                while (!retired && deadline.ElapsedMilliseconds < 1000)
+                {
+                    Complete(0);
+                    Complete(1);
+                    if (Prepare(slot))
+                    {
+                        state = Parsed(SignalAccountingModule.unregister(handles[slot], state));
+                        registered[slot] = false;
+                        retired = true;
+                    }
+                }
+                if (!retired) throw new TimeoutException("Diagnostic signal settlement exceeded one second.");
+            }
+            return Snapshot();
         }
 
         try
@@ -183,58 +271,40 @@ static class SampledSignalWorkload
             foreach (var worker in workers) worker.Start();
             if (!ready.Wait(TimeSpan.FromSeconds(5)) || errors.Any(error => error is not null))
                 throw new InvalidOperationException("The sampled signal workers failed to become ready.");
-            accept = measuring = true;
-            session!.Enable();
-            enabled = true;
-            controllerCpu = controllerClock.ReadNanoseconds();
-            timer.Start();
-            start.Set();
-            double nextBoundary = 10;
-            while (timer.ElapsedMilliseconds < 2000)
+            if (plan.WarmupMilliseconds > 0)
             {
-                Drain();
-                Complete(0);
-                Complete(1);
-                Prepare(0);
-                Prepare(1);
-                long global = SignalAccountingModule.globalNanoseconds(state);
-                maxDebt[0] = Math.Max(maxDebt[0], Math.Max(0, global - credited - waits[0]));
-                maxDebt[1] = Math.Max(maxDebt[1], Math.Max(0, global - waits[1]));
-                if (timer.Elapsed.TotalMilliseconds >= nextBoundary)
-                {
-                    var current = Snapshot();
-                    boundaries.Add(current);
-                    nextBoundary = current.Milliseconds + 10;
-                }
+                var warmBoundary = RunStage("warmup", plan.WarmupMilliseconds);
+                var warmSettled = SettleStage("warmup-settlement");
+                warmup = new(warmBoundary, warmSettled, controllerCpu, pauses, selectedChecks, (long[])maxDebt.Clone());
+                state = SignalAccountingModule.create();
+                selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(plan.Percent), state));
+                peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
+                state = peer.Item2;
+                handles = [selected.Item1, peer.Item1];
+                stream = Parsed(SignalAccountingModule.sampleIdentity(handles[0], state));
+                sequence = represented = 0;
+                epoch = 1;
+                credited = 0;
+                waits = new long[2];
+                maxDebt = new long[2];
+                registered = [true, true];
+                cadence = new SelectedSignalCadence(plan.Cadence);
+                pauses = 0;
+                selectedChecks = 0;
+                batchBaseline = [Volatile.Read(ref batches[0]), Volatile.Read(ref batches[1])];
             }
-            measurement = Snapshot();
-            controllerCpu = controllerClock.ReadNanoseconds() - controllerCpu;
-            measuring = accept = false;
-            if (enabled) { session.Disable(); enabled = false; }
-            Drain();
-            for (int slot = 0; slot < 2; slot++)
-            {
-                var deadline = Stopwatch.StartNew();
-                bool retired = false;
-                while (!retired && deadline.ElapsedMilliseconds < 1000)
-                {
-                    Complete(0);
-                    Complete(1);
-                    if (Prepare(slot))
-                    {
-                        state = Parsed(SignalAccountingModule.unregister(handles[slot], state));
-                        registered[slot] = false;
-                        retired = true;
-                    }
-                }
-                if (!retired) throw new TimeoutException("Diagnostic signal settlement exceeded one second.");
-            }
-            settled = Snapshot();
+            measurementStartRecords = records;
+            measurement = RunStage("measurement", 2000);
+            settled = SettleStage("settlement");
         }
-        catch (Exception error) { failures.Add(error.ToString()); }
+        catch (Exception error)
+        {
+            failureBoundary = Snapshot();
+            failures.Add(error.ToString());
+        }
         finally
         {
-            accept = measuring = false;
+            accept = measuring = runningStage = false;
             if (session is not null)
             {
                 try { session.Dispose(); }
@@ -253,7 +323,8 @@ static class SampledSignalWorkload
         }
         foreach (var error in errors) if (error is not null) failures.Add(error.ToString());
         if (!joined || !restored || nativeOutstanding.Any(value => value)) failures.Add("Sampled signal teardown did not finish.");
-        if (measurement is null || settled is null || records is null || records.SelectedMethodSamples == 0
+        if (measurement is null || settled is null || records is null
+            || records.SelectedMethodSamples - (measurementStartRecords?.SelectedMethodSamples ?? 0) == 0
             || measurement.Batches.Any(count => count == 0)) failures.Add("The sampled signal workload did not reach its measurement requirements.");
         if (plan.Percent == 0 && (credited != 0 || requests.Count != 0)) failures.Add("Zero speedup created signal debt.");
         if (plan.Percent > 0 && (measurement?.CreditNanoseconds is not > 0 || measurement.WaitNanoseconds[1] == 0))
@@ -265,8 +336,10 @@ static class SampledSignalWorkload
             .Select(slot => $"Slot {slot} exceeded the 2000000 ns observed debt limit: {maxDebt[slot]} ns.").ToArray();
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
-            backend = backend?.Name, percent = plan.Percent, runtime = Environment.Version.ToString(),
-            measurement, settled, boundaries, maxDebtNanoseconds = maxDebt, debtBoundNanoseconds = 2000000,
+            backend = backend?.Name, percent = plan.Percent, selectedCadence = plan.Cadence.ToString(), selectedChecks,
+            runtime = Environment.Version.ToString(),
+            warmupMilliseconds = plan.WarmupMilliseconds, warmup, measurement, settled, failureBoundary, measurementStartRecords,
+            boundaries, maxDebtNanoseconds = maxDebt, debtBoundNanoseconds = 2000000,
             controllerCpuNanoseconds = controllerCpu, samplingPauses = pauses, records, samples, requests,
             failures, capacityViolations, joined, restored, protocolPassed, capacityPassed, passed = protocolPassed && capacityPassed,
             forcedGc = false, predictionAccuracyEstablished = false, generalClrSafetyEstablished = false,
