@@ -66,6 +66,116 @@ module DelayLedgerTests =
     [<Tests>]
     let tests =
         testList "Sampled delay ledger" [
+            testCase "Peer snapshot aggregate retains credit that arrives during child service"
+            <| fun _ ->
+                let selected, worker, ledger = pair ()
+
+                let _, reserved =
+                    ledger
+                    |> publish selected 110000L
+                    |> catchUp worker
+
+                let aggregateAction, aggregate =
+                    reserved
+                    |> publish selected 40000L
+                    |> completed worker 115000L
+                    |> catchUp worker
+
+                let _, first =
+                    reserved
+                    |> completed worker 50000L
+                    |> catchUp worker
+
+                let _, second =
+                    first
+                    |> publish selected 40000L
+                    |> completed worker 50000L
+                    |> catchUp worker
+
+                let childAction, children =
+                    second
+                    |> completed worker 15000L
+                    |> catchUp worker
+
+                Expect.equal
+                    aggregateAction
+                    (DelayAction.Wait(ticks 35000L))
+                    "New credit must remain unpaid after the original snapshot is serviced."
+
+                Expect.equal
+                    childAction
+                    aggregateAction
+                    "A terminal aggregate must preserve the child journal's remaining debt."
+
+                Expect.equal
+                    (globalTicks aggregate)
+                    150000L
+                    "Peer service must not publish the selected credit twice."
+
+                Expect.equal
+                    (globalTicks children)
+                    150000L
+                    "Child service must preserve the same published credit."
+
+            testCase "Peer snapshot terminal overshoot publishes once after aggregate settlement"
+            <| fun _ ->
+                let selected, worker, ledger = pair ()
+
+                let _, reserved =
+                    ledger
+                    |> publish selected 100000L
+                    |> catchUp worker
+
+                let aggregateAction, aggregate =
+                    reserved
+                    |> publish selected 40000L
+                    |> completed worker 200000L
+                    |> catchUp worker
+
+                let _, first =
+                    reserved
+                    |> completed worker 50000L
+                    |> catchUp worker
+
+                let childAction, children =
+                    first
+                    |> publish selected 40000L
+                    |> completed worker 150000L
+                    |> catchUp worker
+
+                let selectedAction, _ = catchUp selected aggregate
+                let _, unchanged = catchUp worker aggregate
+
+                Expect.equal
+                    aggregateAction
+                    DelayAction.Continue
+                    "The peer has serviced its snapshot and retains measured overshoot."
+
+                Expect.equal
+                    childAction
+                    aggregateAction
+                    "Separate child settlements must reach the same terminal action."
+
+                Expect.equal
+                    (globalTicks aggregate)
+                    200000L
+                    "Measured overshoot must not be capped to the authorized snapshot."
+
+                Expect.equal
+                    (globalTicks children)
+                    200000L
+                    "The child journal must produce the same global delay."
+
+                Expect.equal
+                    (globalTicks unchanged)
+                    200000L
+                    "Another check must not publish the aggregate twice."
+
+                Expect.equal
+                    selectedAction
+                    (DelayAction.Wait(ticks 60000L))
+                    "The selected thread owes the peer's actual lead."
+
             testCase "Delay ticks reject negative values and preserve endpoints"
             <| fun _ ->
                 Expect.isError

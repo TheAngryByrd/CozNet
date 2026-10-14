@@ -56,5 +56,9 @@ stateDiagram-v2
 The deterministic cases live in `tests/CozNet.Tests/DelayLedgerTests.fs`.
 They cover overlap, wake outcomes, partial waits, overshoot, thread lifecycle, overflow, and duration correction.
 They do not establish causal accuracy or validate live synchronization interception.
+Two fixed-journal cases compare individual peer payments with aggregate completion of a reserved snapshot.
+They preserve concurrent selected credit and terminal overshoot without changing ledger transitions.
+The [native service proposal](../plans/native-debt-service.md) uses that arithmetic for an unsampled peer lease.
+The [peer service accounting model](signal-service.md) implements lease ownership. Native service remains unimplemented.
 
 See [the serial engine](summary.md), [the roadmap](../plans/roadmap.md), and [the port decision](../../docsSrc/Research/coz-port-and-il-rewriting.md).

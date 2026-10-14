@@ -35,6 +35,8 @@ A long peer request has no enclosing runtime suspension overlap.
 The retained product maps to runtime sources where restart releases barriers without waiting for each worker to execute.
 Neither restart nor observed off-CPU time justifies debt forgiveness.
 An internal [signal accounting model](profiling/signal-accounting.md) connects sample credit to bounded requests and matched acknowledgments.
+An internal [peer service model](profiling/signal-service.md) adds finite leases and exact-once aggregate settlement of bounded child journals.
+Its native transport and workload integration remain unimplemented.
 Its deterministic replay checks cover debt settlement and sampling epochs.
 The [live sampled signal workload](profiling/sampled-signals.md) connects these components, but its first run fails the observed debt limit.
 Sample-driven selected checks recover credit. The first warmup run then fails the handler-duration bound.

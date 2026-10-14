@@ -4,6 +4,9 @@
 It performs no sampling, native calls, or waits.
 One controller must serialize transitions and retain the latest state.
 The ledger clock uses nanoseconds.
+An alternative [peer service model](signal-service.md) reserves finite debt snapshots and accepts separate bounded child acknowledgments.
+It shares this ledger and blocks individual requests while a lease owns the peer.
+The live workload does not use that path yet.
 
 Register sampled threads with `Some percent` and unsampled threads with `None`.
 Each sampled registration owns an independent `SampleCreditStream`.

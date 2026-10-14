@@ -65,9 +65,391 @@ module SignalAccountingTests =
         SignalAccounting.complete request sequence (SignalSettlement.Measured(ticks amount)) state
         |> parsed
 
+    let private service peer state =
+        let lease, next =
+            SignalAccounting.prepareService peer state
+            |> parsed
+
+        Expect.isSome lease "The peer requires a debt reservation."
+        Option.get lease, next
+
+    let private child lease ordinal sequence requested measured outcome =
+        SignalServiceChild.tryCreate
+            (SignalServiceLease.identity lease)
+            ordinal
+            sequence
+            requested
+            measured
+            measured
+            1000000L
+            outcome
+            true
+        |> parsed
+
+    let private accept lease ordinal sequence requested measured outcome state =
+        SignalAccounting.acceptServiceChild
+            lease
+            (child lease ordinal sequence requested measured outcome)
+            state
+        |> parsed
+
     [<Tests>]
     let tests =
         testList "Signal accounting" [
+            testCase "Peer service journal retains new credit and settles its aggregate once"
+            <| fun _ ->
+                let selected, peer, state = credited 220000UL
+                let lease, state = service peer state
+
+                Expect.equal
+                    (SignalServiceLease.nanoseconds lease)
+                    110000L
+                    "The lease captures the whole original peer debt."
+
+                let state =
+                    SignalAccounting.sentService lease state
+                    |> parsed
+                    |> accept lease 1L 1UL 50000L 50000L 2
+
+                let _, state =
+                    observe selected 2UL 300000UL 0UL state
+                    |> parsed
+
+                let _, state = prepare selected state
+
+                let state =
+                    state
+                    |> accept lease 2L 2UL 50000L 50000L 2
+                    |> accept lease 3L 3UL 10000L 15000L 2
+
+                Expect.equal
+                    (SignalAccounting.confirmedServiceNanoseconds lease state
+                     |> parsed)
+                    115000L
+                    "The confirmed prefix includes terminal overshoot."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount state)
+                    1
+                    "The ledger stays reserved until aggregate completion."
+
+                let measured, state =
+                    SignalAccounting.completeService lease state
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value measured)
+                    115000L
+                    "The committed amount is the complete journal sum."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount state)
+                    0
+                    "Completion removes the diagnostic prefix with the reservation."
+
+                Expect.isError
+                    (SignalAccounting.completeService lease state)
+                    "A duplicate terminal result cannot settle twice."
+
+                let request, _ = required peer state
+
+                Expect.equal
+                    (SignalDelayRequest.nanoseconds request)
+                    35000L
+                    "New global credit belongs to later service."
+
+            testCase "Service rejection preserves ownership before and after submission"
+            <| fun _ ->
+                let _, peer, state = credited 100000UL
+                let lease, reserved = service peer state
+
+                Expect.isError
+                    (SignalAccounting.acceptServiceChild
+                        lease
+                        (child lease 1L 1UL 50000L 50000L 2)
+                        reserved)
+                    "Unsubmitted leases cannot receive child records."
+
+                let rejected =
+                    SignalAccounting.rejectedServiceBeforeSend lease reserved
+                    |> parsed
+
+                Expect.equal
+                    (SignalAccounting.pendingCount rejected)
+                    0
+                    "Guaranteed rejection releases the reservation."
+
+                let replacement, reserved = service peer rejected
+
+                Expect.notEqual
+                    (SignalServiceLease.identity replacement)
+                    (SignalServiceLease.identity lease)
+                    "A replacement lease needs a new identity."
+
+                Expect.isError
+                    (SignalAccounting.sentService lease reserved)
+                    "An old lease cannot bind a replacement reservation."
+
+                let submitted =
+                    SignalAccounting.sentService replacement reserved
+                    |> parsed
+
+                Expect.isError
+                    (SignalAccounting.sentService replacement submitted)
+                    "Submission cannot bind twice."
+
+                Expect.isError
+                    (SignalAccounting.rejectedServiceBeforeSend replacement submitted)
+                    "Ambiguous delivery must retain ownership."
+
+                Expect.isError
+                    (SignalAccounting.completeService replacement submitted)
+                    "An empty journal cannot prove completion."
+
+                Expect.isError
+                    (SignalAccounting.unregister peer submitted)
+                    "The peer cannot retire while service owns it."
+
+                Expect.isError
+                    (SignalAccounting.prepare peer submitted)
+                    "Single requests cannot overlap a lease."
+
+            testCase "Service journal rejects foreign duplicate skipped and replayed children"
+            <| fun _ ->
+                let _, peer, state = credited 220000UL
+                let lease, state = service peer state
+
+                let state =
+                    SignalAccounting.sentService lease state
+                    |> parsed
+                    |> accept lease 1L 9UL 50000L 50000L 2
+
+                let _, otherPeer, other = credited 220000UL
+                let foreign, _ = service otherPeer other
+
+                for receipt in
+                    [
+                        child foreign 2L 10UL 50000L 50000L 2
+                        child lease 1L 9UL 50000L 50000L 2
+                        child lease 3L 10UL 50000L 50000L 2
+                        child lease 2L 9UL 50000L 50000L 2
+                        child lease 2L 10UL 40000L 40000L 2
+                    ] do
+                    Expect.isError
+                        (SignalAccounting.acceptServiceChild lease receipt state)
+                        "Only the next matching child can extend the prefix."
+
+                Expect.equal
+                    (SignalAccounting.confirmedServiceNanoseconds lease state
+                     |> parsed)
+                    50000L
+                    "Rejected records leave the last prefix intact."
+
+                let next = accept lease 2L 10UL 50000L 50000L 2 state
+
+                Expect.equal
+                    (SignalAccounting.confirmedServiceNanoseconds lease next
+                     |> parsed)
+                    100000L
+                    "A valid retry extends the unchanged prefix."
+
+            testCase "Deferred and interrupted service children terminate with prior measured waits"
+            <| fun _ ->
+                for outcome, partial in
+                    [
+                        1, 0L
+                        3, 10000L
+                    ] do
+                    let _, peer, state = credited 220000UL
+                    let lease, state = service peer state
+
+                    let state =
+                        SignalAccounting.sentService lease state
+                        |> parsed
+                        |> accept lease 1L 1UL 50000L 50000L 2
+                        |> accept lease 2L 2UL 50000L partial outcome
+
+                    Expect.isError
+                        (SignalAccounting.acceptServiceChild
+                            lease
+                            (child lease 3L 3UL 50000L 50000L 2)
+                            state)
+                        "A terminal child must stop the native chain."
+
+                    let measured, state =
+                        SignalAccounting.completeService lease state
+                        |> parsed
+
+                    Expect.equal
+                        (DelayTicks.value measured)
+                        (50000L
+                         + partial)
+                        "Termination preserves earlier and partial measured waits."
+
+                    let next, _ = service peer state
+
+                    Expect.equal
+                        (SignalServiceLease.nanoseconds next)
+                        (60000L
+                         - partial)
+                        "Unpaid snapshot debt remains after partial service."
+
+            testCase "Service eligibility and capacity failures do not consume the original state"
+            <| fun _ ->
+                let selected, peer, empty = start 50
+
+                let none, unchanged =
+                    SignalAccounting.prepareService peer empty
+                    |> parsed
+
+                Expect.isNone none "A settled peer needs no lease."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount unchanged)
+                    0
+                    "An empty check reserves nothing."
+
+                Expect.isError
+                    (SignalAccounting.prepareService selected empty)
+                    "Selected service keeps its existing sample cadence."
+
+                let _, peer, large = credited 4000002UL
+
+                Expect.isError
+                    (SignalAccounting.prepareService peer large)
+                    "Debt above 2 ms must fail instead of being clipped."
+
+                let request, _ = required peer large
+
+                Expect.equal
+                    (SignalDelayRequest.nanoseconds request)
+                    50000L
+                    "The rejected lease leaves its input ledger usable."
+
+            testCase "Service terminal overshoot publishes only at ordinary catch-up"
+            <| fun _ ->
+                let _, peer, state = credited 100000UL
+                let lease, state = service peer state
+
+                let state =
+                    SignalAccounting.sentService lease state
+                    |> parsed
+                    |> accept lease 1L 1UL 50000L 70000L 2
+
+                let _, state =
+                    SignalAccounting.completeService lease state
+                    |> parsed
+
+                Expect.equal
+                    (SignalAccounting.globalNanoseconds state)
+                    50000L
+                    "Completion must not publish overshoot early."
+
+                let next, state =
+                    SignalAccounting.prepareService peer state
+                    |> parsed
+
+                Expect.isNone next "Overshoot leaves no peer debt."
+
+                Expect.equal
+                    (SignalAccounting.globalNanoseconds state)
+                    70000L
+                    "Catch-up publishes actual measured overshoot."
+
+            testCase "Service child parser enforces timing amount and outcome boundaries"
+            <| fun _ ->
+                let identity = Guid.NewGuid()
+
+                let parse ordinal sequence request wait handler observed outcome eligible =
+                    SignalServiceChild.tryCreate
+                        identity
+                        ordinal
+                        sequence
+                        request
+                        wait
+                        handler
+                        observed
+                        outcome
+                        eligible
+
+                Expect.isOk
+                    (parse 100000L UInt64.MaxValue 50000L 5000000L 5000000L 100000000L 2 true)
+                    "Exact upper bounds and measured overshoot remain valid."
+
+                for result in
+                    [
+                        parse 0L 1UL 1L 0L 0L 0L 2 true
+                        parse 100001L 1UL 1L 0L 0L 0L 2 true
+                        parse 1L 0UL 1L 0L 0L 0L 2 true
+                        parse 1L 1UL 0L 0L 0L 0L 2 true
+                        parse 1L 1UL 50001L 0L 0L 0L 2 true
+                        parse 1L 1UL 1L -1L 0L 0L 2 true
+                        parse 1L 1UL 1L 2L 1L 2L 2 true
+                        parse 1L 1UL 1L 0L 5000001L 5000001L 2 true
+                        parse 1L 1UL 1L 0L 0L 100000001L 2 true
+                        parse 1L 1UL 1L 0L 2L 1L 2 true
+                        parse 1L 1UL 1L 1L 1L 1L 1 true
+                        parse 1L 1UL 1L 0L 0L 0L 4 true
+                        parse 1L 1UL 1L 0L 0L 0L 2 false
+                    ] do
+                    Expect.isError result "Invalid transport records must fail before accounting."
+
+            testCase "Service aggregate overflow retains the terminal reservation"
+            <| fun _ ->
+                let selected, state =
+                    SignalAccounting.register (Some 100) (SignalAccounting.create ())
+                    |> parsed
+
+                let _, state =
+                    observe
+                        selected
+                        1UL
+                        (uint64 (
+                            Int64.MaxValue
+                            - 2L
+                        ))
+                        0UL
+                        state
+                    |> parsed
+
+                let _, state = prepare selected state
+
+                let peer, state =
+                    SignalAccounting.register None state
+                    |> parsed
+
+                let _, state =
+                    observe selected 2UL (uint64 Int64.MaxValue) 0UL state
+                    |> parsed
+
+                let _, state = prepare selected state
+                let lease, state = service peer state
+
+                let state =
+                    SignalAccounting.sentService lease state
+                    |> parsed
+                    |> accept lease 1L 1UL 2L 3L 2
+
+                Expect.isError
+                    (SignalAccounting.completeService lease state)
+                    "Measured overshoot cannot wrap the local ledger counter."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount state)
+                    1
+                    "A failed aggregate commit must retain ownership."
+
+                Expect.equal
+                    (SignalAccounting.confirmedServiceNanoseconds lease state
+                     |> parsed)
+                    3L
+                    "The accepted journal remains available after failure."
+
+                Expect.equal
+                    (SignalAccounting.globalNanoseconds state)
+                    Int64.MaxValue
+                    "A failed commit cannot change global delay."
+
             testCase "Sample credit becomes global only when published"
             <| fun _ ->
                 let selected, peer, state = start 50

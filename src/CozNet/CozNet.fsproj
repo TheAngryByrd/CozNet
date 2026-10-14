@@ -14,6 +14,7 @@
     <Compile Include="Domain.fs" />
     <Compile Include="DelayLedger.fs" />
     <Compile Include="SampleCredits.fs" />
+    <Compile Include="SignalService.fs" />
     <Compile Include="SignalAccounting.fs" />
     <Compile Include="CooperativeRuntime.fs" />
     <Compile Include="Experiment.fs" />

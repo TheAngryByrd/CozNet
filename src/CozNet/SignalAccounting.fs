@@ -29,10 +29,19 @@ type private PendingSignal = {
     NativeSequence: uint64 option
 }
 
+type private PendingService = {
+    Lease: SignalServiceLease
+    Sent: bool
+    Count: int64
+    Measured: int64
+    Stopped: bool
+}
+
 type internal SignalAccounting = private {
     Ledger: DelayLedger
     Threads: Map<LedgerThread, SignalThreadAccounting>
     Pending: Map<LedgerThread, PendingSignal>
+    Services: Map<LedgerThread, PendingService>
 }
 
 [<RequireQualifiedAccess>]
@@ -41,12 +50,14 @@ module internal SignalAccounting =
         Ledger = DelayLedger.create ()
         Threads = Map.empty
         Pending = Map.empty
+        Services = Map.empty
     }
 
-    let globalNanoseconds state =
-        DelayLedger.globalTicks state.Ledger
+    let globalNanoseconds state = DelayLedger.globalTicks state.Ledger
 
-    let pendingCount state = Map.count state.Pending
+    let pendingCount state =
+        Map.count state.Pending
+        + Map.count state.Services
 
     let private require message =
         function
@@ -248,6 +259,169 @@ module internal SignalAccounting =
                     | SignalSettlement.Measured duration -> duration
 
                 settle request actual state
+        )
+
+    let prepareService thread state =
+        find thread state
+        |> Result.bind (fun entry ->
+            if entry.Samples.IsSome then
+                Error "Only an unsampled peer can reserve a service lease."
+            else
+                DelayLedger.catchUp thread state.Ledger
+                |> Result.bind (fun (action, ledger) ->
+                    match action with
+                    | DelayAction.Continue -> Ok(None, { state with Ledger = ledger })
+                    | DelayAction.Wait debt ->
+                        SignalServiceLease.tryCreate thread (DelayTicks.value debt)
+                        |> Result.map (fun lease ->
+                            Some lease,
+                            {
+                                state with
+                                    Ledger = ledger
+                                    Services =
+                                        Map.add
+                                            thread
+                                            {
+                                                Lease = lease
+                                                Sent = false
+                                                Count = 0L
+                                                Measured = 0L
+                                                Stopped = false
+                                            }
+                                            state.Services
+                            }
+                        )
+                )
+        )
+
+    let private findService lease state =
+        match Map.tryFind (SignalServiceLease.thread lease) state.Services with
+        | Some service when service.Lease = lease -> Ok service
+        | _ -> Error "The service lease is stale or belongs to another accounting state."
+
+    let sentService lease state =
+        findService lease state
+        |> Result.bind (fun service ->
+            if service.Sent then
+                Error "The service lease was already submitted."
+            else
+                Ok {
+                    state with
+                        Services =
+                            Map.add
+                                (SignalServiceLease.thread lease)
+                                { service with Sent = true }
+                                state.Services
+                }
+        )
+
+    let confirmedServiceNanoseconds lease state =
+        findService lease state
+        |> Result.map (fun service -> service.Measured)
+
+    let acceptServiceChild lease child state =
+        findService lease state
+        |> Result.bind (fun service ->
+            let thread = SignalServiceLease.thread lease
+            let sequence = SignalServiceChild.sequence child
+            let measured = SignalServiceChild.measured child
+
+            let remaining =
+                SignalServiceLease.nanoseconds lease
+                - service.Measured
+
+            if
+                not service.Sent
+                || service.Stopped
+            then
+                Error "The service lease cannot accept another child."
+            elif
+                SignalServiceChild.leaseIdentity child
+                <> SignalServiceLease.identity lease
+                || SignalServiceChild.ordinal child
+                   <> service.Count
+                      + 1L
+                || sequence
+                   <= state.Threads[thread].LastNativeSequence
+            then
+                Error "The service child does not extend the accepted journal."
+            elif
+                SignalServiceChild.requested child
+                <> min 50000L remaining
+            then
+                Error "The service child does not match the remaining snapshot debt."
+            elif
+                measured > Int64.MaxValue
+                           - service.Measured
+            then
+                Error "Service wait accounting overflow."
+            else
+                let total =
+                    service.Measured
+                    + measured
+
+                let next = {
+                    service with
+                        Count =
+                            service.Count
+                            + 1L
+                        Measured = total
+                        Stopped =
+                            SignalServiceChild.stops child
+                            || total
+                               >= SignalServiceLease.nanoseconds lease
+                }
+
+                Ok {
+                    state with
+                        Services = Map.add thread next state.Services
+                        Threads =
+                            Map.add
+                                thread
+                                {
+                                    state.Threads[thread] with
+                                        LastNativeSequence = sequence
+                                }
+                                state.Threads
+                }
+        )
+
+    let private releaseService lease service state =
+        let thread = SignalServiceLease.thread lease
+
+        DelayTicks.tryCreate service.Measured
+        |> Result.bind (fun measured ->
+            DelayLedger.completeDelay thread measured state.Ledger
+            |> Result.map (fun ledger ->
+                measured,
+                {
+                    state with
+                        Ledger = ledger
+                        Services = Map.remove thread state.Services
+                }
+            )
+        )
+
+    let completeService lease state =
+        findService lease state
+        |> Result.bind (fun service ->
+            if
+                not service.Sent
+                || not service.Stopped
+            then
+                Error "The service journal has no terminal child."
+            else
+                releaseService lease service state
+        )
+
+    let rejectedServiceBeforeSend lease state =
+        findService lease state
+        |> Result.bind (fun service ->
+            if service.Sent then
+                Error "A submitted service lease still owns its delivery."
+            else
+                releaseService lease service state
+                |> Result.map snd
         )
 
     let unregister thread state =
