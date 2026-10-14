@@ -29,7 +29,10 @@ Low CPU time does not distinguish blocking from runnable descheduling.
 The native `TargetCpuChecks` fixture compares remote observations with the target's own clock during a controlled CPU interval.
 It checks disabled capture, caller ownership, request consumption, and retirement rejection.
 `TargetCpuSnapshotPreservesBrackets` checks the managed parsing boundary.
-Read overhead, blocked-phase behavior, and sampled prediction accuracy still require measurement.
+The [native clock workload](../../reliability/features/native-signal/target-cpu-clock.md) measures query cost with busy and sleeping targets.
+Its twelve cases pass consistency checks. Sleeping remote cases show zero target CPU advance.
+Added controller CPU averages 282–343 ns per reading relative to the paired native baseline.
+These short native runs do not establish clock accuracy, managed overhead, or sampled prediction accuracy.
 The first four-case capture retains two treatment failures.
 All 28,012 completed treatment requests have both observations.
 Both zero-percent cases pass. The no-GC treatment fails the debt limit.

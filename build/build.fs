@@ -526,6 +526,7 @@ let linuxSignalWaitCompare _ = nativeScript "CompareLinuxSignalWaits.ps1"
 let linuxSpinReliabilityVerify _ = nativeScript "VerifyLinuxSpinReliability.ps1"
 let linuxRuntimeTraceCollect _ = nativeScript "CollectLinuxRuntimeTraces.ps1"
 let linuxTargetCpuCollect _ = nativeScript "CollectLinuxTargetCpu.ps1"
+let linuxTargetCpuMeasure _ = nativeScript "MeasureLinuxTargetCpu.ps1"
 
 let linuxSignalTransitionsVerify _ =
     nativeScript "VerifyLinuxSignalTransitions.ps1"
@@ -904,6 +905,7 @@ let initTargets () =
     Target.create "LinuxSpinReliabilityVerify" linuxSpinReliabilityVerify
     Target.create "LinuxRuntimeTraceCollect" linuxRuntimeTraceCollect
     Target.create "LinuxTargetCpuCollect" linuxTargetCpuCollect
+    Target.create "LinuxTargetCpuMeasure" linuxTargetCpuMeasure
     Target.create "LinuxSignalTransitionsVerify" linuxSignalTransitionsVerify
     Target.create "LinuxSampledSignalsVerify" linuxSampledSignalsVerify
     Target.create "LinuxSampleCadenceVerify" linuxSampleCadenceVerify
@@ -1027,6 +1029,10 @@ let initTargets () =
 
     "LinuxSignalWorkload"
     ==> "LinuxTargetCpuCollect"
+    |> ignore
+
+    "LinuxSignalBuild"
+    ==> "LinuxTargetCpuMeasure"
     |> ignore
 
     "NativeBuild"
