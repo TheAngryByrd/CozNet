@@ -24,6 +24,7 @@ $sources = @('native/service/TimerApi.h', 'native/service/TimerApi.Linux.cpp', '
     'tests/CozNet.LinuxPerf/TimerAccountingAdapter.cs', 'tests/CozNet.LinuxPerf/TimerAccountingAdapterChecks.cs',
     'tests/CozNet.LinuxPerf/TimerManagedWorkload.cs', 'tests/CozNet.LinuxPerf/InstructionMap.cs', 'tests/CozNet.LinuxPerf/OverheadWorkload.cs',
     'tests/CozNet.LinuxPerf/TimerSelectedWorker.cs', 'src/CozNet/SignalAccounting.fs', 'src/CozNet/SignalService.fs',
+    'tests/CozNet.LinuxPerf/TimerWorkerLifetime.cs', 'tests/CozNet.LinuxPerf/TimerWorkerLifetimeChecks.cs',
     'src/CozNet/DelayLedger.fs', 'src/CozNet/SampleCredits.fs',
     'tests/CozNet.LinuxPerf/TimerWorkloadPlan.cs', 'tests/CozNet.LinuxPerf/TimerWorkloadPlanChecks.cs',
     'tests/CozNet.LinuxPerf/TimerGcReach.cs', 'tests/CozNet.LinuxPerf/TimerGcReachChecks.cs',

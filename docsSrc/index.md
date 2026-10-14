@@ -26,6 +26,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Target-local timer interop](Reference/timer-interop.md): C ABI, managed receipt bounds, and cleanup ownership.
 - [Timer journal accounting](Reference/timer-accounting.md): ledger binding, accepted prefixes, and exact-once settlement.
 - [Timer transition workload](Reference/timer-transitions.md): scenario reach, records, bounds, and scope.
+- [Timer worker lifecycle](Reference/timer-worker-lifetime.md): retirement, join, release, and fault-check scope.
 
 ## Explanation
 

@@ -41,7 +41,7 @@ The selected arithmetic range comes from the retained initial and final perf map
 `records` contains command budgets, progress counters, command intervals, and raw timer snapshots with first managed receipts.
 `selectedPayments` contains separate selected-side budgets, confirmed waits, intervals, and raw snapshots.
 `selectedPendingSnapshots` and `selectedPendingInterval` retain an unfinished selected payment.
-`selectedJoined` and `selectedReleased` report selected-target cleanup.
+`selectedRetired`, `selectedJoined`, and `selectedReleased` report selected-target cleanup.
 The selected worker must join and release its final journal before the client closes.
 
 The requested wait limit is 50 µs per child.
@@ -59,7 +59,8 @@ Stable wait entry does not prove that every timer interrupts a blocked syscall.
 Address classification identifies executable images, not the exact runtime operation at each address.
 Synthetic credit does not establish sampled capacity or prediction accuracy.
 These checks do not establish general CLR safety.
-Selected-worker cleanup failures have no injected tests. The live cases verify ordinary cleanup only.
+Portable fault checks verify selected-worker lifecycle ordering and failure outcomes.
+Native syscall fault injection and exhaustive runtime race coverage remain unverified.
 Registration errors do not identify whether native ownership became active. The worker conservatively retains ownership if retirement also fails.
 The [retained matrix](../../reliability/features/native-signal/timer-transitions.md) passes seven cases and fails the forced-GC transition case.
 Peer wait overshoot can make synthetic selected credit insufficient.
@@ -69,3 +70,4 @@ The arithmetic regressions also pass with and without forced GC.
 These controlled results do not extend the public engine's supported workload model.
 
 See [the procedure](../How_Tos/run-timer-transitions.md) and [timer journal accounting](timer-accounting.md).
+See [the worker lifecycle](timer-worker-lifetime.md) for cleanup states and fault-check scope.

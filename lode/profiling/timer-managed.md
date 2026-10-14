@@ -46,6 +46,15 @@ The retained failure came from a harness that rejected selected-side payment.
 `TimerSelectedWorker` now owns a second arithmetic target and pays selected debt through bounded timer leases.
 Its journals and unfinished snapshots remain separate from peer records.
 Both targets must join before native close. Failed retirement retains ownership.
+`TimerWorkerLifetime` owns the selected worker's portable lifecycle decisions.
+Release requires both `Retired` and `Joined`. A failed release leaves `Released` false and prohibits session close.
+Worker and retirement errors remain available together instead of replacing the original failure.
+After release succeeds, repeated cleanup skips all effects but still reports a prior worker failure.
+Nine callback-driven checks cover ordering and failure outcomes without native calls or leaked background threads.
+Isolated mutations detect missing retirement and join gates, premature release confirmation, lost primary errors, and repeated cleanup effects.
+The [lifecycle matrix](../../reliability/features/native-signal/timer-worker-lifetime.md) passes all eight live scenarios with confirmed selected retirement.
+Native syscall fault injection and exhaustive runtime races remain outside their scope.
+See [the lifecycle reference](../../docsSrc/Reference/timer-worker-lifetime.md).
 Each synthetic-credit step establishes the current epoch baseline before adding its CPU increment.
 After each completed peer lease, peer catch-up publishes overshoot and selected service pays it before the next credit step.
 Paid scenarios require a positive selected payment, so an unused recovery path cannot satisfy the live gate.

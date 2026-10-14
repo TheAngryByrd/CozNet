@@ -19,7 +19,7 @@ You need PowerShell, the repository SDK, a Linux Docker engine, and these local 
 6. Check the scenario's reach conditions in [the workload reference](../Reference/timer-transitions.md).
 7. Check each final journal against its command's `Confirmed` wait total.
 8. For GC cases, check `gcReachedCommand`, `gcJoined`, and each collection's duration.
-9. Check `selectedJoined` and `selectedReleased` are `true`.
+9. Check `selectedRetired`, `selectedJoined`, and `selectedReleased` are `true`.
 10. For transition cases, check `selectedPayments` contains a positive `Confirmed` wait.
 11. Sum each selected payment's final child waits and compare the result with `Confirmed`.
 12. Retain failed records and logs. Do not repeat an unchanged timing case to obtain a pass.

@@ -11,6 +11,7 @@ if (args is ["--verify-timer-layout"])
     TimerAccountingAdapterChecks.Run();
     TimerGcReachChecks.Run();
     TimerWorkloadPlanChecks.Run();
+    TimerWorkerLifetimeChecks.Run();
     return 0;
 }
 

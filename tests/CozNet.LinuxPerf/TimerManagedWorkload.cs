@@ -305,6 +305,7 @@ static class TimerManagedWorkload
             skippedSteps, records, unfinishedInterval, unfinishedSnapshots = snapshots, lastRaw = client?.LastRaw, lastSubmission = client?.LastSubmission,
             selectedPayments = selectedWorker?.Payments, selectedPendingSnapshots = selectedWorker?.PendingSnapshots,
             selectedPendingInterval = selectedWorker?.PendingInterval, selectedJoined = selectedWorker?.Joined,
+            selectedRetired = selectedWorker?.Retired,
             selectedReleased = selectedWorker?.Released, selectedProgress = selectedWorker?.Progress,
             selectedFailure = selectedWorker?.Failure,
             cleanup = client?.LastCleanup, pendingAccounting = accounting is null ? (int?)null : SignalAccountingModule.pendingCount(accounting),

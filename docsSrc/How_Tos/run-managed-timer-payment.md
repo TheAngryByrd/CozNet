@@ -24,7 +24,7 @@ You need the repository SDK, PowerShell, a Linux Docker engine, and these local 
 
 The workload uses 16 fixed synthetic-credit steps and two target registrations.
 The second arithmetic target pays selected-side debt caused by peer overshoot.
-Check `selectedJoined` and `selectedReleased` are `true`.
+Check `selectedRetired`, `selectedJoined`, and `selectedReleased` are `true`.
 Check `selectedPayments` contains a positive confirmed wait and inspect its final child journals.
 Each step adds 110,000 ns of selected credit.
 If earlier wait overshoot covers the new credit, the workload records a skipped step instead of submitting another lease.

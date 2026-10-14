@@ -12,7 +12,7 @@ sealed class TimerSelectedWorker
     private readonly ManualResetEventSlim ready = new();
     private readonly Thread worker;
     private int stop;
-    private Exception? error;
+    private readonly TimerWorkerLifetime lifetime = new();
     private long progress;
     private ulong command, outstanding;
     private readonly List<Payment> payments = [];
@@ -20,45 +20,35 @@ sealed class TimerSelectedWorker
     public IReadOnlyList<Payment> Payments => payments;
     public IReadOnlyList<TimerObservation> PendingSnapshots => pendingSnapshots;
     public TimerCommandInterval? PendingInterval { get; private set; }
-    public bool Joined { get; private set; }
-    public bool Released { get; private set; }
+    public bool Joined => lifetime.Joined;
+    public bool Retired => lifetime.Retired;
+    public bool Released => lifetime.Released;
     public long Progress => Interlocked.Read(ref progress);
-    public string? Failure => Volatile.Read(ref error)?.ToString();
+    public string? Failure => lifetime.Error?.ToString();
 
     public TimerSelectedWorker(NativeTimerClient client, ulong begin, ulong size)
     {
         (this.client, this.begin, this.size) = (client, begin, size);
-        worker = new Thread(() =>
-        {
-            try
+        worker = new Thread(() => lifetime.Run(
+            () => client.RegisterCurrentThread(1),
+            ready.Set,
+            () =>
             {
-                client.RegisterCurrentThread(1);
-                ready.Set();
                 while (Volatile.Read(ref stop) == 0)
                 {
                     if (CpuWorkload.Run() != 49995000L)
                         throw new InvalidDataException("Selected timer payment changed the arithmetic checksum.");
                     Interlocked.Increment(ref progress);
                 }
-            }
-            catch (Exception failure) { Volatile.Write(ref error, failure); }
-            finally
-            {
-                ready.Set();
-                try { client.RetireCurrentThread(1); }
-                catch (Exception failure)
-                {
-                    Volatile.Write(ref error, failure);
-                    Thread.Sleep(Timeout.Infinite);
-                }
-            }
-        }) { IsBackground = true };
+            },
+            () => client.RetireCurrentThread(1),
+            () => Thread.Sleep(Timeout.Infinite))) { IsBackground = true };
         worker.Start();
     }
 
     public void AwaitReady()
     {
-        Require(ready.Wait(TimeSpan.FromSeconds(2)) && Volatile.Read(ref error) is null,
+        Require(ready.Wait(TimeSpan.FromSeconds(2)) && lifetime.Error is null,
             "The selected timer target did not register.");
     }
 
@@ -68,7 +58,7 @@ sealed class TimerSelectedWorker
         var deadline = Stopwatch.StartNew();
         while (true)
         {
-            Require(Volatile.Read(ref error) is null, "The selected timer target failed.");
+            Require(lifetime.Error is null, "The selected timer target failed.");
             var reserved = Parsed(SignalAccountingModule.prepareSelectedService(selected, state!));
             state = reserved.Item2;
             if (FSharpOption<SignalServiceLease>.get_IsNone(reserved.Item1)) return;
@@ -121,13 +111,11 @@ sealed class TimerSelectedWorker
 
     public void StopAndJoin()
     {
-        Volatile.Write(ref stop, 1);
-        Joined = worker.Join(TimeSpan.FromSeconds(2));
-        Require(Joined, "Selected timer cleanup remains unresolved. Native ownership was retained.");
-        ready.Dispose();
-        if (outstanding != 0) client.ReleaseAfterRetiredCopy(1);
-        Released = true;
-        Require(Volatile.Read(ref error) is null, "The selected timer target failed during cleanup.");
+        lifetime.StopAndJoin(
+            () => Volatile.Write(ref stop, 1),
+            () => worker.Join(TimeSpan.FromSeconds(2)),
+            ready.Dispose,
+            () => { if (outstanding != 0) client.ReleaseAfterRetiredCopy(1); });
     }
 
     private static T Parsed<T>(FSharpResult<T, string> result) => result.IsOk ? result.ResultValue : throw new InvalidDataException(result.ErrorValue);
