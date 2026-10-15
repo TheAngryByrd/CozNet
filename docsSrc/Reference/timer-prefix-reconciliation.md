@@ -1,5 +1,7 @@
 # Timer prefix reconciliation
 
+The [timer wait membership analyzer](timer-wait-membership.md) compares recorded native intervals with frozen endpoints after prefix reconciliation.
+
 `native/AnalyzeTimerPrefixes.py` reconciles frozen controller accounting with final accepted timer journals.
 It requires `Accounting.Timer` at both measurement boundaries.
 It supports Python 3.10 or later and uses no platform APIs.

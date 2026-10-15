@@ -1,5 +1,7 @@
 # Lode index
 
+For recorded native wait overlap at frozen endpoints, read [timer wait membership](profiling/timer-wait-membership.md).
+
 For observed source timestamps and endpoint ambiguity, read [sample membership](profiling/sample-membership.md).
 
 For matched collection, frozen cost parsing, and unresolved attribution, read [matched prediction diagnostics](profiling/matched-prediction.md).

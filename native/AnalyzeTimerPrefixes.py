@@ -24,6 +24,8 @@ def lease_identity(value):
 class Child:
     waited: int
     captured: int
+    started: int
+    finished: int
 
 
 @dataclass(frozen=True)
@@ -107,7 +109,7 @@ def parse_journal(raw, archived):
             require(end <= first <= captured and first <= upper <= clock["Nanoseconds"], "Invalid first receipt ordering")
             require(number(receipt["Timing"]["UpperNanoseconds"], "receipt bound") == upper - armed <= 100000000,
                     "First receipt bound differs or exceeds its limit")
-            children.append(Child(waited, first))
+            children.append(Child(waited, first, begin, end))
             total += waited
             previous = begin, end
         require(wait_value(header["Measured"]) == total, "Native aggregate differs from child waits")
