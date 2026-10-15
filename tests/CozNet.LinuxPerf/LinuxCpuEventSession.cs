@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 
 sealed class LinuxCpuEventSession : ICpuEventSession
 {
+    public ISampleClockEvidenceSource ClockEvidence { get; } = new LinuxSampleClockEvidenceSource();
     private readonly int fd;
     private IntPtr mapping;
     private readonly nuint length;
@@ -14,10 +15,8 @@ sealed class LinuxCpuEventSession : ICpuEventSession
         if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
             throw new PlatformNotSupportedException("The CPU-event session requires Linux x64.");
         var map = PerfMapSnapshot.Read($"/tmp/perf-{Environment.ProcessId}.map");
-        if (Marshal.SizeOf<PerfAttribute>() != 64) throw new InvalidOperationException("Unexpected perf attribute layout.");
         long tid = Native.GetTid(186);
-        var attribute = new PerfAttribute { Type = 1, Size = 64, Config = 1, SamplePeriod = 1000000,
-            SampleType = 1 | 2 | 4 | 256, Flags = 1UL | (1UL << 5) | (1UL << 6), WakeupEvents = 1 };
+        var attribute = PerfAttribute.TaskClock();
         long descriptor = Native.PerfEventOpen(298, ref attribute, 0, -1, -1, 8);
         if (descriptor < 0) throw new InvalidOperationException($"perf_event_open failed: {Marshal.GetLastPInvokeError()}.");
         fd = checked((int)descriptor);

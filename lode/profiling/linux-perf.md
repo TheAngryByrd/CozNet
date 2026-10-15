@@ -5,6 +5,22 @@ It opens `PERF_COUNT_SW_TASK_CLOCK` for the calling thread with a one-millisecon
 This clock includes user and kernel execution. Ticks in kernel mode produce no sample.
 `representedCpuNanoseconds` sums emitted sample periods. It does not measure selected-method user CPU duration.
 The ring records contain user instruction pointers, process/thread IDs, timestamps, and sample periods.
+Both CPU event paths use `PerfAttribute.TaskClock()` with a 96-byte explicit layout, `use_clockid`, and `CLOCK_MONOTONIC`.
+The syscall fails without a default-clock fallback if the kernel rejects that configuration.
+`PerfAttributeChecks.TaskClockUsesMonotonicAbi` checks the serialized ABI, including zero unused fields and clock ID at offset 92.
+`--verify-cpu-event-clock` runs it without native calls. `--verify-timer-layout` includes it.
+The sampled timer captures namespace offsets and bracketed native/managed readings through `ICpuEventSession.ClockEvidence`.
+The portable parser rejects missing evidence, nonzero offsets, changed contexts, incompatible units, regressions, and brackets that do not enclose the measurement.
+The Linux adapter requires the current thread's current and child namespaces to match `/proc/self/ns/time_for_children` before reading `/proc/self/timens_offsets`.
+It repeats all identity checks after the native reading. The thread-specific proc directory does not expose `timens_offsets` on the tested kernel.
+The adapter's capture seam retains expected read failures, including `InvalidDataException`, as structured readings.
+Controlled namespace, offset, and native-read delegates cover failure retention without native calls or filesystem changes.
+Native capture uses `TimeProvider.System` and retains its partial bracket in an error result before returning to the outer capture.
+Syscall failure retains the leading timestamp. Value and conversion failures retain both timestamps.
+Consistent observations do not establish a kernel clock error bound or prediction eligibility.
+See the [clock reference](../../docsSrc/Reference/cpu-sample-clock.md) and [alignment limits](../../docsSrc/Explanations/sample-clock-alignment.md).
+The [retained clock runs](../../reliability/features/native-signal/sample-clock.md) include a corrected proc-path failure and consistent observations in two cases.
+The fifty-percent case still fails the debt limit. Source-clock error bounds remain unresolved.
 The reader checks record bounds, CPU mode, IDs, timestamp order, lost records, and throttling.
 It supports records that cross the ring boundary and applies the documented memory barriers.
 The reader reuses its immutable `SampleBatch` snapshot when the validated ring head has not advanced.

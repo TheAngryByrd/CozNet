@@ -4,6 +4,13 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-cpu-event-clock"])
+{
+    PerfAttributeChecks.TaskClockUsesMonotonicAbi();
+    SampleClockEvidenceChecks.Run();
+    return 0;
+}
+
 if (args is ["--calibrate-physical-interleaved", var interleavedCalibrationPath])
     return InterleavedCalibration.Run(interleavedCalibrationPath, () => new LinuxThreadCpuClock());
 
@@ -77,6 +84,8 @@ if (args is ["--verify-measurement-boundaries"])
 
 if (args is ["--verify-timer-layout"])
 {
+    PerfAttributeChecks.TaskClockUsesMonotonicAbi();
+    SampleClockEvidenceChecks.Run();
     InterleavedCalibrationChecks.Run();
     PhysicalCalibrationChecks.Run();
     MatchedCpuWorkersChecks.Run();
@@ -397,15 +406,13 @@ int probeCpuMilliseconds = args.Length >= 4 ? int.Parse(args[3]) : 10;
 if (probeCpuMilliseconds is not (0 or 10)) throw new ArgumentException("Select zero or 10 CPU milliseconds between probes.");
 IThreadCpuClock cpuClock = new LinuxThreadCpuClock();
 TimingChecks.WaitDurationAndCancellation(waitBackend);
-if (Marshal.SizeOf<PerfAttribute>() != 64) throw new Exception("Unexpected perf attribute layout.");
 Thread.Sleep(1);
 long beforeWarmupCalls = InjectedProbes.Calls;
 if (CpuWorkload.Run() != 49995000L) throw new Exception("The workload warmup returned an invalid checksum.");
 if (probeMode == ProbeMode.Injected) InjectedProbes.VerifyRewrite(probePlan, InjectedProbes.Calls - beforeWarmupCalls);
 long initialInjectedCalls = InjectedProbes.Calls;
 long tid = Native.GetTid(186);
-var attr = new PerfAttribute { Type = 1, Size = 64, Config = 1, SamplePeriod = 1000000,
-    SampleType = 1 | 2 | 4 | 256, Flags = 1UL | (1UL << 5) | (1UL << 6), WakeupEvents = 1 };
+var attr = PerfAttribute.TaskClock();
 long fd = Native.PerfEventOpen(298, ref attr, 0, -1, -1, 8);
 if (fd < 0)
 {
@@ -601,14 +608,6 @@ sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid,
     }
 }
 
-[StructLayout(LayoutKind.Sequential)]
-struct PerfAttribute
-{
-    public uint Type, Size;
-    public ulong Config, SamplePeriod, SampleType, ReadFormat, Flags;
-    public uint WakeupEvents, BreakpointType;
-    public ulong Config1;
-}
 static class Native
 {
     [DllImport("libc", EntryPoint = "syscall", SetLastError = true)]

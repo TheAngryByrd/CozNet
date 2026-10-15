@@ -25,6 +25,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Reference
 
+- [CPU sample clock](Reference/cpu-sample-clock.md): explicit Linux timestamp selection and ABI checks.
 - [Measurement boundaries](Reference/measurement-boundaries.md): immutable endpoints, capture failures, and unresolved boundary uncertainty.
 - [Matched physical workload](Reference/matched-physical.md): shared workers, physical mode selection, and frozen progress.
 - [Physical CPU calibration](Reference/physical-calibration.md): fixed-work pairs, retained failures, and statistical limits.
@@ -45,6 +46,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Explanation
 
+- [Sample time and measurement time](Explanations/sample-clock-alignment.md).
 - [Calibration variation and overhead sensitivity](Explanations/calibration-sensitivity.md).
 - [Matched physical prediction](Explanations/matched-prediction.md).
 

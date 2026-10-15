@@ -23,6 +23,8 @@ They retain a read-only root filesystem, no network, and dropped capabilities.
 3. Read `summary.json` and both `sampled-0.json` and `sampled-50.json`.
 4. Check `failures`, `peaks`, `pending`, and worker lifecycle fields before interpreting sample credit.
 5. Retain failed records with their manifest and logs.
+6. Inspect `sampleClock.start`, `sampleClock.end`, and `sampleClock.rejection` for clock evidence.
+   A true `observedMappingConsistent` value does not establish prediction accuracy.
 
 The runner executes both percentages even when the first workload fails.
 It checks source and binary hashes after both processes finish.

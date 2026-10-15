@@ -58,6 +58,8 @@ static class SampledTimerWorkload
         long[]? measurementProgress = null;
         long progressCapturedBeforeTimestamp = 0, progressCapturedAfterTimestamp = 0;
         var measurement = new MeasurementWindowCapture(TimeProvider.System);
+        ISampleClockEvidenceSource? clockEvidenceSource = null;
+        SampleClockReading? clockStart = null, clockEnd = null;
 
         MeasurementWindowCapture.Readings ReadMeasurement()
         {
@@ -79,6 +81,7 @@ static class SampledTimerWorkload
             if (measurement.Start is null) return;
             accept = running = false;
             measurement.Finish(ReadMeasurement);
+            if (clockEnd is null) clockEnd = clockEvidenceSource?.Read();
             if (measurement.End is not { } end) return;
             progressCapturedBeforeTimestamp = end.BeforeTimestamp;
             measurementProgress = [end.Accounting.Selected.Progress, end.Accounting.Peer.Progress];
@@ -242,6 +245,8 @@ static class SampledTimerWorkload
             phases?.Begin("setup", "phase-clock", 0);
             phases?.End();
             var timer = new Stopwatch();
+            clockEvidenceSource = session!.ClockEvidence;
+            clockStart = clockEvidenceSource?.Read();
             measurement.Begin(ReadMeasurement, () =>
             {
                 running = true;
@@ -358,6 +363,8 @@ static class SampledTimerWorkload
             if (gcObservations is null || !SampledGcStress.WithinBounds(gcObservations, Stopwatch.Frequency))
                 failures.Add(new InvalidDataException("Sampled timer collection timing did not satisfy the 250 ms call bound."));
         }
+        var clockMapping = ConsistentSampleClockReadings.Parse(clockEvidenceSource?.Description, clockStart, clockEnd,
+            measurement.Start, measurement.End);
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
             percent, failures = failures.Select(error => error.ToString()), failureStage, failureBoundary, samples, boundaries, peaks, progress = work.SnapshotProgress(), waits = new[] { ReleasedWait(0), ReleasedWait(1) }, credit, records, stableMap, closed,
@@ -374,7 +381,13 @@ static class SampledTimerWorkload
             measurementProgress, progressCapturedBeforeTimestamp, progressCapturedAfterTimestamp,
             schedulerTiming = schedulerFactory is not null, schedulerStopped = schedulerCompletion?.Stopped,
             schedulerCaptures = schedulerCompletion?.Captures,
-            timestampFrequency = Stopwatch.Frequency, predictionAccuracyEstablished = false
+            timestampFrequency = Stopwatch.Frequency, predictionAccuracyEstablished = false,
+            sampleClock = new
+            {
+                source = clockEvidenceSource?.Description, metadata = clockEvidenceSource?.Metadata,
+                start = clockStart, end = clockEnd, observedMappingConsistent = clockMapping.Value is not null,
+                rejection = clockMapping.Error, errorBoundEstablished = false
+            }
         }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
         return failures.Count == 0 && closed ? 0 : 1;
     }
