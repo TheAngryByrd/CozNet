@@ -1,5 +1,7 @@
 # Lode index
 
+For injected identity and nonblocking CLR invalidation, read [the lifetime contract research](../docsSrc/Research/cooperative-clr-lifetime.md).
+
 For the next finite experiment lifecycle and explicit residual states, read [the lifecycle plan](plans/experiment-lifecycle.md).
 
 For recorded native wait overlap at frozen endpoints, read [timer wait membership](profiling/timer-wait-membership.md).

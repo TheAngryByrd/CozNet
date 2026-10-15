@@ -68,6 +68,13 @@ The previous failed ledger reservation remains pending.
 Each case runs in a separate process because the native ABI permits one successful session per process.
 The runner retains every case and uses a process watchdog.
 
-These checks do not bind injected probes, pin CLR code versions, drive sampled debt, or establish prediction accuracy.
+The optional `injected-paid` case connects `CpuWorkload.Probe` to the native client through the existing thread-local callback.
+It checks intervals 1, 64, 256, and 1024 in separate processes.
+The callback skips the entry probe and services the lease at the second probe, inside the loop.
+It verifies the checksum, exact helper count, payment, ledger settlement, and payment on a second generation.
+The runner disables tiered compilation and ReadyToRun for these controlled processes.
+The site still carries synthetic identities. The callback does not prove CLR code-version identity or prevent code replacement.
+
+These checks do not pin CLR code versions, drive sampled debt, or establish prediction accuracy.
 See [the native ABI](cooperative-interop.md), [the verification procedure](../How_Tos/verify-cooperative-interop.md),
 and [the contract evidence](../../reliability/features/native-signal/cooperative-managed.md).

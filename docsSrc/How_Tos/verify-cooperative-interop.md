@@ -28,4 +28,30 @@ The other cases must verify a new independent generation without repairing any p
 Retain failed cases. Do not repeat unchanged timing cases to obtain a pass.
 
 For pure managed checks only, run the `CooperativeManagedVerify` build target.
+
+## Verify injected loop payment
+
+Build the workload and the native profiler for the target platform.
+For Windows x64, run:
+
+```powershell
+dotnet build tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj -c Release
+./native/Build.ps1
+./native/VerifyCooperativeInterop.ps1 -Injected
+```
+
+For Linux x64 containers, run:
+
+```powershell
+dotnet build tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj -c Release
+./native/BuildLinux.ps1
+./native/VerifyCooperativeInterop.ps1 -Platform LinuxContainer -Injected
+```
+
+Inspect the four `injected-*.json` records and `summary.json` in the reported directory.
+Each record must contain two payments with `ServiceProbe` equal to 2.
+The records must show successful ledger settlement, slot reuse, owner join, and session close.
+The summary must report unchanged inputs and successful checks at all four intervals.
+This procedure uses synthetic site identities. It does not verify CLR code lifetime or sampled capacity.
+
 See [the reference](../Reference/cooperative-managed.md) for ownership, timing, and support limits.

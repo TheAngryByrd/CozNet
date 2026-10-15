@@ -1,5 +1,7 @@
 param(
     [ValidateSet('Host', 'LinuxContainer')][string]$Platform = 'Host',
+    [switch]$Injected,
+    [string]$ProfilerDirectory,
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/cooperative-interop')
 )
 $ErrorActionPreference = 'Stop'
@@ -8,6 +10,15 @@ $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNo
 $native = Join-Path $run 'native'
 New-Item -ItemType Directory -Force $native | Out-Null
 $workload = Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0'
+if ($Injected) {
+    if (-not $ProfilerDirectory) {
+        $ProfilerDirectory = Join-Path $root $(if ($Platform -eq 'LinuxContainer') { 'artifacts/native-linux/integrated' } else { 'artifacts/native' })
+    }
+    $ProfilerDirectory = [IO.Path]::GetFullPath($ProfilerDirectory)
+    $profilerName = if ($Platform -eq 'LinuxContainer' -or $IsLinux) { 'libCozNet.Profiler.so' } elseif ($IsMacOS) { 'libCozNet.Profiler.dylib' } else { 'CozNet.Profiler.dll' }
+    $profiler = Join-Path $ProfilerDirectory $profilerName
+    if (-not (Test-Path -LiteralPath $profiler)) { throw "Build the native profiler first: $profiler" }
+}
 $sources = @('native/service/CooperativeApi.cpp', 'native/service/CooperativeApi.h',
     'native/service/CooperativeSpinTiming.cpp', 'native/service/CooperativeSpinTiming.h',
     'native/service/CooperativeTarget.cpp', 'native/service/CooperativeTarget.h',
@@ -19,20 +30,41 @@ $sources = @('native/service/CooperativeApi.cpp', 'native/service/CooperativeApi
     'src/CozNet/SignalAccounting.fs', 'src/CozNet/SignalService.fs', 'src/CozNet/DelayLedger.fs', 'src/CozNet/SampleCredits.fs',
     'native/VerifyCooperativeInterop.ps1', 'native/VerifyServiceOwner.ps1', 'build/build.fs')
 $hashes = @{}
+if ($Injected) { $sources += @('native/Profiler.cpp', 'native/Sampler.h', 'native/GenerateCallbacks.ps1', 'tests/CozNet.LinuxPerf/InjectedProbes.cs') }
 foreach ($name in $sources) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash }
 & (Join-Path $PSScriptRoot 'VerifyServiceOwner.ps1') -Platform $Platform -OutputDirectory $native *> (Join-Path $run 'native.log')
 $binary = if ($Platform -eq 'LinuxContainer' -or $IsLinux) { 'libCozNet.Cooperative.so' } elseif ($IsMacOS) { 'libCozNet.Cooperative.dylib' } else { 'Release/CozNet.Cooperative.dll' }
 $library = Join-Path $native $binary
 $binaries = @{}
+if ($Injected) { $binaries[$profiler] = (Get-FileHash -LiteralPath $profiler -Algorithm SHA256).Hash }
 foreach ($file in @($library, (Join-Path $workload 'CozNet.LinuxPerf.dll'), (Join-Path $workload 'CozNet.dll'))) {
     $binaries[$file] = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash
 }
-function Invoke-HostCase([string[]]$Arguments, [string]$Name) {
+function Invoke-HostCase([string[]]$Arguments, [string]$Name, [int]$Interval = 0) {
     $start = [Diagnostics.ProcessStartInfo]::new('dotnet')
     $start.UseShellExecute = $false
     $start.CreateNoWindow = $true
     $start.RedirectStandardOutput = $true
     $start.RedirectStandardError = $true
+    foreach ($key in @($start.Environment.Keys)) {
+        if ($key -match '^(CORECLR|COR)_.*PROFIL' -or $key -match '^COZNET_' -or $key -match '^(DOTNET|COMPlus)_(EnableDiagnostics|TieredCompilation|ReadyToRun)') {
+            [void]$start.Environment.Remove($key)
+        }
+    }
+    if ($Interval -ne 0) {
+        $start.Environment['DOTNET_TieredCompilation'] = '0'
+        $start.Environment['DOTNET_ReadyToRun'] = '0'
+        $start.Environment['CORECLR_ENABLE_PROFILING'] = '1'
+        $start.Environment['CORECLR_PROFILER'] = '{6E51C528-23F1-49EA-9346-2A7A8D911B61}'
+        $start.Environment['CORECLR_PROFILER_PATH'] = $profiler
+        $start.Environment['COZNET_PROBE_TARGET'] = 'linux-perf'
+        $start.Environment['COZNET_PROBE_INTERVAL'] = "$Interval"
+        $start.Environment['COZNET_IL_MAP_MODE'] = 'registered'
+        $start.Environment['COZNET_PROBE_PLACEMENT'] = 'branch'
+        $start.Environment['PATH'] = "$ProfilerDirectory$([IO.Path]::PathSeparator)$($start.Environment['PATH'])"
+        if ($IsLinux) { $start.Environment['LD_LIBRARY_PATH'] = $ProfilerDirectory }
+        if ($IsMacOS) { $start.Environment['DYLD_LIBRARY_PATH'] = $ProfilerDirectory }
+    }
     foreach ($argument in $Arguments) { $start.ArgumentList.Add($argument) }
     $process = [Diagnostics.Process]::Start($start)
     try {
@@ -52,20 +84,33 @@ if ($Platform -eq 'LinuxContainer') {
     if ($LASTEXITCODE -ne 0) { throw 'The Linux SDK image is unavailable.' }
     $container = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
         '--tmpfs', '/tmp:rw,nosuid,size=64m', '--mount', "type=bind,source=$workload,target=/workload,readonly",
-        '--mount', "type=bind,source=$run,target=/evidence", $runtimeImage)
-    & docker @container timeout -k 2s 25s dotnet /workload/CozNet.LinuxPerf.dll --verify-cooperative-managed *> (Join-Path $run 'managed-checks.log')
+        '--mount', "type=bind,source=$run,target=/evidence")
+    & docker @container $runtimeImage timeout -k 2s 25s dotnet /workload/CozNet.LinuxPerf.dll --verify-cooperative-managed *> (Join-Path $run 'managed-checks.log')
     $contractExit = $LASTEXITCODE
 } else {
     $contractExit = Invoke-HostCase @((Join-Path $workload 'CozNet.LinuxPerf.dll'), '--verify-cooperative-managed') 'managed-checks'
 }
 $outcomes = @()
-foreach ($mode in @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'active-cleanup')) {
-    $record = Join-Path $run "$mode.json"
+$cases = if ($Injected) { @(1, 64, 256, 1024 | ForEach-Object { @{ mode = 'injected-paid'; interval = $_; name = "injected-$_" } }) }
+else { @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'active-cleanup' | ForEach-Object { @{ mode = $_; interval = 0; name = $_ } }) }
+foreach ($case in $cases) {
+    $mode = $case.mode
+    $name = $case.name
+    $record = Join-Path $run "$name.json"
     if ($Platform -eq 'LinuxContainer') {
-        & docker @container timeout -k 2s 25s dotnet /workload/CozNet.LinuxPerf.dll --verify-cooperative-interop "/evidence/$mode.json" $mode "/evidence/native/$binary" *> (Join-Path $run "$mode.log")
+        $activation = @()
+        if ($Injected) {
+            $activation = @('--mount', "type=bind,source=$ProfilerDirectory,target=/profiler,readonly",
+                '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0',
+                '--env', 'CORECLR_ENABLE_PROFILING=1', '--env', 'CORECLR_PROFILER={6E51C528-23F1-49EA-9346-2A7A8D911B61}',
+                '--env', "CORECLR_PROFILER_PATH=/profiler/$profilerName", '--env', 'LD_LIBRARY_PATH=/profiler',
+                '--env', 'COZNET_PROBE_TARGET=linux-perf', '--env', "COZNET_PROBE_INTERVAL=$($case.interval)",
+                '--env', 'COZNET_IL_MAP_MODE=registered', '--env', 'COZNET_PROBE_PLACEMENT=branch')
+        }
+        & docker @container @activation $runtimeImage timeout -k 2s 25s dotnet /workload/CozNet.LinuxPerf.dll --verify-cooperative-interop "/evidence/$name.json" $mode "/evidence/native/$binary" *> (Join-Path $run "$name.log")
         $exitCode = $LASTEXITCODE
     } else {
-        $exitCode = Invoke-HostCase @((Join-Path $workload 'CozNet.LinuxPerf.dll'), '--verify-cooperative-interop', $record, $mode, $library) $mode
+        $exitCode = Invoke-HostCase @((Join-Path $workload 'CozNet.LinuxPerf.dll'), '--verify-cooperative-interop', $record, $mode, $library) $name $case.interval
     }
     $exists = Test-Path -LiteralPath $record
     $passed = $false
@@ -76,7 +121,7 @@ foreach ($mode in @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'a
             $passed = $result.passed -is [bool] -and $result.passed
         } catch { $recordError = $_.Exception.Message }
     }
-    $outcomes += @{ mode = $mode; exitCode = $exitCode; recordExists = $exists; passed = $passed; recordError = $recordError }
+    $outcomes += @{ mode = $mode; interval = $case.interval; exitCode = $exitCode; recordExists = $exists; passed = $passed; recordError = $recordError }
 }
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash -eq $hashes[$name] }

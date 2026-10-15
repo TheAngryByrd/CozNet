@@ -38,6 +38,16 @@ flowchart LR
     Raw --> Cleanup[Native cleanup without ledger acceptance]
 ```
 
-Manual managed polls now have a client and ledger boundary.
-Injected probe binding, actual CLR code lifetime, sampled capacity, and physical prediction remain incomplete.
+Manual managed polls have a client and ledger boundary.
+The optional `injected-paid` fixture connects the existing thread-local callback to native payment.
+It skips entry and services at loop probe 2, with exact counts and checksum checks.
+It repeats payment on a second independent generation at intervals 1, 64, 256, and 1024.
+Run `./native/VerifyCooperativeInterop.ps1 -Injected` after building the workload and profiler.
+Use `-Platform LinuxContainer` for the Linux profiler.
+The fixture retains synthetic site identities and disables tiered compilation and ReadyToRun.
+Actual CLR identity and code lifetime, sampled capacity, and physical prediction remain incomplete.
+The [CLR lifetime research](../../docsSrc/Research/cooperative-clr-lifetime.md) requires immutable injected generation/site literals and permanent invalidation.
+Do not use the controller-only transport revocation call from a CLR callback.
+Retained injected runs: Windows `artifacts/cooperative-interop/20261015T094338818-84caeb46` and Linux `artifacts/cooperative-interop/20261015T094433278-cabb08b1`.
+Both runs pass four intervals and preserve unchanged input hashes. This establishes controlled transport integration only.
 See [the reference](../../docsSrc/Reference/cooperative-managed.md), [native interop](cooperative-interop.md), and [the lifecycle plan](../plans/experiment-lifecycle.md).

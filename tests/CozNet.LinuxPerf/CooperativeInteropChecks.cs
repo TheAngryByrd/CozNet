@@ -34,8 +34,12 @@ static class CooperativeInteropChecks
     }
     public static int Run(string path, string mode, string library)
     {
-        if (mode is not ("paid" or "deferred" or "cancelled" or "late" or "clock-failure" or "active-cleanup"))
-            throw new ArgumentException("Select paid, deferred, cancelled, late, clock-failure, or active-cleanup.");
+        if (mode is not ("paid" or "deferred" or "cancelled" or "late" or "clock-failure" or "active-cleanup" or "injected-paid"))
+            throw new ArgumentException("Select paid, deferred, cancelled, late, clock-failure, active-cleanup, or injected-paid.");
+        bool injected = mode == "injected-paid";
+        bool pays = mode is "paid" or "injected-paid";
+        ProbePlan? plan = injected ? ProbePlan.Parse("injected", Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL")) : null;
+        var injectedPayments = new List<InjectedPayment>();
         NativeLibrary.SetDllImportResolver(typeof(CooperativeNativeMethods).Assembly,
             (name, _, _) => name == "CozNet.Cooperative" ? NativeLibrary.Load(Path.GetFullPath(library)) : IntPtr.Zero);
         NativeCooperativeClient? client = null;
@@ -55,6 +59,17 @@ static class CooperativeInteropChecks
             registered = true;
             worker.Run(() => client.RegisterCurrentThread(0, Site));
             Require(worker.Run(() => client.Poll(0, Site)) == CooperativePollOutcome.Idle, "A registered idle owner performed work.");
+            if (injected)
+                worker.Run(() =>
+                {
+                    long before = InjectedProbes.Calls;
+                    Require(CpuWorkload.Run() == (long)CpuWorkload.Iterations * (CpuWorkload.Iterations - 1) / 2,
+                        "Injected warmup changed the workload result.");
+                    InjectedProbes.VerifyRewrite(plan!, InjectedProbes.Calls - before);
+                    using var binding = InjectedProbes.Bind(() => Require(client.Poll(0, Site) == CooperativePollOutcome.Idle,
+                        "An injected warmup probe performed work without a lease."));
+                    CpuWorkload.Run();
+                });
             var fixture = Reserve(100000);
             ulong generation = client.Submit(0, 7, 50000);
             var adapter = Adapter(fixture, generation);
@@ -78,6 +93,12 @@ static class CooperativeInteropChecks
                 var observed = mode == "deferred" ? CooperativeSite.Parse(1, 2, 4) : Site;
                 var outcome = worker.Run(() =>
                 {
+                    if (injected)
+                    {
+                        var payment = PayFromInjectedLoop(client, plan!);
+                        injectedPayments.Add(payment);
+                        return payment.Outcome;
+                    }
                     ulong value = 1;
                     for (uint index = 0; index < 1024; ++index) value = unchecked(value * 33 + index);
                     GC.KeepAlive(value);
@@ -104,8 +125,8 @@ static class CooperativeInteropChecks
                     settled = accepted.Adapter.IsTerminal;
                     unpaid = Remaining(fixture, accepted.State);
                     Require(settled && SignalAccountingModule.pendingCount(accepted.State) == 0
-                        && unpaid == (mode == "paid" ? 0 : 50000), "Cooperative ledger settlement differs from actual payment.");
-                    Require(mode == "paid" ? firstRaw!.Header.Measured >= 50000 : firstRaw!.Header.Measured == 0,
+                        && unpaid == (pays ? 0 : 50000), "Cooperative ledger settlement differs from actual payment.");
+                    Require(pays ? firstRaw!.Header.Measured >= 50000 : firstRaw!.Header.Measured == 0,
                         "The cooperative journal contains unexpected payment.");
                     ulong firstUpper = observation!.Received[0].FirstManagedReceiptUpper;
                     Thread.Sleep(150);
@@ -139,7 +160,13 @@ static class CooperativeInteropChecks
                 Require(nextGeneration == generation + 1 && !ReferenceEquals(oldTracker, client.Receipts(0))
                     && client.Receipts(0).FirstFailure is null && client.Receipts(0).LastRaw is null,
                     "A reused slot retained the prior tracker identity or failure.");
-                Require(worker.Run(() => client.Poll(0, Site)) == CooperativePollOutcome.Serviced, "The reused target failed its child.");
+                Require(worker.Run(() =>
+                {
+                    if (!injected) return client.Poll(0, Site);
+                    var payment = PayFromInjectedLoop(client, plan!);
+                    injectedPayments.Add(payment);
+                    return payment.Outcome;
+                }) == CooperativePollOutcome.Serviced, "The reused target failed its child.");
                 var nextObservation = client.Read(0);
                 var nextSettlement = Adapter(independent, nextGeneration, 8).Accept(nextObservation, independent.State);
                 reuseVerified = nextSettlement.Adapter.IsTerminal && Remaining(independent, nextSettlement.State) == 0
@@ -198,8 +225,34 @@ static class CooperativeInteropChecks
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         File.WriteAllText(path, JsonSerializer.Serialize(new { mode, passed, failure, cleanupFailures, joined, closed, rejected,
             firstPreserved, settled, reservationRetained, unpaid, firstRaw, reuseVerified, firstCleanup, activeCleanupVerified, cleanup = client?.LastCleanup,
+            injectedPayments, probeInterval = plan?.BackedgeInterval, clrCodeLifetimeEstablished = false,
             sampledCapacityEstablished = false, generalClrSafetyEstablished = false, predictionAccuracyEstablished = false },
             new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
         return passed ? 0 : 1;
+    }
+
+    private sealed record InjectedPayment(long Calls, long ServiceProbe, CooperativePollOutcome Outcome);
+
+    private static InjectedPayment PayFromInjectedLoop(NativeCooperativeClient client, ProbePlan plan)
+    {
+        long before = InjectedProbes.Calls;
+        long serviceProbe = 0;
+        var outcome = CooperativePollOutcome.Idle;
+        using (InjectedProbes.Bind(() =>
+        {
+            long ordinal = InjectedProbes.Calls - before;
+            if (ordinal != 2) return;
+            serviceProbe = ordinal;
+            outcome = client.Poll(0, Site);
+        }))
+        {
+            Require(CpuWorkload.Run() == (long)CpuWorkload.Iterations * (CpuWorkload.Iterations - 1) / 2,
+                "Cooperative payment changed the injected workload result.");
+        }
+        long calls = InjectedProbes.Calls - before;
+        InjectedProbes.VerifyRewrite(plan, calls);
+        Require(serviceProbe == 2 && outcome == CooperativePollOutcome.Serviced,
+            "A loop probe must service the lease after the entry probe returns.");
+        return new(calls, serviceProbe, outcome);
     }
 }
