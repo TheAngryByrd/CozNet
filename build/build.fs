@@ -732,6 +732,20 @@ let linuxPhysicalCalibration _ =
 let linuxInterleavedCalibration _ =
     nativeScriptWithArgs "VerifyPhysicalCalibration.ps1" [ "-Interleaved" ]
 
+let linuxMatchedPrediction _ =
+    let calibration = Environment.environVarOrDefault "COZNET_CALIBRATION_DIRECTORY" ""
+
+    if String.IsNullOrWhiteSpace calibration then
+        failwith
+            "Set COZNET_CALIBRATION_DIRECTORY to the retained interleaved calibration directory."
+
+    nativeScriptWithArgs "VerifyMatchedPrediction.ps1" [
+        "-CalibrationDirectory"
+        calibration
+        "-PythonCommand"
+        Environment.environVarOrDefault "COZNET_PYTHON" "python"
+    ]
+
 let linuxPerfWorkload _ =
     DotNet.build
         (fun options -> {
@@ -1168,6 +1182,7 @@ let initTargets () =
     Target.create "LinuxFastTimerCapacity" linuxFastTimerCapacity
     Target.create "LinuxPhysicalCalibration" linuxPhysicalCalibration
     Target.create "LinuxInterleavedCalibration" linuxInterleavedCalibration
+    Target.create "LinuxMatchedPrediction" linuxMatchedPrediction
     Target.create "LinuxFastTimerGc" linuxFastTimerGc
     Target.create "LinuxFastTimerScheduler" linuxFastTimerScheduler
     Target.create "LinuxTimerSchedulerCost" linuxTimerSchedulerCost
@@ -1283,6 +1298,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxInterleavedCalibration"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxMatchedPrediction"
     |> ignore
 
     "LinuxPerfWorkload"

@@ -1,5 +1,10 @@
 # MiniScaffold build
 
+`LinuxMatchedPrediction` uses `LinuxPerfWorkload` and `VerifyMatchedPrediction.ps1` for eight four-case diagnostic blocks.
+It requires `COZNET_CALIBRATION_DIRECTORY` and supports `COZNET_PYTHON` for the Python command.
+The analyzer currently rejects accuracy because attribution and calibration bounds remain unresolved.
+See [matched prediction diagnostics](../profiling/matched-prediction.md).
+
 `LinuxInterleavedCalibration` depends on `LinuxPerfWorkload` and calls `VerifyPhysicalCalibration.ps1 -Interleaved`.
 It preserves the contiguous route and retains evidence under `artifacts/interleaved-calibration/`.
 See [the interleaved procedure](../../docsSrc/How_Tos/run-interleaved-calibration.md).

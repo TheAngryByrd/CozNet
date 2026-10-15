@@ -11,6 +11,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Run the sampled timer experiment](How_Tos/run-sampled-timer.md).
 - [Run physical CPU calibration](How_Tos/run-physical-calibration.md).
 - [Run interleaved CPU calibration](How_Tos/run-interleaved-calibration.md).
+- [Collect matched prediction diagnostics](How_Tos/run-matched-prediction.md).
 
 - [Verify the deterministic contract](How_Tos/verify-the-contract.md).
 - [Inspect measurement evidence](How_Tos/inspect-measurements.md).
@@ -28,6 +29,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Matched physical workload](Reference/matched-physical.md): shared workers, physical mode selection, and frozen progress.
 - [Physical CPU calibration](Reference/physical-calibration.md): fixed-work pairs, retained failures, and statistical limits.
 - [Interleaved CPU calibration](Reference/interleaved-calibration.md): short segments, block statistics, and overhead sensitivity.
+- [Matched prediction diagnostics](Reference/matched-prediction.md): frozen costs, declared cases, and rejected attribution gaps.
 
 - [Sampled timer workload](Reference/sampled-timer.md): CPU sample credit, timer ownership, and retained failures.
 
@@ -44,6 +46,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 ## Explanation
 
 - [Calibration variation and overhead sensitivity](Explanations/calibration-sensitivity.md).
+- [Matched physical prediction](Explanations/matched-prediction.md).
 
 - [Serial proportional-delay model](Explanations/Background.md).
 - [Native service ownership and measurement validity](Explanations/native-service-validity.md).

@@ -1,5 +1,7 @@
 # Lode index
 
+For matched collection, frozen cost parsing, and unresolved attribution, read [matched prediction diagnostics](profiling/matched-prediction.md).
+
 For fixed-work CPU calibration and its retained uncertainty, read [physical calibration](profiling/physical-calibration.md).
 
 For shared timer/physical workers and the uninstrumented route, read [matched physical work](profiling/matched-physical.md).

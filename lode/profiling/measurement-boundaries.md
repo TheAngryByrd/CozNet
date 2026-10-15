@@ -27,7 +27,7 @@ The capture copies pending identities and global delay, reads selected then peer
 These are controller-accounted values, not an atomic view of native work.
 Unreceived sample and journal tails still need uncertainty accounting before prediction analysis.
 The [matched physical harness](matched-physical.md) uses the same boundary contract.
-[CPU calibration](physical-calibration.md) retains paired measurements. Prediction analysis remains unimplemented.
+[CPU calibration](physical-calibration.md) retains paired measurements. [Matched diagnostics](matched-prediction.md) parse costs but reject unbounded attribution.
 
 Seven portable checks cover frozen data, release ordering, failure retention, invalid readings, clock ordering, capture transitions, and cumulative counters.
 `--verify-measurement-boundaries` runs these checks alone. `--verify-timer-layout` includes them.

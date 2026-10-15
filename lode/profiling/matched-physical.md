@@ -33,6 +33,7 @@ flowchart LR
 ```
 
 [CPU calibration](physical-calibration.md) measures paired call costs, but its current uncertainty does not justify an exact 50-percent comparison.
-Prediction analysis remains absent. No nominal 50-percent accuracy claim follows from the optimized implementation.
+[Matched diagnostics](matched-prediction.md) collect the comparison but reject unbounded attribution and calibration uncertainty.
+No nominal 50-percent accuracy claim follows from the optimized implementation.
 The older physical route remains separate for previous experiment scripts.
 See [the reference](../../docsSrc/Reference/matched-physical.md), [boundaries](measurement-boundaries.md), and [sampled timers](timer-sampled.md).
