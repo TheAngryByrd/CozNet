@@ -1,5 +1,9 @@
 # Project scope
 
+An opt-in [native progress marker](profiling/cooperative-progress-marker.md) now captures peer submission and failed-debt observations.
+Its unrestricted treatment fails the receipt limit. A one-CPU run captures pending markers after two failed debt gates.
+The markers do not establish why the peer did not reach a native poll.
+
 The [peer-progress analyzer](profiling/peer-progress.md) places one direct trial's first child after its debt observation under explicit clock-rate assumptions.
 A later retired journal does not establish payment before the gate. Peer scheduling remains unresolved.
 

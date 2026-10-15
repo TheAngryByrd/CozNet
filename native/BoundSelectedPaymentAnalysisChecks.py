@@ -4,7 +4,7 @@ import pathlib
 import tempfile
 import unittest
 
-from AnalyzeBoundSelectedPayment import main, verify_case, verify_record, verify_pause_timing, PAUSE_TIMING_FIELDS
+from AnalyzeBoundSelectedPayment import main, verify_case, verify_record, verify_pause_timing, PAUSE_TIMING_FIELDS, verify_peer_progress
 
 
 def payment(worker, ordinal, budget, waited, managed, native):
@@ -732,6 +732,120 @@ class RejectedReceiptAnalysisChecks(unittest.TestCase):
         record = valid_record()
         record.update(receiptIntervalCaptureVersion=1, receiptIntervalRejection=None)
         self.assertTrue(verify_record(record)["casePassed"])
+
+
+class PeerProgressChecks(unittest.TestCase):
+    def record(self):
+        record = valid_record()
+        owner = dict(Process=1, Thread=3)
+        observation = dict(Slot=0, Command=2, Generation=2, Budget=2, RequestStarted=80,
+                           Owner=owner, DebtTimestamp=None, Unavailable=None,
+                           Capture=dict(Started=81, Finished=82, Status=0,
+                                        Snapshot=dict(Generation=2, Ordinal=0, Phase=1), Failure=None))
+        record.update(peerProgressEnabled=True, peerOwner=owner, peerOwnerFailure=None,
+                      peerSubmitProgress=observation, peerDebtProgress=None)
+        return record
+
+    def test_valid_query_preserves_workload_outcome(self):
+        result = verify_record(self.record())
+        self.assertTrue(result["casePassed"])
+        self.assertTrue(result["completed"])
+
+    def test_invalid_identity_phase_and_brackets_reject(self):
+        mutations = [lambda r: r.update(peerProgressEnabled=1),
+                     lambda r: r.update(peerSubmitProgress=None),
+                     lambda r: r["peerSubmitProgress"].update(Slot=1),
+                     lambda r: r["peerSubmitProgress"].update(Command=3),
+                     lambda r: r["peerSubmitProgress"]["Capture"].update(Started=79),
+                     lambda r: r["peerSubmitProgress"]["Capture"]["Snapshot"].update(Phase=11),
+                     lambda r: r["peerSubmitProgress"]["Capture"]["Snapshot"].update(Generation=3),
+                     lambda r: r["peerSubmitProgress"]["Capture"]["Snapshot"].update(Ordinal=1)]
+        for mutate in mutations:
+            record = self.record()
+            mutate(record)
+            with self.subTest(record=record), self.assertRaises((ValueError, AssertionError)):
+                verify_record(record)
+
+    def test_child_phases_require_an_admitted_ordinal(self):
+        for phase in range(4, 9):
+            record = self.record()
+            record["peerSubmitProgress"]["Capture"]["Snapshot"].update(Phase=phase, Ordinal=0)
+            with self.subTest(phase=phase), self.assertRaises(ValueError):
+                verify_record(record)
+
+    def test_submission_capture_precedes_receipt_and_failure(self):
+        record = self.record()
+        record["peerSubmitProgress"]["Capture"].update(Started=89, Finished=90)
+        with self.assertRaisesRegex(ValueError, "follows receipt"):
+            verify_record(record)
+        record = self.failed_debt_record()
+        record["peerSubmitProgress"]["Capture"].update(Started=121, Finished=122)
+        with self.assertRaisesRegex(ValueError, "follows failure"):
+            verify_peer_progress(record)
+        record = self.failed_debt_record()
+        record["peerSubmitProgress"]["Capture"].update(Started=100, Finished=101)
+        with self.assertRaisesRegex(ValueError, "follows failed debt"):
+            verify_peer_progress(record)
+
+    def test_disabled_capture_rejects_evidence(self):
+        record = self.record()
+        record["peerProgressEnabled"] = False
+        with self.assertRaises((ValueError, AssertionError)):
+            verify_record(record)
+
+    def test_native_unavailable_and_query_failure_remain_evidence(self):
+        for status in (1, 8, None):
+            record = self.record()
+            record["peerSubmitProgress"]["Capture"].update(Status=status,
+                Snapshot=dict(Generation=0, Ordinal=0, Phase=0) if status is not None else None,
+                Failure=None if status is not None else "controlled failure")
+            verify_record(record)
+
+    def failed_debt_record(self):
+        record = self.record()
+        record.update(passed=False, completed=False, failure="debt exceeded",
+                      pending=dict(command=3, generation=3, budget=2000000, started=90))
+        observation = record["peerSubmitProgress"]
+        observation.update(Command=3, Generation=3, Budget=2000000, RequestStarted=90)
+        observation["Capture"].update(Started=91, Finished=92)
+        observation["Capture"]["Snapshot"]["Generation"] = 3
+        failed_debt = debt(100, 2000001, 0, 0, 0)
+        record["failureBoundary"] = dict(Command=3, Generation=3, Budget=2000000, RequestStarted=90,
+            LastObservedDebt=failed_debt, Capture=dict(Started=120))
+        captured = copy.deepcopy(observation)
+        captured.update(DebtTimestamp=100)
+        captured["Capture"].update(Started=101, Finished=102)
+        captured["Capture"]["Snapshot"].update(Phase=5, Ordinal=1)
+        record["peerDebtProgress"] = captured
+        return record
+
+    def test_failed_debt_query_binds_before_failure_capture(self):
+        record = self.failed_debt_record()
+        verify_peer_progress(record)
+        self.assertFalse(record["passed"])
+        self.assertEqual(record["failure"], "debt exceeded")
+        for mutate in (lambda r: r.update(peerDebtProgress=None),
+                       lambda r: r["peerDebtProgress"].update(DebtTimestamp=99),
+                       lambda r: r["peerDebtProgress"]["Capture"].update(Started=99),
+                       lambda r: r["peerDebtProgress"]["Capture"].update(Finished=121),
+                       lambda r: r["peerDebtProgress"].update(Command=2)):
+            changed = copy.deepcopy(record)
+            mutate(changed)
+            with self.subTest(record=changed), self.assertRaises(ValueError):
+                verify_peer_progress(changed)
+
+    def test_missing_pending_request_is_explicit(self):
+        record = self.failed_debt_record()
+        record["pending"] = None
+        record["peerSubmitProgress"] = self.record()["peerSubmitProgress"]
+        record["peerDebtProgress"].update(Capture=None, Unavailable="No pending request")
+        verify_peer_progress(record)
+
+    def test_debt_snapshot_requires_failed_debt_gate(self):
+        record = self.record()
+        record["peerDebtProgress"] = copy.deepcopy(record["peerSubmitProgress"])
+        with self.assertRaises((ValueError, AssertionError)):
+            verify_record(record)
 
 
 if __name__ == "__main__":

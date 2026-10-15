@@ -14,6 +14,7 @@ if (args is ["--verify-pausable-managed"])
 
 if (args is ["--verify-cooperative-managed"])
 {
+    CooperativeProgressCaptureChecks.Run();
     CooperativeCleanupCancellationChecks.Run();
     CooperativeReceiptIntervalChecks.Run();
     CooperativeDebtChecks.Run();
@@ -27,6 +28,7 @@ if (args is ["--verify-bound-cooperative-managed"])
     BoundReceiptReadinessChecks.Run();
     CooperativeDispatchTimingChecks.Run();
     BoundSelectedCadenceChecks.Run();
+    CooperativeProgressCaptureChecks.Run();
     CooperativeCleanupCancellationChecks.Run();
     CooperativeReceiptIntervalChecks.Run();
     CooperativeDebtChecks.Run();

@@ -27,9 +27,11 @@ if ($Injected) {
 $sources = @('native/service/CooperativeApi.cpp', 'native/service/CooperativeApi.h',
     'native/service/CooperativeSpinTiming.cpp', 'native/service/CooperativeSpinTiming.h',
     'native/service/CooperativeTarget.cpp', 'native/service/CooperativeTarget.h',
+    'native/service/CooperativeProgress.h',
     'native/service/TargetLease.cpp', 'native/service/TargetLease.h', 'native/service/LeaseMailbox.h', 'native/service/TimerJournalSnapshot.h',
     'native/service/CMakeLists.txt', 'tests/CozNet.LinuxPerf/CooperativeReceipts.cs',
     'tests/CozNet.LinuxPerf/CooperativeAccountingAdapter.cs', 'tests/CozNet.LinuxPerf/NativeCooperativeClient.cs',
+    'tests/CozNet.LinuxPerf/CooperativeProgressCapture.cs', 'tests/CozNet.LinuxPerf/CooperativeProgressCaptureChecks.cs',
     'tests/CozNet.LinuxPerf/CooperativeManagedChecks.cs', 'tests/CozNet.LinuxPerf/CooperativeInteropChecks.cs',
     'tests/CozNet.LinuxPerf/ServiceReceiptTiming.cs', 'tests/CozNet.LinuxPerf/Program.cs',
     'src/CozNet/SignalAccounting.fs', 'src/CozNet/SignalService.fs', 'src/CozNet/DelayLedger.fs', 'src/CozNet/SampleCredits.fs',
@@ -116,7 +118,7 @@ elseif ($ProbeIdentity) {
     })
 }
 elseif ($Injected) { @(1, 64, 256, 1024 | ForEach-Object { @{ mode = 'injected-paid'; interval = $_; name = "injected-$_" } }) }
-else { @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'active-cleanup', 'diagnostic', 'cpu' | ForEach-Object { @{ mode = $_; interval = 0; name = $_ } }) }
+else { @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'active-cleanup', 'diagnostic', 'cpu', 'progress' | ForEach-Object { @{ mode = $_; interval = 0; name = $_ } }) }
 foreach ($case in $cases) {
     $mode = $case.mode
     $name = $case.name

@@ -1,5 +1,7 @@
 # Cooperative peer progress analysis
 
+For the internal native phase diagnostic, see [cooperative progress marker](cooperative-progress-marker.md).
+
 `native/AnalyzeCooperativePeerProgress.py` analyzes one selected-payment JSON record.
 It runs the existing selected-payment replay before deriving any timing result.
 It does not change payment acceptance, debt limits, or the workload outcome.

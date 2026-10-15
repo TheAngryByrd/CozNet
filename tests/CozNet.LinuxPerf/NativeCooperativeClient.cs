@@ -39,6 +39,12 @@ static unsafe partial class CooperativeNativeMethods
     [LibraryImport(Library, EntryPoint = "coz_cooperative_register_cpu")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int RegisterCpu(CooperativeSessionHandle session, uint slot, ulong worker, ulong site);
+    [LibraryImport(Library, EntryPoint = "coz_cooperative_register_progress")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial int RegisterProgress(CooperativeSessionHandle session, uint slot, ulong worker, ulong site, uint observeCpu);
+    [LibraryImport(Library, EntryPoint = "coz_cooperative_progress")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial int Progress(CooperativeSessionHandle session, uint slot, ulong generation, out CooperativeNativeProgress progress);
     [LibraryImport(Library, EntryPoint = "coz_cooperative_cpu_snapshot")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int CpuSnapshot(CooperativeSessionHandle session, uint slot, ulong generation,
@@ -88,7 +94,8 @@ sealed class NativeCooperativeClient
     public Exception? LastClockFailure { get; private set; }
     public static void VerifyLayout()
     {
-        if (Marshal.SizeOf<CooperativeNativeCpuReading>() != 40 || Marshal.SizeOf<CooperativeNativeCpuChild>() != 136
+        if (Marshal.SizeOf<CooperativeNativeProgress>() != 24 || Marshal.OffsetOf<CooperativeNativeProgress>(nameof(CooperativeNativeProgress.Phase)).ToInt64() != 16 ||
+            Marshal.SizeOf<CooperativeNativeCpuReading>() != 40 || Marshal.SizeOf<CooperativeNativeCpuChild>() != 136
             || Marshal.OffsetOf<CooperativeNativeCpuChild>(nameof(CooperativeNativeCpuChild.After)).ToInt64() != 96
             || Marshal.SizeOf<CooperativeNativeChild>() != 88 || Marshal.OffsetOf<CooperativeNativeChild>(nameof(CooperativeNativeChild.Valid)).ToInt64() != 80
             || Marshal.SizeOf<CooperativeNativeSnapshot>() != 88 || Marshal.OffsetOf<CooperativeNativeSnapshot>(nameof(CooperativeNativeSnapshot.Captured)).ToInt64() != 80)
@@ -107,11 +114,12 @@ sealed class NativeCooperativeClient
         generations = new ulong[targets];
         Check(CooperativeNativeMethods.Open(version, targets, capacity, out session), "open");
     }
-    public void RegisterCurrentThread(uint slot, CooperativeSite site)
+    public void RegisterCurrentThread(uint slot, CooperativeSite site, bool observeProgress = false)
     {
         ArgumentNullException.ThrowIfNull(site);
         if (site.CodeVersion != version) throw new InvalidDataException("The cooperative site does not match the session code version.");
-        Check(cpuBuffers is null
+        Check(observeProgress ? CooperativeNativeMethods.RegisterProgress(session, slot, site.Worker, site.Site, cpuBuffers is null ? 0U : 1U) :
+            cpuBuffers is null
             ? CooperativeNativeMethods.Register(session, slot, site.Worker, site.Site)
             : CooperativeNativeMethods.RegisterCpu(session, slot, site.Worker, site.Site), "register");
     }
@@ -153,6 +161,12 @@ sealed class NativeCooperativeClient
         Check(CooperativeNativeMethods.ReceiptReady(session, slot, Generation(slot), out uint ready), "receipt readiness");
         return ready switch { 0 => false, 1 => true, _ => throw new InvalidDataException("Invalid cooperative readiness value.") };
     }
+    public CooperativeProgressCapture CaptureProgress(uint slot, ulong generation) =>
+        CooperativeProgressCapture.Read(generation, () =>
+        {
+            int status = CooperativeNativeMethods.Progress(session, slot, generation, out var snapshot);
+            return (status, snapshot);
+        });
     public unsafe CooperativeRawCapture CaptureDiagnostic(uint slot)
     {
         ulong generation = Generation(slot);

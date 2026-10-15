@@ -1,6 +1,7 @@
 #pragma once
 #include "TargetLease.h"
 #include "LeaseMailbox.h"
+#include "CooperativeProgress.h"
 #include <memory>
 #include <shared_mutex>
 #include <thread>
@@ -47,13 +48,15 @@ class CooperativeTarget {
 public:
     static std::unique_ptr<CooperativeTarget> registerCurrentThread(CooperativePollSite site,
         std::shared_ptr<CooperativeCodeLifetime> code, std::thread::id controller,
-        std::size_t capacity, CooperativeTiming& timing, bool observeCpu = false);
+        std::size_t capacity, CooperativeTiming& timing, bool observeCpu = false, bool observeProgress = false);
     CooperativeTarget(const CooperativeTarget&) = delete;
     CooperativeTarget& operator=(const CooperativeTarget&) = delete;
     std::optional<uint32_t> submit(uint64_t command, uint64_t budget);
     CooperativePollResult poll(CooperativePollSite observed);
     bool cancel(uint32_t generation) noexcept;
     std::optional<bool> receiptReady(uint32_t generation) const noexcept;
+    bool progressEnabled() const noexcept { return observe_progress_; }
+    std::optional<CooperativeProgressSnapshot> progress(uint32_t generation) const noexcept;
     std::optional<TargetLeaseSnapshot> snapshot(uint32_t generation, std::span<TargetLeaseChild> destination,
         std::size_t& required) noexcept;
     bool release(uint32_t generation) noexcept;
@@ -62,7 +65,8 @@ public:
     bool retired() const noexcept { return retired_.load(std::memory_order_acquire); }
 private:
     CooperativeTarget(CooperativePollSite site, std::shared_ptr<CooperativeCodeLifetime> code,
-        std::thread::id controller, std::size_t capacity, CooperativeTiming& timing, bool observeCpu);
+        std::thread::id controller, std::size_t capacity, CooperativeTiming& timing, bool observeCpu, bool observeProgress);
+    void recordProgress(uint32_t generation, CooperativeProgressPhase phase, uint64_t ordinal = 0) noexcept;
     bool finish() noexcept;
     bool controller() const noexcept { return std::this_thread::get_id() == controller_; }
     const CooperativePollSite site_;
@@ -72,6 +76,8 @@ private:
     LeaseMailbox mailbox_;
     std::vector<TargetLeaseChild> journal_;
     const bool observe_cpu_;
+    const bool observe_progress_;
+    CooperativeProgress progress_;
     std::vector<CooperativeCpuChild> cpu_journal_;
     std::size_t cpu_count_{};
     std::optional<TargetLease> lease_;

@@ -5,6 +5,7 @@
 #include <mutex>
 
 using namespace coz::service;
+static_assert(sizeof(CozCooperativeProgress) == 24 && offsetof(CozCooperativeProgress, phase) == 16);
 static_assert(sizeof(CozCooperativeCpuReading) == 40);
 static_assert(sizeof(CozCooperativeCpuChild) == 136 && offsetof(CozCooperativeCpuChild, after) == 96);
 static_assert(sizeof(CozCooperativeChild) == 88 && offsetof(CozCooperativeChild, valid) == 80);
@@ -77,7 +78,7 @@ int32_t COZ_COOPERATIVE_CALL coz_cooperative_open(uint64_t version, uint32_t tar
         return COZ_COOPERATIVE_OK;
     });
 }
-static int32_t registerTarget(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site, bool observeCpu) {
+static int32_t registerTarget(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site, bool observeCpu, bool observeProgress = false) {
     return translated([&]() -> int32_t {
         std::unique_lock lock(api_gate);
         if (!session || session != active.get()) return COZ_COOPERATIVE_INVALID;
@@ -86,7 +87,7 @@ static int32_t registerTarget(CozCooperativeSession* session, uint32_t slot, uin
         auto* value = get(*session, slot);
         if (!value || !identity) return COZ_COOPERATIVE_INVALID;
         if (value->target) return COZ_COOPERATIVE_BUSY;
-        auto target = CooperativeTarget::registerCurrentThread(*identity, session->code, session->controller, value->copy.size(), session->timing, observeCpu);
+        auto target = CooperativeTarget::registerCurrentThread(*identity, session->code, session->controller, value->copy.size(), session->timing, observeCpu, observeProgress);
         if (!target) return COZ_COOPERATIVE_BUSY;
         if (observeCpu) value->cpu_copy.resize(value->copy.size());
         value->owner = std::this_thread::get_id();
@@ -102,6 +103,26 @@ int32_t COZ_COOPERATIVE_CALL coz_cooperative_register_cpu(CozCooperativeSession*
     return registerTarget(session, slot, worker, site, true);
 }
 
+int32_t COZ_COOPERATIVE_CALL coz_cooperative_register_progress(CozCooperativeSession* session, uint32_t slot,
+    uint64_t worker, uint64_t site, uint32_t observe_cpu) {
+    if (observe_cpu > 1) return COZ_COOPERATIVE_INVALID;
+    return registerTarget(session, slot, worker, site, observe_cpu != 0, true);
+}
+int32_t COZ_COOPERATIVE_CALL coz_cooperative_progress(CozCooperativeSession* session, uint32_t slot,
+    uint64_t generation, CozCooperativeProgress* progress) {
+    if (!progress) return COZ_COOPERATIVE_INVALID;
+    *progress = {};
+    if (generation == 0 || generation > std::numeric_limits<uint32_t>::max()) return COZ_COOPERATIVE_INVALID;
+    return access(session, false, [&](CozCooperativeSession& value) -> int32_t {
+        auto* target = get(value, slot);
+        if (!target || !target->target) return COZ_COOPERATIVE_INVALID;
+        if (!target->target->progressEnabled()) return COZ_COOPERATIVE_DISABLED;
+        const auto result = target->target->progress(static_cast<uint32_t>(generation));
+        if (!result) return COZ_COOPERATIVE_INVALID;
+        *progress = {result->generation, result->ordinal, static_cast<uint64_t>(result->phase)};
+        return COZ_COOPERATIVE_OK;
+    });
+}
 int32_t COZ_COOPERATIVE_CALL coz_cooperative_cpu_snapshot(CozCooperativeSession* session,
     uint32_t slot, uint64_t generation, CozCooperativeCpuChild* children, uint32_t capacity, uint32_t* required) {
     if (!required || (capacity != 0 && !children) || capacity > 100000) return COZ_COOPERATIVE_INVALID;

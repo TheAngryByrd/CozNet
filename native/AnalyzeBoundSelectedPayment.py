@@ -337,7 +337,81 @@ def verify_child_cpu(record):
     return dict(enabled=enabled, generations=len(seen), failedReadings=reading_failures, unsupportedReadings=unsupported)
 
 
+def verify_peer_progress(record):
+    enabled = record.get("peerProgressEnabled", False)
+    require(type(enabled) is bool, "Peer progress activation is not Boolean")
+    fields = ("peerOwner", "peerOwnerFailure", "peerSubmitProgress", "peerDebtProgress")
+    if not enabled:
+        require(all(record.get(key) is None for key in fields), "Disabled peer progress contains observations")
+        return
+    owner, owner_error = record.get("peerOwner"), record.get("peerOwnerFailure")
+    if owner is not None:
+        require(all(0 < count(owner[key]) <= 4294967295 for key in ("Process", "Thread")), "Invalid peer owner identity")
+        require(owner_error is None, "Peer owner has both identity and failure")
+    elif owner_error is not None:
+        require(isinstance(owner_error, str) and bool(owner_error), "Invalid peer owner failure")
+    submissions = [(p["Command"], p["Generation"], p["Budget"], p["Started"]) for p in record["payments"]]
+    pending = record.get("pending")
+    if pending is not None and pending["generation"]:
+        submissions.append(tuple(pending[k] for k in ("command", "generation", "budget", "started")))
+    require(not submissions or owner is not None or owner_error is not None, "Peer owner evidence is missing")
+    latest = record.get("peerSubmitProgress")
+    require(not submissions or latest is not None, "Peer submission progress is missing")
+    boundary = record.get("failureBoundary")
+    debt = boundary.get("LastObservedDebt") if boundary else None
+    exceeded = debt is not None and max(debt["Selected"], debt["Peer"]) > 2000000
+    at_debt = record.get("peerDebtProgress")
+    require(not exceeded or at_debt is not None, "Peer debt progress is missing")
+    require(at_debt is None or exceeded, "Peer debt progress has no failed debt gate")
+    for observation, is_debt in ((latest, False), (at_debt, True)):
+        if observation is None:
+            continue
+        require(type(observation["Slot"]) is int and observation["Slot"] == 0, "Peer progress changed its slot")
+        require(observation["Owner"] == owner, "Peer progress changed its owner")
+        identity = tuple(count(observation[k]) for k in ("Command", "Generation", "Budget", "RequestStarted"))
+        require(observation["DebtTimestamp"] == (debt["Timestamp"] if is_debt else None), "Peer progress changed its debt timestamp")
+        if is_debt:
+            require(identity == tuple(boundary[k] for k in ("Command", "Generation", "Budget", "RequestStarted")),
+                    "Debt progress differs from the failure request")
+        capture, unavailable = observation["Capture"], observation["Unavailable"]
+        if capture is None:
+            require(is_debt and isinstance(unavailable, str) and bool(unavailable), "Peer progress lacks capture evidence")
+            require(pending is None or pending["generation"] == 0, "Pending peer progress was reported absent")
+            continue
+        require(unavailable is None and identity in submissions, "Peer progress request identity differs")
+        if not is_debt:
+            require(identity == max(submissions, key=lambda item: item[0]), "Peer submit progress is not the latest request")
+        start, finish = count(capture["Started"]), count(capture["Finished"])
+        require(identity[3] <= start <= finish, "Invalid peer progress query bracket")
+        if is_debt:
+            require(debt["Timestamp"] <= start and finish <= boundary["Capture"]["Started"], "Peer progress is outside failure capture order")
+        else:
+            accepted = next((p for p in record["payments"] if (p["Command"], p["Generation"]) == identity[:2]), None)
+            if accepted is not None:
+                require(finish <= accepted["ReceiptInterval"]["Observed"], "Peer submission query follows receipt observation")
+            elif boundary is not None:
+                require(finish <= boundary["Capture"]["Started"], "Peer submission query follows failure capture")
+            if at_debt is not None and at_debt["Generation"] == identity[1]:
+                require(finish <= at_debt["DebtTimestamp"], "Peer submission query follows failed debt observation")
+        status, raw, error = capture["Status"], capture["Snapshot"], capture["Failure"]
+        require(status is None or type(status) is int and 0 <= status <= 8, "Invalid peer progress status")
+        if error is not None:
+            require(isinstance(error, str) and bool(error), "Invalid peer progress failure")
+            continue
+        require(status is not None and raw is not None, "Peer progress query lost its result")
+        counts(raw)
+        if status == 0:
+            require(raw["Generation"] == identity[1] and 0 < raw["Generation"] <= 4294967295,
+                    "Peer progress generation differs")
+            require(raw["Ordinal"] <= 100000 and 1 <= raw["Phase"] <= 10 and
+                    (raw["Phase"] != 1 or raw["Ordinal"] == 0) and
+                    (not 4 <= raw["Phase"] <= 8 or raw["Ordinal"] > 0), "Invalid peer progress phase or ordinal")
+        else:
+            require(all(value == 0 for value in raw.values()), "Unavailable peer progress contains a marker")
+
+
 def verify_record(record):
+    verify_peer_progress(record)
     verify_dispatch_timing(record)
     verify_sample_publication(record)
     verify_rejected_receipt_interval(record)

@@ -17,6 +17,8 @@ static class BoundSampledPaymentWorkload
     private sealed record FailureBoundary(Debt? LastObservedDebt, ulong Command, ulong Generation, long Budget,
         long RequestStarted, CooperativeFailureCapture Capture);
 
+    private sealed record PeerProgressObservation(uint Slot, ulong Command, ulong Generation, long Budget,
+        long RequestStarted, CpuSampleOwner? Owner, long? DebtTimestamp, CooperativeProgressCapture? Capture, string? Unavailable);
     public static int Run(string path, SampledSignalPlan settings, string library,
         Func<CpuSampleOwner> readOwner, Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource,
         bool invalidateAfterPayment = false,
@@ -52,6 +54,15 @@ static class BoundSampledPaymentWorkload
             _ => throw new ArgumentException("COZNET_CHILD_CPU must be 0 or 1.")
         };
         Require(!childCpuEnabled || selectedPaymentEnabled, "Child CPU capture requires selected payment.");
+        bool peerProgressEnabled = Environment.GetEnvironmentVariable("COZNET_PEER_PROGRESS") switch
+        {
+            null or "0" => false, "1" => true,
+            _ => throw new ArgumentException("COZNET_PEER_PROGRESS must be 0 or 1.")
+        };
+        Require(!peerProgressEnabled || selectedPaymentEnabled, "Peer progress capture requires selected payment.");
+        CpuSampleOwner? peerOwner = null;
+        string? peerOwnerFailure = null;
+        PeerProgressObservation? peerSubmitProgress = null, peerDebtProgress = null;
         bool ownerDrainEnabled = Environment.GetEnvironmentVariable("COZNET_OWNER_DRAIN") switch
         {
             null or "0" => false,
@@ -127,6 +138,14 @@ static class BoundSampledPaymentWorkload
         }
         void Control(Action action, CooperativeDispatchOperation operation) => OnController(() => { action(); return true; }, operation);
 
+        PeerProgressObservation CapturePeerProgress(long? debtTimestamp)
+        {
+            if (client is null || lease is null || generation == 0)
+                return new(0, command, generation, pendingBudget, pendingStarted, peerOwner, debtTimestamp, null,
+                    "No submitted peer request is pending.");
+            return new(0, command, generation, pendingBudget, pendingStarted, peerOwner, debtTimestamp,
+                client.CaptureProgress(0, generation), null);
+        }
         Debt ObserveDebt()
         {
             var observed = accounting.Observe(state);
@@ -136,7 +155,10 @@ static class BoundSampledPaymentWorkload
             if (selectedPeak is null || debt.Selected > selectedPeak.Selected) selectedPeak = debt;
             if (peerPeak is null || debt.Peer > peerPeak.Peer) peerPeak = debt;
             if (debt.Selected > 2000000 || debt.Peer > 2000000)
+            {
+                if (peerProgressEnabled && peerDebtProgress is null) peerDebtProgress = CapturePeerProgress(debt.Timestamp);
                 throw new InvalidDataException($"Sampled cooperative debt exceeded 2 ms: selected={debt.Selected}, peer={debt.Peer}.");
+            }
             return debt;
         }
 
@@ -295,6 +317,7 @@ static class BoundSampledPaymentWorkload
                     state = Parsed(SignalAccountingModule.sentService(lease, state));
                     generation = 0;
                     generation = OnController(() => client!.Submit(0, command, checked((ulong)pendingBudget)), CooperativeDispatchOperation.PeerSubmit);
+                    if (peerProgressEnabled) peerSubmitProgress = CapturePeerProgress(null);
                     pending = new(CooperativeAccountingBinding.Parse(lease, generation, command, site!));
                 }
             }
@@ -314,7 +337,16 @@ static class BoundSampledPaymentWorkload
             }
             worker = new();
             registered = true;
-            site = worker.Run(() => client.RegisterCurrentThread(0, 2));
+            site = worker.Run(() =>
+            {
+                var registeredSite = client.RegisterCurrentThread(0, 2, peerProgressEnabled);
+                if (peerProgressEnabled)
+                {
+                    try { peerOwner = readOwner(); }
+                    catch (Exception error) { peerOwnerFailure = error.ToString(); }
+                }
+                return registeredSite;
+            });
             worker.Run(() => Require(CpuWorkload.Run() == 49995000L, "Peer warmup changed its checksum."));
             Action peerWork = () =>
             {
@@ -527,6 +559,7 @@ static class BoundSampledPaymentWorkload
             batchServiceEnabled = publication.BatchServiceEnabled, sampleServiceCalls = publication.ServiceCalls,
             dispatchTimingEnabled = dispatchTiming is not null, dispatchTiming,
             directReceiptReadyEnabled = receiptReadiness.DirectEnabled, receiptReadyCalls = receiptReadiness.Calls,
+            peerProgressEnabled, peerOwner, peerOwnerFailure, peerSubmitProgress, peerDebtProgress,
             binding = bindingEvidence is null ? null : new { bindingEvidence.Generation, Module = (ulong)bindingEvidence.Module,
                 Function = (ulong)bindingEvidence.Function, bindingEvidence.Method, bindingEvidence.Sites }, nativeRange = collection?.Map.Range,
             selectedBatches = batches, checksum, peerBatches, peerChecksum, peerCalls,

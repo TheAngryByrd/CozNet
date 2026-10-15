@@ -23,7 +23,8 @@ enum CozCooperativeStatus {
     COZ_COOPERATIVE_BUFFER = 4,
     COZ_COOPERATIVE_CLOCK = 5,
     COZ_COOPERATIVE_MEMORY = 6,
-    COZ_COOPERATIVE_FAILURE = 7
+    COZ_COOPERATIVE_FAILURE = 7,
+    COZ_COOPERATIVE_DISABLED = 8
 };
 enum CozCooperativePollOutcome {
     COZ_COOPERATIVE_IDLE = 0,
@@ -60,6 +61,13 @@ typedef struct {
     uint64_t generation, command, ordinal, worker, code_version, site, requested;
     CozCooperativeCpuReading before, after;
 } CozCooperativeCpuChild;
+
+typedef struct {
+    uint64_t generation, ordinal, phase;
+} CozCooperativeProgress;
+
+COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_register_progress(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site, uint32_t observe_cpu);
+COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_progress(CozCooperativeSession* session, uint32_t slot, uint64_t generation, CozCooperativeProgress* progress);
 
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_register_cpu(CozCooperativeSession* session,
     uint32_t slot, uint64_t worker, uint64_t site);

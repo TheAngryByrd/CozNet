@@ -26,15 +26,15 @@ sealed class BoundCooperativeClient
         if (cleanup.HasStarted) throw new InvalidOperationException("Cooperative cleanup has started.");
     }
     private CooperativeSite Site(uint slot) => sites[slot] ?? throw new InvalidOperationException("The cooperative target is not registered.");
-    public CooperativeSite RegisterCurrentThread(uint slot, ulong worker)
+    public CooperativeSite RegisterCurrentThread(uint slot, ulong worker, bool observeProgress = false)
     {
         RequireActive();
-        return lifetime.Execute((Self: this, Slot: slot, Worker: worker), static value =>
+        return lifetime.Execute((Self: this, Slot: slot, Worker: worker, ObserveProgress: observeProgress), static value =>
         {
             if (value.Self.sites[value.Slot] is not null) throw new InvalidOperationException("The cooperative slot already has an owner identity.");
             var site = CooperativeSite.Parse(value.Worker, value.Self.Binding.Generation, 2);
             value.Self.sites[value.Slot] = site;
-            value.Self.native.RegisterCurrentThread(value.Slot, site);
+            value.Self.native.RegisterCurrentThread(value.Slot, site, value.ObserveProgress);
             return site;
         });
     }
@@ -69,6 +69,7 @@ sealed class BoundCooperativeClient
     public bool HasPending(uint slot) => native.HasPending(slot);
     public CooperativeRawCapture CaptureDiagnostic(uint slot) => native.CaptureDiagnostic(slot);
     public CooperativeNativeSnapshot CleanupHeader(uint slot) => native.Probe(slot);
+    public CooperativeProgressCapture CaptureProgress(uint slot, ulong generation) => native.CaptureProgress(slot, generation);
     public bool ReceiptReady(uint slot) => native.ReceiptReady(slot);
     public void ReleaseAfterRetiredCopy(uint slot) => native.ReleaseAfterRetiredCopy(slot);
     public void BeginCleanup() => cleanup.Begin();

@@ -40,11 +40,11 @@ static class CooperativeInteropChecks
     }
     public static int Run(string path, string mode, string library)
     {
-        if (mode is not ("paid" or "deferred" or "cancelled" or "late" or "clock-failure" or "active-cleanup" or "injected-paid" or "diagnostic" or "cpu"))
-            throw new ArgumentException("Select paid, deferred, cancelled, late, clock-failure, active-cleanup, injected-paid, diagnostic, or cpu.");
+        if (mode is not ("paid" or "deferred" or "cancelled" or "late" or "clock-failure" or "active-cleanup" or "injected-paid" or "diagnostic" or "cpu" or "progress"))
+            throw new ArgumentException("Select paid, deferred, cancelled, late, clock-failure, active-cleanup, injected-paid, diagnostic, cpu, or progress.");
         bool injected = mode == "injected-paid";
         bool diagnostic = mode is "diagnostic" or "cpu";
-        bool pays = mode is "paid" or "injected-paid" or "diagnostic" or "cpu";
+        bool pays = mode is "paid" or "injected-paid" or "diagnostic" or "cpu" or "progress";
         ProbePlan? plan = injected ? ProbePlan.Parse("injected", Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL")) : null;
         var injectedPayments = new List<InjectedPayment>();
         NativeLibrary.SetDllImportResolver(typeof(CooperativeNativeMethods).Assembly,
@@ -57,6 +57,7 @@ static class CooperativeInteropChecks
         CooperativeCleanupCapture? firstCleanup = null;
         long? unpaid = null;
         CooperativeRawCapture? firstRaw = null;
+        CooperativeProgressCapture? pendingProgress = null, retiredProgress = null, releasedProgress = null;
         CooperativeRawCapture? activeDiagnostic = null, retiredDiagnostic = null;
         string? failure = null;
         var cleanupFailures = new List<string>();
@@ -65,7 +66,7 @@ static class CooperativeInteropChecks
             client = new(2, capacity: 8, observeCpu: mode == "cpu");
             worker = new();
             registered = true;
-            worker.Run(() => client.RegisterCurrentThread(0, Site));
+            worker.Run(() => client.RegisterCurrentThread(0, Site, observeProgress: mode == "progress"));
             Require(worker.Run(() => client.Poll(0, Site)) == CooperativePollOutcome.Idle, "A registered idle owner performed work.");
             if (injected)
                 worker.Run(() =>
@@ -80,6 +81,13 @@ static class CooperativeInteropChecks
                 });
             var fixture = Reserve(100000);
             ulong generation = client.Submit(0, 7, 50000);
+            if (mode == "progress")
+            {
+                pendingProgress = client.CaptureProgress(0, generation);
+                Require(pendingProgress is { Status: 0, Failure: null, Snapshot: { Phase: 1, Ordinal: 0 } marker } &&
+                    marker.Generation == generation && client.Receipts(0).LastRaw is null && client.HasPending(0),
+                    "The pending marker changed ownership or receipt tracking.");
+            }
             if (diagnostic)
             {
                 activeDiagnostic = client.CaptureDiagnostic(0);
@@ -122,6 +130,13 @@ static class CooperativeInteropChecks
                     return client.Poll(0, observed);
                 });
                 Require(outcome == CooperativePollOutcome.Serviced, "The cooperative owner failed its bounded child.");
+                if (mode == "progress")
+                {
+                    retiredProgress = client.CaptureProgress(0, generation);
+                    Require(retiredProgress is { Status: 0, Failure: null, Snapshot: { Phase: 9, Ordinal: 1 } marker } &&
+                        marker.Generation == generation && client.Receipts(0).LastRaw is null && client.HasPending(0),
+                        "The retired marker changed ownership or receipt tracking.");
+                }
                 var header = client.Probe(0);
                 Require(header.Visibility == 3 && header.Children == 1 && header.Error == 0,
                     "The controlled cooperative child did not produce a valid retired journal.");
@@ -176,6 +191,12 @@ static class CooperativeInteropChecks
                 var oldTracker = client.Receipts(0);
                 var oldFailure = oldTracker.FirstFailure;
                 client.ReleaseAfterRetiredCopy(0);
+                if (mode == "progress")
+                {
+                    releasedProgress = client.CaptureProgress(0, generation);
+                    Require(releasedProgress is { Status: 1, Failure: null, Snapshot: { Generation: 0, Ordinal: 0, Phase: 0 } },
+                        "A released marker remained observable.");
+                }
                 firstCleanup = client.LastCleanup ?? throw new InvalidDataException("The first cleanup capture is missing.");
             if (mode == "cpu")
             {
@@ -276,7 +297,7 @@ static class CooperativeInteropChecks
         bool passed = bodyPassed && joined && closed && cleanupFailures.Count == 0 && activeCleanupVerified;
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         File.WriteAllText(path, JsonSerializer.Serialize(new { mode, passed, failure, cleanupFailures, joined, closed, rejected,
-            firstPreserved, settled, reservationRetained, unpaid, firstRaw, activeDiagnostic, retiredDiagnostic, reuseVerified, firstCleanup, activeCleanupVerified, cleanup = client?.LastCleanup,
+            firstPreserved, settled, reservationRetained, unpaid, firstRaw, pendingProgress, retiredProgress, releasedProgress, activeDiagnostic, retiredDiagnostic, reuseVerified, firstCleanup, activeCleanupVerified, cleanup = client?.LastCleanup,
             injectedPayments, probeInterval = plan?.BackedgeInterval, clrCodeLifetimeEstablished = false,
             sampledCapacityEstablished = false, generalClrSafetyEstablished = false, predictionAccuracyEstablished = false },
             new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));

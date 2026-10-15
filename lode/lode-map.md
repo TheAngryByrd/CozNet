@@ -1,5 +1,7 @@
 # Lode index
 
+For the internal opt-in atomic phase marker, read [cooperative progress](profiling/cooperative-progress-marker.md).
+
 For conditional first-child timing relative to a debt observation, read [peer progress](profiling/peer-progress.md).
 
 For opt-in direct observation without controller header dispatches, read [receipt readiness](profiling/receipt-readiness.md).

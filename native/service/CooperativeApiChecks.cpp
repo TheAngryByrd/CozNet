@@ -313,7 +313,44 @@ static void receiptReadinessIsObservationOnly(CozCooperativeSession* session, Wo
     require(coz_cooperative_receipt_ready(session, 0, generation, &ready) == COZ_COOPERATIVE_INVALID && ready == 0, 110);
 }
 
+static void progressApiContract() {
+    CozCooperativeSession* session{};
+    require(coz_cooperative_open(2, 2, 4, &session) == COZ_COOPERATIVE_OK, 120);
+    Worker owner, observer;
+    require(owner.run([&] { return coz_cooperative_register_progress(session, 0, 1, 3, 2); }) == COZ_COOPERATIVE_INVALID, 121);
+    require(owner.run([&] { return coz_cooperative_register_progress(session, 0, 1, 3, 1); }) == COZ_COOPERATIVE_OK, 122);
+    require(owner.run([&] { return coz_cooperative_register(session, 1, 2, 3); }) == COZ_COOPERATIVE_OK, 123);
+    CozCooperativeProgress progress{99, 99, 99};
+    require(coz_cooperative_progress(session, 0, 1, nullptr) == COZ_COOPERATIVE_INVALID, 124);
+    require(coz_cooperative_progress(nullptr, 0, 1, &progress) == COZ_COOPERATIVE_INVALID &&
+        progress.generation == 0 && progress.ordinal == 0 && progress.phase == 0, 125);
+    require(coz_cooperative_progress(session, 1, 1, &progress) == COZ_COOPERATIVE_DISABLED, 126);
+    require(coz_cooperative_progress(session, 2, 1, &progress) == COZ_COOPERATIVE_INVALID, 127);
+    uint64_t generation{};
+    require(coz_cooperative_submit(session, 0, 70, 1, &generation) == COZ_COOPERATIVE_OK, 128);
+    for (uint64_t invalid : {uint64_t{0}, (uint64_t{1} << 32) | generation, generation + 1}) {
+        progress = {99, 99, 99};
+        require(coz_cooperative_progress(session, 0, invalid, &progress) == COZ_COOPERATIVE_INVALID &&
+            progress.generation == 0 && progress.ordinal == 0 && progress.phase == 0, 129);
+    }
+    require(observer.run([&] { return coz_cooperative_progress(session, 0, generation, &progress); }) == COZ_COOPERATIVE_OK &&
+        progress.generation == generation && progress.ordinal == 0 && progress.phase == 1, 130);
+    require(coz_cooperative_release(session, 0, generation) == COZ_COOPERATIVE_BUSY, 131);
+    require(owner.run([&] { uint32_t outcome{}; return coz_cooperative_poll(session, 0, 1, 2, 3, &outcome); }) == COZ_COOPERATIVE_OK, 132);
+    require(observer.run([&] { return coz_cooperative_progress(session, 0, generation, &progress); }) == COZ_COOPERATIVE_OK &&
+        progress.ordinal == 1 && progress.phase == 9 && coz_cooperative_release(session, 0, generation) == COZ_COOPERATIVE_BUSY, 133);
+    CozCooperativeSnapshot snapshot{};
+    CozCooperativeChild child{};
+    require(coz_cooperative_snapshot(session, 0, generation, &snapshot, &child, 1) == COZ_COOPERATIVE_OK &&
+        coz_cooperative_release(session, 0, generation) == COZ_COOPERATIVE_OK, 134);
+    require(coz_cooperative_progress(session, 0, generation, &progress) == COZ_COOPERATIVE_INVALID && progress.generation == 0, 135);
+    require(owner.run([&] { return coz_cooperative_retire(session, 0) == COZ_COOPERATIVE_OK &&
+        coz_cooperative_retire(session, 1) == COZ_COOPERATIVE_OK; }), 136);
+    require(coz_cooperative_close(session) == COZ_COOPERATIVE_OK &&
+        coz_cooperative_progress(session, 0, generation, &progress) == COZ_COOPERATIVE_INVALID, 137);
+}
 int main(int argc, char** argv) {
+    if (argc == 2 && std::string_view(argv[1]) == "progress") { progressApiContract(); return 0; }
     if (argc == 2 && std::string_view(argv[1]) == "cpu") { cpuSnapshotContract(); return 0; }
     if (argc == 2 && std::string_view(argv[1]) == "timing") { nativeClockAndBoundedWait(); return 0; }
     CozCooperativeSession* session{};

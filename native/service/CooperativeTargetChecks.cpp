@@ -61,11 +61,11 @@ public:
     std::shared_ptr<CooperativeCodeLifetime> code = std::make_shared<CooperativeCodeLifetime>(site());
     std::unique_ptr<CooperativeTarget> target;
     const std::thread::id controller = std::this_thread::get_id();
-    explicit Worker(bool observeCpu = false) {
+    explicit Worker(bool observeCpu = false, bool observeProgress = false) {
         std::promise<std::unique_ptr<CooperativeTarget>> registration;
         auto registered = registration.get_future();
-        thread = std::thread([this, observeCpu, registration = std::move(registration)]() mutable {
-            registration.set_value(CooperativeTarget::registerCurrentThread(site(), code, controller, 4, timing, observeCpu));
+        thread = std::thread([this, observeCpu, observeProgress, registration = std::move(registration)]() mutable {
+            registration.set_value(CooperativeTarget::registerCurrentThread(site(), code, controller, 4, timing, observeCpu, observeProgress));
             for (;;) {
                 std::function<void()> task;
                 {
@@ -361,7 +361,100 @@ static void executingChildIsNotReceiptReady() {
     require(worker.target->release(*generation) && worker.run([&] { return worker.target->retire(); }), 144);
 }
 
+static void progressPreservesGenerationAndTerminalPhase() {
+    CooperativeProgress marker;
+    require(!marker.read(0) && !marker.read(1), 150);
+    marker.begin(1);
+    marker.record(1, CooperativeProgressPhase::child_admitted, 100000);
+    marker.record(1, CooperativeProgressPhase::poll_entered);
+    auto value = marker.read(1);
+    require(value && value->ordinal == 100000 && value->phase == CooperativeProgressPhase::poll_entered, 151);
+    marker.record(1, CooperativeProgressPhase::child_admitted, 100001);
+    require(marker.read(1)->ordinal == 100000, 152);
+    marker.record(1, CooperativeProgressPhase::failed);
+    marker.record(1, CooperativeProgressPhase::returning);
+    require(marker.read(1)->phase == CooperativeProgressPhase::failed, 153);
+    marker.record(1, CooperativeProgressPhase::quiesced);
+    marker.record(1, CooperativeProgressPhase::failed);
+    require(marker.read(1)->phase == CooperativeProgressPhase::quiesced, 154);
+    marker.begin(2);
+    marker.record(1, CooperativeProgressPhase::quiesced);
+    value = marker.read(2);
+    require(!marker.read(1) && value && value->ordinal == 0 && value->phase == CooperativeProgressPhase::pending, 155);
+}
+static void progressConcurrentGenerationReplacement() {
+    CooperativeProgress marker;
+    marker.begin(1);
+    std::atomic<uint32_t> generation{1};
+    std::atomic<bool> started{}, stop{};
+    std::thread oldWriter([&] {
+        started.store(true, std::memory_order_release);
+        while (!stop.load(std::memory_order_acquire))
+            marker.record(generation.load(std::memory_order_acquire), CooperativeProgressPhase::child_admitted, 1);
+    });
+    while (!started.load(std::memory_order_acquire)) std::this_thread::yield();
+    bool preserved = true;
+    for (uint32_t next = 2; next <= 20000; ++next) {
+        marker.begin(next);
+        generation.store(next, std::memory_order_release);
+        preserved = preserved && marker.read(next).has_value();
+    }
+    stop.store(true, std::memory_order_release);
+    oldWriter.join();
+    require(preserved && marker.read(20000).has_value(), 173);
+}
+static void progressObservesExecutingChildWithoutReceiptAuthority() {
+    Worker worker(false, true);
+    require(worker.target->progressEnabled() && !worker.target->progress(0) && !worker.target->progress(1), 156);
+    const auto generation = worker.target->submit(90, 60000);
+    require(generation.has_value(), 157);
+    auto value = worker.target->progress(*generation);
+    require(value && value->generation == *generation && value->ordinal == 0 && value->phase == CooperativeProgressPhase::pending, 158);
+    require(worker.target->poll(site()) == CooperativePollResult::rejected &&
+        worker.target->progress(*generation)->phase == CooperativeProgressPhase::pending, 159);
+    worker.timing.hold.store(true);
+    auto polling = worker.enqueue([&] { return worker.target->poll(site()); });
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!worker.timing.entered.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::yield();
+    value = worker.target->progress(*generation);
+    require(worker.timing.entered.load() && value && value->ordinal == 1 &&
+        value->phase == CooperativeProgressPhase::wait_entered && !worker.target->release(*generation), 160);
+    worker.timing.resume.store(true, std::memory_order_release);
+    require(polling.wait_for(std::chrono::seconds(5)) == std::future_status::ready &&
+        polling.get() == CooperativePollResult::serviced, 161);
+    value = worker.target->progress(*generation);
+    require(value && value->ordinal == 1 && value->phase == CooperativeProgressPhase::returning, 162);
+    require(worker.run([&] { return worker.target->poll(site()); }) == CooperativePollResult::serviced, 163);
+    value = worker.target->progress(*generation);
+    require(value && value->ordinal == 2 && value->phase == CooperativeProgressPhase::quiesced &&
+        !worker.target->release(*generation), 164);
+    std::array<TargetLeaseChild, 4> children{};
+    read(worker, *generation, children);
+    require(worker.target->release(*generation) && !worker.target->progress(*generation), 165);
+    const auto next = worker.target->submit(91, 1);
+    require(next && *next != *generation && !worker.target->progress(*generation) &&
+        worker.target->progress(*next)->ordinal == 0, 166);
+    require(worker.target->cancel(*next) && worker.run([&] { return worker.target->poll(site()); }) == CooperativePollResult::serviced, 167);
+    require(worker.target->progress(*next)->phase == CooperativeProgressPhase::quiesced, 168);
+    read(worker, *next, children);
+    require(worker.target->release(*next) && worker.run([&] { return worker.target->retire(); }), 169);
+}
+static void disabledProgressRemainsUnavailable() {
+    Worker worker;
+    const auto generation = worker.target->submit(92, 1);
+    require(generation && !worker.target->progressEnabled() && !worker.target->progress(*generation), 170);
+    require(worker.run([&] { return worker.target->poll(site()); }) == CooperativePollResult::serviced &&
+        !worker.target->progress(*generation), 171);
+    std::array<TargetLeaseChild, 4> children{};
+    read(worker, *generation, children);
+    require(worker.target->release(*generation) && worker.run([&] { return worker.target->retire(); }), 172);
+}
 int main() {
+    progressPreservesGenerationAndTerminalPhase();
+    progressConcurrentGenerationReplacement();
+    progressObservesExecutingChildWithoutReceiptAuthority();
+    disabledProgressRemainsUnavailable();
     receiptReadinessPreservesOwnership();
     executingChildIsNotReceiptReady();
     cpuJournalRetainsBoundedChildren();
