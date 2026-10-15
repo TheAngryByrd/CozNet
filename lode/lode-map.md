@@ -1,5 +1,9 @@
 # Lode index
 
+For the opt-in two-slot payment draft and its verification gaps, read [selected-owner payment](profiling/selected-owner-payment.md).
+
+For authoritative selected and peer debt, read [cooperative ledger observations](profiling/cooperative-debt.md).
+
 For acknowledged drain ownership before selected payment, read [the pausable collector](profiling/pausable-collector.md).
 
 For real selected samples driving bound peer waits, read [sample-driven cooperative payment](profiling/bound-sampled-payment.md).

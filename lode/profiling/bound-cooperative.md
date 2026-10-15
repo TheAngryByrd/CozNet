@@ -29,6 +29,10 @@ flowchart LR
 
 Cleanup bypasses lifetime acceptance, never ownership checks.
 Cleanup polls require a successful controller cancellation and do not establish injected-origin evidence.
+`BeginCleanup` attempts each slot even if an earlier slot fails. It reports those failures together after all cancellation attempts.
+`CooperativeCleanupCancellation` owns this sequence and each slot's polling permission.
+Permission follows successful cancellation return. A failed retry preserves any earlier successful cancellation.
+Its injected pending, visibility, and cancellation operations permit deterministic failure checks without native API calls.
 Completion requires close after owner join and another lifetime check.
 Invalidation after accepted settlement rejects completion without rolling back the returned ledger.
 Completion is a point-in-time boundary, not a code pin.

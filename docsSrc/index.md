@@ -13,6 +13,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Verify CLR-bound cooperative payment](How_Tos/verify-bound-cooperative.md).
 - [Verify CLR-bound CPU samples](How_Tos/verify-bound-samples.md).
 - [Run sample-driven bound peer payment](How_Tos/run-bound-sampled-payment.md).
+- [Run bound selected-owner payment](How_Tos/run-bound-selected-payment.md).
 
 - [Run the sampled timer experiment](How_Tos/run-sampled-timer.md).
 - [Run physical CPU calibration](How_Tos/run-physical-calibration.md).

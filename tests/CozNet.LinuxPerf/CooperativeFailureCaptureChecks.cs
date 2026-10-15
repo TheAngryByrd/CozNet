@@ -8,6 +8,9 @@ static class CooperativeFailureCaptureChecks
         CaptureErrorPreservesOriginalFailure();
         RawFailureRemainsDiagnostic();
         CapturePrecedesExceptionFormatting();
+        AllReadersPrecedeExceptionFormatting();
+        FailedReaderDoesNotPreventLaterCapture();
+        EmptyReadersPreserveEmptyResult();
     }
 
     private static void MissingRequestPreservesFailure()
@@ -56,5 +59,49 @@ static class CooperativeFailureCaptureChecks
         bool captured = false;
         var result = CooperativeFailureCapture.Capture(new ObservedException(() => captured), () => { captured = true; return null; });
         Require(result.Failure == "original failure", "Capture lost the original formatted failure.");
+    }
+
+    private static void AllReadersPrecedeExceptionFormatting()
+    {
+        int calls = 0;
+        var raw = new CooperativeRawCapture(new(), Array.Empty<CooperativeNativeChild>(), new(7, 0), 4);
+        var captures = CooperativeFailureCapture.CaptureAll(new ObservedException(() => calls == 2),
+            () => { ++calls; return raw; },
+            () => { ++calls; return null; });
+        Require(captures.Count == 2 && calls == 2
+            && captures[0].State == CooperativeFailureCaptureState.Captured
+            && ReferenceEquals(captures[0].Raw, raw) && captures[0].CaptureFailure is null
+            && captures[1].State == CooperativeFailureCaptureState.NoRequest
+            && captures[1].Raw is null && captures[1].CaptureFailure is null
+            && captures.All(capture => capture.Failure == "original failure"),
+            "Multiple captures changed reader order, evidence, or the original failure.");
+        Require(captures[0].Started <= captures[0].Finished
+            && captures[0].Finished <= captures[1].Started
+            && captures[1].Started <= captures[1].Finished
+            && captures.All(capture => capture.TimestampFrequency == System.Diagnostics.Stopwatch.Frequency),
+            "Multiple captures lost their separate ordered timestamp brackets or clock units.");
+    }
+
+    private static void FailedReaderDoesNotPreventLaterCapture()
+    {
+        int calls = 0;
+        var raw = new CooperativeRawCapture(new(), Array.Empty<CooperativeNativeChild>(), new(7, 0), 4);
+        var captureError = new ObservedException(() => calls == 2);
+        var captures = CooperativeFailureCapture.CaptureAll(new InvalidDataException("workload failure"),
+            () => { ++calls; throw captureError; },
+            () => { ++calls; return raw; });
+        Require(calls == 2 && captures.Count == 2
+            && captures[0].State == CooperativeFailureCaptureState.Failed
+            && captures[0].Raw is null && captures[0].CaptureFailure == "original failure"
+            && captures[1].State == CooperativeFailureCaptureState.Captured
+            && ReferenceEquals(captures[1].Raw, raw) && captures[1].CaptureFailure is null
+            && captures.All(capture => capture.Failure.Contains("workload failure", StringComparison.Ordinal)),
+            "A failed reader prevented later capture or replaced the workload failure.");
+    }
+
+    private static void EmptyReadersPreserveEmptyResult()
+    {
+        var captures = CooperativeFailureCapture.CaptureAll(new InvalidDataException("workload failure"));
+        Require(captures.Count == 0, "An empty reader set invented native evidence.");
     }
 }

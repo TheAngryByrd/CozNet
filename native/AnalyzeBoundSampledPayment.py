@@ -13,6 +13,21 @@ def count(value):
     return value
 
 
+def signed_count(value):
+    require(type(value) is int and -9223372036854775808 <= value <= 9223372036854775807,
+            "Invalid signed evidence value")
+    return value
+
+
+def verify_receipt_interval(payment, frequency=None):
+    interval = payment["ReceiptInterval"]
+    started, observed, recorded_frequency = (count(interval[key]) for key in ("Started", "Observed", "TimestampFrequency"))
+    require(recorded_frequency > 0 and (frequency is None or frequency == recorded_frequency),
+            "Receipt clock frequency differs")
+    require(started == payment["Started"] and started <= observed <= payment["Finished"]
+            and (observed - started) * 10 <= recorded_frequency, "Request-to-receipt interval exceeds 100 ms or has invalid ordering")
+
+
 def verify_failure_boundary(record):
     if "failureBoundary" not in record:
         return
@@ -62,7 +77,61 @@ def verify_failure_boundary(record):
                     and raw["Children"] == cleanup["Children"][:len(raw["Children"])], "Diagnostic prefix changed during cleanup")
 
 
+def verify_payments(payments, binding, worker):
+    paid = 0
+    for ordinal, payment in enumerate(payments, 1):
+        command, generation, budget = (count(payment[name]) for name in ("Command", "Generation", "Budget"))
+        require(command == ordinal and generation == ordinal and 0 < budget <= 2000000, "Payment identity or budget differs")
+        require(count(payment["Started"]) <= count(payment["Finished"]), "Payment observation clock regressed")
+        if "ReceiptInterval" in payment:
+            verify_receipt_interval(payment)
+        observation = payment["Observation"]
+        raw, received = observation["Raw"], observation["Received"]
+        header, children, clock = raw["Header"], raw["Children"], raw["Clock"]
+        for value in header.values():
+            count(value)
+        require(type(raw["Status"]) is int and type(clock["Status"]) is int, "Invalid payment capture status")
+        require(raw["Status"] == 0 and clock["Status"] == 0, "Payment capture failed")
+        require(header["Generation"] == generation and header["Command"] == command and header["Budget"] == budget, "Header identity differs")
+        require(header["Visibility"] == 3 and header["Stop"] == 1 and header["Error"] == 0
+                and header["TransportError"] == 0 and header["MayHaveDelivery"] == 0, "Payment did not retire successfully")
+        require(header["Children"] == len(children) == len(received) and len(children) > 0, "Payment children are missing")
+        require(count(clock["Nanoseconds"]) >= count(header["Captured"]), "Receipt clock precedes capture")
+        measured = 0
+        for child_index, (child, receipt) in enumerate(zip(children, received), 1):
+            for value in child.values():
+                count(value)
+            require(child["Ordinal"] == child_index and child["Valid"] == 1 and child["WaitStatus"] == 0, "Invalid payment child")
+            require(child["Worker"] == worker and child["CodeVersion"] == binding["Generation"] and child["Site"] == 2, "Child site differs")
+            requested, waited = count(child["Requested"]), count(child["Waited"])
+            require(measured < budget and requested == min(50000, budget - measured), "Child request differs from remaining budget")
+            armed, started, finished = (count(child[name]) for name in ("Armed", "Started", "Finished"))
+            require(armed > 0, "Child arm clock failed")
+            require(0 < requested <= 50000 and armed <= started <= finished and finished - started <= 5000000
+                    and requested <= waited <= finished - started, "Child timing exceeds its contract")
+            if child_index > 1:
+                previous = children[child_index - 2]
+                require(previous["Started"] <= armed <= previous["Finished"] and started >= previous["Finished"],
+                        "Child continuation does not follow its preceding handler")
+            captured, upper = count(receipt["FirstCaptured"]), count(receipt["FirstManagedReceiptUpper"])
+            require(captured <= header["Captured"], "Child receipt capture exceeds snapshot")
+            require(receipt["Raw"] == child and finished <= captured <= upper <= clock["Nanoseconds"]
+                    and upper - armed <= 100000000 and receipt["Timing"]["UpperNanoseconds"] == upper - armed, "Child receipt differs")
+            measured += waited
+        require(measured == header["Measured"] and measured >= budget, "Payment aggregate differs")
+        cleanup = payment["Cleanup"]
+        require(cleanup["Status"] == 0 and cleanup["Children"] == children, "Released children changed")
+        final_header = dict(cleanup["Header"])
+        require(count(final_header["Captured"]) >= header["Captured"], "Final copy clock regressed")
+        final_header["Captured"] = header["Captured"]
+        require(final_header == header, "Released header changed")
+        paid += measured
+    return paid
+
+
 def verify_record(record):
+    require(type(record.get("schemaVersion", 1)) is int and record.get("schemaVersion", 1) == 1,
+            "This replay accepts only sampled-payment schema version 1")
     verify_failure_boundary(record)
     require(type(record["passed"]) is bool and type(record["completed"]) is bool, "Invalid result flags")
     percent = record["percent"]
@@ -95,47 +164,7 @@ def verify_record(record):
         credit += item["Credit"]
         expected_credit += expected
     require(credit == expected_credit == count(record["credit"]), "Aggregate credit differs")
-    paid = 0
-    for ordinal, payment in enumerate(record["payments"], 1):
-        command, generation, budget = (count(payment[name]) for name in ("Command", "Generation", "Budget"))
-        require(command == ordinal and generation == ordinal and 0 < budget <= 2000000, "Payment identity or budget differs")
-        require(count(payment["Started"]) <= count(payment["Finished"]), "Payment observation clock regressed")
-        observation = payment["Observation"]
-        raw, received = observation["Raw"], observation["Received"]
-        header, children, clock = raw["Header"], raw["Children"], raw["Clock"]
-        require(raw["Status"] == 0 and clock["Status"] == 0, "Payment capture failed")
-        require(header["Generation"] == generation and header["Command"] == command and header["Budget"] == budget, "Header identity differs")
-        require(header["Visibility"] == 3 and header["Stop"] == 1 and header["Error"] == 0
-                and header["TransportError"] == 0 and header["MayHaveDelivery"] == 0, "Payment did not retire successfully")
-        require(header["Children"] == len(children) == len(received) and len(children) > 0, "Payment children are missing")
-        require(count(clock["Nanoseconds"]) >= count(header["Captured"]), "Receipt clock precedes capture")
-        measured = 0
-        for child_index, (child, receipt) in enumerate(zip(children, received), 1):
-            require(child["Ordinal"] == child_index and child["Valid"] == 1 and child["WaitStatus"] == 0, "Invalid payment child")
-            require(child["Worker"] == 2 and child["CodeVersion"] == binding["Generation"] and child["Site"] == 2, "Child site differs")
-            requested, waited = count(child["Requested"]), count(child["Waited"])
-            require(measured < budget and requested == min(50000, budget - measured), "Child request differs from remaining budget")
-            armed, started, finished = (count(child[name]) for name in ("Armed", "Started", "Finished"))
-            require(armed > 0, "Child arm clock failed")
-            require(0 < requested <= 50000 and armed <= started <= finished and finished - started <= 5000000
-                    and requested <= waited <= finished - started, "Child timing exceeds its contract")
-            if child_index > 1:
-                previous = children[child_index - 2]
-                require(previous["Started"] <= armed <= previous["Finished"] and started >= previous["Finished"],
-                        "Child continuation does not follow its preceding handler")
-            captured, upper = count(receipt["FirstCaptured"]), count(receipt["FirstManagedReceiptUpper"])
-            require(captured <= header["Captured"], "Child receipt capture exceeds snapshot")
-            require(receipt["Raw"] == child and finished <= captured <= upper <= clock["Nanoseconds"]
-                    and upper - armed <= 100000000 and receipt["Timing"]["UpperNanoseconds"] == upper - armed, "Child receipt differs")
-            measured += waited
-        require(measured == header["Measured"] and measured >= budget, "Payment aggregate differs")
-        cleanup = payment["Cleanup"]
-        require(cleanup["Status"] == 0 and cleanup["Children"] == children, "Released children changed")
-        final_header = dict(cleanup["Header"])
-        require(count(final_header["Captured"]) >= header["Captured"], "Final copy clock regressed")
-        final_header["Captured"] = header["Captured"]
-        require(final_header == header, "Released header changed")
-        paid += measured
+    paid = verify_payments(record["payments"], binding, 2)
     require(paid == count(record["paid"]), "Retained payments differ from settled wait")
     for key in ("selectedPeak", "peerPeak", "finalDebt"):
         debt = record[key]

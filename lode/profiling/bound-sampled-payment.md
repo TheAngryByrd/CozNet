@@ -30,6 +30,8 @@ flowchart LR
 Peer overshoot can create selected debt. The selected owner does not pay it.
 Selected catch-up runs only when credit covers global delay. Outstanding selected debt remains visible and bounded by 2 ms.
 The controller does not subtract unconfirmed partial wait from peer debt.
+It obtains both debts from [immutable ledger observations](cooperative-debt.md), using global minus local delay.
+Measured wait enters local delay at service settlement. A later catch-up publishes local overshoot to global delay.
 It accepts the retired journal once, then copies and releases native ownership.
 The native adapter retains the existing 50 us child, 5 ms handler, and 100 ms receipt gates.
 
@@ -47,6 +49,11 @@ Native payment remains irreversible after final evidence rejection.
 JSON serialization includes native struct fields. Empty objects cannot support payment analysis.
 Workload failure captures the latest immutable debt observation and native request evidence before cleanup.
 `CooperativeFailureCapture` preserves the original exception and records diagnostic exceptions separately.
+`CaptureAll` reads all supplied slots before formatting any exception. A failed reader does not prevent later reads.
+Results preserve reader order and separate timestamp brackets. They do not establish atomic native state or clock mapping.
+The single-slot `Capture` delegates to this helper. The legacy workload captures only the peer slot.
+The opt-in selected-payment draft captures both slots before formatting either failure.
+See [selected-owner payment](selected-owner-payment.md) for its pending verification and replay work.
 It formats both exceptions after native capture and freezes the capture timestamps before formatting.
 `NativeCooperativeClient.CaptureDiagnostic` copies raw native storage without updating receipt tracking or the ledger.
 An active snapshot contains only published children. It cannot bound an executing child's uncommitted wait.
@@ -82,7 +89,7 @@ This establishes restricted live integration in that run, not stable capacity ac
 Windows run `artifacts/cooperative-interop/20261015T124752598-94a63709` passes twenty existing bound payment/lifetime cases with the shared client change.
 It does not run the Linux-only sampled workload.
 
-This is a capacity diagnostic, not a complete Coz engine. General eligibility, selected-owner payment, overhead, and prediction remain unverified.
+This is a capacity diagnostic, not a complete Coz engine. General eligibility, acceptable overhead, stable capacity, and prediction remain unverified.
 The controller and source factory are portable. Only the Linux CPU source is wired to the live command.
 See [the reference](../../docsSrc/Reference/bound-sampled-payment.md), [the procedure](../../docsSrc/How_Tos/run-bound-sampled-payment.md),
 [bound samples](bound-samples.md), [bound payment](bound-cooperative.md), and [eligibility research](../../docsSrc/Research/cooperative-sample-eligibility.md).

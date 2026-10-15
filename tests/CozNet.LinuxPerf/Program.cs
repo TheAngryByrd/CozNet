@@ -14,12 +14,18 @@ if (args is ["--verify-pausable-managed"])
 
 if (args is ["--verify-cooperative-managed"])
 {
+    CooperativeCleanupCancellationChecks.Run();
+    CooperativeReceiptIntervalChecks.Run();
+    CooperativeDebtChecks.Run();
     CooperativeFailureCaptureChecks.Run();
     CooperativeManagedChecks.Run();
     return 0;
 }
 if (args is ["--verify-bound-cooperative-managed"])
 {
+    CooperativeCleanupCancellationChecks.Run();
+    CooperativeReceiptIntervalChecks.Run();
+    CooperativeDebtChecks.Run();
     CooperativeFailureCaptureChecks.Run();
     CooperativeManagedChecks.Run();
     ClrProbeLifetimeChecks.Run();
@@ -39,6 +45,16 @@ if (args is ["--verify-bound-samples-managed"])
 }
 if (args is ["--verify-bound-samples", var boundSamplesPath, var boundSamplesMode])
     return BoundSamplesWorkload.Run(boundSamplesPath, boundSamplesMode);
+if (args is ["--sampled-bound-selected-cooperative", var selectedBoundPath, var selectedBoundPercent, var selectedBoundLibrary])
+    return BoundSampledPaymentWorkload.Run(selectedBoundPath, SampledSignalPlan.Parse(selectedBoundPercent), selectedBoundLibrary,
+        () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
+        (map, sink) => new LinuxCpuEventSession(sink, map),
+        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map));
+if (args is ["--invalidate-sampled-bound-selected-cooperative", var selectedInvalidatedPath, var selectedInvalidatedLibrary])
+    return BoundSampledPaymentWorkload.Run(selectedInvalidatedPath, SampledSignalPlan.Parse("50"), selectedInvalidatedLibrary,
+        () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
+        (map, sink) => new LinuxCpuEventSession(sink, map),
+        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map), invalidateAfterSelectedPayment: true);
 if (args is ["--sampled-bound-cooperative", var sampledBoundPath, var sampledBoundPercent, var sampledBoundLibrary])
     return BoundSampledPaymentWorkload.Run(sampledBoundPath, SampledSignalPlan.Parse(sampledBoundPercent), sampledBoundLibrary,
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),

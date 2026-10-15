@@ -38,6 +38,20 @@ The property is diagnostic evidence. Its presence does not prove that ledger acc
 
 ## Gates and completion
 
+`CooperativeDebtSnapshot.Capture` reads both thread observations from the same immutable accounting state.
+Observed debt is `max(0, Global - Local)` for each thread.
+The local ledger value includes settled waits as well as sample credit.
+Retained credit and wait totals remain diagnostic fields; they do not determine the runtime debt gate.
+
+An accepted child journal does not reduce ledger debt until its service settles.
+Settlement adds measured wait to local delay and returns the thread to Runnable.
+The next catch-up operation publishes any local excess to global delay.
+An earlier snapshot retains its original values and operation state after these transitions.
+
+The snapshot rejects duplicate thread handles and handles from another ledger.
+It creates two immutable thread observations per call. Their cost in the sampled controller remains unmeasured.
+The legacy command pays only the peer. The opt-in selected-payment command also settles selected leases during excluded callbacks.
+
 | Gate | Bound |
 | --- | --- |
 | Requested selected work interval | Two seconds |
@@ -90,9 +104,66 @@ Exception formatting follows capture and does not delay the native snapshot.
 Captured raw evidence can contain a failed native status. State 1 does not mean valid payment evidence.
 An active snapshot excludes an executing child's uncommitted wait. The peer can advance during capture.
 This diagnostic does not reduce debt, release ownership, or replace the original failure.
+
+`CooperativeFailureCapture.CaptureAll` accepts an ordered set of diagnostic readers.
+It reads every slot before it formats the workload exception or any capture exception.
+A failed read does not prevent later reads.
+Each result retains its own timestamp bracket, raw evidence, and capture error.
+Result order matches reader order. An empty reader set returns no observations.
+The results are separate observations. They do not establish an atomic snapshot or a managed/native clock mapping.
+The legacy command supplies one reader to `CaptureAll`.
+The opt-in selected-payment draft uses the multi-reader helper for slots 0 and 1.
+
 Cleanup polls bypass measurement acceptance and preserve native ownership until final copy and release.
+Cleanup attempts cancellation for every native slot, even when an earlier slot fails.
+An aggregate error retains the original failures in slot order.
+Cleanup polling requires a cancellation call that returned successfully for that slot.
+A later failure does not erase an earlier successful cancellation.
+
+## Selected-owner payment draft
+
+`--sampled-bound-selected-cooperative <path> <percent> <library>` selects the experimental two-slot path.
+The peer owns native slot 0. The selected owner owns native slot 1.
+The native controller uses a separate thread. It cannot register as a payment target.
+Controller operations run on that thread. Source control and selected polling remain on the selected owner.
+Dispatch timeouts do not cancel queued controller work. Failed cleanup can require process termination by the external watchdog.
+The source factory must return `IOwnerStoppedCpuEventSession` for this path.
+The existing command retains its one-shot source and peer-only payment.
+
+An admitted selected loop probe can enter an excluded callback when the ledger reports selected debt.
+The callback processes the acknowledged final drain before it reserves at most one selected service lease.
+It polls that lease on its owner until retirement, subject to the 100 ms receipt bound.
+Receipt acceptance retains the existing 50 µs child and 5 ms handler bounds.
+Settlement updates selected local delay. A subsequent catch-up publishes overshoot without reserving a second lease.
+Sampling resumes after the callback returns and the CLR lifetime check succeeds.
+
+Each sample retains its eligibility epoch. The first observation in each epoch earns no credit.
+The credit stream retains its fractional remainder across these baselines.
+Final peer settlement can leave bounded selected debt. It does not start an unbounded cycle of overshoot payments.
+
+The draft writes `schemaVersion: 3`, selected receipts and waits, local ledger values, pause boundaries, and both slots' failure evidence.
+`timestampFrequency` gives the managed clock units for payment and pause timestamps.
+Each payment retains a parsed `ReceiptInterval` with its start, receipt observation, and clock frequency.
+The interval cannot exceed 100 ms. The workload checks it before it applies the returned ledger settlement.
+`Payment.Finished` follows native release and can include later cleanup work. It is not the receipt deadline endpoint.
+A pause without `Resumed` does not prove successful source restart.
+`AnalyzeBoundSelectedPayment.py` validates version 3. The legacy analyzer accepts only version 1.
+Retained version 2 runs use their saved analyzer because they lack explicit managed receipt intervals and clock frequency.
+Version 3 checks sample epochs, retained rounding remainder, both payment journals, local ledger arithmetic, and pause ordering.
+It binds selected payment to a completed producer-stop transition and source restart to callback return.
+Counter transitions and pause boundaries use managed timestamps. Native receipt checks use native timestamps separately.
+The analyzer requires matching frequencies before it compares counter and pause timestamps.
+The analyzer does not infer a managed/native clock mapping.
+Raw `TransportError` values remain signed. Invalid numeric fields do not become valid because JSON encodes them as booleans.
+It validates retained observations and totals, not a complete journal of every ledger transition.
+Earlier version 2 runs passed zero speedup, 50% speedup, and invalidation after selected payment.
+One treatment run earned credit from only one selected interval. A run with no eligible selected interval fails the positive-credit requirement.
+Frequent pauses can make this reach condition unstable. They do not establish acceptable overhead or prediction accuracy.
+Portable checks cover cancellation failure isolation and polling permission.
+Live native cancellation and release failures remain unverified in the selected path.
+See [the retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/bound-selected-payment.md).
 Failed evidence cannot undo earlier native waits. Any source, lifetime, receipt, work, or capacity failure rejects the experiment.
 
-The diagnostic does not establish selected-owner payment, general CLR safety, profiler overhead acceptability, or prediction accuracy.
+The diagnostic does not establish general CLR safety, acceptable profiler overhead, stable capacity, or prediction accuracy.
 The [retained runs](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/bound-sampled-payment.md) include a capacity failure and a later complete-evidence pass.
 See [the procedure](../How_Tos/run-bound-sampled-payment.md) and [the eligibility comparison](../Research/cooperative-sample-eligibility.md).

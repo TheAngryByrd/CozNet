@@ -5,8 +5,7 @@ sealed class BoundCooperativeClient
     private readonly NativeCooperativeClient native;
     private readonly ClrProbeLifetime lifetime;
     private readonly CooperativeSite?[] sites;
-    private readonly bool[] cleanupCancellation;
-    private int cleanupStarted;
+    private readonly CooperativeCleanupCancellation cleanup;
     private bool closed, completed;
     public Exception? FirstFailure => lifetime.FirstFailure;
     public CooperativeCleanupCapture? LastCleanup => native.LastCleanup;
@@ -19,12 +18,12 @@ sealed class BoundCooperativeClient
         lifetime.RequireCurrent();
         if (targets is 0 or > 64) throw new ArgumentOutOfRangeException(nameof(targets));
         sites = new CooperativeSite[targets];
-        cleanupCancellation = new bool[targets];
         native = new(binding.Generation, targets, capacity);
+        cleanup = new(targets, native.HasPending, slot => native.Probe(slot).Visibility, native.Cancel);
     }
     private void RequireActive()
     {
-        if (Volatile.Read(ref cleanupStarted) != 0) throw new InvalidOperationException("Cooperative cleanup has started.");
+        if (cleanup.HasStarted) throw new InvalidOperationException("Cooperative cleanup has started.");
     }
     private CooperativeSite Site(uint slot) => sites[slot] ?? throw new InvalidOperationException("The cooperative target is not registered.");
     public CooperativeSite RegisterCurrentThread(uint slot, ulong worker)
@@ -71,30 +70,20 @@ sealed class BoundCooperativeClient
     public CooperativeRawCapture CaptureDiagnostic(uint slot) => native.CaptureDiagnostic(slot);
     public CooperativeNativeSnapshot CleanupHeader(uint slot) => native.Probe(slot);
     public void ReleaseAfterRetiredCopy(uint slot) => native.ReleaseAfterRetiredCopy(slot);
-    public void BeginCleanup()
-    {
-        Interlocked.Exchange(ref cleanupStarted, 1);
-        for (uint slot = 0; slot < sites.Length; ++slot)
-            if (native.HasPending(slot) && native.Probe(slot).Visibility < 3)
-            {
-                native.Cancel(slot);
-                cleanupCancellation[slot] = true;
-            }
-    }
+    public void BeginCleanup() => cleanup.Begin();
     public CooperativePollOutcome PollForCleanup(uint slot)
     {
-        if (Volatile.Read(ref cleanupStarted) == 0 || !cleanupCancellation[slot])
-            throw new InvalidOperationException("Cleanup polling requires controller cancellation.");
+        cleanup.RequireCancelled(slot);
         return native.Poll(slot, Site(slot));
     }
     public void RetireCurrentThread(uint slot)
     {
-        if (Volatile.Read(ref cleanupStarted) == 0) throw new InvalidOperationException("Begin cleanup before target retirement.");
+        if (!cleanup.HasStarted) throw new InvalidOperationException("Begin cleanup before target retirement.");
         native.RetireCurrentThread(slot);
     }
     public void CloseAfterThreadJoin()
     {
-        if (Volatile.Read(ref cleanupStarted) == 0) throw new InvalidOperationException("Begin cleanup before close.");
+        if (!cleanup.HasStarted) throw new InvalidOperationException("Begin cleanup before close.");
         native.CloseAfterThreadJoin();
         closed = true;
     }

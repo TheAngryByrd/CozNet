@@ -71,6 +71,9 @@ It retains every outcome under `artifacts/bound-samples/` with runtime perf-map 
 See [bound sample collection](../profiling/bound-samples.md) for admission and completion limits.
 
 `build/build.fs` owns the FAKE target graph. Its baseline is MiniScaffold's `v0.40.0-beta001` library template.
+`LinuxBoundSelectedPayment` uses the Linux profiler and workload build chains with the shared payment runner's `-SelectedPayment` mode.
+It runs zero speedup, 50% speedup, and invalidation after selected payment, then applies the version 3 analyzer.
+The runner retains source snapshots and executes the retained analyzer. Failed cases remain in the evidence directory.
 `LinuxFastTimerScheduler` adds controller and target scheduler capture to the sampled timer forced-GC comparison.
 `LinuxFastTimerSchedulerNoGc` captures the same scheduler streams without the forced-GC worker.
 It selects `--sampled-timer-scheduler` with `no-gc` and preserves the prepared short-interval capacity settings.

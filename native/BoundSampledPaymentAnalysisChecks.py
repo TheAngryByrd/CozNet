@@ -44,6 +44,17 @@ def failure_record():
 
 
 class BoundPaymentAnalysisChecks(unittest.TestCase):
+    def test_schema_versions_do_not_use_legacy_replay_silently(self):
+        record = valid_record()
+        verify_record(record)
+        record["schemaVersion"] = 1
+        verify_record(record)
+        for version in (2, 0, True, "1", None):
+            with self.subTest(version=version):
+                record["schemaVersion"] = version
+                with self.assertRaisesRegex(ValueError, "schema version 1"):
+                    verify_record(record)
+
     def test_failure_capture_outcomes_preserve_runtime_failure(self):
         for state in (0, 1, 2):
             with self.subTest(state=state):
@@ -159,7 +170,9 @@ class BoundPaymentAnalysisChecks(unittest.TestCase):
                       failure="The CLR probe lifetime is no longer admitted.")
         self.assertFalse(verify_record(record)["completed"])
         record.update(payments=[], paid=0)
-        with self.assertRaises(ValueError):
+        for key in ("selectedPeak", "peerPeak", "finalDebt"):
+            record[key].update(PeerWait=0, Peer=record[key]["Global"])
+        with self.assertRaisesRegex(ValueError, "Expected rejection was not verified"):
             verify_record(record)
 
     def test_completed_case_requires_each_debt_record(self):
