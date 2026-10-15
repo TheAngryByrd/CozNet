@@ -13,6 +13,12 @@ if (args is ["--verify-bound-cooperative-managed"])
 {
     CooperativeManagedChecks.Run();
     ClrProbeLifetimeChecks.Run();
+    ClrBoundInstructionMapChecks.Run();
+    return 0;
+}
+if (args is ["--verify-bound-map-managed"])
+{
+    ClrBoundInstructionMapChecks.Run();
     return 0;
 }
 if (args is ["--verify-bound-cooperative", var boundPath, var boundMode, var boundLibrary])

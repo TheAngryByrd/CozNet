@@ -69,7 +69,9 @@ The portable core now separates cooperative site identity from timer interrupted
 The portable `CooperativeTarget` now binds the owner thread and supplies explicit code-revocation guards.
 The cooperative C ABI now supplies production timing and native receipt records.
 Managed receipt parsing and ledger binding now support manual owner polls.
-Next, bind injected .NET probes and actual CLR code lifetime, then measure sampled intervention capacity under the existing gates.
+The bound cooperative client now checks CLR lifetime around injected service and receipt acceptance.
+The bound native range supports guarded whole-method address resolution.
+Next, admit real samples after range capture, then measure sampled intervention capacity under the existing gates.
 The [transport reference](../../docsSrc/Reference/cooperative-target.md) distinguishes implemented hooks from missing runtime integration.
 Keep cooperative receipts distinct from the timer C ABI, which carries only interrupted addresses.
 Each poll services at most one bounded child and returns to application work. Do not apply the existing 10 ms CPU cadence to pending service.

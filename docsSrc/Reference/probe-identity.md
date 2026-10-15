@@ -25,10 +25,10 @@ They also do not authenticate callers that deliberately invoke the helper with f
 | 0 | Empty | No selected compilation has started. |
 | 1 | Compiling | The first selected compilation owns the record. |
 | 2 | Rewritten | IL replacement and site registration completed. |
-| 3 | Ready | The selected JIT compilation finished successfully. |
+| 3 | Ready | The selected JIT compilation and native range capture succeeded. |
 | 4 | Invalid identity | A required identity or site count was zero. |
 | 5 | Duplicate compilation | Another selected compilation attempted to use the record. |
-| 6 | Compilation failed | Rewriting or compilation failed. |
+| 6 | Compilation failed | Rewriting, compilation, or native range capture failed. |
 | 7 | Module unloaded | The selected module started unloading. |
 | 8 | Shutdown | The profiler started shutdown. |
 
@@ -43,6 +43,10 @@ Invalidation uses lock-free atomics. The unload callback does not wait for manag
 `CozGetProbeBinding(...)` returns the generation, module, function, method token, and site count only in Ready state.
 It clears output fields when no binding is available.
 `CozIsProbeBindingCurrent(generation, site)` rejects foreign generations, zero sites, out-of-range sites, and invalidated records.
+`CozGetProbeCodeRange(generation, module, function, method, sites, address, size)` returns the single native method range for an exact binding.
+It clears both outputs on rejection. The range uses an exclusive end address.
+The profiler captures this range through `GetCodeInfo2` before it publishes Ready.
+Failed queries, multiple extents, zero values, and address overflow reject publication.
 
 A successful query is an observation. It does not pin code or prevent invalidation after the query returns.
 The optional [bound cooperative client](bound-cooperative.md) consumes this record around payment admission and receipt acceptance.
@@ -54,7 +58,21 @@ Bound mode disables tiered compilation, precompiled images, and inlining through
 The inlining restriction affects the whole process and changes optimization behavior.
 Overhead and physical prediction remain unmeasured for this mode.
 The existing stack-sampling export returns `E_NOTIMPL` in bound mode.
-Native code maps are not prepared for this mode.
+The bound range is separate from the legacy sampler's IL map.
+It identifies a whole-method extent. It does not identify injected instructions or source lines.
+
+## Managed instruction map
+
+`ClrBoundInstructionMap.Capture` copies the native range through a `ClrProbeLifetime` guard.
+`ClrNativeRange.Parse` rejects zero values and overflow before the map can use the range.
+`Resolve` checks lifetime before and after interval lookup, including unmatched addresses.
+An observed invalidation permanently rejects later lookups.
+The immutable range remains available as evidence after rejection.
+
+This resolver does not admit samples by itself.
+A collector must start after map capture and reject records from earlier collection epochs.
+Sample acceptance and experiment completion also require lifetime checks.
+Real sample provenance, sampled payment capacity, and prediction remain unverified for this path.
 
 The prototype supports one controlled method only.
 It rejects another matching module or compilation instead of creating a replacement generation.

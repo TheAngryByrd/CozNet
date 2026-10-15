@@ -9,7 +9,24 @@ using static CooperativeManagedChecks;
 static class ProbeIdentityChecks
 {
     private sealed record Binding(ulong Generation, ulong Module, ulong Function, uint Method, uint Sites);
-    private sealed record Loaded(WeakReference Context, Binding Binding, ulong[] Observation);
+    private sealed record Loaded(WeakReference Context, Binding Binding, ulong[] Observation, ClrBoundInstructionMap? Map);
+    private static ClrBoundInstructionMap ReadMap(Binding binding)
+    {
+        var parsed = ClrProbeBinding.Parse(binding.Generation, (nuint)binding.Module, (nuint)binding.Function, binding.Method, binding.Sites);
+        var map = ClrBoundInstructionMap.Capture(new ClrProbeLifetime(parsed), "controlled-bound-method");
+        Require(map.Resolve(map.Range.Start) == "controlled-bound-method"
+            && map.Resolve(map.Range.Start + map.Range.Size - 1) == "controlled-bound-method"
+            && map.Resolve(map.Range.Start - 1) is null && map.Resolve(map.Range.Start + map.Range.Size) is null,
+            "The CLR native range did not resolve its exact boundaries.");
+        foreach (var foreign in new[] {
+            binding with { Generation = binding.Generation + 1 }, binding with { Module = binding.Module + 1 },
+            binding with { Function = binding.Function + 1 }, binding with { Method = binding.Method + 1 },
+            binding with { Sites = binding.Sites + 1 } })
+            Require(ClrBoundInstructionMap.GetRange(foreign.Generation, (nuint)foreign.Module, (nuint)foreign.Function,
+                foreign.Method, foreign.Sites, out nuint start, out nuint size) == 0 && start == 0 && size == 0,
+                "The CLR native range accepted a foreign binding field.");
+        return map;
+    }
 
     private static Binding ReadBinding()
     {
@@ -44,13 +61,13 @@ static class ProbeIdentityChecks
             if (duplicate)
             {
                 Require(CozGetProbeLifetimeState() == 5, "A second selected module did not invalidate the first binding.");
-                return new(new WeakReference(context), new(0, 0, 0, 0, 0), []);
+                return new(new WeakReference(context), new(0, 0, 0, 0, 0), [], null);
             }
             var observation = (ulong[])assembly.GetType("InjectedProbes", throwOnError: true)!
                 .GetMethod("ReadBoundObservation", BindingFlags.Public | BindingFlags.Static)!.Invoke(null, null)!;
             var binding = ReadBinding();
             CheckObservation(binding, observation, method.MetadataToken, plan);
-            return new(new WeakReference(context), binding, observation);
+            return new(new WeakReference(context), binding, observation, ReadMap(binding));
         }
         finally { context.Unload(); }
     }
@@ -62,6 +79,7 @@ static class ProbeIdentityChecks
         if (mode is not ("identity" or "unload" or "duplicate-module")) throw new ArgumentException("Select identity, unload, or duplicate-module.");
         Binding? binding = null;
         ulong[]? observation = null;
+        ClrBoundInstructionMap? map = null;
         bool unloaded = false, passed = false;
         string? failure = null;
         int finalState = -1;
@@ -72,11 +90,14 @@ static class ProbeIdentityChecks
                 "A probe binding was admitted before target compilation.");
             Require(CozGetProbeBinding(out ulong before, out _, out _, out _, out _) == 0 && before == 0,
                 "The uncompiled target returned a binding.");
+            Require(ClrBoundInstructionMap.GetRange(1, 0, 0, 0, 2, out nuint beforeStart, out nuint beforeSize) == 0
+                && beforeStart == 0 && beforeSize == 0, "The uncompiled target returned a native range.");
             if (mode == "unload")
             {
                 var loaded = LoadCollectible(plan, false);
                 binding = loaded.Binding;
                 observation = loaded.Observation;
+                map = loaded.Map;
                 var deadline = Stopwatch.StartNew();
                 while ((loaded.Context.IsAlive || CozGetProbeLifetimeState() != 7) && deadline.Elapsed < TimeSpan.FromSeconds(5))
                 {
@@ -94,6 +115,7 @@ static class ProbeIdentityChecks
                 binding = ReadBinding();
                 observation = InjectedProbes.ReadBoundObservation();
                 CheckObservation(binding, observation, typeof(CpuWorkload).GetMethod(nameof(CpuWorkload.Run))!.MetadataToken, plan);
+                map = ReadMap(binding);
                 if (mode == "duplicate-module") _ = LoadCollectible(plan, true);
             }
             if (mode != "identity")
@@ -101,6 +123,15 @@ static class ProbeIdentityChecks
                 Require(CozIsProbeBindingCurrent(binding.Generation, 1) == 0 && CozIsProbeBindingCurrent(binding.Generation, 2) == 0
                     && CozGetProbeBinding(out ulong after, out _, out _, out _, out _) == 0 && after == 0,
                     "Invalidation left an admitted binding or site.");
+                Require(ClrBoundInstructionMap.GetRange(binding.Generation, (nuint)binding.Module, (nuint)binding.Function,
+                    binding.Method, binding.Sites, out nuint afterStart, out nuint afterSize) == 0 && afterStart == 0 && afterSize == 0,
+                    "Invalidation left an admitted native range.");
+                foreach (ulong address in new[] { map!.Range.Start, map.Range.Start - 1 })
+                {
+                    bool rejected = false;
+                    try { _ = map.Resolve(address); } catch (InvalidDataException) { rejected = true; }
+                    Require(rejected, "The copied native map survived lifetime invalidation.");
+                }
             }
             finalState = CozGetProbeLifetimeState();
             Require(finalState == (mode == "identity" ? 3 : mode == "unload" ? 7 : 5), "The lifetime state differs from the selected case.");
@@ -108,7 +139,7 @@ static class ProbeIdentityChecks
         }
         catch (Exception error) { failure = error.ToString(); }
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, JsonSerializer.Serialize(new { mode, passed, failure, binding, observation, unloaded, finalState,
+        File.WriteAllText(path, JsonSerializer.Serialize(new { mode, passed, failure, binding, observation, unloaded, finalState, nativeRange = map?.Range,
             paymentLifetimeIntegrated = false, nativeVersionIdentityEstablished = false, predictionAccuracyEstablished = false },
             new JsonSerializerOptions { WriteIndented = true }));
         return passed ? 0 : 1;

@@ -114,7 +114,8 @@ The native state checks cover invalid identities, failed compilation, duplicate 
 Same-function repeated JIT callbacks still need a controlled runtime case.
 An unload case must prove invalidation without waiting for owner progress inside the callback.
 The bound cooperative checks exercise probe service and complete shutdown on Windows and Linux.
-Sample-driven operation still needs native code maps tied to the admitted binding.
+The [native range contract](bound-native-mapping.md) ties one copied method extent to the admitted binding.
+Sample-driven operation still needs collection epochs and acceptance checks that preserve this identity.
 These checks establish the restricted transport contract.
 They do not establish prediction accuracy or exact attribution of countdown CPU.
 

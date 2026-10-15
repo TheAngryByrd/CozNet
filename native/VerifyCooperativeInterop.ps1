@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($ProbeIdentity -and $BoundCooperative) { throw 'Select probe identity or bound cooperative checks.' }
 if ($ProbeIdentity -or $BoundCooperative) { $Injected = $true }
-$contractMode = if ($BoundCooperative) { '--verify-bound-cooperative-managed' } else { '--verify-cooperative-managed' }
+$contractMode = if ($BoundCooperative -or $ProbeIdentity) { '--verify-bound-cooperative-managed' } else { '--verify-cooperative-managed' }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 $native = Join-Path $run 'native'
@@ -35,6 +35,10 @@ $sources = @('native/service/CooperativeApi.cpp', 'native/service/CooperativeApi
     'src/CozNet/SignalAccounting.fs', 'src/CozNet/SignalService.fs', 'src/CozNet/DelayLedger.fs', 'src/CozNet/SampleCredits.fs',
     'native/VerifyCooperativeInterop.ps1', 'native/VerifyServiceOwner.ps1', 'build/build.fs')
 $hashes = @{}
+if ($ProbeIdentity -or $BoundCooperative) {
+    $sources += @('tests/CozNet.LinuxPerf/ClrBoundInstructionMap.cs', 'tests/CozNet.LinuxPerf/ClrBoundInstructionMapChecks.cs',
+        'tests/CozNet.LinuxPerf/ClrProbeLifetime.cs', 'tests/CozNet.LinuxPerf/ClrProbeLifetimeChecks.cs', 'tests/CozNet.LinuxPerf/InstructionMap.cs')
+}
 if ($BoundCooperative) { $sources += @('tests/CozNet.LinuxPerf/ClrProbeLifetime.cs', 'tests/CozNet.LinuxPerf/ClrProbeLifetimeChecks.cs', 'tests/CozNet.LinuxPerf/BoundCooperativeClient.cs', 'tests/CozNet.LinuxPerf/BoundCooperativeChecks.cs') }
 if ($Injected) { $sources += @('native/Profiler.cpp', 'native/ProbeLifetime.h', 'native/service/ProbeLifetimeChecks.cpp', 'native/Sampler.h', 'native/GenerateCallbacks.ps1', 'tests/CozNet.LinuxPerf/InjectedProbes.cs', 'tests/CozNet.LinuxPerf/ProbeIdentityChecks.cs') }
 foreach ($name in $sources) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash }

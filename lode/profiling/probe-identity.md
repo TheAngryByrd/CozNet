@@ -12,7 +12,7 @@ if (lifetime.read(binding)) {
 }
 ```
 
-Only a completed rewrite followed by successful JIT completion can publish Ready.
+Only a completed rewrite followed by successful JIT completion and one valid native range can publish Ready.
 Duplicate selected compilation, module unload, and shutdown permanently invalidate the record.
 An invalidated record cannot publish Ready again. The first reason wins.
 Callbacks use lock-free atomics and never drain cooperative ownership.
@@ -28,12 +28,19 @@ flowchart LR
 ```
 
 Bound mode disables tiering, precompiled images, and process-wide inlining through the startup event mask.
-It does not prepare native sampling maps. `CozStartSampling` rejects bound mode.
+It captures one whole-method native range through `GetCodeInfo2`. `CozStartSampling` still rejects bound mode.
+Range publication rejects failed queries, extra extents, zero values, and address overflow.
+The single-writer publication guard prevents repeated completion from replacing the range.
+`CozGetProbeCodeRange` requires all binding fields and checks Ready before and after copying.
+`ClrBoundInstructionMap` parses the interval and guards capture and resolution through `ClrProbeLifetime`.
+Invalidation rejects unmatched addresses as well as addresses inside the former extent.
+Real sample admission still requires a collection epoch after capture and final lifetime checks.
+Synthetic boundary checks do not establish CPU sample provenance.
 The live workload checks literals, collectible unload, and a second matching module at all four intervals.
 The portable native check covers rejection and competing publication/invalidation.
-FAKE target runs pass on Windows (`artifacts/cooperative-interop/20261015T101255091-197a515e`) and Linux (`artifacts/cooperative-interop/20261015T101431712-a432135e`).
-Both pass all twelve lifetime cases with unchanged inputs. The later build-file edit changes formatting only.
-Both also pass twelve native checks and the managed receipt checks.
+FAKE target runs pass on Windows (`artifacts/cooperative-interop/20261015T111945678-89fdca72`) and Linux (`artifacts/cooperative-interop/20261015T112159374-f3295eef`).
+Both pass all twelve lifetime/range cases with unchanged inputs and current source hashes.
+Both also pass twelve native checks, including competing publication, and the managed range, lifetime, and receipt checks.
 The earlier host run `20261015T095911895-2cc7f637` is rejected because source changed during execution, despite all case outcomes passing.
 The repeat-rewrite guard preserves the original admitted site count.
 Live repeated compilation of the same FunctionID and invalidation during a native wait remain unverified.

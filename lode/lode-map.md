@@ -1,5 +1,7 @@
 # Lode index
 
+For the bound native range contract and sample-admission limits, read [the map plan](plans/bound-native-map.md) and [the source comparison](../docsSrc/Research/bound-native-mapping.md).
+
 For CLR lifetime checks around payment and receipts, read [bound cooperative payment](profiling/bound-cooperative.md).
 
 For opt-in literal probe arguments and CLR invalidation, read [probe identity](profiling/probe-identity.md).

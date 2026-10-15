@@ -4,6 +4,7 @@
 `ClrProbeBinding` parses copied CLR identities. Availability remains a separate runtime observation.
 Every guarded operation checks lifetime before and after execution. The first failure is permanent and thread-safe.
 Each check compares all captured CLR identity fields, not only the instrumentation generation.
+The native Ready state also requires successful capture of one valid native method range.
 Controller operations use cached static delegates with value-tuple arguments. Probe guards do not allocate a closure per call.
 
 ```csharp
@@ -35,7 +36,7 @@ Completion is a point-in-time boundary, not a code pin.
 The live fixture invalidates through a second matching module at four lifecycle boundaries.
 The paid case verifies independent generation reuse. Pure checks cover invalidation during a guarded operation and after computed settlement.
 Live invalidation during a native wait, sampled capacity, overhead, and prediction remain unverified.
-Windows run `artifacts/cooperative-interop/20261015T105353938-a9d86c25` and Linux run `artifacts/cooperative-interop/20261015T105555257-06dfa7b1` pass twenty cases with unchanged inputs.
+Windows run `artifacts/cooperative-interop/20261015T112241819-7b31dbc2` and Linux run `artifacts/cooperative-interop/20261015T112452730-5b8ebd59` pass twenty cases with unchanged inputs.
 Both runs exercise the full native identity comparison and reject altered captured bindings.
 Both also pass the managed guard/receipt checks and twelve native checks.
 The managed checks reject both directions of legacy/bound callback replacement and helper mismatch.

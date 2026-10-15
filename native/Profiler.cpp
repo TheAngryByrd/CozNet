@@ -279,7 +279,12 @@ public:
     }
     HRESULT STDMETHODCALLTYPE JITCompilationFinished(FunctionID function, HRESULT result, BOOL) override {
         if (boundProbes) {
-            probeLifetime.finish(function, SUCCEEDED(result));
+            if (!probeLifetime.awaitingCode(function)) return S_OK;
+            COR_PRF_CODE_INFO code{};
+            ULONG32 count = 0;
+            if (SUCCEEDED(result)) result = samplingInfo->GetCodeInfo2(function, 1, &count, &code);
+            if (!probeLifetime.finish(function, SUCCEEDED(result), count, code.startAddress, code.size))
+                status.store(FAILED(result) ? result : E_FAIL);
             return S_OK;
         }
         if (function != selectedFunction) return S_OK;
@@ -411,6 +416,13 @@ COZ_EXPORT BOOL __stdcall CozGetProbeBinding(uint64_t* generation, UINT_PTR* mod
 }
 COZ_EXPORT BOOL __stdcall CozIsProbeBindingCurrent(uint64_t generation, ULONG site) {
     return boundProbes && probeLifetime.current(generation, site);
+}
+COZ_EXPORT BOOL __stdcall CozGetProbeCodeRange(uint64_t generation, UINT_PTR module, UINT_PTR function, ULONG method, ULONG sites,
+    UINT_PTR* address, SIZE_T* size) {
+    if (!address || !size) return FALSE;
+    *address = 0;
+    *size = 0;
+    return boundProbes && probeLifetime.readCode({generation, module, function, method, sites}, *address, *size);
 }
 COZ_EXPORT HRESULT __stdcall CozStartSampling() {
     if (boundProbes) return E_NOTIMPL;

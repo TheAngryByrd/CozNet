@@ -20,8 +20,11 @@ class ProbeLifetime final {
     static_assert(std::atomic<ProbeLifetimeState>::is_always_lock_free);
     static_assert(std::atomic<uintptr_t>::is_always_lock_free);
     static_assert(std::atomic<uint32_t>::is_always_lock_free);
+    static_assert(std::atomic<bool>::is_always_lock_free);
     std::atomic<ProbeLifetimeState> state_{ProbeLifetimeState::empty};
     std::atomic<uintptr_t> module_{}, function_{};
+    std::atomic<uintptr_t> codeStart_{}, codeSize_{};
+    std::atomic<bool> finishing_{};
     std::atomic<uint32_t> method_{}, sites_{};
 public:
     static constexpr uint64_t generation = 1;
@@ -55,9 +58,21 @@ public:
         auto expected = ProbeLifetimeState::compiling;
         return state_.compare_exchange_strong(expected, ProbeLifetimeState::rewritten, std::memory_order_acq_rel);
     }
-    bool finish(uintptr_t function, bool success) noexcept {
+    bool awaitingCode(uintptr_t function) const noexcept {
+        return function != 0 && function_.load(std::memory_order_acquire) == function
+            && state() == ProbeLifetimeState::rewritten;
+    }
+    bool finish(uintptr_t function, bool success, uint32_t regions, uintptr_t start, uintptr_t size) noexcept {
         if (!function || function_.load(std::memory_order_acquire) != function) return false;
-        if (!success) { invalidate(ProbeLifetimeState::compilationFailed); return false; }
+        if (!success || regions != 1 || !start || !size || size > UINTPTR_MAX - start) {
+            invalidate(ProbeLifetimeState::compilationFailed);
+            return false;
+        }
+        if (state() != ProbeLifetimeState::rewritten) return false;
+        bool expectedFinishing = false;
+        if (!finishing_.compare_exchange_strong(expectedFinishing, true, std::memory_order_acq_rel)) return false;
+        codeStart_.store(start, std::memory_order_release);
+        codeSize_.store(size, std::memory_order_release);
         auto expected = ProbeLifetimeState::rewritten;
         return state_.compare_exchange_strong(expected, ProbeLifetimeState::ready, std::memory_order_acq_rel);
     }
@@ -79,6 +94,20 @@ public:
     bool current(uint64_t observedGeneration, uint32_t site) const noexcept {
         return observedGeneration == generation && site != 0 && site <= sites_.load(std::memory_order_acquire)
             && state() == ProbeLifetimeState::ready;
+    }
+    bool readCode(const ProbeBinding& expected, uintptr_t& start, uintptr_t& size) const noexcept {
+        start = 0;
+        size = 0;
+        ProbeBinding observed{};
+        if (!read(observed) || expected.generation != observed.generation || expected.module != observed.module
+            || expected.function != observed.function || expected.method != observed.method || expected.sites != observed.sites)
+            return false;
+        const auto candidateStart = codeStart_.load(std::memory_order_acquire);
+        const auto candidateSize = codeSize_.load(std::memory_order_acquire);
+        if (state() != ProbeLifetimeState::ready) return false;
+        start = candidateStart;
+        size = candidateSize;
+        return true;
     }
 };
 }
