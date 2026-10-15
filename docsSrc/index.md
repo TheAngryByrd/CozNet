@@ -73,6 +73,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Explanation
 
+- [Owner draining and payment capacity](Explanations/owner-drain-capacity.md).
 - [Observer overhead in the bound workload](Explanations/bound-observer-overhead.md).
 
 - [Limits on valid service completion](Explanations/service-completion-limits.md).

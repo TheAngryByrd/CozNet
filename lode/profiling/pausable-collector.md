@@ -94,3 +94,14 @@ flowchart LR
 ```
 
 See [the first owner comparison](../../docsSrc/Research/native-owner-scheduling.md#first-owner-driven-drain-comparison) for retained failures and the single-pair overhead limit.
+
+## One-CPU capacity limit
+
+The [declared ABBA comparison](../../reliability/features/native-signal/owner-drain-single-cpu.md) fails all four treatments.
+Zero-speedup and expected-invalidation cases pass. Replay verifies all twelve records.
+One owner failure receives new selected credits after peer arming, before the first peer child executes.
+The other rejects a managed receipt interval whose exact endpoint is not retained.
+Owner draining does not remove these capacity limits.
+The next diagnostic must retain rejected managed receipt endpoints without changing the 100 ms gate.
+Native Coz applies a full captured batch before its delay check; this workload still services peer receipts between samples.
+See [the explanation](../../docsSrc/Explanations/owner-drain-capacity.md).

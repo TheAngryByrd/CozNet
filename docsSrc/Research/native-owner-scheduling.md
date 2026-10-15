@@ -250,3 +250,6 @@ All three cases pass, and replay verifies their records.
 The zero-speedup and treatment cases each complete 10,000 selected batches.
 Source and binary hashes remain unchanged during this capture.
 This verifies the final guarded path. It does not establish stable capacity or prediction accuracy.
+
+The subsequent [single-CPU comparison](../Explanations/owner-drain-capacity.md) fails in both collection modes.
+Owner draining does not remove the observed debt and receipt capacity failures.

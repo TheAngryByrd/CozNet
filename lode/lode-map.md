@@ -1,5 +1,7 @@
 # Lode index
 
+For owner/background one-CPU failures and the missing managed receipt endpoint, read [the constrained comparison](../reliability/features/native-signal/owner-drain-single-cpu.md).
+
 For opt-in owner-thread draining and its first comparison, read [the collector contract](profiling/pausable-collector.md#owner-driven-mode).
 
 For the managed one-CPU capacity failure and wall/CPU divergence, read [the scheduling evidence](../reliability/features/native-signal/cooperative-single-cpu.md).

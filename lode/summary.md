@@ -84,3 +84,7 @@ CPU observations do not replace wall-time payment.
 The [single-CPU cooperative diagnostic](../reliability/features/native-signal/cooperative-single-cpu.md) retains a peer debt failure after 8538 selected batches.
 Its late credits come from buffered samples, and the pending peer request has no child in its first failure snapshot.
 No handler exceeds 5 ms. An opt-in owner-driven collector now drains before selected debt checks. Its first ordinary-CPU-set run passes all three cases, while the background treatment fails selected debt. Stable capacity and isolated overhead remain unverified.
+
+The [one-CPU owner/background comparison](../reliability/features/native-signal/owner-drain-single-cpu.md) fails all four treatments with verified evidence.
+One owner failure accrues new credit after peer arming. Another rejects a managed receipt interval without retaining its exact endpoint.
+Owner draining does not establish stable service capacity.
