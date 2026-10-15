@@ -1,5 +1,9 @@
 # MiniScaffold build
 
+`LinuxInterleavedCalibration` depends on `LinuxPerfWorkload` and calls `VerifyPhysicalCalibration.ps1 -Interleaved`.
+It preserves the contiguous route and retains evidence under `artifacts/interleaved-calibration/`.
+See [the interleaved procedure](../../docsSrc/How_Tos/run-interleaved-calibration.md).
+
 `LinuxPhysicalCalibration` depends on `LinuxPerfWorkload` and calls `VerifyPhysicalCalibration.ps1`.
 It retains pre-execution source and binary snapshots, portable checks, physical runs, and fixed paired CPU calibration.
 See [the procedure](../../docsSrc/How_Tos/run-physical-calibration.md).

@@ -1,7 +1,9 @@
-param([string]$EvidenceDirectory)
+param([string]$EvidenceDirectory, [switch]$Interleaved)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-if (-not $EvidenceDirectory) { $EvidenceDirectory = Join-Path $root 'artifacts/physical-calibration' }
+if (-not $EvidenceDirectory) {
+    $EvidenceDirectory = Join-Path $root $(if ($Interleaved) { 'artifacts/interleaved-calibration' } else { 'artifacts/physical-calibration' })
+}
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 $snapshot = Join-Path $run 'workload'
 New-Item -ItemType Directory -Force $snapshot | Out-Null
@@ -26,6 +28,7 @@ foreach ($file in Get-ChildItem -LiteralPath $workload -File) {
 }
 @{ capturedBeforeExecution = [DateTime]::UtcNow.ToString('O'); sources = $sources; binaries = $binaries; runtimeImage = $image
     cases = @('host-layout', 'linux-layout', 'physical-baseline', 'physical-optimized', 'calibration')
+    calibrationCommand = $(if ($Interleaved) { '--calibrate-physical-interleaved' } else { '--calibrate-physical' })
     tieredCompilation = '0'; readyToRun = '0'; startupProfiler = '0'; watchdogSeconds = 30
 } | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $run 'manifest.json')
 $runtime = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only',
@@ -41,7 +44,8 @@ foreach ($mode in @('baseline', 'optimized')) {
     & docker @runtime --timer-physical "/output/physical-$mode.json" $mode *> (Join-Path $run "physical-$mode.log")
     $outcomes += @{ mode = "physical-$mode"; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "physical-$mode.json") }
 }
-& docker @runtime --calibrate-physical /output/calibration.json *> (Join-Path $run 'calibration.log')
+$calibrationCommand = if ($Interleaved) { '--calibrate-physical-interleaved' } else { '--calibrate-physical' }
+& docker @runtime $calibrationCommand /output/calibration.json *> (Join-Path $run 'calibration.log')
 $outcomes += @{ mode = 'calibration'; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run 'calibration.json') }
 $outcomes | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $run 'outcomes.json')
 $unchanged = $true

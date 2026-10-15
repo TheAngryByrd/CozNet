@@ -32,12 +32,13 @@ static class PhysicalCalibration
         return steps.ToImmutable();
     }
 
-    internal static Measurement Measure<T>(T arithmetic, IThreadCpuClock cpu, TimeProvider clock)
+    internal static Measurement Measure<T>(T arithmetic, IThreadCpuClock cpu, TimeProvider clock, CalibrationBatchSize? size = null)
         where T : struct, IChecksumArithmetic
     {
         long? before = null, after = null, cpuBefore = null, cpuAfter = null;
         long checksum = 0, frequency = 0;
         int completed = 0;
+        int calls = (size ?? CalibrationBatchSize.Contiguous).Calls;
         string? failure = null;
         try
         {
@@ -45,7 +46,7 @@ static class PhysicalCalibration
             if (frequency <= 0) throw new InvalidDataException("The calibration clock frequency must be positive.");
             before = clock.GetTimestamp();
             cpuBefore = cpu.ReadNanoseconds();
-            for (int index = 0; index < CallsPerTrial; index++)
+            for (int index = 0; index < calls; index++)
             {
                 long result = arithmetic.Run();
                 if (result != MatchedCpuWorkers.ExpectedChecksum)
@@ -99,11 +100,10 @@ static class PhysicalCalibration
     public static int Run(string path, Func<IThreadCpuClock> cpuFactory,
         Func<PhysicalWorkMode, IThreadCpuClock, Measurement>? measure = null, Action<Trial>? checkpoint = null)
     {
-        if (File.Exists(path) || File.Exists(path + ".plan.json") || File.Exists(path + ".trials.jsonl"))
-            throw new IOException("Calibration evidence already exists.");
+        CalibrationEvidence.RequireNew(path);
         var plan = CreatePlan();
         var options = new JsonSerializerOptions { WriteIndented = true };
-        WriteNew(path + ".plan.json", new
+        CalibrationEvidence.WriteNew(path + ".plan.json", new
         {
             seed = Seed, pairCount = PairCount, callsPerTrial = CallsPerTrial, steps = plan,
             orderGenerator = "System.Random.Next(2)", runtime = RuntimeInformation.FrameworkDescription,
@@ -130,19 +130,13 @@ static class PhysicalCalibration
                 var trial = new Trial(step, measurement);
                 trials.Add(trial);
                 if (checkpoint is not null) checkpoint(trial);
-                else
-                {
-                    byte[] row = JsonSerializer.SerializeToUtf8Bytes(trial);
-                    journal.Write(row);
-                    journal.WriteByte((byte)'\n');
-                    journal.Flush(flushToDisk: true);
-                }
+                else CalibrationEvidence.Append(journal, trial);
             }
         }
         catch (Exception error) { failures.Add(error.ToString()); }
         var estimate = failures.Count == 0 ? Analyze(trials) : null;
         bool complete = failures.Count == 0 && estimate is not null;
-        WriteNew(path, new
+        CalibrationEvidence.WriteNew(path, new
         {
             plan, trials, failures, unexecutedSteps = plan.Skip(trials.Count), clockType, estimate,
             calibrationComplete = complete, predictionAccuracyEstablished = false,
@@ -151,9 +145,4 @@ static class PhysicalCalibration
         return complete ? 0 : 1;
     }
 
-    private static void WriteNew(string path, object value, JsonSerializerOptions options)
-    {
-        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
-        JsonSerializer.Serialize(stream, value, options);
-    }
 }

@@ -274,7 +274,7 @@ static class PhysicalCalibrationChecks
 
     private static void OrphanedEvidencePreventsExecution()
     {
-        foreach (string suffix in new[] { ".plan.json", ".trials.jsonl" })
+        foreach (string suffix in new[] { ".plan.json", ".trials.jsonl", ".blocks.jsonl" })
         {
             string path = Path.Combine(Path.GetTempPath(), "coz-calibration-check-" + Guid.NewGuid().ToString("N") + ".json");
             try
@@ -293,6 +293,7 @@ static class PhysicalCalibrationChecks
                 File.Delete(path);
                 File.Delete(path + ".plan.json");
                 File.Delete(path + ".trials.jsonl");
+                File.Delete(path + ".blocks.jsonl");
             }
         }
     }

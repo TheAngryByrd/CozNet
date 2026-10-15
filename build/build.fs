@@ -729,6 +729,9 @@ let nativeCountdownVerify script _ =
 let linuxPhysicalCalibration _ =
     nativeScript "VerifyPhysicalCalibration.ps1"
 
+let linuxInterleavedCalibration _ =
+    nativeScriptWithArgs "VerifyPhysicalCalibration.ps1" [ "-Interleaved" ]
+
 let linuxPerfWorkload _ =
     DotNet.build
         (fun options -> {
@@ -1164,6 +1167,7 @@ let initTargets () =
     Target.create "LinuxFastTimer" linuxFastTimer
     Target.create "LinuxFastTimerCapacity" linuxFastTimerCapacity
     Target.create "LinuxPhysicalCalibration" linuxPhysicalCalibration
+    Target.create "LinuxInterleavedCalibration" linuxInterleavedCalibration
     Target.create "LinuxFastTimerGc" linuxFastTimerGc
     Target.create "LinuxFastTimerScheduler" linuxFastTimerScheduler
     Target.create "LinuxTimerSchedulerCost" linuxTimerSchedulerCost
@@ -1275,6 +1279,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxPhysicalCalibration"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxInterleavedCalibration"
     |> ignore
 
     "LinuxPerfWorkload"

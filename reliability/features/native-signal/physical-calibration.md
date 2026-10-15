@@ -1,5 +1,8 @@
 # Physical calibration evidence
 
+The interleaved protocol later generalized the shared loop bound while preserving the contiguous count of 50,000 calls.
+The retained contiguous timings do not establish identical generated-code overhead for that refactor.
+
 Run `20261015T004041293-546e85fe` retains two warmups and eight paired CPU measurements.
 The exact order was saved before clock setup or timed work.
 Each trial completed 50,000 checksum calls.

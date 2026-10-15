@@ -4,6 +4,15 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--calibrate-physical-interleaved", var interleavedCalibrationPath])
+    return InterleavedCalibration.Run(interleavedCalibrationPath, () => new LinuxThreadCpuClock());
+
+if (args is ["--verify-interleaved-calibration"])
+{
+    InterleavedCalibrationChecks.Run();
+    return 0;
+}
+
 if (args is ["--calibrate-physical", var calibrationPath])
     return PhysicalCalibration.Run(calibrationPath, () => new LinuxThreadCpuClock());
 
@@ -68,6 +77,7 @@ if (args is ["--verify-measurement-boundaries"])
 
 if (args is ["--verify-timer-layout"])
 {
+    InterleavedCalibrationChecks.Run();
     PhysicalCalibrationChecks.Run();
     MatchedCpuWorkersChecks.Run();
     TimerSchedulerCaptureGroupChecks.Run();

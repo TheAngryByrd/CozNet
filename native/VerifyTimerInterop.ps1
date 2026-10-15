@@ -50,6 +50,7 @@ $sources += @('tests/CozNet.LinuxPerf/MatchedCpuWorkers.cs', 'tests/CozNet.Linux
 $sources += 'tests/CozNet.LinuxPerf/MatchedCpuWorkersChecks.cs'
 $sources += @('tests/CozNet.LinuxPerf/ChecksumArithmetic.cs', 'tests/CozNet.LinuxPerf/PhysicalCalibration.cs')
 $sources += 'tests/CozNet.LinuxPerf/PhysicalCalibrationChecks.cs'
+$sources += @('tests/CozNet.LinuxPerf/CalibrationEvidence.cs', 'tests/CozNet.LinuxPerf/CalibrationSegment.cs', 'tests/CozNet.LinuxPerf/InterleavedCalibration.cs', 'tests/CozNet.LinuxPerf/InterleavedCalibrationAnalysis.cs', 'tests/CozNet.LinuxPerf/InterleavedCalibrationChecks.cs')
 $hashes = @{}
 $sources += 'native/service/TimerJournalSnapshot.h'
 $sources += @('tests/CozNet.LinuxPerf/ITimerTransport.cs', 'tests/CozNet.LinuxPerf/TimerServiceController.cs',
