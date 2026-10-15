@@ -1,5 +1,7 @@
 # Lode index
 
+For opt-in controller queue, action, and return brackets, read [dispatch timing](profiling/controller-dispatch.md).
+
 For opt-in peer service after a published sample batch, read [sample publication](profiling/sample-publication.md).
 
 For raw managed receipt rejection arguments and request binding, read [the receipt capture contract](profiling/cooperative-managed.md#rejected-managed-receipt-intervals).

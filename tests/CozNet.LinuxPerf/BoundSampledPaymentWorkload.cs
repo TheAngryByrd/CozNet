@@ -102,8 +102,28 @@ static class BoundSampledPaymentWorkload
         var receiptIntervals = new CooperativeReceiptIntervalCapture();
         var publication = BoundSamplePublication.Parse(Environment.GetEnvironmentVariable("COZNET_BATCH_SERVICE"));
 
-        T OnController<T>(Func<T> action) => controller is null ? action() : controller.Run(action);
-        void Control(Action action) => OnController(() => { action(); return true; });
+        var dispatchTiming = CooperativeDispatchTiming.Parse(Environment.GetEnvironmentVariable("COZNET_DISPATCH_TIMING"));
+        Require(dispatchTiming is null || selectedPaymentEnabled, "Dispatch timing requires the selected-payment controller.");
+
+        T OnController<T>(Func<T> action, CooperativeDispatchOperation operation)
+        {
+            if (controller is null) return action();
+            if (dispatchTiming is null) return controller.Run(action);
+            var identity = operation switch
+            {
+                CooperativeDispatchOperation.SelectedSubmit or CooperativeDispatchOperation.SelectedHeader
+                    or CooperativeDispatchOperation.SelectedRead or CooperativeDispatchOperation.SelectedRelease
+                    or CooperativeDispatchOperation.SelectedFailureCapture or CooperativeDispatchOperation.SelectedCleanupHeader
+                    or CooperativeDispatchOperation.SelectedCleanupRelease => (selectedCommand, selectedGeneration),
+                CooperativeDispatchOperation.PeerSubmit or CooperativeDispatchOperation.PeerHeader
+                    or CooperativeDispatchOperation.PeerRead or CooperativeDispatchOperation.PeerRelease
+                    or CooperativeDispatchOperation.PeerFailureCapture or CooperativeDispatchOperation.PeerCleanupHeader
+                    or CooperativeDispatchOperation.PeerCleanupRelease => (command, generation),
+                _ => (0UL, 0UL)
+            };
+            return dispatchTiming.Run(operation, identity.Item1, identity.Item2, action, work => controller.Run(work));
+        }
+        void Control(Action action, CooperativeDispatchOperation operation) => OnController(() => { action(); return true; }, operation);
 
         Debt ObserveDebt()
         {
@@ -185,9 +205,9 @@ static class BoundSampledPaymentWorkload
                     selectedStarted = Stopwatch.GetTimestamp();
                     state = Parsed(SignalAccountingModule.sentService(selectedLease, state));
                     selectedGeneration = 0;
-                    selectedGeneration = OnController(() => client.Submit(1, selectedCommand, checked((ulong)selectedBudget)));
+                    selectedGeneration = OnController(() => client.Submit(1, selectedCommand, checked((ulong)selectedBudget)), CooperativeDispatchOperation.SelectedSubmit);
                     selectedPending = new(CooperativeAccountingBinding.Parse(selectedLease, selectedGeneration, selectedCommand, selectedSite!));
-                    while (OnController(() => client.CleanupHeader(1)).Visibility < 3)
+                    while (OnController(() => client.CleanupHeader(1), CooperativeDispatchOperation.SelectedHeader).Visibility < 3)
                     {
                         Require(Stopwatch.GetElapsedTime(selectedStarted) <= TimeSpan.FromMilliseconds(100),
                             "A selected cooperative request exceeded 100 ms.");
@@ -196,7 +216,7 @@ static class BoundSampledPaymentWorkload
                     }
                     Require(Stopwatch.GetElapsedTime(selectedStarted) <= TimeSpan.FromMilliseconds(100),
                         "A selected cooperative receipt exceeded 100 ms.");
-                    var accepted = OnController(() => client.ReadAndAccept(1, selectedPending, state));
+                    var accepted = OnController(() => client.ReadAndAccept(1, selectedPending, state), CooperativeDispatchOperation.SelectedRead);
                     var interval = receiptIntervals.Parse(new(1, selectedCommand, selectedGeneration, selectedBudget),
                         selectedStarted, Stopwatch.GetTimestamp(), Stopwatch.Frequency);
                     selectedPending = accepted.Adapter;
@@ -204,7 +224,7 @@ static class BoundSampledPaymentWorkload
                     Require(selectedPending.IsTerminal, "The selected cooperative lease did not settle.");
                     selectedReceipt = client.LastAccountingObservation
                         ?? throw new InvalidDataException("The selected request has no retained receipt observation.");
-                    Control(() => client.ReleaseAfterRetiredCopy(1));
+                    Control(() => client.ReleaseAfterRetiredCopy(1), CooperativeDispatchOperation.SelectedRelease);
                     selectedCleanup = client.LastCleanup;
                     selectedPaid = checked(selectedPaid + selectedPending.ConfirmedNanoseconds);
                     selectedPayments.Add(new(selectedCommand, selectedGeneration, selectedBudget, selectedStarted,
@@ -237,9 +257,9 @@ static class BoundSampledPaymentWorkload
             {
                 Require(Stopwatch.GetElapsedTime(pendingStarted) <= TimeSpan.FromMilliseconds(100),
                     "A sampled cooperative request exceeded 100 ms.");
-                if (OnController(() => client!.CleanupHeader(0)).Visibility == 3)
+                if (OnController(() => client!.CleanupHeader(0), CooperativeDispatchOperation.PeerHeader).Visibility == 3)
                 {
-                    var accepted = OnController(() => client!.ReadAndAccept(0, pending, state));
+                    var accepted = OnController(() => client!.ReadAndAccept(0, pending, state), CooperativeDispatchOperation.PeerRead);
                     var interval = receiptIntervals.Parse(new(2, command, generation, pendingBudget),
                         pendingStarted, Stopwatch.GetTimestamp(), Stopwatch.Frequency);
                     Require(accepted.Adapter.IsTerminal, "A retired cooperative request did not settle its ledger lease.");
@@ -251,7 +271,7 @@ static class BoundSampledPaymentWorkload
                         && observation.Raw.Header.Generation == generation && observation.Raw.Header.Budget == (ulong)pendingBudget,
                         "The retained receipt observation does not match the accepted request.");
                     long nextPaid = checked(paid + pending.ConfirmedNanoseconds);
-                    Control(() => client.ReleaseAfterRetiredCopy(0));
+                    Control(() => client.ReleaseAfterRetiredCopy(0), CooperativeDispatchOperation.PeerRelease);
                     payments.Add(new(command, generation, pendingBudget, pendingStarted, Stopwatch.GetTimestamp(), observation, client.LastCleanup!, interval));
                     paid = nextPaid;
                     pending = null;
@@ -270,7 +290,7 @@ static class BoundSampledPaymentWorkload
                     pendingStarted = Stopwatch.GetTimestamp();
                     state = Parsed(SignalAccountingModule.sentService(lease, state));
                     generation = 0;
-                    generation = OnController(() => client!.Submit(0, command, checked((ulong)pendingBudget)));
+                    generation = OnController(() => client!.Submit(0, command, checked((ulong)pendingBudget)), CooperativeDispatchOperation.PeerSubmit);
                     pending = new(CooperativeAccountingBinding.Parse(lease, generation, command, site!));
                 }
             }
@@ -282,7 +302,7 @@ static class BoundSampledPaymentWorkload
             Require(CpuWorkload.Run() == 49995000L, "Selected warmup changed its checksum.");
             var binding = ClrProbeBinding.ReadCurrent();
             if (selectedPaymentEnabled) controller = new();
-            client = OnController(() => new BoundCooperativeClient(binding, selectedPaymentEnabled ? 2U : 1U, observeCpu: childCpuEnabled));
+            client = OnController(() => new BoundCooperativeClient(binding, selectedPaymentEnabled ? 2U : 1U, observeCpu: childCpuEnabled), CooperativeDispatchOperation.Create);
             if (selectedPaymentEnabled)
             {
                 selectedRegistered = true;
@@ -379,10 +399,10 @@ static class BoundSampledPaymentWorkload
         {
             var capturedDebt = lastObservedDebt;
             Func<CooperativeRawCapture?> readPeer = () => client is not null && client.HasPending(0)
-                ? OnController(() => client.CaptureDiagnostic(0)) : null;
+                ? OnController(() => client.CaptureDiagnostic(0), CooperativeDispatchOperation.PeerFailureCapture) : null;
             var captures = selectedPaymentEnabled
                 ? CooperativeFailureCapture.CaptureAll(error, readPeer,
-                    () => client is not null && client.HasPending(1) ? OnController(() => client.CaptureDiagnostic(1)) : null)
+                    () => client is not null && client.HasPending(1) ? OnController(() => client.CaptureDiagnostic(1), CooperativeDispatchOperation.SelectedFailureCapture) : null)
                 : CooperativeFailureCapture.CaptureAll(error, readPeer);
             var capture = captures[0];
             failureBoundary = new(capturedDebt, command, generation, pendingBudget, pendingStarted, capture);
@@ -412,7 +432,7 @@ static class BoundSampledPaymentWorkload
                     }
             }
             if (client is not null)
-                try { Control(client.BeginCleanup); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
+                try { Control(client.BeginCleanup, CooperativeDispatchOperation.BeginCleanup); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             if (client is not null && selectedRegistered)
             {
                 try
@@ -420,12 +440,12 @@ static class BoundSampledPaymentWorkload
                     if (client.HasPending(1))
                     {
                         var deadline = Stopwatch.StartNew();
-                        while (OnController(() => client.CleanupHeader(1)).Visibility < 3)
+                        while (OnController(() => client.CleanupHeader(1), CooperativeDispatchOperation.SelectedCleanupHeader).Visibility < 3)
                         {
                             Require(deadline.Elapsed < TimeSpan.FromSeconds(2), "Selected cleanup did not retire the request.");
                             client.PollForCleanup(1);
                         }
-                        Control(() => client.ReleaseAfterRetiredCopy(1));
+                        Control(() => client.ReleaseAfterRetiredCopy(1), CooperativeDispatchOperation.SelectedCleanupRelease);
                         selectedCleanup = client.LastCleanup;
                     }
                     client.RetireCurrentThread(1);
@@ -440,12 +460,12 @@ static class BoundSampledPaymentWorkload
                     if (client.HasPending(0))
                     {
                         var deadline = Stopwatch.StartNew();
-                        while (OnController(() => client.CleanupHeader(0)).Visibility < 3)
+                        while (OnController(() => client.CleanupHeader(0), CooperativeDispatchOperation.PeerCleanupHeader).Visibility < 3)
                         {
                             Require(deadline.Elapsed < TimeSpan.FromSeconds(2), "Sampled cooperative cleanup did not retire the request.");
                             worker.Run(() => client.PollForCleanup(0));
                         }
-                        Control(() => client.ReleaseAfterRetiredCopy(0));
+                        Control(() => client.ReleaseAfterRetiredCopy(0), CooperativeDispatchOperation.PeerCleanupRelease);
                     }
                     worker.Run(() => client.RetireCurrentThread(0));
                     registered = false;
@@ -455,7 +475,7 @@ static class BoundSampledPaymentWorkload
             if (worker is not null && !registered)
                 try { joined = worker.Join(); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             if (client is not null && joined && !selectedRegistered)
-                try { Control(client.CloseAfterThreadJoin); closed = true; } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
+                try { Control(client.CloseAfterThreadJoin, CooperativeDispatchOperation.Close); closed = true; } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             if (controller is null) controllerJoined = true;
             else if (closed || client is null)
                 try { controllerJoined = controller.Join(); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
@@ -501,6 +521,7 @@ static class BoundSampledPaymentWorkload
             invalidated, rejectionVerified, rejectedAfterPayment, failure, failureBoundary, verificationFailure, peerFailure, cleanupErrors, joined, controllerJoined, closed,
             receiptIntervalCaptureVersion = 1, receiptIntervalRejection = receiptIntervals.Rejected,
             batchServiceEnabled = publication.BatchServiceEnabled, sampleServiceCalls = publication.ServiceCalls,
+            dispatchTimingEnabled = dispatchTiming is not null, dispatchTiming,
             binding = bindingEvidence is null ? null : new { bindingEvidence.Generation, Module = (ulong)bindingEvidence.Module,
                 Function = (ulong)bindingEvidence.Function, bindingEvidence.Method, bindingEvidence.Sites }, nativeRange = collection?.Map.Range,
             selectedBatches = batches, checksum, peerBatches, peerChecksum, peerCalls,

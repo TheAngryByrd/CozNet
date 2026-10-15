@@ -127,3 +127,43 @@ The current runner requires capture version 1 in every result.
 Controlled checks cover the capture helper and replay rules.
 They do not force rejection through either workload call site or verify its ledger assignment order at runtime.
 The retained live captures contain no parser rejection.
+
+## Controller dispatch timing
+
+`COZNET_DISPATCH_TIMING` accepts `0` or `1`. An absent value disables timing.
+The runner exposes `-DispatchTiming`, which requires `-SelectedPayment`.
+The shared observer uses managed synchronization and `Stopwatch`. The live sampled command requires the Linux CPU source.
+
+`dispatchTimingEnabled` records the activation Boolean. `dispatchTiming` is null when disabled.
+Enabled evidence contains `Calls`, `Failed`, `Incomplete`, `Recent`, `Longest`, `LongestQueue`, `LongestAction`, and `LongestReturn`.
+`Recent` retains at most 128 immutable records in sequence order.
+The four maxima retain records independently of recent-history eviction. Ties retain the first record.
+
+Each observation contains `Sequence`, `Operation`, `Command`, `Generation`, `Submitted`, `Started`, `Finished`, `Returned`, and `Failed`.
+All timestamps use the result's `timestampFrequency`.
+
+| Interval | Calculation | Meaning |
+| --- | --- | --- |
+| Queue | `Started - Submitted` | Caller submission through controller action entry |
+| Action | `Finished - Started` | Controller action bracket |
+| Return | `Returned - Finished` | Action exit through caller observation |
+| Total | `Returned - Submitted` | Full dispatch bracket |
+
+`Started` and `Finished` can be null after dispatch failure.
+A late callback cannot rewrite the captured failure. Missing endpoints do not authorize a phase duration.
+Action failures retain `Finished`. `Failed` describes the caller's dispatch outcome.
+Submit records have generation zero until the native call returns. Session-wide operations have zero command and generation.
+
+Operations identify session creation, selected or peer submit/header/read/release, failure capture, cleanup header/release, cleanup start, and close.
+The existing 100 ms receipt checks remain separate from these diagnostic brackets.
+Timing preserves the existing worker exception shape and does not authorize payment.
+
+The observer adds clock reads, locks, and allocations. Its durations include that cost and exception handling.
+The return bracket also includes worker fault publication. It is not a timestamp at task completion.
+`Returned` precedes history and maximum updates. The total bracket excludes that final observer work.
+They do not establish pure scheduler latency or CPU consumption.
+Replay checks retained ordering, counts, and maxima. It cannot reconstruct evicted calls or verify maxima against their missing records.
+Totals include unique observations retained as maxima, even when those observations have left `Recent`.
+Replay does not bind diagnostic command and generation fields to accepted payments or failure boundaries.
+Frequent header polls can evict earlier submit records. Maxima cover session creation and cleanup as well as payment.
+Legacy records without both dispatch fields remain readable. The runner requires the requested activation mode in new results.

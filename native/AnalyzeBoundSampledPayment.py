@@ -28,6 +28,88 @@ def verify_receipt_interval(payment, frequency=None):
             and (observed - started) * 10 <= recorded_frequency, "Request-to-receipt interval exceeds 100 ms or has invalid ordering")
 
 
+
+def verify_dispatch_timing(record):
+    if "dispatchTimingEnabled" not in record:
+        require("dispatchTiming" not in record, "Dispatch timing has no activation flag")
+        return
+    enabled = record["dispatchTimingEnabled"]
+    require(type(enabled) is bool, "Dispatch timing activation is not Boolean")
+    timing = record["dispatchTiming"]
+    if not enabled:
+        require(timing is None, "Disabled dispatch timing contains observations")
+        return
+    require(record["selectedPaymentEnabled"] is True and count(record["timestampFrequency"]) > 0,
+            "Dispatch timing requires the selected controller clock")
+    calls, failed, incomplete = (count(timing[key]) for key in ("Calls", "Failed", "Incomplete"))
+    require(incomplete <= failed <= calls, "Dispatch timing counts are inconsistent")
+    require(not record["completed"] or calls > 0, "Completed workload has no dispatch observations")
+    require(not record["completed"] or failed == 0, "Completed workload has failed controller dispatch")
+    recent = timing["Recent"]
+    require(len(recent) == min(calls, 128), "Dispatch history length differs")
+    known = {}
+
+    def observation(item):
+        sequence = count(item["Sequence"])
+        require(0 < sequence <= calls, "Dispatch sequence is outside the call range")
+        require(count(item["Operation"]) <= 16, "Unknown dispatch operation")
+        count(item["Command"])
+        count(item["Generation"])
+        submitted, returned = count(item["Submitted"]), count(item["Returned"])
+        require(submitted <= returned and type(item["Failed"]) is bool, "Dispatch clock or outcome is invalid")
+        started, finished = item["Started"], item["Finished"]
+        if started is not None:
+            require(submitted <= count(started) <= returned, "Dispatch start is outside its caller bracket")
+        if finished is not None:
+            require(started is not None and started <= count(finished) <= returned, "Dispatch finish is outside its action bracket")
+        else:
+            require(item["Failed"], "Successful dispatch has no completed action")
+        require(sequence not in known or known[sequence] == item, "Dispatch sequence changed its observation")
+        known[sequence] = item
+
+    for sequence, item in enumerate(recent, calls - len(recent) + 1):
+        observation(item)
+        require(item["Sequence"] == sequence, "Recent dispatch history is not contiguous")
+    unseen = calls - len(recent)
+    for total, observed in ((failed, sum(item["Failed"] for item in recent)),
+                            (incomplete, sum(item["Finished"] is None for item in recent))):
+        require(observed <= total <= observed + unseen, "Dispatch totals differ from retained history")
+    metrics = {
+        "Longest": (lambda item: True, lambda item: item["Returned"] - item["Submitted"]),
+        "LongestQueue": (lambda item: item["Started"] is not None, lambda item: item["Started"] - item["Submitted"]),
+        "LongestAction": (lambda item: item["Finished"] is not None, lambda item: item["Finished"] - item["Started"]),
+        "LongestReturn": (lambda item: item["Finished"] is not None, lambda item: item["Returned"] - item["Finished"]),
+    }
+    for key, (eligible, duration) in metrics.items():
+        maximum = timing[key]
+        candidates = [item for item in recent if eligible(item)]
+        required = calls > 0 if key == "Longest" else bool(candidates) or calls > incomplete
+        require(maximum is not None or not required, "Dispatch maximum is missing: " + key)
+        if maximum is not None:
+            observation(maximum)
+            require(eligible(maximum), "Dispatch maximum has an incomplete phase: " + key)
+            require(all(duration(maximum) >= duration(item) for item in candidates), "Dispatch maximum is smaller than retained history: " + key)
+            if unseen == 0:
+                require(maximum in recent, "Dispatch maximum is absent from complete history")
+    unseen = calls - len(known)
+    for total, observed in ((failed, sum(item["Failed"] for item in known.values())),
+                            (incomplete, sum(item["Finished"] is None for item in known.values()))):
+        require(observed <= total <= observed + unseen, "Dispatch totals differ from retained observations")
+    require(incomplete - sum(item["Finished"] is None for item in known.values())
+            <= failed - sum(item["Failed"] for item in known.values()),
+            "Unretained incomplete dispatches exceed failures")
+    for key, (eligible, duration) in metrics.items():
+        maximum = timing[key]
+        candidates = [item for item in known.values() if eligible(item)]
+        require(maximum is not None or not candidates, "Dispatch maximum is missing for retained observations: " + key)
+        if maximum is not None:
+            require(all(duration(maximum) >= duration(item) for item in candidates),
+                    "Dispatch maximum is smaller than retained observations: " + key)
+    ordered = sorted(known.values(), key=lambda item: item["Sequence"])
+    require(all(before["Returned"] <= after["Submitted"] for before, after in zip(ordered, ordered[1:])),
+            "Sequential dispatch caller brackets overlap")
+
+
 def verify_sample_publication(record):
     if "batchServiceEnabled" not in record:
         require("sampleServiceCalls" not in record, "Sample service count has no mode")
@@ -178,6 +260,7 @@ def verify_payments(payments, binding, worker):
 
 
 def verify_record(record):
+    verify_dispatch_timing(record)
     verify_sample_publication(record)
     verify_rejected_receipt_interval(record)
     require(type(record.get("schemaVersion", 1)) is int and record.get("schemaVersion", 1) == 1,

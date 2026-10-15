@@ -541,6 +541,110 @@ class PauseTimingChecks(unittest.TestCase):
             verify_pause_timing(record)
 
 
+class DispatchTimingAnalysisChecks(unittest.TestCase):
+    @staticmethod
+    def record():
+        record = valid_record()
+        first = dict(Sequence=1, Operation=3, Command=1, Generation=1, Submitted=10, Started=20, Finished=40, Returned=70, Failed=False)
+        record.update(dispatchTimingEnabled=True, dispatchTiming=dict(Calls=1, Failed=0, Incomplete=0, Recent=[first],
+            Longest=copy.deepcopy(first), LongestQueue=copy.deepcopy(first), LongestAction=copy.deepcopy(first), LongestReturn=copy.deepcopy(first)))
+        return record
+
+    def test_dispatch_phases_and_maxima_are_consistent(self):
+        self.assertTrue(verify_record(self.record())["casePassed"])
+        for mutate, message in (
+            (lambda r: r.update(dispatchTimingEnabled=1), "not Boolean"),
+            (lambda r: r["dispatchTiming"].update(Calls=0), "no dispatch observations"),
+            (lambda r: r["dispatchTiming"].update(Failed=2), "counts are inconsistent"),
+            (lambda r: r["dispatchTiming"].update(Failed=1), "Completed workload has failed"),
+            (lambda r: r["dispatchTiming"].update(Recent=[]), "history length"),
+            (lambda r: r["dispatchTiming"]["Recent"][0].update(Started=9), "start is outside"),
+            (lambda r: r["dispatchTiming"]["Recent"][0].update(Finished=71), "finish is outside"),
+            (lambda r: r["dispatchTiming"]["Recent"][0].update(Finished=None), "no completed action"),
+            (lambda r: r["dispatchTiming"].update(LongestQueue=None), "maximum is missing"),
+            (lambda r: r["dispatchTiming"]["Longest"].update(Returned=71), "changed its observation"),
+        ):
+            with self.subTest(message=message):
+                record = self.record()
+                mutate(record)
+                with self.assertRaisesRegex(ValueError, message):
+                    verify_record(record)
+
+    def test_incomplete_dispatch_keeps_failure_without_inventing_action(self):
+        record = self.record()
+        record.update(passed=False, completed=False, failure="dispatch failed")
+        timing = record["dispatchTiming"]
+        timing.update(Failed=1, Incomplete=1, LongestQueue=None, LongestAction=None, LongestReturn=None)
+        timing["Recent"][0].update(Started=None, Finished=None, Failed=True)
+        timing["Longest"] = copy.deepcopy(timing["Recent"][0])
+        from AnalyzeBoundSampledPayment import verify_dispatch_timing
+        verify_dispatch_timing(record)
+        timing["Incomplete"] = 0
+        with self.assertRaisesRegex(ValueError, "totals differ"):
+            verify_dispatch_timing(record)
+
+    def test_disabled_dispatch_timing_has_no_observations(self):
+        record = valid_record()
+        record.update(dispatchTimingEnabled=False, dispatchTiming=None)
+        self.assertTrue(verify_record(record)["casePassed"])
+        record["dispatchTiming"] = self.record()["dispatchTiming"]
+        with self.assertRaisesRegex(ValueError, "Disabled dispatch timing"):
+            verify_record(record)
+
+    def test_evicted_failure_maximum_contributes_to_totals(self):
+        record = self.record()
+        record.update(passed=False, completed=False, failure="dispatch failed")
+        from AnalyzeBoundSampledPayment import verify_dispatch_timing
+        timing = record["dispatchTiming"]
+        timing.update(Calls=129, Failed=1, Incomplete=1)
+        timing["Recent"] = [dict(Sequence=i, Operation=2, Command=1, Generation=1,
+            Submitted=i * 1000, Started=i * 1000 + 1, Finished=i * 1000 + 2, Returned=i * 1000 + 3, Failed=False)
+            for i in range(2, 130)]
+        timing["Longest"] = dict(Sequence=1, Operation=2, Command=1, Generation=1,
+            Submitted=1000, Started=None, Finished=None, Returned=1100, Failed=True)
+        for key in ("LongestQueue", "LongestAction", "LongestReturn"):
+            timing[key] = copy.deepcopy(timing["Recent"][0])
+        verify_dispatch_timing(record)
+        timing.update(Failed=0, Incomplete=0)
+        with self.assertRaisesRegex(ValueError, "totals differ from retained observations"):
+            verify_dispatch_timing(record)
+
+    def test_evicted_started_failure_requires_queue_maximum(self):
+        record = self.record()
+        record.update(passed=False, completed=False, failure="dispatch failed")
+        from AnalyzeBoundSampledPayment import verify_dispatch_timing
+        timing = record["dispatchTiming"]
+        timing.update(Calls=129, Failed=129, Incomplete=129, LongestAction=None, LongestReturn=None)
+        timing["Recent"] = [dict(Sequence=i, Operation=2, Command=1, Generation=1,
+            Submitted=i * 1000, Started=None, Finished=None, Returned=i * 1000 + 3, Failed=True)
+            for i in range(2, 130)]
+        timing["Longest"] = dict(Sequence=1, Operation=2, Command=1, Generation=1,
+            Submitted=1000, Started=1001, Finished=None, Returned=1100, Failed=True)
+        timing["LongestQueue"] = copy.deepcopy(timing["Longest"])
+        verify_dispatch_timing(record)
+        timing["LongestQueue"] = None
+        with self.assertRaisesRegex(ValueError, "maximum is missing for retained observations"):
+            verify_dispatch_timing(record)
+
+    def test_unretained_incomplete_calls_must_also_be_failures(self):
+        from AnalyzeBoundSampledPayment import verify_dispatch_timing
+        record = self.record()
+        record.update(passed=False, completed=False, failure="dispatch failed")
+        timing = record["dispatchTiming"]
+        timing.update(Calls=130, Failed=2, Incomplete=1)
+        timing["Recent"] = [dict(Sequence=i, Operation=2, Command=1, Generation=1,
+            Submitted=i * 1000, Started=i * 1000 + 1, Finished=i * 1000 + 2, Returned=i * 1000 + 3, Failed=False)
+            for i in range(3, 131)]
+        maximum = dict(Sequence=1, Operation=2, Command=1, Generation=1,
+            Submitted=1000, Started=1001, Finished=1099, Returned=1100, Failed=True)
+        for key in ("Longest", "LongestQueue", "LongestAction", "LongestReturn"):
+            timing[key] = copy.deepcopy(maximum)
+        verify_dispatch_timing(record)
+        timing["Failed"] = 1
+        with self.assertRaisesRegex(ValueError, "Unretained incomplete dispatches exceed failures"):
+            verify_dispatch_timing(record)
+
+
 class RejectedReceiptAnalysisChecks(unittest.TestCase):
     def test_selected_replay_checks_publication_mode_and_count(self):
         record = valid_record()

@@ -62,3 +62,20 @@ Compare source and binary hashes before attributing a difference to publication 
 Compare completed work duration, processed samples, and `sampleServiceCalls` at the same work count.
 Keep incomplete cases separate. A smaller service count does not establish lower controller cost or stable capacity.
 See [publication semantics](../Reference/bound-sampled-payment.md#sample-publication-cadence) and [capacity limits](../Explanations/owner-drain-capacity.md).
+
+## Capture controller dispatch intervals
+
+After the target builds the required binaries, enable the dispatch diagnostic:
+
+```powershell
+pwsh -NoProfile -File native/VerifyBoundSampledPayment.ps1 -SelectedPayment -OwnerDrain -ChildCpu -PauseTiming -DispatchTiming -SelectedCadence qualified-sample -SelectedBatches 50000 -EvidenceDirectory artifacts/controller-dispatch
+```
+
+Check `dispatchTimingEnabled` and the retained source and binary hashes.
+Inspect `dispatchTiming.Recent` near the failed request, then compare its four timestamps with the matching failure boundary.
+Check the operation label, command, and generation before combining records.
+Keep queue, controller action, and return intervals separate from native child waits.
+Treat absent start or finish timestamps as incomplete evidence.
+Check whether a maximum belongs to creation or cleanup before using it to describe payment.
+Retain all failures. The enabled observer changes execution cost.
+See [the reference](../Reference/cooperative-managed.md#controller-dispatch-timing) for interpretation limits.

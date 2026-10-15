@@ -105,6 +105,36 @@ Reducing publication service calls does not ensure prompt peer execution or boun
 The next investigation must distinguish controller handoff time from native execution and receipt-observation time.
 See [the retained evidence](../../reliability/features/native-signal/sample-publication.md) and [comparison commands](../How_Tos/run-bound-selected-cadence.md#compare-peer-service-after-sample-batches).
 
+## Controller action exit is not caller observation
+
+The [dispatch diagnostic](../Reference/cooperative-managed.md#controller-dispatch-timing) separates submission, controller action, and caller observation.
+Its first unrestricted treatment completes 50,000 batches with 29,456 controller calls.
+Session creation supplies all four global maxima in that run. Those maxima do not describe steady-state payment.
+
+The one-CPU treatment fails after 19,944 batches at peer request 154.
+The native journal retains a 6,167,752 ns child, which exceeds the 5 ms handler limit.
+The receipt-read action then rejects that failed journal.
+
+| Failed receipt read | Duration |
+| --- | ---: |
+| Submission to action entry | 0.024660 ms |
+| Controller action bracket | 0.316728 ms |
+| Action exit to caller observation | 115.427269 ms |
+
+The action exits about 33.286 ms after request start. The caller observes failure about 148.713 ms after request start.
+The return interval includes worker fault publication, exception handling, scheduling, and observer work.
+It does not identify which component consumed that time.
+The separate longest queue interval is about 49.895 ms for a header read on peer request 55.
+
+The managed receipt-interval parser is not reached for request 154 because journal acceptance throws first.
+These data do not explain the earlier rejected receipt endpoint or authorize a longer receipt bound.
+They establish that a late caller observation can follow a short controller action, separately from a native wait failure.
+
+The capture is `artifacts/controller-dispatch-single/20261015T221111890/01-owner`.
+Zero speedup and expected invalidation pass. Replay verifies all three records and preserves the treatment failure.
+The observer adds cost, and the capture does not establish prediction accuracy or a scheduling cause.
+See [the evidence and limits](../../reliability/features/native-signal/controller-dispatch.md).
+
 See [collector operations](../Reference/pausable-sample-collector.md),
 [comparison commands](../How_Tos/run-bound-selected-cadence.md),
 and [native owner scheduling](../Research/native-owner-scheduling.md).

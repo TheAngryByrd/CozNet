@@ -1,5 +1,8 @@
 # Project scope
 
+An opt-in [dispatch diagnostic](profiling/controller-dispatch.md) retains controller queue, action, and return brackets without changing payment rules.
+Its one-CPU failure separates a short failed receipt-read action from a 115.427269 ms caller-observation interval. The cause of that interval remains unresolved.
+
 An opt-in [batch service comparison](profiling/sample-publication.md) changes peer service cadence while preserving every per-sample debt gate.
 Both batch treatments fail peer debt in the retained one-CPU comparison. Stable capacity and prediction remain unverified.
 
