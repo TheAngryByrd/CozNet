@@ -10,6 +10,10 @@ All streams report zero loss. The three longest handlers have no observed target
 Command 460 has a 3,378,738 ns submission-to-first-handler interval without observed switch-out overlap on any captured thread.
 Only one child completed before the violating checkpoint. Later shutdown payment cannot remove that earlier violation.
 The previous 9.684 ms invalid wait did not recur. Its cause remains unresolved.
+The retained `replay-timer-checkpoint.py` now reproduces the cross-thread submission window and optimistic prefix bound from raw records.
+The first arm-to-handler gap is 3,357,430 ns. Four samples add 2 ms of local credit, with observations spanning 14,151 ns after submission.
+These timestamps do not measure the later global-delay publication.
+Their source timestamps span 3,458,638 ns. The records establish backlog, not its cause or a passing reordering policy.
 
 `LinuxServiceSchedulerTiming` connects the existing scheduler backend to the initialized native-service workload with submission timing.
 `AnalyzeServiceSnapshotLag.py --scheduler` requires stopped, loss-free captures with distinct thread identities in one process.

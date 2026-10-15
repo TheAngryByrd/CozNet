@@ -41,6 +41,41 @@ Its [handler](https://github.com/ByteLab-David/JCoz/blob/1df02b0f6e319bd7df05ba5
 These paths provide accounting precedents.
 They do not establish a complete drain barrier or a retrospective source-window bound for CozNet.
 
+## Capacity before endpoint qualification
+
+The [capture without forced GC](../../reliability/features/native-signal/timer-scheduler-no-gc.md) fails the 2 ms debt gate before shutdown.
+Four queued samples add 2 ms of local credit while a peer command remains active.
+The subsequent catch-up publishes global delay before the failed checkpoint.
+The first handler starts about 3.36 ms after the first arm reading.
+All three guest scheduler streams show zero switch-out overlap from submission through the failed checkpoint.
+This does not exclude host scheduling, clock effects, or unobserved execution costs.
+
+The accepted prefix leaves 2,444,062 ns of debt at that checkpoint.
+Crediting the entire elapsed prefix of the unfinished child would still leave at least 2,420,658 ns.
+Later payment cannot qualify the earlier measurement.
+A larger lease budget alone does not change that recorded prefix.
+An implementation change must improve actual service or observation timing, then pass the existing capacity and physical-prediction gates.
+Changing sample publication order requires a new comparison. It cannot retroactively repair this run.
+
+## Cooperative delivery candidate
+
+The next proposed capacity experiment uses existing method-entry and countdown probes to observe a finite request on the target thread.
+Each probe would execute at most one bounded child wait, then return to application work.
+This removes asynchronous timer delivery from that path. It does not guarantee a time bound between probes.
+The existing ten-millisecond CPU cadence cannot gate these requests under the two-millisecond debt limit.
+
+The request must retain worker, command, and generation identity until valid terminal settlement.
+Existing native mailbox ownership can supply publication, claim, cancellation, and retirement rules.
+A cooperative poll site needs explicit admission evidence. It is not an interrupted instruction pointer.
+The timer receipt contract cannot accept a fabricated address as proof of cooperative eligibility.
+
+The experiment must retain the 50 µs child request, 2 ms lease, 5 ms child duration, and 100 ms receipt limits.
+It must also retain the 2 ms debt gate and record zero-speedup instrumentation cost.
+The [existing countdown comparison](../../reliability/features/linux-perf/component-overhead.md) found substantial probe overhead.
+Removing timer delivery therefore does not establish prediction accuracy.
+The [probe design comparison](../Research/probe-overhead-options.md) describes the armed-poll alternative and native Coz's different settlement cadence.
+This adapter is not implemented yet.
+
 ## Next prototype
 
 The proposed lifecycle retains the existing estimator inputs: frozen global delay, elapsed time, and progress.

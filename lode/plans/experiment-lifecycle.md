@@ -63,6 +63,12 @@ No residual formula is accepted until its state transitions and unknown inputs a
 The [live ledger capture](../../reliability/features/native-signal/ledger-boundaries.md) fails the existing handler gate and native closure in treatment.
 The conditional model cannot qualify that run.
 Address intervention capacity before using the model for prediction eligibility.
+The next capacity candidate is opt-in cooperative delivery through existing entry/countdown probes.
+Reuse `LeaseMailbox` generation ownership instead of adding a second request protocol.
+Define registered poll-site admission separately from timer interrupted-IP admission before adapting journals or transports.
+Each poll services at most one bounded child and returns to application work. Do not apply the existing 10 ms CPU cadence to pending service.
+Keep all lease, child, receipt, debt, and prediction gates. Record instrumentation cost and retain failed runs.
+The [human explanation](../../docsSrc/Explanations/experiment-lifecycle.md#cooperative-delivery-candidate) records the candidate and its limits.
 Reuse the existing wait and scheduling evidence. Do not repeat unchanged timing cases to obtain a pass.
 See [delay accounting](../profiling/delay-ledger.md), [timer accounting](../profiling/timer-accounting.md),
 [measurement boundaries](../profiling/measurement-boundaries.md), and [the roadmap](roadmap.md).

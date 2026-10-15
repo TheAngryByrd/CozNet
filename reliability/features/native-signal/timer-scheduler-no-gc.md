@@ -62,6 +62,37 @@ Neither extra payment nor successful cleanup establishes capacity at the earlier
 
 ## Reproduction and limits
 
+### Credit observation and first delivery
+
+The checkpoint replay separates command submission, first arm, handler start, and sample observation.
+Submission preceded the first arm by 21,308 ns.
+The first arm preceded the first handler by 3,357,430 ns.
+These intervals use recorded clock readings. They do not identify a delay cause.
+
+Four accepted samples added 2,000,000 ns of local credit after command submission and before the first violating checkpoint.
+Their source timestamps span 3,458,638 ns. Their observation timestamps span 14,151 ns.
+These observations follow local-credit updates. They do not timestamp the later catch-up that publishes global delay.
+The first source timestamp precedes command submission.
+The controller therefore processes an existing sample backlog while the peer starts payment.
+The records do not identify which controller operation delayed processing.
+
+Refreshing the accepted prefix cannot remove this violation: even its optimistic debt floor exceeds 2 ms.
+A larger lease changes the remaining payment budget, not the elapsed prefix before this checkpoint.
+Interleaving sample processing and service would change execution timing and requires a new controlled comparison.
+The retained run does not establish that this reordering would pass the debt gate.
+
+`replay-timer-checkpoint.py` uses the retained scheduler parser and the original treatment JSON.
+It checks the first violating boundary, completed children, active child prefix, source credits, and all three scheduler windows.
+It reproduces the cross-thread no-overlap claim separately from the handler analyzer.
+Its output is `checkpoint-replay.json`. Neither replay starts a workload.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `replay-timer-checkpoint.py` | `d06849dff2b75fd977c6dbd6a09080d29654fe5523ec088b1807eac2815abf20` |
+| `checkpoint-replay.json` | `8e5f94273402e17b08ee0235329b44c99a53c4c0088e1a2ae83293720655f937` |
+
+### Existing handler replay
+
 The artifact directory retains `analyze-handler-scheduling.py` and its exact `AnalyzeScheduler.py` dependency.
 Run the retained script with Python to reproduce `handler-scheduler-analysis.json` without a new timing run.
 The analysis preserves failures and reports observed overlap only.
