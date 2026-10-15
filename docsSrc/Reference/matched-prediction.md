@@ -21,6 +21,10 @@ It compiles the timer library from the source snapshot.
 The source snapshot is not a complete managed rebuild checkout.
 The manifest records snapshot hashes and image identities before timed cases.
 The analyzer checks those hashes after collection.
+The snapshot includes `AnalyzeCpuCounters.py` and `CpuCounterChecks.py`.
+The current analyzer rejects an entire legacy run if its manifest lacks these required hashes.
+It then produces a run-level error instead of per-case diagnostics. Previously retained reports remain evidence for those runs.
+The runner executes the counter checks before the matched analyzer checks.
 
 `outcomes.json` contains all 32 declared cases from the start.
 Each completed process updates its row with arguments, exit code, and result-file presence.
@@ -52,6 +56,10 @@ Shutdown progress, shutdown credit, and summed worker waits do not enter this ca
 
 Failed exits, workload failures, missing records, invalid boundaries, or snapshot changes reject case eligibility.
 Profile cases also require stable maps, loss-free sampling, completed native lifetimes, and the unchanged 2 ms debt bound.
+They require reconciled [CPU counter evidence](cpu-counter-evidence.md).
+Missing legacy evidence rejects profile eligibility. Physical cases do not require CPU counter evidence.
+`cpuCounterDiagnostics` retains counter results even when the process exits unsuccessfully or native cleanup fails.
+Counter reconciliation does not remove workload failures or establish treatment eligibility.
 Zero-intervention cases must contain no delay credit or native wait.
 Treatment must contain positive credit and paid intervention inside the frozen window. Later shutdown payment cannot repair this requirement.
 

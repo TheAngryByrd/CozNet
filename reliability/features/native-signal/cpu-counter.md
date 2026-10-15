@@ -46,6 +46,30 @@ The full `--verify-timer-layout` command passes on Windows and Linux x64.
 `LinuxPerfVerify` also passes for the direct CPU-event route.
 These deterministic checks do not establish runtime accuracy or observer overhead bounds.
 
+## Offline reconciliation
+
+`AnalyzeCpuCounters.py` reconciles both retained captures without another workload execution.
+Reports are `counter-analysis-reconciled-0.json` and `counter-analysis-reconciled-50.json` in the same run directory.
+Each report retains input and analyzer SHA-256 hashes. Earlier reports remain unchanged.
+
+| Observation | Zero percent | Fifty percent |
+| --- | ---: | ---: |
+| Count after last accepted sample, lower | 1,003,400 ns | 3,174,900 ns |
+| Count after last accepted sample, upper | 1,418,700 ns | 3,720,700 ns |
+| Disabled elapsed time, lower | 0 ns | 206,498 ns |
+| Disabled elapsed time, upper | 3,014,905 ns | 3,304,688 ns |
+
+These ranges use frozen endpoints. Shutdown samples do not replace the last accepted sample.
+Disabled elapsed ranges include endpoint and transition uncertainty.
+They do not establish disabled CPU or selected CPU.
+The treatment report preserves all four workload failures and `nativeSessionClosed = false`.
+Both reports keep all attribution and prediction claim flags false.
+
+Fifteen counter checks and nineteen matched-analyzer checks pass on Windows and Linux with Python.
+The Linux checks use `python:3.12-slim`.
+The .NET SDK image does not contain Python.
+`BuildDocs` passes. No new timed matrix has run for this analyzer increment.
+
 See the [counter reference](../../../docsSrc/Reference/cpu-counter-evidence.md),
 [attribution limits](../../../docsSrc/Explanations/cpu-counter-attribution.md), and
 [Linux perf contracts](../../../lode/profiling/linux-perf.md).

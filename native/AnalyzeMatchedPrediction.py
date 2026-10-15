@@ -6,6 +6,7 @@ import statistics
 import sys
 from dataclasses import dataclass
 from fractions import Fraction
+from AnalyzeCpuCounters import analyze_counter_capture
 
 
 MODES = ("profile-zero", "profile-half", "physical-baseline", "physical-optimized")
@@ -162,6 +163,7 @@ def parse_window(data, mode):
 def analyze_case(data, mode, exit_code):
     errors = []
     cost = None
+    counters = analyze_counter_capture(data) if mode in ("profile-zero", "profile-half") else None
     try:
         require(mode in MODES, "Unknown case mode")
         require(type(exit_code) is int and exit_code == 0, "Workload process did not exit successfully")
@@ -200,11 +202,13 @@ def analyze_case(data, mode, exit_code):
         cost = parse_window(data, mode).report()
     except (ValueError, KeyError, TypeError, IndexError) as error:
         errors.append(str(error))
+    if counters is not None and not counters["reconciled"]:
+        errors.extend("CPU counter evidence: " + reason for reason in counters["reasons"])
     if mode == "profile-half":
         errors.extend(["Unreceived sample-period attribution has no verified bound",
                        "Native journal suffix attribution has no verified bound"])
     return {"predictionEligible": not errors, "reasons": errors, "observedAccountedCost": cost,
-            "costIncludesUnboundedAttribution": mode == "profile-half"}
+            "costIncludesUnboundedAttribution": mode == "profile-half", "cpuCounterDiagnostics": counters}
 
 
 def analyze(root):
@@ -223,7 +227,8 @@ def analyze(root):
     require([item["name"] for item in outcomes] == names, "Outcomes omit, duplicate, or reorder declared cases")
     manifest = read(root / "manifest.json")
     require(isinstance(manifest["files"], dict), "Snapshot hashes must be a mapping")
-    require(all(name in manifest["files"] for name in ("plan.json", "source/native/AnalyzeMatchedPrediction.py",
+    require(all(name in manifest["files"] for name in ("plan.json", "source/native/AnalyzeMatchedPrediction.py", "source/native/AnalyzeCpuCounters.py",
+        "source/native/CpuCounterChecks.py",
             "workload/CozNet.LinuxPerf.dll", "workload/CozNet.dll", "native/libCozNet.Timer.so",
             "calibration/calibration.json", "calibration/calibration.json.plan.json",
             "calibration/calibration.json.blocks.jsonl", "calibration/manifest.json")), "Required snapshot hashes are missing")

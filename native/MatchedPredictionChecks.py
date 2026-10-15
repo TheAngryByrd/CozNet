@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from AnalyzeMatchedPrediction import MODES, analyze, analyze_case, parse_window, parse_calibration
+from CpuCounterChecks import fixture as counter_fixture
 
 
 def fixture(mode="profile-half"):
@@ -35,6 +36,11 @@ def fixture(mode="profile-half"):
             "credit": 900000000 if mode == "profile-half" else 0,
             "journals": [{}] if mode == "profile-half" else [],
             "waits": [800000000, 900000000] if mode == "profile-half" else [0, 0]}
+    if mode.startswith("profile-"):
+        counter = counter_fixture()
+        for field in ("cpuCounters", "samples", "records"):
+            data[field] = counter[field]
+        end["Accounting"]["AcceptedSampleSequence"] = 2
     return data
 
 
@@ -89,7 +95,8 @@ def series(root):
     for item in order:
         (root / (item["name"] + ".json")).write_text(json.dumps(fixture(item["mode"])))
     calibration(root / "calibration")
-    names = ("plan.json", "source/native/AnalyzeMatchedPrediction.py", "workload/CozNet.LinuxPerf.dll", "workload/CozNet.dll",
+    names = ("plan.json", "source/native/AnalyzeMatchedPrediction.py", "source/native/AnalyzeCpuCounters.py",
+             "source/native/CpuCounterChecks.py", "workload/CozNet.LinuxPerf.dll", "workload/CozNet.dll",
              "native/libCozNet.Timer.so", "calibration/calibration.json", "calibration/calibration.json.plan.json",
              "calibration/calibration.json.blocks.jsonl", "calibration/manifest.json")
     hashes = {}
@@ -105,6 +112,44 @@ def series(root):
 
 
 class MatchedPredictionChecks(unittest.TestCase):
+    def test_legacy_manifest_requires_both_counter_module_hashes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            series(root)
+            manifest_path = root / "manifest.json"
+            original = json.loads(manifest_path.read_text())
+            for name in ("AnalyzeCpuCounters.py", "CpuCounterChecks.py"):
+                with self.subTest(name=name):
+                    manifest = deepcopy(original)
+                    del manifest["files"]["source/native/" + name]
+                    manifest_path.write_text(json.dumps(manifest))
+                    with self.assertRaisesRegex(ValueError, "Required snapshot hashes are missing"):
+                        analyze(root)
+
+    def test_counter_diagnostics_survive_workload_and_cleanup_failure(self):
+        data = fixture()
+        data.update(failures=["debt exceeded"], closed=False)
+        result = analyze_case(data, "profile-half", 1)
+        self.assertFalse(result["predictionEligible"])
+        self.assertIn("Workload process did not exit successfully", result["reasons"])
+        counters = result["cpuCounterDiagnostics"]
+        self.assertTrue(counters["reconciled"], counters["reasons"])
+        self.assertEqual(counters["recordedWorkloadFailures"], ["debt exceeded"])
+        self.assertFalse(counters["nativeSessionClosed"])
+        self.assertFalse(counters["predictionAccuracyEstablished"])
+
+    def test_legacy_profile_requires_counters_but_physical_case_does_not(self):
+        data = fixture("profile-zero")
+        del data["cpuCounters"]
+        result = analyze_case(data, "profile-zero", 0)
+        self.assertFalse(result["predictionEligible"])
+        self.assertIsNotNone(result["observedAccountedCost"])
+        self.assertFalse(result["cpuCounterDiagnostics"]["reconciled"])
+        self.assertTrue(any(reason.startswith("CPU counter evidence:") for reason in result["reasons"]))
+        physical = analyze_case(fixture("physical-baseline"), "physical-baseline", 0)
+        self.assertTrue(physical["predictionEligible"], physical["reasons"])
+        self.assertIsNone(physical["cpuCounterDiagnostics"])
+
     def test_calibration_reconciles_all_records_and_independent_statistics(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)

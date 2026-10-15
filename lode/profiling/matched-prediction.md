@@ -36,4 +36,13 @@ flowchart LR
 ```
 
 The remaining work is source-time alignment, bounded sample/journal tails, and conservative propagation into paired prediction-error intervals.
+`AnalyzeCpuCounters.py` parses raw evidence into immutable capture values before computing diagnostics.
+It reconciles counters, transition state, samples, totals, and final disabled counts.
+The final snapshot can equal disabled `endAfter`.
+Disabled counts must remain stable in the same epoch.
+It reports frozen counter prefixes and suffixes plus outward-rounded disabled elapsed ranges.
+It preserves workload failures and closure state. All CPU-attribution and accuracy claims remain false.
+The matched analyzer computes these diagnostics before workload eligibility checks.
+Missing or invalid counter evidence rejects profile eligibility, including legacy captures.
+Physical cases do not require it. New runner snapshots include both counter Python files and run their checks.
 See [the reference](../../docsSrc/Reference/matched-prediction.md), [matched workers](matched-physical.md), and [boundaries](measurement-boundaries.md).

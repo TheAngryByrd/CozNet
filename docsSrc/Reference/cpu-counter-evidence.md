@@ -70,3 +70,35 @@ It does not establish selected-method CPU, clock accuracy, or lifecycle validity
 `--verify-timer-layout` includes these checks.
 
 See [CPU periods and missing tails](../Explanations/cpu-counter-attribution.md) for attribution limits.
+
+## Offline reconciliation
+
+`python native/AnalyzeCpuCounters.py capture.json report.json` parses one sampled timer capture.
+The portable analyzer requires Python 3.9 or later. It uses no native platform APIs.
+It creates the report exclusively and rejects an existing output path.
+The report retains SHA-256 hashes of the input bytes and analyzer source.
+Exit code zero means counter reconciliation succeeded. It does not mean the workload succeeded.
+
+The parser reconciles endpoint readings, transition state, final count, sample order, and record totals.
+It rejects failed reads, incomplete journals, sample loss, and inconsistent accepted-sample sequences.
+The final snapshot can equal the disabled `endAfter` reading.
+A counter cannot advance between readings in the same disabled epoch.
+Missing legacy counter evidence produces a rejected diagnostic.
+
+| Report field | Meaning |
+| --- | --- |
+| `reconciled`, `reasons` | Counter parsing result and rejection details |
+| `enabledCountRange` | Recomputed frozen-window counter range |
+| `countBeforeFirstAccepted` | Counter range before the first accepted sample. Null when none exists. |
+| `countAfterLastAccepted` | Counter range after the last accepted sample. The whole enabled range when none exists. |
+| `disabledElapsed` | Disabled interval ranges clipped to the uncertain measurement endpoints |
+| `recordedWorkloadFailures` | Workload failures retained independently of counter reconciliation |
+| `nativeSessionClosed` | Recorded native closure state |
+
+Disabled elapsed bounds use managed timestamps. Nanosecond conversion rounds the lower bound down and the upper bound up.
+Sample ordering uses controller receipt timestamps. It does not compare perf timestamps with managed timestamps.
+Shutdown samples do not replace the frozen-window suffix.
+Selected CPU, missing-sample tails, disabled CPU, and prediction accuracy claim flags remain false.
+
+The matched analyzer embeds this report as `cpuCounterDiagnostics` for profile cases, including failed cases.
+See [matched prediction diagnostics](matched-prediction.md) for eligibility rules.

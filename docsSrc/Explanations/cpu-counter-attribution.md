@@ -19,7 +19,10 @@ A counter increase can include selected work, other work, and kernel execution.
 Without additional attribution evidence, selected CPU can lie anywhere between zero and that entire increase.
 
 CozNet now retains sample counts, endpoint readings, and transition journals.
-It does not yet reconcile them into a verified missing-tail bound.
+The offline analyzer reconciles these records and reports counter prefixes, suffixes, and disabled elapsed intervals.
+These observations do not establish a verified missing-tail bound.
+Disabled elapsed time includes time when the target does not execute.
+An accepted sample identifies one sampled instruction, not all work represented by its cumulative count.
 Native journal suffixes require separate attribution.
 Prediction accuracy remains unverified.
 
