@@ -143,6 +143,7 @@ sealed class BoundSampleCollection
         capture.TrackEpochs = allowPause;
         lifetime.Execute(createSource, factory =>
         {
+            PrepareValidation();
             source = factory(Map, capture) ?? throw new InvalidDataException("The sample factory returned no source.");
             var counters = source.CounterEvidence ?? throw new InvalidDataException("The bound source has no counter epoch evidence.");
             _ = counters.ReadCounter();
@@ -192,10 +193,11 @@ sealed class BoundSampleCollection
             throw new InvalidOperationException("Pausable collection control requires its owning thread.");
     }
 
-    private void DisablePausable()
+    private void DisablePausable(BoundPauseTiming? timing = null)
     {
         ((IOwnerStoppedCpuEventSession)source!).DisableAndStopProducer();
         sourceDisabled = true;
+        if (timing is not null) timing.ProducerStopped = System.Diagnostics.Stopwatch.GetTimestamp();
         ReadDisabledCounters();
     }
 
@@ -208,35 +210,46 @@ sealed class BoundSampleCollection
         if (session!.Current.Enabled) session = session.Disable(counters.DescribeCounters(), cpuNanoseconds);
     }
 
-    public void ExecuteExcluded(Action<IReadOnlyList<BoundEpochSample>> action)
+    public void ExecuteExcluded(Action<IReadOnlyList<BoundEpochSample>> action, BoundPauseTiming? timing = null)
     {
         ArgumentNullException.ThrowIfNull(action);
         RequireOwner();
         if (pausableCollector is null || Cleanup is not null || excluding)
             throw new InvalidOperationException("Excluded execution requires an active pausable collection without an excluded callback.");
+        if (timing is not null) timing.Started = System.Diagnostics.Stopwatch.GetTimestamp();
         lifetime.Execute(action, callback =>
         {
             excluding = true;
             try
             {
-                DisablePausable();
+                DisablePausable(timing);
+                if (timing is not null) timing.DisabledCountersAccepted = System.Diagnostics.Stopwatch.GetTimestamp();
                 var pause = pausableCollector.RequestPause().GetAwaiter().GetResult();
+                if (timing is not null) timing.DrainAcknowledged = System.Diagnostics.Stopwatch.GetTimestamp();
                 capture.Close();
                 lifetime.RequireCurrent();
                 ValidateBatch(finalBatch ?? throw new InvalidDataException("The paused source has no final drain evidence."), capture.Snapshot(), cpuNanoseconds);
-                callback(capture.EpochSnapshot(0));
+                if (timing is not null) timing.BatchValidated = System.Diagnostics.Stopwatch.GetTimestamp();
+                var snapshot = capture.EpochSnapshot(0);
+                if (timing is not null) timing.SnapshotReady = System.Diagnostics.Stopwatch.GetTimestamp();
+                callback(snapshot);
+                if (timing is not null) timing.CallbackReturned = System.Diagnostics.Stopwatch.GetTimestamp();
                 lifetime.RequireCurrent();
                 capture.Open();
                 sourceDisabled = false;
                 source!.Enable();
+                if (timing is not null) timing.SourceEnabled = System.Diagnostics.Stopwatch.GetTimestamp();
                 var counters = source.CounterEvidence ?? throw new InvalidDataException("The pausable source lost counter evidence.");
                 _ = counters.ReadCounter();
                 session = session!.Enable(counters.DescribeCounters());
+                if (timing is not null) timing.EnabledCountersAccepted = System.Diagnostics.Stopwatch.GetTimestamp();
                 pausableCollector.Resume(pause);
+                if (timing is not null) timing.CollectorResumed = System.Diagnostics.Stopwatch.GetTimestamp();
                 return true;
             }
             finally { excluding = false; }
         });
+        if (timing is not null) timing.Completed = System.Diagnostics.Stopwatch.GetTimestamp();
     }
 
     public BoundSampleCleanup CloseForCleanup()
@@ -313,6 +326,18 @@ sealed class BoundSampleCollection
         });
         completed = true;
         return result;
+    }
+
+    private static void PrepareValidation()
+    {
+        var samples = Array.AsReadOnly(new[]
+        {
+            CpuSample.Create(1, 1, 1, 1, 1, OverheadWorkload.SelectedSymbol, 1),
+            CpuSample.Create(1, 1, 2, 1, 1, OverheadWorkload.SelectedSymbol, 2),
+            CpuSample.Create(1, 1, 3, 1, 2, null, 3)
+        });
+        var batch = new SampleBatch(3, 2, 3, 0, 0, 0, 2, 1, new[] { OverheadWorkload.SelectedSymbol });
+        ValidateBatch(batch, samples, 3);
     }
 
     private static void ValidateBatch(SampleBatch batch, IReadOnlyList<CpuSample> samples, ulong cpuNanoseconds)

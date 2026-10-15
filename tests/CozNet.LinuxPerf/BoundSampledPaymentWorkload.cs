@@ -13,7 +13,7 @@ static class BoundSampledPaymentWorkload
     private sealed record Debt(long Timestamp, long Global, long SelectedCredit, long PeerWait, long Selected, long Peer,
         long SelectedLocal, long PeerLocal, long SelectedWait);
     private sealed record PauseBoundary(long Started, int FirstUnprocessed, int? FinalDrainCount = null,
-        long? CallbackFinished = null, long? Resumed = null, BoundSelectedAdmission? Admission = null);
+        long? CallbackFinished = null, long? Resumed = null, BoundSelectedAdmission? Admission = null, BoundPauseTiming? Timing = null);
     private sealed record FailureBoundary(Debt? LastObservedDebt, ulong Command, ulong Generation, long Budget,
         long RequestStarted, CooperativeFailureCapture Capture);
 
@@ -38,6 +38,13 @@ static class BoundSampledPaymentWorkload
         var selectedPayments = new List<Payment>();
         var pauses = new List<PauseBoundary>();
         bool selectedPaymentEnabled = selectedPaymentSource is not null;
+        bool pauseTimingEnabled = Environment.GetEnvironmentVariable("COZNET_PAUSE_TIMING") switch
+        {
+            null or "0" => false,
+            "1" => true,
+            _ => throw new ArgumentException("COZNET_PAUSE_TIMING must be 0 or 1.")
+        };
+        Require(!pauseTimingEnabled || selectedPaymentEnabled, "Pause timing requires selected payment.");
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
@@ -145,10 +152,12 @@ static class BoundSampledPaymentWorkload
             }
             else if (accounting.Observe(state).Selected == 0) return;
             int pauseIndex = pauses.Count;
-            pauses.Add(new(Stopwatch.GetTimestamp(), samples.Count, Admission: admission));
+            var timing = pauseTimingEnabled ? new BoundPauseTiming() : null;
+            pauses.Add(new(Stopwatch.GetTimestamp(), samples.Count, Admission: admission, Timing: timing));
             collection!.ExecuteExcluded(drained =>
             {
                 PublishEpochs(drained, samples.Count);
+                if (timing is not null) timing.SamplesPublished = Stopwatch.GetTimestamp();
                 pauses[pauseIndex] = pauses[pauseIndex] with { FinalDrainCount = samples.Count };
                 var prepared = Parsed(SignalAccountingModule.prepareSelectedService(selected.Item1, state));
                 state = prepared.Item2;
@@ -200,7 +209,7 @@ static class BoundSampledPaymentWorkload
                     }
                 }
                 pauses[pauseIndex] = pauses[pauseIndex] with { CallbackFinished = Stopwatch.GetTimestamp() };
-            });
+            }, timing);
             pauses[pauseIndex] = pauses[pauseIndex] with { Resumed = Stopwatch.GetTimestamp() };
             cadence?.Resume();
         }
@@ -482,7 +491,7 @@ static class BoundSampledPaymentWorkload
             sourceCleanup = collection?.Cleanup, initialCounters = collection?.InitialCounters, finalCounters = collection?.FinalCounters,
             sourceSamples = collection?.Cleanup is null ? null : collection.Diagnostics, batch = collection?.Latest,
             sourceEpochSamples = !selectedPaymentEnabled || collection?.Cleanup is null ? null : collection.EpochDiagnostics,
-            selectedPaymentEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false
+            selectedPaymentEnabled, pauseTimingEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false
         }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
         return completed || rejectionVerified ? 0 : 1;
     }

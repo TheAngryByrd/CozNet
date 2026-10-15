@@ -31,6 +31,14 @@ try {
     $failed.passed = $false
     if ((Read-Fixture $failed).passed) { throw 'A failed runtime record cannot pass.' }
     if (-not (Read-Fixture @{ passed = $true; schemaVersion = 1 } -Cadence '').passed) { throw 'A legacy record must not require cadence fields.' }
+    foreach ($expected in @($true, $false)) {
+        foreach ($actual in @($true, $false, $null, 'true')) {
+            @{ passed = $true; pauseTimingEnabled = $actual } | ConvertTo-Json | Set-Content -LiteralPath $path
+            $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedPauseTiming $expected
+            $matches = $actual -is [bool] -and $actual -eq $expected
+            if ($outcome.passed -ne $matches) { throw 'Pause timing settings did not control outcome acceptance.' }
+        }
+    }
     Set-Content -LiteralPath $path -Value '{'
     $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0
     if ($outcome.passed -or -not $outcome.recordError) { throw 'Malformed JSON cannot pass.' }

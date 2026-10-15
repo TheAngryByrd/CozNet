@@ -119,12 +119,19 @@ static class PausableBoundCollectionChecks
                 Require(releaseDrain.Wait(TimeSpan.FromSeconds(5)), "The queued drain was not released by source disable.");
             },
             AfterDisable = releaseDrain.Set,
-            BeforeEnable = () => Require(source!.Enables == 0 || callbackReturned, "The source resumed before callback return.")
+            BeforeEnable = () =>
+            {
+                if (source!.Enables == 0)
+                    Require(collection.LiveSamples == 0 && source.DescribeCounters().LastReading is { CpuNanoseconds: 0 },
+                        "Validation preparation published samples or advanced the event counter before enable.");
+                else Require(callbackReturned, "The source resumed before callback return.");
+            }
         });
         try
         {
             Require(inDrain.Wait(TimeSpan.FromSeconds(5)), "The collector did not enter its controlled drain.");
             IReadOnlyList<BoundEpochSample>? frozen = null;
+            var timing = new BoundPauseTiming();
             collection.ExecuteExcluded(records =>
             {
                 frozen = records;
@@ -138,7 +145,12 @@ static class PausableBoundCollectionChecks
                 Fails<InvalidOperationException>(() => collection.CloseForCleanup());
                 Require(source.Drains == drains, "Collection drained inside an excluded callback.");
                 callbackReturned = true;
-            });
+            }, timing);
+            long?[] boundaries = [timing.Started, timing.ProducerStopped, timing.DisabledCountersAccepted,
+                timing.DrainAcknowledged, timing.BatchValidated, timing.SnapshotReady, timing.CallbackReturned,
+                timing.SourceEnabled, timing.EnabledCountersAccepted, timing.CollectorResumed, timing.Completed];
+            Require(boundaries.All(value => value is > 0) && boundaries.Zip(boundaries.Skip(1)).All(pair => pair.First <= pair.Second),
+                "Successful pause timing lost or reordered a completed boundary.");
             var result = collection.Complete();
             var records = collection.EpochDiagnostics;
             Require(result.Samples.Count == 2 && result.CpuNanoseconds == 2000 && result.FinalCounters.Epoch == 2
@@ -155,7 +167,11 @@ static class PausableBoundCollectionChecks
         Source? source = null;
         collection.StartPausable((_, sink) => source = new(sink));
         var failure = new IOException("Controlled callback failure.");
-        var observed = Fails<IOException>(() => collection.ExecuteExcluded(_ => throw failure));
+        var timing = new BoundPauseTiming();
+        var observed = Fails<IOException>(() => collection.ExecuteExcluded(_ => throw failure, timing));
+        Require(timing.SnapshotReady is > 0 && timing.CallbackReturned is null && timing.SourceEnabled is null
+            && timing.CollectorResumed is null && timing.Completed is null,
+            "Failed callback timing claimed a completed callback or resume.");
         int drains = source!.Drains;
         var cleanup = collection.CloseForCleanup();
         Require(ReferenceEquals(observed, failure) && source.Enables == 1 && source.Drains == drains
@@ -183,7 +199,11 @@ static class PausableBoundCollectionChecks
         Source? source = null;
         collection.StartPausable((_, sink) => source = new(sink) { FailDisable = true });
         bool invoked = false;
-        Fails<IOException>(() => collection.ExecuteExcluded(_ => invoked = true));
+        var timing = new BoundPauseTiming();
+        Fails<IOException>(() => collection.ExecuteExcluded(_ => invoked = true, timing));
+        Require(timing.Started is > 0 && timing.ProducerStopped is null && timing.DrainAcknowledged is null
+            && timing.CallbackReturned is null && timing.Completed is null,
+            "Failed disable timing claimed producer stop or later work.");
         var cleanup = collection.CloseForCleanup();
         Require(!invoked && source!.Enables == 1 && !cleanup.DisableSucceeded && cleanup.SourceDisposed
             && cleanup.Errors.Any(item => item.Stage == "disable"), "A failed disable permitted payment or disappeared from cleanup evidence.");
@@ -196,7 +216,11 @@ static class PausableBoundCollectionChecks
         Source? source = null;
         collection.StartPausable((_, sink) => source = new(sink) { FailEnableAt = 2 });
         bool invoked = false;
-        Fails<IOException>(() => collection.ExecuteExcluded(_ => invoked = true));
+        var timing = new BoundPauseTiming();
+        Fails<IOException>(() => collection.ExecuteExcluded(_ => invoked = true, timing));
+        Require(timing.CallbackReturned is > 0 && timing.SourceEnabled is null && timing.EnabledCountersAccepted is null
+            && timing.CollectorResumed is null && timing.Completed is null,
+            "Failed resume timing claimed enabled or completed collection.");
         var cleanup = collection.CloseForCleanup();
         Require(invoked && source!.Enables == 1 && source.Disposes == 1 && source.Stops == 2 && cleanup.DisableSucceeded
             && !cleanup.Errors.Any(item => item.Stage == "disable"), "Resume failure lost the completed callback or reported a false disable failure.");

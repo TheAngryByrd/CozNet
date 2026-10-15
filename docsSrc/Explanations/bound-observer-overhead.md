@@ -73,3 +73,118 @@ and [the cache contract](../Reference/cooperative-managed.md#immutable-accountin
 See [the cadence contract](../Reference/bound-selected-cadence.md),
 [the cadence procedure](../How_Tos/run-bound-selected-cadence.md), and
 [the retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/fixed-work-observer.md).
+
+## Cost of bound probes
+
+A separate Linux x64 diagnostic compares four stages with the same compiled delegate and checksum arithmetic.
+Each stage completes 50,000 measured batches after warmup.
+Eight shuffled blocks use separate processes, with tiered compilation and ReadyToRun disabled.
+All 32 cases passed work, probe identity, cleanup, and unchanged-input checks.
+
+| Stage | Median elapsed time | Observed range |
+| --- | --- | --- |
+| Profiler disabled | 160.6 ms | 154.4–191.6 ms |
+| Bound probes without a callback | 180.6 ms | 178.7–217.3 ms |
+| Bound probes with CLR lifetime checks | 202.6 ms | 196.1–238.5 ms |
+| Bound probes with idle native polling | 221.8 ms | 215.0–329.2 ms |
+
+Each measured stage allocated zero bytes on the calling thread.
+Injected stages executed 500,000 probes per case.
+Within-block median differences were 20.7 ms, 20.1 ms, and 18.9 ms between adjacent stages.
+These differences include process and scheduling variation. Some individual differences were negative.
+All results, including the 329.2 ms idle-poll case, remain in the comparison.
+
+The diagnostic excludes sampling, debt accounting, and active payment.
+Its callbacks also perform diagnostic checks that differ between stages.
+The result supports further study of lifetime checks, but does not establish their exact cost in the sampled workload.
+It does not justify weaker lifetime or thread-ownership checks.
+See [the probe evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/bound-probe-cost.md).
+
+## Why the cheaper lifetime query remains deferred
+
+The current guard compares generation, module, function, method, and site count on every native check.
+`CozIsProbeBindingCurrent` checks only generation, site bounds, and the native Ready state.
+It cannot replace full identity comparison for an arbitrary parsed binding.
+
+A scratch candidate first checks the full identity.
+It then binds one immutable object to the cheaper query for later checks.
+This design depends on the current native record: identity fields never change after Ready, and invalidation is permanent.
+A reusable record or a new generation scheme would require a new admission argument.
+The candidate retains the existing checks before and after each operation and permanent first-failure behavior.
+Neither design pins code or prevents invalidation immediately after a successful query.
+
+Eight shuffled pairs compared both guards with 500,000 probes per case.
+All 16 cases passed their work checks and rejected duplicate-module invalidation after measurement.
+The median paired reduction was 15.6 ms, or about 31 ns per probe in this diagnostic.
+Both paths allocated zero bytes on the calling thread.
+One pair favored the current guard. Large timing differences remain in the records.
+
+This result does not measure the candidate inside the full sampled workload.
+It also does not exercise invalidation during a native wait or prove all concurrent schedules.
+The runtime retains full identity checks because the measured benefit does not yet justify a new admission contract.
+The next investigation should address sample coverage and physical prediction, which remain unmet requirements.
+
+## Coverage and pause cost
+
+A longer sample-qualified capture completes 50,000 selected batches in each normal case.
+All three cases, including expected invalidation, passed with unchanged inputs and timing bounds.
+The treatment credited 125 mapped intervals, compared with 9 and 15 in two earlier 5,000-batch treatments.
+It retained 421 source observations across 125 enabled epochs.
+Every enabled epoch contained at least one processed observation.
+
+The treatment also retained 62 mapped observations as epoch baselines.
+Those observations earned no credit because their nominal periods can span a disabled interval.
+Removing that rule would change the eligibility contract.
+An enabled-event counter cannot assign the uncertain interval to application instructions.
+The source counter and nominal sample totals also cover more than the selected-work measurement window.
+These counts therefore do not establish application CPU coverage.
+
+The 124 pause intervals totaled 60.507 ms within the 522.706 ms selected-work interval.
+Recorded selected payment totaled 0.166 ms.
+The first pause took 26.117 ms and was the longest. It remains in the totals.
+Pause duration includes producer stop, final drain, callback work, controller dispatch, and resume.
+The current timestamps do not separate all these phases or distinguish execution from descheduling.
+
+The longer run establishes more credited observations under the existing bounds.
+It does not establish stable capacity or prediction accuracy.
+Phase timing at the first payment is the next diagnostic needed before changing that path.
+See [the coverage evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/bound-coverage.md).
+
+## First pause phase capture
+
+Optional phase timing retains completed boundaries and leaves unreached boundaries null.
+The first timed 50,000-batch capture passed zero speedup and expected invalidation.
+Its treatment failed at 2,309 batches because peer debt reached 2.500 ms, above the unchanged 2 ms limit.
+The analyzer accepted the evidence structure and preserved the runtime failure.
+The failed capture does not establish that timing caused the debt failure.
+
+The first treatment pause took 42.733 ms.
+The interval from drain acknowledgment through batch validation took 35.567 ms.
+This interval includes admission closure, a lifetime check, snapshot construction, and validation.
+The final-drain wait itself took 1.064 ms after disabled counters were accepted.
+The phase measurements narrow the investigation, but do not identify execution versus descheduling or prove a JIT cause.
+
+Batch validation uses several LINQ operations over the frozen sample prefix.
+Its first-use execution and scheduling need separate investigation before changing validation or adding warmup.
+The diagnostic must retain failures and must not treat validation time as payable application work.
+See [phase fields](../Reference/bound-selected-cadence.md#optional-pause-timing) and [retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/bound-coverage.md#phase-timing).
+
+## Validation preparation
+
+Bound collection startup executes the full batch validator on a local setup list before creating the source.
+The list contains mapped, unmapped, and duplicate-IP cases.
+It never enters the sample sink, event counter, eligibility epochs, or causal ledger.
+Every real paused and final batch still receives the same complete validation.
+Preparation adds startup work. It does not bound future JIT, allocation, or scheduling cost.
+
+An eight-process Linux diagnostic called the existing validator on a retained 47-sample prefix.
+First validation took 18.4–35.5 ms. Repeated validation averaged 3.15–4.26 microseconds per call.
+The snapshot-copy diagnostic was much smaller, but excluded the capture lock.
+These isolated measurements include invocation overhead and do not prove an exact JIT duration.
+
+With preparation, the next live first pause spent 0.400 ms from drain acknowledgment through validation.
+Its outer pause took 6.664 ms. The previous capture recorded 35.567 ms and 42.733 ms respectively.
+Separate captures cannot isolate every source of timing variation.
+The prepared treatment later rejected a 6.292 ms child against the unchanged 5 ms handler limit.
+Preparation therefore does not establish stable service capacity or prediction accuracy.
+See [validation preparation evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/validation-preparation.md).

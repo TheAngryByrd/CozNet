@@ -67,3 +67,37 @@ The revised comparison completes both qualified treatments and one continuous tr
 The other continuous treatment rejects a child that exceeds the 5 ms handler bound.
 The overall comparison remains failed.
 See [the retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/bound-selected-cadence.md).
+
+## Optional pause timing
+
+`VerifyBoundSampledPayment.ps1 -SelectedPayment -PauseTiming` sets `COZNET_PAUSE_TIMING=1` in each child.
+`0` or an absent variable disables timing. Other values reject the workload.
+Timing requires selected payment. It does not change sample eligibility or payment bounds.
+
+Schema 3 and 4 records include `pauseTimingEnabled` and optional `pauses[].Timing`.
+Legacy records without these fields remain valid.
+Every enabled pause owns a fresh timing record. All values use the record's `timestampFrequency`.
+
+| Timing field | Completed boundary |
+| --- | --- |
+| `Started` | Collection accepted the excluded-operation request, before its first lifetime check |
+| `ProducerStopped` | Native producer stop returned and collection recorded the disabled state |
+| `DisabledCountersAccepted` | Disabled counter read and session validation returned |
+| `DrainAcknowledged` | Collector acknowledged its final drain |
+| `BatchValidated` | Frozen sample batch validation returned |
+| `SnapshotReady` | Immutable epoch snapshot was constructed |
+| `SamplesPublished` | Workload published drained samples and their accounting effects |
+| `CallbackReturned` | Excluded workload callback returned |
+| `SourceEnabled` | Source enable returned |
+| `EnabledCountersAccepted` | Enabled counter read and session validation returned |
+| `CollectorResumed` | Collector resume returned |
+| `Completed` | Final guarded lifetime check returned |
+
+Unreached boundaries remain null after failure.
+`SamplesPublished` belongs to the sampled workload callback. Other users of collection timing can leave it null.
+The sampled-workload analyzer requires reached phases to form an ordered prefix.
+It rejects enabled timing without records, timing while disabled, and resumed pauses with incomplete timing.
+
+Clock reads and recording add observer cost.
+Phase duration includes execution and descheduling. It does not identify JIT or CPU ownership.
+Native receipt clocks remain separate from these managed timestamps.

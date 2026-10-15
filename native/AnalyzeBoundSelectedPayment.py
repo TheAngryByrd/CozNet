@@ -97,6 +97,47 @@ def verify_source(record):
     return credit, last_cpu
 
 
+PAUSE_TIMING_FIELDS = (
+    "Started", "ProducerStopped", "DisabledCountersAccepted", "DrainAcknowledged",
+    "BatchValidated", "SnapshotReady", "SamplesPublished", "CallbackReturned",
+    "SourceEnabled", "EnabledCountersAccepted", "CollectorResumed", "Completed")
+
+
+def verify_pause_timing(record):
+    enabled = record.get("pauseTimingEnabled", False)
+    require(type(enabled) is bool, "Pause timing activation is not Boolean")
+    for pause in record["pauses"]:
+        timing = pause.get("Timing")
+        if not enabled:
+            require(timing is None, "Disabled pause timing contains phase records")
+            continue
+        require(isinstance(timing, dict), "Enabled pause timing is missing")
+        previous = count(pause["Started"])
+        missing = False
+        for field in PAUSE_TIMING_FIELDS:
+            value = timing[field]
+            if value is None:
+                missing = True
+                continue
+            require(not missing and count(value) >= previous and value > 0,
+                    "Pause timing regressed or skipped a boundary")
+            previous = value
+        require(timing["Started"] is not None, "Pause timing did not start")
+        if pause["CallbackFinished"] is not None:
+            require(timing["SamplesPublished"] is not None
+                    and timing["SamplesPublished"] <= pause["CallbackFinished"],
+                    "Callback completion precedes sample publication")
+        if timing["CallbackReturned"] is not None:
+            require(pause["CallbackFinished"] is not None
+                    and pause["CallbackFinished"] <= timing["CallbackReturned"],
+                    "Collection callback returned before workload completion")
+        if pause["Resumed"] is not None:
+            require(timing["Completed"] is not None and previous <= pause["Resumed"],
+                    "Resumed pause has incomplete or late timing")
+        else:
+            require(timing["Completed"] is None, "Incomplete pause claims completed timing")
+
+
 def verify_cadence(record):
     if record["schemaVersion"] == 3:
         return
@@ -235,6 +276,7 @@ def verify_record(record):
     require(paid == count(record["paid"]) and selected_paid == count(record["selectedPaid"]), "Settled payment totals differ")
     payment_pauses = verify_pauses(record)
     verify_cadence(record)
+    verify_pause_timing(record)
     for key in ("selectedPeak", "peerPeak", "finalDebt"):
         debt = record[key]
         require(not record["passed"] or key == "finalDebt" and not record["completed"] or debt is not None,

@@ -4,7 +4,7 @@ import pathlib
 import tempfile
 import unittest
 
-from AnalyzeBoundSelectedPayment import main, verify_case, verify_record
+from AnalyzeBoundSelectedPayment import main, verify_case, verify_record, verify_pause_timing, PAUSE_TIMING_FIELDS
 
 
 def payment(worker, ordinal, budget, waited, managed, native):
@@ -408,6 +408,58 @@ class SelectedPaymentAnalysisChecks(unittest.TestCase):
             self.assertTrue(case["evidenceVerified"])
             self.assertFalse(case["casePassed"])
             self.assertFalse(result["cases"][0]["evidenceVerified"])
+
+
+class PauseTimingChecks(unittest.TestCase):
+    def test_record_verification_rejects_incomplete_timing(self):
+        record = valid_record()
+        record['pauseTimingEnabled'] = True
+        record['pauses'][0]['Timing'] = dict(zip(PAUSE_TIMING_FIELDS,
+            (31, 32, 33, 34, 35, 36, 37, 61, 62, 63, 64, 65)))
+        verify_record(record)
+        record['pauses'][0]['Timing']['Completed'] = None
+        with self.assertRaises(ValueError):
+            verify_record(record)
+
+    def record(self):
+        timing = {key: index + 10 for index, key in enumerate(PAUSE_TIMING_FIELDS)}
+        return dict(pauseTimingEnabled=True, pauses=[dict(Started=9, CallbackFinished=16,
+            Resumed=22, Timing=timing)])
+
+    def test_complete_and_legacy_timing(self):
+        verify_pause_timing(self.record())
+        verify_pause_timing(dict(pauses=[dict(Timing=None)]))
+
+    def test_failed_pause_retains_only_reached_prefix(self):
+        record = self.record()
+        pause = record['pauses'][0]
+        pause.update(CallbackFinished=None, Resumed=None)
+        for key in PAUSE_TIMING_FIELDS[6:]:
+            pause['Timing'][key] = None
+        verify_pause_timing(record)
+
+    def test_corrupted_phase_order_is_rejected(self):
+        for field, value in [('Started', None), ('ProducerStopped', None), ('DrainAcknowledged', 1),
+                             ('Completed', 23), ('SourceEnabled', True)]:
+            with self.subTest(field=field):
+                record = self.record()
+                record['pauses'][0]['Timing'][field] = value
+                with self.assertRaises(ValueError):
+                    verify_pause_timing(record)
+
+    def test_missing_or_disabled_timing_is_rejected(self):
+        for enabled, timing in [(True, None), (False, self.record()['pauses'][0]['Timing'])]:
+            record = self.record()
+            record['pauseTimingEnabled'] = enabled
+            record['pauses'][0]['Timing'] = timing
+            with self.assertRaises(ValueError):
+                verify_pause_timing(record)
+
+    def test_incomplete_timing_cannot_claim_resume(self):
+        record = self.record()
+        record['pauses'][0]['Timing']['Completed'] = None
+        with self.assertRaises(ValueError):
+            verify_pause_timing(record)
 
 
 if __name__ == "__main__":
