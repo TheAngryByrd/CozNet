@@ -63,7 +63,7 @@ In [Linux Coz's processing loop][processing], the target applies selected credit
 The [iterator][iterator] captures one ring head. It does not chase a moving producer.
 The [delay handler][delay] then publishes excess local delay or pays outstanding debt.
 
-CozNet currently checks debt and services peer receipts after each published sample.
+By default, CozNet checks debt and services peer receipts after each published sample.
 Receipt acceptance can therefore occur between historical samples from one captured batch.
 Later selected credits can reduce selected debt before a full batch has been published.
 This source difference does not prove incorrect causality or justify removing the 2 ms gate.
@@ -73,6 +73,37 @@ Neither inspected processing path guarantees complete observer-CPU exclusion.
 Native Coz stops its sampler around waiting, not around record processing.
 CozNet owner drains also run while the source is enabled.
 The credit rule is unchanged, but owner drain CPU can enter sample periods.
+
+## Batch service does not establish stable capacity
+
+The opt-in batch mode services the peer after each published batch.
+It still checks both debts after every sample. An intermediate failure stops processing before later credits can change that debt.
+This preserves CozNet's acceptance limit while testing one scheduling difference from native Coz.
+
+The one-CPU comparison uses owner draining and a declared per-sample, batch, batch, per-sample order.
+Each case requests 50,000 batches with qualified-sample cadence, pause timing, and child CPU capture.
+All cases use the same binaries and guest CPU 0.
+
+| Trial | Treatment batches | Publication service calls / processed samples | Outcome |
+| --- | ---: | ---: | --- |
+| Per-sample 1 | 4,791 | 283 / 284 | Peer debt 2,499,949 ns |
+| Batch 1 | 4,672 | 236 / 266 | Peer debt 2,499,939 ns |
+| Batch 2 | 2,971 | 146 / 180 | Peer debt 2,499,929 ns |
+| Per-sample 2 | 50,000 | 2,685 / 2,685 | Passed |
+
+All zero-speedup and expected-invalidation cases pass. Replay verifies all twelve records and preserves the three treatment failures.
+The local capture is `artifacts/batch-service-single/20261015T215459946`.
+Publication service counts exclude service at probes and outside publication. They do not measure controller handoffs or their cost.
+Incomplete treatment records cannot support an equal-work overhead comparison.
+
+An earlier unrestricted batch treatment also fails after 30,203 batches.
+Its failed peer journal retains a child with 9,374,041 ns of measured wait, above the 5 ms limit.
+This is separate from the one-CPU debt failures.
+
+These results do not support changing the default or relaxing a bound.
+Reducing publication service calls does not ensure prompt peer execution or bounded native waits.
+The next investigation must distinguish controller handoff time from native execution and receipt-observation time.
+See [the retained evidence](../../reliability/features/native-signal/sample-publication.md) and [comparison commands](../How_Tos/run-bound-selected-cadence.md#compare-peer-service-after-sample-batches).
 
 See [collector operations](../Reference/pausable-sample-collector.md),
 [comparison commands](../How_Tos/run-bound-selected-cadence.md),

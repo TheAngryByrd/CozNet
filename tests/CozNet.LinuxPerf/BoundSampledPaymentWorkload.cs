@@ -100,6 +100,7 @@ static class BoundSampledPaymentWorkload
         Debt? lastObservedDebt = null;
         FailureBoundary? failureBoundary = null;
         var receiptIntervals = new CooperativeReceiptIntervalCapture();
+        var publication = BoundSamplePublication.Parse(Environment.GetEnvironmentVariable("COZNET_BATCH_SERVICE"));
 
         T OnController<T>(Func<T> action) => controller is null ? action() : controller.Run(action);
         void Control(Action action) => OnController(() => { action(); return true; });
@@ -137,18 +138,16 @@ static class BoundSampledPaymentWorkload
                 state = prepared.Item2;
             }
             ObserveDebt();
-            Service();
         }
 
         void Publish(IReadOnlyList<CpuSample> incoming, int offset = 0)
         {
-            for (int index = offset; index < incoming.Count; ++index) Process(incoming[index], 1);
+            publication.Publish(incoming, offset, sample => Process(sample, 1), Service);
         }
 
         void PublishEpochs(IReadOnlyList<BoundEpochSample> incoming, int offset = 0)
         {
-            for (int index = offset; index < incoming.Count; ++index)
-                Process(incoming[index].Sample, incoming[index].EligibilityEpoch);
+            publication.Publish(incoming, offset, sample => Process(sample.Sample, sample.EligibilityEpoch), Service);
         }
 
         void PaySelected(ulong version, uint point)
@@ -501,6 +500,7 @@ static class BoundSampledPaymentWorkload
             invalidateAfterSelectedPayment,
             invalidated, rejectionVerified, rejectedAfterPayment, failure, failureBoundary, verificationFailure, peerFailure, cleanupErrors, joined, controllerJoined, closed,
             receiptIntervalCaptureVersion = 1, receiptIntervalRejection = receiptIntervals.Rejected,
+            batchServiceEnabled = publication.BatchServiceEnabled, sampleServiceCalls = publication.ServiceCalls,
             binding = bindingEvidence is null ? null : new { bindingEvidence.Generation, Module = (ulong)bindingEvidence.Module,
                 Function = (ulong)bindingEvidence.Function, bindingEvidence.Method, bindingEvidence.Sites }, nativeRange = collection?.Map.Range,
             selectedBatches = batches, checksum, peerBatches, peerChecksum, peerCalls,

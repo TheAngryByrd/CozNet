@@ -542,6 +542,14 @@ class PauseTimingChecks(unittest.TestCase):
 
 
 class RejectedReceiptAnalysisChecks(unittest.TestCase):
+    def test_selected_replay_checks_publication_mode_and_count(self):
+        record = valid_record()
+        record.update(batchServiceEnabled=False, sampleServiceCalls=len(record["samples"]))
+        self.assertTrue(verify_record(record)["casePassed"])
+        record["sampleServiceCalls"] += 1
+        with self.assertRaisesRegex(ValueError, "exceed published samples"):
+            verify_record(record)
+
     @staticmethod
     def record(worker):
         record = failed_record()

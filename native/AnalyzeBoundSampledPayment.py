@@ -28,6 +28,20 @@ def verify_receipt_interval(payment, frequency=None):
             and (observed - started) * 10 <= recorded_frequency, "Request-to-receipt interval exceeds 100 ms or has invalid ordering")
 
 
+def verify_sample_publication(record):
+    if "batchServiceEnabled" not in record:
+        require("sampleServiceCalls" not in record, "Sample service count has no mode")
+        return
+    require(type(record["batchServiceEnabled"]) is bool, "Batch service mode is not Boolean")
+    calls = count(record["sampleServiceCalls"])
+    require(calls <= len(record["samples"]), "Sample service calls exceed published samples")
+    if record["completed"]:
+        if record["batchServiceEnabled"]:
+            require(bool(calls) == bool(record["samples"]), "Completed batch service has no publication service")
+        else:
+            require(calls == len(record["samples"]), "Completed per-sample service count differs")
+
+
 def verify_rejected_receipt_interval(record):
     if "receiptIntervalCaptureVersion" not in record:
         require("receiptIntervalRejection" not in record, "Receipt rejection has no capture version")
@@ -164,6 +178,7 @@ def verify_payments(payments, binding, worker):
 
 
 def verify_record(record):
+    verify_sample_publication(record)
     verify_rejected_receipt_interval(record)
     require(type(record.get("schemaVersion", 1)) is int and record.get("schemaVersion", 1) == 1,
             "This replay accepts only sampled-payment schema version 1")

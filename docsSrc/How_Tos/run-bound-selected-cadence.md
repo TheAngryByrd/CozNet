@@ -44,3 +44,21 @@ Check `ownerDrainEnabled` in each runtime record and its manifest.
 Compare completed work duration, samples, pauses, and native receipts at the same batch count.
 Do not infer prediction accuracy from a capacity pass.
 See [the collector reference](../Reference/pausable-sample-collector.md#owner-driven-collection) for ownership and failure behavior.
+
+## Compare peer service after sample batches
+
+After the target builds the required binaries, run both publication modes with the same settings:
+
+```powershell
+$modes = @($false, $true, $true, $false)
+foreach ($batch in $modes) {
+    pwsh -NoProfile -File native/VerifyBoundSampledPayment.ps1 -SelectedPayment -OwnerDrain -ChildCpu -PauseTiming -SelectedCadence qualified-sample -SelectedBatches 50000 -BatchService:$batch -EvidenceDirectory artifacts/batch-service
+}
+```
+
+Run the cases serially and retain every result, including failures.
+Check `batchServiceEnabled` against the declared order in each manifest and runtime record.
+Compare source and binary hashes before attributing a difference to publication mode.
+Compare completed work duration, processed samples, and `sampleServiceCalls` at the same work count.
+Keep incomplete cases separate. A smaller service count does not establish lower controller cost or stable capacity.
+See [publication semantics](../Reference/bound-sampled-payment.md#sample-publication-cadence) and [capacity limits](../Explanations/owner-drain-capacity.md).

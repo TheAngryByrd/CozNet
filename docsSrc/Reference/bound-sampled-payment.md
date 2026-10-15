@@ -168,3 +168,26 @@ Failed evidence cannot undo earlier native waits. Any source, lifetime, receipt,
 The diagnostic does not establish general CLR safety, acceptable profiler overhead, stable capacity, or prediction accuracy.
 The [retained runs](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/bound-sampled-payment.md) include a capacity failure and a later complete-evidence pass.
 See [the procedure](../How_Tos/run-bound-sampled-payment.md) and [the eligibility comparison](../Research/cooperative-sample-eligibility.md).
+
+## Sample publication cadence
+
+`COZNET_BATCH_SERVICE` accepts `0` or `1`. An absent value selects `0`.
+The runner exposes this option as `-BatchService`.
+The default services the peer after each successfully processed sample.
+Batch mode services the peer once after a nonempty published batch.
+Both modes freeze the input count and retain sample order, offsets, and eligibility epochs.
+The helper does not copy elements. Its callers supply snapshots whose existing elements remain unchanged during publication.
+
+Each sample still passes the 2 ms selected and peer debt checks before service.
+A failed sample stops publication before service or later samples. The original exception remains unchanged.
+An empty batch performs no service. A failed service stops publication without retry.
+Probe, outer-loop, and final settlement service calls remain independent of this option.
+
+`batchServiceEnabled` records the mode as a Boolean.
+`sampleServiceCalls` counts attempted publication-triggered service calls, including failed calls.
+It excludes service calls outside publication and does not count controller dispatches.
+Replay checks count bounds, not the exact history of published batches.
+The runner rejects a result whose mode differs from the requested mode.
+Legacy replay records without both fields remain readable.
+
+See [the scheduling comparison](../Explanations/owner-drain-capacity.md#native-coz-applies-a-batch-before-its-delay-check).

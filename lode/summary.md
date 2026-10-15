@@ -1,5 +1,8 @@
 # Project scope
 
+An opt-in [batch service comparison](profiling/sample-publication.md) changes peer service cadence while preserving every per-sample debt gate.
+Both batch treatments fail peer debt in the retained one-CPU comparison. Stable capacity and prediction remain unverified.
+
 CozNet is an experimental F# library for .NET 10. The public engine compares proportional delays in serial CPU regions. It records randomized blocks and paired elapsed-time reductions. An internal immutable ledger models sampled Coz delay credits, thread lifecycle, and dependency wakes. An internal cooperative adapter performs measured waits from this ledger. A controlled Linux workload connects sampled method periods to this adapter. The public API requires explicit regions and progress. The public engine does not support parallel, async, or native sampling. General application accuracy remains unverified. The repository uses MiniScaffold as its basis and `master` as its default branch. The checksum sample compares predictions with actual reductions in work.
 
 ```fsharp

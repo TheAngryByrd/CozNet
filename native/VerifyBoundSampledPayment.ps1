@@ -1,4 +1,4 @@
-param([string]$EvidenceDirectory, [switch]$SelectedPayment, [switch]$PauseTiming, [switch]$ChildCpu, [switch]$OwnerDrain,
+param([string]$EvidenceDirectory, [switch]$SelectedPayment, [switch]$PauseTiming, [switch]$ChildCpu, [switch]$OwnerDrain, [switch]$BatchService,
     [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
     [ValidateRange(1, 2147483647)][int]$SelectedBatches = 5000)
 $ErrorActionPreference = 'Stop'
@@ -64,6 +64,7 @@ $activation = @('--security-opt', 'seccomp=unconfined', '--env', 'DOTNET_PerfMap
 $activation += @('--env', ('COZNET_PAUSE_TIMING=' + [int][bool]$PauseTiming))
 $activation += @('--env', ('COZNET_CHILD_CPU=' + [int][bool]$ChildCpu))
 $activation += @('--env', ('COZNET_OWNER_DRAIN=' + [int][bool]$OwnerDrain))
+$activation += @('--env', ('COZNET_BATCH_SERVICE=' + [int][bool]$BatchService))
 $outcomes = @()
 foreach ($case in $caseNames) {
     $arguments = if ($SelectedCadence -and $case -eq 'invalidate-after-selected-payment') { @('--invalidate-sampled-bound-selected-cadence', "/evidence/$case.json", '/native/libCozNet.Cooperative.so', $SelectedCadence, [string]$SelectedBatches) }
@@ -74,15 +75,15 @@ foreach ($case in $caseNames) {
         else { @('--sampled-bound-cooperative', "/evidence/$case.json", $case, '/native/libCozNet.Cooperative.so') }
     & docker @container @activation $image timeout -k 2s 30s dotnet /workload/CozNet.LinuxPerf.dll @arguments *> (Join-Path $run "$case.log")
     $caseExit = $LASTEXITCODE
-    $outcomes += Read-BoundSampledOutcome -Path (Join-Path $run "$case.json") -Case $case -ExitCode $caseExit -SelectedCadence $SelectedCadence -SelectedBatches $SelectedBatches -ExpectedPauseTiming ([bool]$PauseTiming) -ExpectedChildCpu ([bool]$ChildCpu) -ExpectedOwnerDrain ([bool]$OwnerDrain) -ExpectedReceiptCaptureVersion 1
+    $outcomes += Read-BoundSampledOutcome -Path (Join-Path $run "$case.json") -Case $case -ExitCode $caseExit -SelectedCadence $SelectedCadence -SelectedBatches $SelectedBatches -ExpectedPauseTiming ([bool]$PauseTiming) -ExpectedChildCpu ([bool]$ChildCpu) -ExpectedOwnerDrain ([bool]$OwnerDrain) -ExpectedReceiptCaptureVersion 1 -ExpectedBatchService ([bool]$BatchService)
 }
 & python (Join-Path $run "source/native/$analysisScript") $run *> (Join-Path $run 'analysis.log')
 $analysisExit = $LASTEXITCODE
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash (Join-Path $root $name)).Hash -eq $hashes[$name] }
 foreach ($file in $binaries.Keys) { $unchanged = $unchanged -and (Get-FileHash $file).Hash -eq $binaries[$file] }
-@{ sources = $hashes; binaries = $binaries; image = $image; source = 'selected Linux task-clock'; interval = 1024; runtimePerfMap = $false; order = $caseNames; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; selectedCadence = $SelectedCadence; requestedBatches = $(if ($SelectedCadence) { $SelectedBatches } else { $null }); measurementSeconds = $(if ($SelectedCadence) { $null } else { 2 }); debtLimitNanoseconds = 2000000 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
+@{ sources = $hashes; binaries = $binaries; image = $image; source = 'selected Linux task-clock'; interval = 1024; runtimePerfMap = $false; order = $caseNames; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; selectedCadence = $SelectedCadence; requestedBatches = $(if ($SelectedCadence) { $SelectedBatches } else { $null }); measurementSeconds = $(if ($SelectedCadence) { $null } else { 2 }); debtLimitNanoseconds = 2000000 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
 $passed = $unchanged -and $outcomeChecksExit -eq 0 -and $analysisChecksExit -eq 0 -and $analysisExit -eq 0 -and @($managed | Where-Object { $_.exitCode -ne 0 }).Count -eq 0 -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.passed -or $_.recordError }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; outcomeChecksExit = $outcomeChecksExit; analysisChecksExit = $analysisChecksExit; analysisExit = $analysisExit; managed = $managed; outcomes = $outcomes; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; selectedPaymentSupported = $false; predictionAccuracyEstablished = $false } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
+@{ passed = $passed; inputsUnchanged = $unchanged; outcomeChecksExit = $outcomeChecksExit; analysisChecksExit = $analysisChecksExit; analysisExit = $analysisExit; managed = $managed; outcomes = $outcomes; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; selectedPaymentSupported = $false; predictionAccuracyEstablished = $false } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run
 if (-not $passed) { throw 'Bound sampled payment failed. Retain this run.' }

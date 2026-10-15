@@ -23,6 +23,7 @@ if (args is ["--verify-cooperative-managed"])
 }
 if (args is ["--verify-bound-cooperative-managed"])
 {
+    BoundSamplePublicationChecks.Run();
     BoundSelectedCadenceChecks.Run();
     CooperativeCleanupCancellationChecks.Run();
     CooperativeReceiptIntervalChecks.Run();

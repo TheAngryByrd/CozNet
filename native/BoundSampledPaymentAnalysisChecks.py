@@ -44,6 +44,20 @@ def failure_record():
 
 
 class BoundPaymentAnalysisChecks(unittest.TestCase):
+    def test_publication_mode_and_service_count_are_checked(self):
+        for batch in (False, True):
+            record = valid_record()
+            record.update(batchServiceEnabled=batch, sampleServiceCalls=1 if batch else len(record["samples"]))
+            self.assertTrue(verify_record(record)["casePassed"])
+            for value in (0, True, -1, len(record["samples"]) + 1):
+                changed = copy.deepcopy(record)
+                changed["sampleServiceCalls"] = value
+                with self.assertRaises(ValueError):
+                    verify_record(changed)
+        record["batchServiceEnabled"] = 1
+        with self.assertRaisesRegex(ValueError, "not Boolean"):
+            verify_record(record)
+
     def test_rejected_receipt_frequency_matches_failure_capture(self):
         record = failure_record()
         message = "System.IO.InvalidDataException: The cooperative request-to-receipt interval exceeds 100 ms or has invalid clock evidence."
