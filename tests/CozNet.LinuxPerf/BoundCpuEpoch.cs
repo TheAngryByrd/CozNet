@@ -2,7 +2,7 @@ sealed class BoundCpuEpoch
 {
     public CpuCounterSourceSnapshot Initial { get; }
     private BoundCpuEpoch(CpuCounterSourceSnapshot initial) => Initial = initial;
-    private static CpuCounterReading ReadValid(CpuCounterSourceSnapshot snapshot)
+    internal static CpuCounterReading ReadValid(CpuCounterSourceSnapshot snapshot)
     {
         if (string.IsNullOrWhiteSpace(snapshot.SourceIdentity) || snapshot.Units != "task-clock-nanoseconds"
             || snapshot.Overflowed || snapshot.UnrecordedCleanup || snapshot.FailedReads != 0 || snapshot.FirstReadFailure is not null

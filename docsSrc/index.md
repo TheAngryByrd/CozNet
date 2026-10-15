@@ -31,6 +31,9 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Reference
 
+- [Pausable sample collector](Reference/pausable-sample-collector.md) for the internal drain-ownership component under development.
+- [Bound CPU session](Reference/bound-cpu-session.md) for repeated source transitions and cumulative counter evidence.
+
 - [Managed cooperative receipts and accounting](Reference/cooperative-managed.md): first receipt bounds, exact site binding, and cleanup ownership.
 - [Injected probe identity](Reference/probe-identity.md): literal sites and permanent CLR invalidation.
 - [CLR-bound cooperative payment](Reference/bound-cooperative.md): lifetime admission, receipt acceptance, and cleanup.
@@ -82,6 +85,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Why cooperative probes need a CLR lifetime contract](Research/cooperative-clr-lifetime.md).
 - [How native ranges support bound probes](Research/bound-native-mapping.md).
 - [Cooperative payment and sample eligibility](Research/cooperative-sample-eligibility.md).
+- [Perf pause and sample ownership](Research/perf-pause-ownership.md).
 - [Native owner scheduling and local debt payment](Research/native-owner-scheduling.md).
 - [Target-local timer delivery design](Research/target-local-timer-delivery.md).
 

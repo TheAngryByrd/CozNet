@@ -1,5 +1,7 @@
 # Lode index
 
+For acknowledged drain ownership before selected payment, read [the pausable collector](profiling/pausable-collector.md).
+
 For real selected samples driving bound peer waits, read [sample-driven cooperative payment](profiling/bound-sampled-payment.md).
 
 For payment CPU exclusion and selected debt from peer overshoot, read [cooperative sample eligibility](../docsSrc/Research/cooperative-sample-eligibility.md).

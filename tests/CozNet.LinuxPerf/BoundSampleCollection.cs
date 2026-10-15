@@ -11,6 +11,12 @@ sealed class CpuSampleOwner
 }
 
 sealed record BoundSampleCleanupError(string Stage, string Type, string Error);
+sealed record BoundEpochSample(ulong EligibilityEpoch, CpuSample Sample);
+
+interface IOwnerStoppedCpuEventSession : ICpuEventSession
+{
+    void DisableAndStopProducer();
+}
 sealed record BoundSampleCleanup(bool SourceCreated, bool DisableSucceeded, bool CollectorJoined, bool SourceDisposed, BoundSampleCleanupError[] Errors);
 sealed record BoundSampleResult(ClrProbeBinding Binding, ClrNativeRange Range, SampleBatch Batch,
     IReadOnlyList<CpuSample> Samples, ulong CpuNanoseconds, CpuCounterSourceSnapshot InitialCounters,
@@ -22,11 +28,23 @@ sealed class BoundSampleCollection
     {
         private readonly object gate = new();
         private readonly List<CpuSample> samples = [];
+        private readonly List<BoundEpochSample> epochs = [];
+        private ulong eligibilityEpoch;
+        public bool TrackEpochs { get; set; }
         private bool accepting;
         private ulong lastTimestamp, lastCounter;
         public int Count { get { lock (gate) return samples.Count; } }
-        public void Open() { lock (gate) accepting = true; }
+        public void Open() { lock (gate) { eligibilityEpoch = checked(eligibilityEpoch + 1); accepting = true; } }
         public void Close() { lock (gate) accepting = false; }
+        public IReadOnlyList<BoundEpochSample> EpochSnapshot(int offset)
+        {
+            lock (gate)
+            {
+                ArgumentOutOfRangeException.ThrowIfNegative(offset);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(offset, epochs.Count);
+                return Array.AsReadOnly(epochs.GetRange(offset, epochs.Count - offset).ToArray());
+            }
+        }
         public IReadOnlyList<CpuSample> Snapshot(int offset = 0)
         {
             lock (gate)
@@ -56,6 +74,7 @@ sealed class BoundSampleCollection
                     return item;
                 });
                 samples.Add(accepted);
+                if (TrackEpochs) epochs.Add(new(eligibilityEpoch, accepted));
                 lastTimestamp = accepted.Timestamp;
                 lastCounter = accepted.CumulativeCpuNanoseconds!.Value;
             }
@@ -66,6 +85,10 @@ sealed class BoundSampleCollection
     private readonly Capture capture;
     private ICpuEventSession? source;
     private LiveSampleCollector? collector;
+    private PausableSampleCollector? pausableCollector;
+    private BoundCpuSession? session;
+    private readonly int owner = Environment.CurrentManagedThreadId;
+    private bool pausable, excluding, sourceDisabled = true;
     private bool started, enableAttempted, completed;
     private SampleBatch? finalBatch;
     private ulong cpuNanoseconds;
@@ -76,13 +99,15 @@ sealed class BoundSampleCollection
     public CpuCounterSourceSnapshot? InitialCounters => epoch?.Initial;
     public CpuCounterSourceSnapshot? FinalCounters => finalCounters;
     public int LiveSamples => capture.Count;
-    public SampleBatch? Latest => collector?.Latest;
+    public SampleBatch? Latest => pausable ? Volatile.Read(ref finalBatch) : collector?.Latest;
     public IReadOnlyList<CpuSample> Diagnostics => Cleanup is null
         ? throw new InvalidOperationException("Close collection before reading sample diagnostics.") : capture.Snapshot();
+    public IReadOnlyList<BoundEpochSample> EpochDiagnostics => Cleanup is null
+        ? throw new InvalidOperationException("Close collection before reading epoch diagnostics.") : capture.EpochSnapshot(0);
 
     public IReadOnlyList<CpuSample> ReadProvisional(int offset)
     {
-        if (collector is null || Cleanup is not null)
+        if ((collector is null && pausableCollector is null) || Cleanup is not null)
             throw new InvalidOperationException("Provisional reads require an active collection.");
         return lifetime.Execute((Capture: capture, Offset: offset), static value => value.Capture.Snapshot(value.Offset));
     }
@@ -100,16 +125,29 @@ sealed class BoundSampleCollection
     }
 
     public void Start(Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource)
+        => StartCore(createSource, false);
+
+    public void StartPausable(Func<IInstructionMap, ICpuSampleSink, IOwnerStoppedCpuEventSession> createSource)
+    {
+        ArgumentNullException.ThrowIfNull(createSource);
+        RequireOwner();
+        StartCore((map, sink) => createSource(map, sink), true);
+    }
+
+    private void StartCore(Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource, bool allowPause)
     {
         ArgumentNullException.ThrowIfNull(createSource);
         if (started || Cleanup is not null) throw new InvalidOperationException("A bound collection can start only once.");
         started = true;
+        pausable = allowPause;
+        capture.TrackEpochs = allowPause;
         lifetime.Execute(createSource, factory =>
         {
             source = factory(Map, capture) ?? throw new InvalidDataException("The sample factory returned no source.");
             var counters = source.CounterEvidence ?? throw new InvalidDataException("The bound source has no counter epoch evidence.");
             _ = counters.ReadCounter();
             epoch = BoundCpuEpoch.ParseFresh(counters.DescribeCounters());
+            if (pausable) session = BoundCpuSession.ParseFresh(epoch.Initial);
             var initial = source.Drain();
             if (initial.Samples != 0 || initial.DistinctInstructionPointers != 0 || initial.RepresentedCpuNanoseconds != 0
                 || initial.LostRecords != 0 || initial.LostSamples != 0 || initial.Throttles != 0
@@ -118,22 +156,124 @@ sealed class BoundSampleCollection
             lifetime.RequireCurrent();
             capture.Open();
             enableAttempted = true;
+            sourceDisabled = false;
             source.Enable();
-            collector = new LiveSampleCollector(source.Drain);
+            if (pausable)
+            {
+                _ = counters.ReadCounter();
+                session = session!.Enable(counters.DescribeCounters());
+                pausableCollector = new PausableSampleCollector(() =>
+                {
+                    lifetime.Execute((Self: this, Source: source), static value =>
+                    {
+                        var batch = value.Source.Drain();
+                        Volatile.Write(ref value.Self.finalBatch, batch with { SelectedSymbols = Array.AsReadOnly(batch.SelectedSymbols.ToArray()) });
+                        if (batch.LostRecords != 0 || batch.LostSamples != 0 || batch.Throttles != 0)
+                            throw new InvalidDataException("The pausable source reported cumulative loss or throttling.");
+                        return true;
+                    });
+                });
+            }
+            else collector = new LiveSampleCollector(source.Drain);
             return true;
+        });
+    }
+
+    public IReadOnlyList<BoundEpochSample> ReadEpochProvisional(int offset)
+    {
+        if (pausableCollector is null || Cleanup is not null)
+            throw new InvalidOperationException("Epoch reads require an active pausable collection.");
+        return lifetime.Execute((Capture: capture, Offset: offset), static value => value.Capture.EpochSnapshot(value.Offset));
+    }
+
+    private void RequireOwner()
+    {
+        if (Environment.CurrentManagedThreadId != owner)
+            throw new InvalidOperationException("Pausable collection control requires its owning thread.");
+    }
+
+    private void DisablePausable()
+    {
+        ((IOwnerStoppedCpuEventSession)source!).DisableAndStopProducer();
+        sourceDisabled = true;
+        ReadDisabledCounters();
+    }
+
+    private void ReadDisabledCounters()
+    {
+        var counters = source!.CounterEvidence ?? throw new InvalidDataException("The pausable source lost counter evidence.");
+        var reading = counters.ReadCounter();
+        if (reading.Error is not null) throw new InvalidDataException("The disabled source CPU counter read failed.");
+        cpuNanoseconds = reading.CpuNanoseconds ?? throw new InvalidDataException("The disabled source has no CPU counter.");
+        if (session!.Current.Enabled) session = session.Disable(counters.DescribeCounters(), cpuNanoseconds);
+    }
+
+    public void ExecuteExcluded(Action<IReadOnlyList<BoundEpochSample>> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        RequireOwner();
+        if (pausableCollector is null || Cleanup is not null || excluding)
+            throw new InvalidOperationException("Excluded execution requires an active pausable collection without an excluded callback.");
+        lifetime.Execute(action, callback =>
+        {
+            excluding = true;
+            try
+            {
+                DisablePausable();
+                var pause = pausableCollector.RequestPause().GetAwaiter().GetResult();
+                capture.Close();
+                lifetime.RequireCurrent();
+                ValidateBatch(finalBatch ?? throw new InvalidDataException("The paused source has no final drain evidence."), capture.Snapshot(), cpuNanoseconds);
+                callback(capture.EpochSnapshot(0));
+                lifetime.RequireCurrent();
+                capture.Open();
+                sourceDisabled = false;
+                source!.Enable();
+                var counters = source.CounterEvidence ?? throw new InvalidDataException("The pausable source lost counter evidence.");
+                _ = counters.ReadCounter();
+                session = session!.Enable(counters.DescribeCounters());
+                pausableCollector.Resume(pause);
+                return true;
+            }
+            finally { excluding = false; }
         });
     }
 
     public BoundSampleCleanup CloseForCleanup()
     {
+        if (pausable)
+        {
+            RequireOwner();
+            if (excluding) throw new InvalidOperationException("Collection cannot close inside its excluded callback.");
+        }
         if (Cleanup is not null) return Cleanup;
         var errors = new List<BoundSampleCleanupError>();
         void Retain(string stage, Exception error) => errors.Add(new(stage, error.GetType().FullName!, error.ToString()));
-        bool disabled = !enableAttempted, joined = collector is null, disposed = source is null;
-        if (enableAttempted)
+        bool disabled = !enableAttempted || sourceDisabled, joined = collector is null && pausableCollector is null, disposed = source is null;
+        if (enableAttempted && !sourceDisabled)
         {
-            try { cpuNanoseconds = source!.Disable(); disabled = true; }
+            try
+            {
+                if (pausable)
+                {
+                    ((IOwnerStoppedCpuEventSession)source!).DisableAndStopProducer();
+                    sourceDisabled = true;
+                }
+                else { cpuNanoseconds = source!.Disable(); sourceDisabled = true; }
+                disabled = true;
+            }
             catch (Exception error) { Retain("disable", error); }
+            if (pausable && disabled)
+            {
+                try { ReadDisabledCounters(); }
+                catch (Exception error) { Retain("counters", error); }
+            }
+        }
+        if (pausableCollector is not null)
+        {
+            try { pausableCollector.Complete(); }
+            catch (Exception error) { Retain("collector", error); }
+            finally { joined = true; }
         }
         if (collector is not null)
         {
@@ -167,19 +307,24 @@ sealed class BoundSampleCollection
             var samples = capture.Snapshot();
             var batch = finalBatch with { SelectedSymbols = Array.AsReadOnly(finalBatch.SelectedSymbols.ToArray()) };
             if (epoch is null || finalCounters is null) throw new InvalidDataException("The bound source lost its counter epoch evidence.");
-            var counters = epoch.Close(finalCounters, cpuNanoseconds);
-            if (batch.LostRecords != 0 || batch.LostSamples != 0 || batch.Throttles != 0
-                || batch.Samples != samples.Count
-                || batch.SelectedMethodSamples != samples.Count(item => item.Method == OverheadWorkload.SelectedSymbol)
-                || batch.UnmappedSamples != samples.Count(item => item.Method is null)
-                || batch.DistinctInstructionPointers != samples.Select(item => item.InstructionPointer).Distinct().Count()
-                || !batch.SelectedSymbols.SequenceEqual(samples.Where(item => item.Method is not null).Select(item => item.Method!).Distinct().Order())
-                || samples.Any(item => item.CumulativeCpuNanoseconds > cpuNanoseconds)
-                || batch.RepresentedCpuNanoseconds != samples.Aggregate(0UL, (sum, item) => checked(sum + item.PeriodNanoseconds)))
-                throw new InvalidDataException("The bound sample epoch lost records or changed sample accounting.");
+            var counters = pausable ? session!.Close(finalCounters, cpuNanoseconds) : epoch.Close(finalCounters, cpuNanoseconds);
+            ValidateBatch(batch, samples, cpuNanoseconds);
             return new BoundSampleResult(lifetime.Binding, Map.Range, batch, samples, cpuNanoseconds, epoch.Initial, counters, value);
         });
         completed = true;
         return result;
+    }
+
+    private static void ValidateBatch(SampleBatch batch, IReadOnlyList<CpuSample> samples, ulong cpuNanoseconds)
+    {
+        if (batch.LostRecords != 0 || batch.LostSamples != 0 || batch.Throttles != 0
+            || batch.Samples != samples.Count
+            || batch.SelectedMethodSamples != samples.Count(item => item.Method == OverheadWorkload.SelectedSymbol)
+            || batch.UnmappedSamples != samples.Count(item => item.Method is null)
+            || batch.DistinctInstructionPointers != samples.Select(item => item.InstructionPointer).Distinct().Count()
+            || !batch.SelectedSymbols.SequenceEqual(samples.Where(item => item.Method is not null).Select(item => item.Method!).Distinct().Order())
+            || samples.Any(item => item.CumulativeCpuNanoseconds > cpuNanoseconds)
+            || batch.RepresentedCpuNanoseconds != samples.Aggregate(0UL, (sum, item) => checked(sum + item.PeriodNanoseconds)))
+            throw new InvalidDataException("The bound sample epoch lost records or changed sample accounting.");
     }
 }

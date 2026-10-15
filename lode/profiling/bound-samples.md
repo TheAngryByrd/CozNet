@@ -1,6 +1,7 @@
 # Bound CPU sample collection
 
 `BoundSampleCollection` owns one source and one collector after capturing a CLR-bound native map.
+This page describes the default one-shot `Start` path. See [pausable collection](pausable-collector.md) for `StartPausable` and excluded callbacks.
 The source factory receives the map explicitly. Linux no longer needs a runtime perf map for this route.
 The existing default Linux map path remains available to earlier callers.
 
@@ -34,10 +35,10 @@ flowchart LR
 
 Cleanup retains ownership after admission or collection fails. Each stage runs even when another stage fails.
 The final snapshot retains source cleanup state after disposal. A source adapter must keep its counter journal readable after disposal.
-Completion requires one successful enable/disable pair, the same source identity, zero losses, and matching sample/count metadata.
+One-shot completion requires one successful enable/disable pair, the same source identity, zero losses, and matching sample/count metadata.
 The final counter covers the retained sample counters. Source transitions and counter readings retain their timestamp ordering.
 Diagnostics become available only after collector completion. They are not accepted experiment input after rejection.
-Collection is one-shot. A later epoch requires a new source and collection object.
+The default `Start` path is one-shot. A later epoch on that path requires a new source and collection object.
 
 The live fixture uses interval 1024 with runtime perf-map output disabled.
 It checks normal collection and duplicate-module invalidation before enable, during collection, and after closure.

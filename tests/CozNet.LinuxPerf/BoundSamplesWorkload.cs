@@ -7,8 +7,8 @@ static class BoundSamplesWorkload
 {
     public static int Run(string path, string mode)
     {
-        if (mode is not ("collect" or "before-enable" or "during" or "after-close"))
-            throw new ArgumentException("Select collect, before-enable, during, or after-close.");
+        if (mode is not ("collect" or "pause" or "before-enable" or "during" or "after-close"))
+            throw new ArgumentException("Select collect, pause, before-enable, during, or after-close.");
         BoundSampleCollection? collection = null;
         BoundSampleResult? result = null;
         ClrProbeLifetime? lifetime = null;
@@ -17,6 +17,8 @@ static class BoundSamplesWorkload
         string? failure = null, verificationFailure = null;
         long batches = 0, checksum = 0, calls = 0;
         var provisional = new List<CpuSample>();
+        var excludedCounters = new List<CpuCounterReading>();
+        int pauses = 0;
         try
         {
             if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
@@ -26,16 +28,33 @@ static class BoundSamplesWorkload
             lifetime = new(ClrProbeBinding.ReadCurrent());
             var owner = CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186)));
             collection = new(lifetime, owner);
-            collection.Start((map, sink) =>
+            LinuxCpuEventSession? liveSource = null;
+            LinuxCpuEventSession CreateSource(IInstructionMap map, ICpuSampleSink sink)
             {
-                var source = new LinuxCpuEventSession(sink, map);
+                var source = liveSource = new LinuxCpuEventSession(sink, map);
+                if (mode == "pause")
+                {
+                    try
+                    {
+                        bool rejected = Task.Run(() =>
+                        {
+                            try { source.DisableAndStopProducer(); return false; }
+                            catch (InvalidOperationException) { return true; }
+                        }).GetAwaiter().GetResult();
+                        Require(rejected && source.DescribeCounters() is { Enabled: false, Epoch: 0, UnrecordedCleanup: false },
+                            "Foreign-thread pause changed the Linux source.");
+                    }
+                    catch { source.Dispose(); throw; }
+                }
                 if (mode == "before-enable")
                 {
                     try { ProbeIdentityChecks.InvalidateWithDuplicateModule(plan); invalidated = true; }
                     catch { source.Dispose(); throw; }
                 }
                 return source;
-            });
+            }
+            if (mode == "pause") collection.StartPausable(CreateSource);
+            else collection.Start(CreateSource);
             long initialCalls = InjectedProbes.Calls;
             var elapsed = Stopwatch.StartNew();
             while (elapsed.Elapsed < TimeSpan.FromSeconds(2))
@@ -44,6 +63,22 @@ static class BoundSamplesWorkload
                 batches++;
                 if (collection.LiveSamples > provisional.Count)
                     provisional.AddRange(collection.ReadProvisional(provisional.Count));
+                if (mode == "pause" && pauses < 2 && elapsed.Elapsed >= TimeSpan.FromMilliseconds(500 * (pauses + 1)))
+                {
+                    collection.ExecuteExcluded(records =>
+                    {
+                        Require(records.Any(item => item.EligibilityEpoch == (ulong)pauses + 1
+                            && item.Sample.Method == OverheadWorkload.SelectedSymbol), "The completed eligibility epoch has no selected sample.");
+                        var before = liveSource!.ReadCounter();
+                        Thread.SpinWait(1000000);
+                        var after = liveSource.ReadCounter();
+                        excludedCounters.Add(before);
+                        excludedCounters.Add(after);
+                        Require(!before.Enabled && !after.Enabled && before.Error is null && after.Error is null
+                            && before.CpuNanoseconds == after.CpuNanoseconds, "Excluded owner work advanced the disabled task-clock counter.");
+                    });
+                    pauses++;
+                }
                 if (mode == "during" && collection.LiveSamples > 0 && collection.Latest?.SelectedMethodSamples > 0)
                 {
                     ProbeIdentityChecks.InvalidateWithDuplicateModule(plan);
@@ -73,13 +108,18 @@ static class BoundSamplesWorkload
                 "The bound sample source did not preserve cleanup ownership.");
             Require(cleanup!.Errors.All(error => mode == "during" && error.Stage == "collector"
                 && error.Type == typeof(InvalidDataException).FullName), "The bound sample cleanup contains an unexpected failure.");
-            if (mode == "collect")
+            if (mode is "collect" or "pause")
             {
                 Require(result is not null && failure is null && result.Batch.Samples > 0 && result.Batch.SelectedMethodSamples > 0
                     && result.CpuNanoseconds > 0 && collection!.LiveSamples > 0, "No real CPU samples reached the admitted bound map.");
                 Require(provisional.Any(sample => sample.Method == OverheadWorkload.SelectedSymbol)
                     && result!.Samples.Take(provisional.Count).SequenceEqual(provisional),
                     "Live provisional samples differ from the completed collection prefix.");
+                if (mode == "pause")
+                    Require(pauses == 2 && excludedCounters.Count == 4 && result!.FinalCounters.Epoch == 3
+                        && collection!.EpochDiagnostics.Select(item => item.EligibilityEpoch).Distinct().SequenceEqual(new ulong[] { 1, 2, 3 })
+                        && collection.EpochDiagnostics.Select(item => item.Sample).SequenceEqual(result.Samples),
+                        "Live pause/resume lost source transitions or sample epoch ownership.");
             }
             else
             {
@@ -110,6 +150,9 @@ static class BoundSamplesWorkload
             initialCounters = collection?.InitialCounters, finalCounters = collection?.FinalCounters,
             samples = collection?.Diagnostics, batch = collection?.Latest,
             provisionalSamples = provisional.Count,
+            pauses,
+            excludedCounters,
+            epochSamples = mode == "pause" ? collection?.EpochDiagnostics : null,
             sampledPaymentCapacityEstablished = false, predictionAccuracyEstablished = false, codePinned = false
         }, new JsonSerializerOptions { WriteIndented = true }));
         return passed ? 0 : 1;

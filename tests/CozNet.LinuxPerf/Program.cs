@@ -4,6 +4,14 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-pausable-managed"])
+{
+    PausableCollectorChecks.Run();
+    BoundCpuSessionChecks.Run();
+    PausableBoundCollectionChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-cooperative-managed"])
 {
     CooperativeFailureCaptureChecks.Run();

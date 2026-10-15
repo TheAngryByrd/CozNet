@@ -53,8 +53,9 @@ Native payment cannot be undone when later evidence fails. A consumer must prese
 Cleanup does not require a valid CLR binding.
 It retains errors by stage. Repeated cleanup returns the same report without releasing the source again.
 `Diagnostics` becomes available after cleanup and retains provisional samples from rejected collections.
+Cleanup errors describe cleanup operations. The original operation failure remains separate.
 
-`Complete` requires clean closure and exactly one successful enable/disable pair on the original counter source.
+For `Start`, `Complete` requires clean closure and exactly one successful enable/disable pair on the original counter source.
 The final counter reading must follow disable completion.
 Lost records, lost samples, throttling, changed counts, and inconsistent period totals reject completion.
 The final CPU counter must cover every retained sample counter.
@@ -65,6 +66,63 @@ Successful completion returns an immutable sample snapshot and the source journa
 An invalidation after source closure still rejects completion.
 Failed completion does not erase diagnostic records.
 A successful lifetime check observes a boundary. It does not pin code after that boundary.
+
+## Pausable collection
+
+`StartPausable` selects the internal mode for excluded owner work.
+Its source factory must return `IOwnerStoppedCpuEventSession`.
+`DisableAndStopProducer` must disable the source on its owner thread and stop sample publication before it returns.
+It returns no counter value. Counter validation follows the stop acknowledgement.
+The hook must also stop a source whose enable attempt failed before its logical state changed.
+This backend contract does not imply that all loss evidence is available before resume.
+The collection requires its constructing thread for start, excluded execution, and cleanup in this mode.
+
+`ExecuteExcluded(action)` disables the source before it requests a collector pause.
+The collector finishes its current drain and a final drain before it acknowledges that pause.
+The collection then closes sample admission and checks cumulative batch accounting against the disabled CPU counter.
+Only a consistent batch and a current CLR binding permit the callback.
+
+The callback receives an immutable snapshot of all admitted `BoundEpochSample` records.
+Each record contains its original eligibility epoch and sample.
+The callback can process the final old records before it performs excluded work.
+Nested excluded execution and cleanup from the callback are rejected.
+An exception or observed invalidation prevents resume and permanently fails collection.
+
+After the callback returns, the collection checks CLR lifetime and opens the next eligibility epoch.
+It enables the source, parses the source journal, and resumes the collector with the acknowledged pause handle.
+`ReadEpochProvisional(offset)` returns immutable records with their admission epochs while collection remains active.
+An invalid offset permanently fails the lifetime guard, as with `ReadProvisional`.
+`EpochDiagnostics` retains these records after cleanup, including rejected collections.
+Diagnostic records can be an incomplete prefix after failure.
+For example, enable can succeed before its counter check fails, while the collector remains paused.
+The resulting uncollected tail is not admitted after the CLR lifetime guard fails.
+
+The source journal preserves cumulative CPU across all enable/disable pairs.
+Completion reconciles the complete journal, cumulative batch, and all samples.
+A loss or throttle report at any drain fails the whole collection.
+Earlier callback effects remain irreversible. Acceptance at a pause remains provisional until final closure succeeds.
+`Latest` is diagnostic evidence, not accepted progress. It can retain the batch that reported loss and caused rejection.
+`DisableSucceeded` records successful producer-stop acknowledgement even if a later counter check fails.
+Cleanup reports failures found during its counter checks under `counters`, separately from a failed producer stop under `disable`.
+Counter failures from excluded entry remain the original operation failure and do not become cleanup errors unless cleanup encounters another failure.
+
+This mode does not calculate credits or perform selected-owner payment.
+Consumers still need first-observation baseline exclusion for each new eligibility epoch.
+Portable fake-source checks exercise the mode on Windows and Linux.
+`LinuxCpuEventSession.DisableAndStopProducer` requires the creating OS thread and uses the dedicated task-clock disable operation.
+After a failed enable, it still issues disable when the journal already reports disabled.
+That recovery marks unrecorded cleanup and cannot establish a valid experiment journal.
+The source restrictions in the perf ownership analysis apply to this hook.
+The `pause` verification mode exercises two excluded callbacks and three source epochs with real task-clock samples.
+It checks that deliberate owner CPU work inside each callback does not advance the disabled event counter.
+This check does not establish exact exclusion of all profiler CPU work.
+The live mode also checks that a foreign OS thread cannot stop the source.
+
+Pausable control is synchronous and owner-thread-only. It cannot resume on another thread after `await`.
+Callers must keep cleanup on the owner thread and provide a process watchdog for blocked drains.
+The verification runner rejects an epoch without selected samples. A scheduling delay does not waive that reach condition.
+
+See [the collector](pausable-sample-collector.md), [source sessions](bound-cpu-session.md), and [perf ownership](../Research/perf-pause-ownership.md).
 
 ## Platform support and limits
 

@@ -23,13 +23,15 @@ $container = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-dro
 if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the Linux kernel.' }
 & docker @container $image timeout -k 2s 30s dotnet /workload/CozNet.LinuxPerf.dll --verify-bound-samples-managed *> (Join-Path $run 'managed.log')
 $managedExit = $LASTEXITCODE
+& docker @container $image timeout -k 2s 30s dotnet /workload/CozNet.LinuxPerf.dll --verify-pausable-managed *> (Join-Path $run 'pausable-managed.log')
+$pausableManagedExit = $LASTEXITCODE
 $activation = @('--security-opt', 'seccomp=unconfined', '--env', 'DOTNET_PerfMapEnabled=0', '--env', 'DOTNET_TieredCompilation=0',
     '--env', 'DOTNET_ReadyToRun=0', '--env', 'CORECLR_ENABLE_PROFILING=1',
     '--env', 'CORECLR_PROFILER={6E51C528-23F1-49EA-9346-2A7A8D911B61}', '--env', 'CORECLR_PROFILER_PATH=/native/libCozNet.Profiler.so',
     '--env', 'LD_LIBRARY_PATH=/native', '--env', 'COZNET_PROBE_TARGET=linux-perf', '--env', 'COZNET_PROBE_IDENTITY=bound',
     '--env', 'COZNET_IL_MAP_MODE=registered', '--env', 'COZNET_PROBE_INTERVAL=1024')
 $outcomes = @()
-foreach ($mode in @('collect', 'before-enable', 'during', 'after-close')) {
+foreach ($mode in @('collect', 'pause', 'before-enable', 'during', 'after-close')) {
     & docker @container @activation $image timeout -k 2s 30s dotnet /workload/CozNet.LinuxPerf.dll --verify-bound-samples "/evidence/$mode.json" $mode *> (Join-Path $run "$mode.log")
     $caseExit = $LASTEXITCODE
     $record = Join-Path $run "$mode.json"
@@ -46,8 +48,8 @@ foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash (Join-P
 foreach ($file in $binaries.Keys) { $unchanged = $unchanged -and (Get-FileHash $file).Hash -eq $binaries[$file] }
 @{ sources = $hashes; binaries = $binaries; image = $image; source = 'Linux task-clock'; interval = 1024; runtimePerfMap = $false } |
     ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
-$passed = $unchanged -and $managedExit -eq 0 -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.passed }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; managedExit = $managedExit; outcomes = $outcomes;
+$passed = $unchanged -and $managedExit -eq 0 -and $pausableManagedExit -eq 0 -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.passed }).Count -eq 0
+@{ passed = $passed; inputsUnchanged = $unchanged; managedExit = $managedExit; pausableManagedExit = $pausableManagedExit; outcomes = $outcomes;
     sampledPaymentCapacityEstablished = $false; predictionAccuracyEstablished = $false } |
     ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run

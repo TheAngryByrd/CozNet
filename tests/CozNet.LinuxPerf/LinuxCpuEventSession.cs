@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-sealed class LinuxCpuEventSession : ICpuEventSession, ICpuCounterEvidenceSource
+sealed class LinuxCpuEventSession : IOwnerStoppedCpuEventSession, ICpuCounterEvidenceSource
 {
     public ISampleClockEvidenceSource ClockEvidence { get; } = new LinuxSampleClockEvidenceSource();
     public ICpuCounterEvidenceSource CounterEvidence => this;
@@ -11,6 +11,7 @@ sealed class LinuxCpuEventSession : ICpuEventSession, ICpuCounterEvidenceSource
     private readonly CpuCounterJournal counters;
     private readonly Action enableEvent, disableEvent;
     private bool disposed;
+    private readonly long ownerThread;
 
     public LinuxCpuEventSession(ICpuSampleSink sink, IInstructionMap? instructionMap = null)
     {
@@ -18,6 +19,7 @@ sealed class LinuxCpuEventSession : ICpuEventSession, ICpuCounterEvidenceSource
             throw new PlatformNotSupportedException("The CPU-event session requires Linux x64.");
         var map = instructionMap ?? PerfMapSnapshot.Read($"/tmp/perf-{Environment.ProcessId}.map");
         long tid = Native.GetTid(186);
+        ownerThread = tid;
         var attribute = PerfAttribute.TaskClock();
         counters = new(TimeProvider.System, ReadRawCounter);
         enableEvent = EnableRaw;
@@ -52,6 +54,19 @@ sealed class LinuxCpuEventSession : ICpuEventSession, ICpuCounterEvidenceSource
         if (!counters.Enabled) throw new InvalidOperationException("The CPU-event session is not enabled.");
         counters.Transition(false, disableEvent);
         return counters.ReadCounter(propagateFailure: true).CpuNanoseconds!.Value;
+    }
+
+    public void DisableAndStopProducer()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (Native.GetTid(186) != ownerThread)
+            throw new InvalidOperationException("Task-clock pause requires its owning OS thread.");
+        if (counters.Enabled) counters.Transition(false, disableEvent);
+        else
+        {
+            counters.MarkUnrecordedCleanup();
+            disableEvent();
+        }
     }
 
     private ulong ReadRawCounter()

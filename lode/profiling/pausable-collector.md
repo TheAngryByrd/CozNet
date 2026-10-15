@@ -1,0 +1,65 @@
+# Acknowledged collector pause
+
+`PausableSampleCollector` separates drain ownership from source enable/disable ownership.
+The constructing controller thread owns transitions. One worker owns every drain.
+Pause acknowledges only after the in-flight drain and a final drain complete.
+The current pause handle is checked by reference identity. Stop revokes a pending handle and prevents resume.
+
+```csharp
+collection.StartPausable(CreateOwnerStoppedSource);
+collection.ExecuteExcluded(records => ProcessOldRecordsAndPay(records));
+```
+
+`BoundSampleCollection.StartPausable` requires an `IOwnerStoppedCpuEventSession` backend.
+`ExecuteExcluded` disables the producer, awaits the final drain, closes admission, and checks cumulative accounting before its callback.
+After callback return and a CLR lifetime check, it opens the next admission epoch, enables the source, and resumes collection.
+`BoundEpochSample` retains its epoch at admission. `ReadEpochProvisional` returns immutable copies.
+`EpochDiagnostics` preserves the labels after cleanup, including failure cleanup.
+Callback failure or observed invalidation prevents resume and permanently rejects collection.
+The default `Start` path retains `BoundCpuEpoch` and `LiveSampleCollector`.
+The sampled payment workload still uses that default path.
+`LinuxCpuEventSession.DisableAndStopProducer` requires its creating OS thread and disables its dedicated task-clock source.
+Producer-stop acknowledgement is separate from counter validation. Failed-enable recovery still issues disable and marks unrecorded cleanup.
+`DisableSucceeded` records the stop acknowledgement. Counter failure belongs to the `counters` cleanup stage.
+The code above describes the new collection API. The selected payment callback remains unimplemented.
+
+`BoundCpuSession` separately parses repeated enable and disable evidence into immutable session values.
+It preserves source identity, the previous journal prefix, and cumulative CPU across source epochs.
+It requires exactly one successful transition for each advance and a matching disabled counter for closure.
+The collection consumes these values at each source transition and at final closure.
+
+The restricted task-clock source analysis supports disable followed by a final drain for old sample ownership.
+Deferred loss records can still describe pre-pause overflow after resume.
+Loss accounting must remain cumulative. Later loss rejects the whole experiment without reversing physical waits.
+Resume preserves the partial timer period, so the first sample in a new eligibility epoch earns no credit.
+
+```mermaid
+stateDiagram-v2
+    Running --> PauseRequested: controller requests pause
+    PauseRequested --> Paused: final drain succeeds
+    Paused --> Running: exact handle resumes
+    Running --> Stopped: stop and final drain
+    PauseRequested --> Stopped: stop revokes pause and drains
+    Paused --> Stopped: stop without drain
+    Running --> Failed: drain throws
+    PauseRequested --> Failed: final drain throws
+```
+
+A drain failure faults pause and completion with the same exception. Failed or stopped collectors cannot resume.
+Completion joins the worker before it disposes the wake event. A stuck drain still requires an outer process watchdog.
+The controlled queue prototype demonstrates why switching admission before pause acknowledgement mislabels queued samples.
+It does not prove timing capacity or source-disable behavior.
+
+Portable integration checks cover queued old records, callback-return ordering, disable/resume failure, invalidation, late loss, and inconsistent pause accounting.
+These checks use a fake source. They do not establish a live backend's producer-stop contract or selected payment capacity.
+The live `pause` mode runs two excluded callbacks with real task-clock samples and requires three source and eligibility epochs.
+It checks a stable disabled event counter during deliberate owner CPU work, plus final cumulative accounting.
+The source research constrains the Linux hook. A passing workload does not generalize its contract to other perf event types.
+Failure diagnostics can retain only a prefix, especially when enable succeeds before its counter check fails while collection remains paused.
+`Latest` retains raw cumulative diagnostics, including rejected loss. It is not acceptance evidence.
+See [retained pause evidence](../../reliability/features/bound-samples/pausable-collection.md) for the live case and portable contracts.
+
+See [the reference](../../docsSrc/Reference/pausable-sample-collector.md),
+[source sessions](../../docsSrc/Reference/bound-cpu-session.md),
+[perf ownership](../../docsSrc/Research/perf-pause-ownership.md),
+[sample eligibility](../../docsSrc/Research/cooperative-sample-eligibility.md), and [the lifecycle plan](../plans/experiment-lifecycle.md).

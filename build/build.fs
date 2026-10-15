@@ -671,17 +671,22 @@ let boundCooperativeVerify platform _ =
     ]
 
 let boundSamplesManagedVerify _ =
-    DotNet.exec
-        id
-        (rootDirectory
-         </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll")
-        "--verify-bound-samples-managed"
-    |> fun result ->
-        if
-            result.ExitCode
-            <> 0
-        then
-            failwith "Bound sample collection checks failed."
+    for argument in
+        [
+            "--verify-bound-samples-managed"
+            "--verify-pausable-managed"
+        ] do
+        DotNet.exec
+            id
+            (rootDirectory
+             </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll")
+            argument
+        |> fun result ->
+            if
+                result.ExitCode
+                <> 0
+            then
+                failwithf "Bound sample collection checks failed: %s" argument
 
 let linuxBoundSamplesVerify _ =
     nativeScriptWithArgs "VerifyBoundSamples.ps1" []
