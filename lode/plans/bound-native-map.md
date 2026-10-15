@@ -24,7 +24,7 @@ flowchart LR
     JitFinished --> Range[Capture one native range]
     Range --> Ready
     Ready --> Map[Guarded immutable map]
-    Map --> Samples[Future sample acceptance]
+    Map --> Samples[Guarded sample collection]
     Ready --> Invalid[Permanent invalidation]
 ```
 
@@ -33,5 +33,13 @@ The native competing-publisher check detected guard removal in an isolated copy.
 The [mutation record](../../reliability/mutations/bound-map-publication.md) retains the source fingerprints and exit-code evidence.
 Live identity, duplicate-module, and collectible-unload cases check range admission and rejection on Windows and Linux.
 Sampled payment capacity and prediction remain separate gates.
+
+The [bound collection](../profiling/bound-samples.md) uses a fresh disabled source created after map capture.
+Its initial drain must be empty. The source cannot be reused for a second epoch.
+One collector checks owner identity, ordering, mapping, and lifetime for each provisional sample.
+Completion disables the source, joins the collector, disposes the source, checks losses, and rechecks lifetime.
+Failure retains cleanup diagnostics and rejects the epoch. It does not return accepted samples.
+The source factory remains portable. Linux uses the existing task-clock backend with the bound map supplied explicitly.
+This first epoch does not qualify measurement endpoints or generate payment credits.
 
 See [bound payment](../profiling/bound-cooperative.md), [identity](../profiling/probe-identity.md), and [the lifecycle plan](experiment-lifecycle.md).

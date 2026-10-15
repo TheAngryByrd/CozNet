@@ -670,6 +670,22 @@ let boundCooperativeVerify platform _ =
         "-BoundCooperative"
     ]
 
+let boundSamplesManagedVerify _ =
+    DotNet.exec
+        id
+        (rootDirectory
+         </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll")
+        "--verify-bound-samples-managed"
+    |> fun result ->
+        if
+            result.ExitCode
+            <> 0
+        then
+            failwith "Bound sample collection checks failed."
+
+let linuxBoundSamplesVerify _ =
+    nativeScriptWithArgs "VerifyBoundSamples.ps1" []
+
 let linuxTargetLeaseDrainFailure _ =
     nativeScriptWithArgs "VerifyTargetLeaseReuse.ps1" [
         "-Mode"
@@ -1241,6 +1257,8 @@ let initTargets () =
     Target.create "LinuxProbeIdentityVerify" (probeIdentityVerify "LinuxContainer")
     Target.create "BoundCooperativeVerify" (boundCooperativeVerify "Host")
     Target.create "LinuxBoundCooperativeVerify" (boundCooperativeVerify "LinuxContainer")
+    Target.create "BoundSamplesManagedVerify" boundSamplesManagedVerify
+    Target.create "LinuxBoundSamplesVerify" linuxBoundSamplesVerify
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
@@ -1426,6 +1444,15 @@ let initTargets () =
 
     "NativeLinuxBuild"
     ==> "LinuxBoundCooperativeVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "BoundSamplesManagedVerify"
+    ==> "LinuxBoundSamplesVerify"
+    |> ignore
+
+    "NativeLinuxBuild"
+    ==> "LinuxBoundSamplesVerify"
     |> ignore
 
     "LinuxPerfWorkload"

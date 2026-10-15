@@ -61,6 +61,11 @@ It retains each run under `artifacts/service-interop/` and uses a 30-second proc
 `LinuxServiceSnapshotCost` builds the native ABI and records [cached snapshot costs](../profiling/service-snapshot-cost.md).
 `LinuxServiceInteropVerify` also runs the `ServiceAccountingVerify` checks in Linux and verifies live journal settlement or rejection.
 
+`BoundSamplesManagedVerify` builds the workload and runs portable bound collection checks on the host.
+`LinuxBoundSamplesVerify` also builds the Linux profiler, repeats portable checks in Linux, and runs four live collection cases.
+It retains every outcome under `artifacts/bound-samples/` with runtime perf-map output disabled.
+See [bound sample collection](../profiling/bound-samples.md) for admission and completion limits.
+
 `build/build.fs` owns the FAKE target graph. Its baseline is MiniScaffold's `v0.40.0-beta001` library template.
 `LinuxFastTimerScheduler` adds controller and target scheduler capture to the sampled timer forced-GC comparison.
 `LinuxFastTimerSchedulerNoGc` captures the same scheduler streams without the forced-GC worker.

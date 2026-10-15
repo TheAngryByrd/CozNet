@@ -12,11 +12,11 @@ sealed class LinuxCpuEventSession : ICpuEventSession, ICpuCounterEvidenceSource
     private readonly Action enableEvent, disableEvent;
     private bool disposed;
 
-    public LinuxCpuEventSession(ICpuSampleSink sink)
+    public LinuxCpuEventSession(ICpuSampleSink sink, IInstructionMap? instructionMap = null)
     {
         if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
             throw new PlatformNotSupportedException("The CPU-event session requires Linux x64.");
-        var map = PerfMapSnapshot.Read($"/tmp/perf-{Environment.ProcessId}.map");
+        var map = instructionMap ?? PerfMapSnapshot.Read($"/tmp/perf-{Environment.ProcessId}.map");
         long tid = Native.GetTid(186);
         var attribute = PerfAttribute.TaskClock();
         counters = new(TimeProvider.System, ReadRawCounter);

@@ -21,6 +21,14 @@ if (args is ["--verify-bound-map-managed"])
     ClrBoundInstructionMapChecks.Run();
     return 0;
 }
+if (args is ["--verify-bound-samples-managed"])
+{
+    ClrBoundInstructionMapChecks.Run();
+    BoundSampleCollectionChecks.Run();
+    return 0;
+}
+if (args is ["--verify-bound-samples", var boundSamplesPath, var boundSamplesMode])
+    return BoundSamplesWorkload.Run(boundSamplesPath, boundSamplesMode);
 if (args is ["--verify-bound-cooperative", var boundPath, var boundMode, var boundLibrary])
     return BoundCooperativeChecks.Run(boundPath, boundMode, boundLibrary);
 if (args is ["--verify-cooperative-interop", var cooperativePath, var cooperativeMode, var cooperativeLibrary])

@@ -71,7 +71,8 @@ The cooperative C ABI now supplies production timing and native receipt records.
 Managed receipt parsing and ledger binding now support manual owner polls.
 The bound cooperative client now checks CLR lifetime around injected service and receipt acceptance.
 The bound native range supports guarded whole-method address resolution.
-Next, admit real samples after range capture, then measure sampled intervention capacity under the existing gates.
+The [bound collection](../profiling/bound-samples.md) now admits real Linux samples after range capture and rejects observed CLR invalidation.
+Next, connect those samples to cooperative payment and measure sampled intervention capacity under the existing gates.
 The [transport reference](../../docsSrc/Reference/cooperative-target.md) distinguishes implemented hooks from missing runtime integration.
 Keep cooperative receipts distinct from the timer C ABI, which carries only interrupted addresses.
 Each poll services at most one bounded child and returns to application work. Do not apply the existing 10 ms CPU cadence to pending service.

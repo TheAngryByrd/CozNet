@@ -1,7 +1,7 @@
 # Native ranges for bound cooperative probes
 
 This explanation describes how a native method range can support the CLR-bound probe contract.
-The native range contract supports a later restricted Linux perf integration.
+The native range contract supports the restricted [Linux sample collection](../Reference/bound-samples.md).
 It does not establish sampled capacity, source-line attribution, or prediction accuracy.
 The runtime sources use revision `60629d14374c56f1cb51819049ad1fa529307f8d`.
 
@@ -78,7 +78,7 @@ The existing [bound cooperative contract](../Reference/bound-cooperative.md) sep
 
 ## A perf record needs more than an address match
 
-The future sample path must accept records only within an admitted collection epoch.
+The sample path must accept records only within an admitted collection epoch.
 The epoch begins after range publication and a successful binding check.
 It excludes records retained from an earlier collection interval.
 The controller checks the same binding when it accepts samples, admits payment, accepts receipts, and completes the experiment.
@@ -113,17 +113,19 @@ It matches the selected method identifier and bytecode-location ranges. [8]
 This supports separating runtime identity from experiment accounting.
 It does not demonstrate that a CLR native range remains valid after unload.
 
-## Evidence needed before sampled admission
+## Evidence and remaining limits
 
 The range contract requires checks for failed queries, extra extents, overflow, duplicate publication, and publication competing with invalidation.
 Runtime checks must obtain the extent from the actual rewritten target on each claimed platform.
 They must reject mapping after a real duplicate-module event and after selected-module unload.
 Synthetic boundary addresses can verify interval arithmetic, but cannot establish sample provenance.
 
-A later Linux perf check must collect real target IPs after admission and resolve them against the same binding.
-That check must preserve loss, ownership, timing, and cleanup evidence.
-A passing check would establish the restricted mapping path.
-It would still leave intervention capacity, overhead, and physical prediction as separate gates.
+The [bound sample checks](../How_Tos/verify-bound-samples.md) collect real target IPs after admission and resolve them against the same binding.
+They retain loss, ownership, timing, and cleanup evidence.
+Controlled Linux checks pass for collection and rejection after duplicate-module invalidation before enable, during collection, and after closure.
+These checks establish the restricted collection path.
+They do not establish frozen measurement membership or thread eligibility.
+Intervention capacity, overhead, and physical prediction remain separate gates.
 
 ## Primary sources
 

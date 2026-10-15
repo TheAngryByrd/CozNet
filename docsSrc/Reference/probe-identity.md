@@ -72,7 +72,9 @@ The immutable range remains available as evidence after rejection.
 This resolver does not admit samples by itself.
 A collector must start after map capture and reject records from earlier collection epochs.
 Sample acceptance and experiment completion also require lifetime checks.
-Real sample provenance, sampled payment capacity, and prediction remain unverified for this path.
+The internal [bound sample collection](bound-samples.md) enforces these admission and lifetime checks with a fresh Linux task-clock source.
+Its controlled Linux checks collect real selected-method samples without runtime perf-map output.
+Sampled payment capacity and prediction remain unverified for this path.
 
 The prototype supports one controlled method only.
 It rejects another matching module or compilation instead of creating a replacement generation.

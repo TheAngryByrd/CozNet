@@ -1,5 +1,7 @@
 # Lode index
 
+For real CPU records through the bound map, read [bound sample collection](profiling/bound-samples.md).
+
 For the bound native range contract and sample-admission limits, read [the map plan](plans/bound-native-map.md) and [the source comparison](../docsSrc/Research/bound-native-mapping.md).
 
 For CLR lifetime checks around payment and receipts, read [bound cooperative payment](profiling/bound-cooperative.md).
