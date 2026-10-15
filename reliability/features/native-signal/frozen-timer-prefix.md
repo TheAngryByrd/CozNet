@@ -42,6 +42,23 @@ These observations verify capture and preservation of controller knowledge.
 They do not bound unreceived native waits or establish sampled capacity, general CLR safety, or prediction accuracy.
 No unchanged timing case was repeated after this failure.
 
+## Prefix reconciliation
+
+The retained captures reconcile through `native/AnalyzeTimerPrefixes.py`.
+Reports are `timer-prefix-reviewed-0.json` and `timer-prefix-reviewed-50.json` in the same artifact directory.
+Each report records the input hash and analyzer source hashes.
+These reports were produced after collection and are not part of the original capture manifest.
+
+The treatment reports accepted wait deltas of 1,918 ns for selected and 812,502,014 ns for peer.
+The peer suffix contains one later accepted child with zero wait.
+That child's recorded finish precedes the endpoint bracket. Later acceptance does not mean later execution.
+The report preserves the original debt failure and keeps all eligibility, native-tail, and prediction flags false.
+
+Nineteen focused Python checks pass on Windows and Linux.
+They cover frozen accounting, unknown observations, ownership regression, malformed records, closure, failure preservation, and CLI output protection.
+Thirty-one matched-analysis checks pass on both platforms.
+Invalid prefixes suppress the affected block. Physical cases remain exempt, and failed profile cases retain prefix diagnostics.
+
 See [measurement boundaries](../../../docsSrc/Reference/measurement-boundaries.md),
 [the controller reference](../../../docsSrc/Reference/timer-service-controller.md), and
 [timer accounting](../../../lode/profiling/timer-accounting.md).

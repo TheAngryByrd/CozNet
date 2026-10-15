@@ -66,5 +66,14 @@ The [retained frozen-prefix capture](../../reliability/features/native-signal/fr
 The treatment still fails the unchanged debt limit and completes native cleanup.
 
 See the [controller reference](../../docsSrc/Reference/timer-service-controller.md) for the full contract.
+
+`AnalyzeTimerPrefixes.py` reconciles frozen released inventory and pending accepted prefixes against final accepted journals.
+It rejects reused slot generations, closed sessions with pending ownership, and same-operation prefix or ownership regression.
+An unavailable final observation produces null suffix diagnostics, not zero wait.
+Later acceptance does not locate native execution after the endpoint.
+A frozen prefix cannot omit a child first captured before its last accepted capture. Equal timestamps remain unordered.
+Frozen failures and final journal failures remain separate evidence.
+The analyzer preserves workload failure and makes no native-tail, eligibility, or prediction claim.
+See the [prefix reference](../../docsSrc/Reference/timer-prefix-reconciliation.md).
 See [sampled timer execution](timer-sampled.md) for live integration, initialization, diagnostics, and current limits.
 See [timer interop](timer-interop.md), [service accounting](signal-service.md), and [the index](../lode-map.md).

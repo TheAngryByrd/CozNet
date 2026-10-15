@@ -49,6 +49,7 @@ try {
     foreach ($name in @('native/VerifyMatchedPrediction.ps1', 'native/AnalyzeMatchedPrediction.py', 'native/MatchedPredictionChecks.py',
             'native/AnalyzeCpuCounters.py', 'native/CpuCounterChecks.py',
             'native/AnalyzeSampleMembership.py', 'native/SampleMembershipChecks.py',
+            'native/AnalyzeTimerPrefixes.py', 'native/TimerPrefixChecks.py',
             'build/build.fs', 'global.json')) { Capture-File (Join-Path $root $name) "source/$name" }
     foreach ($file in Get-ChildItem -LiteralPath (Join-Path $root 'tests/CozNet.LinuxPerf/bin/Release/net10.0') -File) {
         Capture-File $file.FullName "workload/$($file.Name)"
@@ -84,6 +85,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Portable counter checks failed.' }
     & $PythonCommand (Join-Path $source 'native/SampleMembershipChecks.py') *> (Join-Path $run 'membership-checks.log')
     if ($LASTEXITCODE -ne 0) { throw 'Portable membership checks failed.' }
+    & $PythonCommand (Join-Path $source 'native/TimerPrefixChecks.py') *> (Join-Path $run 'timer-prefix-checks.log')
+    if ($LASTEXITCODE -ne 0) { throw 'Timer prefix checks failed.' }
     & $PythonCommand (Join-Path $source 'native/MatchedPredictionChecks.py') *> (Join-Path $run 'analyzer-checks.log')
     if ($LASTEXITCODE -ne 0) { throw 'Portable analyzer checks failed.' }
     & docker @runtime --verify-timer-layout *> (Join-Path $run 'layout.log')

@@ -36,6 +36,12 @@ flowchart LR
 ```
 
 The remaining work is source-time alignment, bounded sample/journal tails, and conservative propagation into paired prediction-error intervals.
+
+`timerPrefixDiagnostics` reconciles profile endpoint inventory and accepted waits before comparison eligibility.
+Invalid prefix evidence suppresses the affected block. Physical cases remain exempt.
+Workload failures retain prefix diagnostics without becoming eligible.
+The runner snapshots `AnalyzeTimerPrefixes.py` and `TimerPrefixChecks.py` and runs the checks before timed cases.
+Both source hashes are required. Reconciliation does not establish a native-tail bound.
 `AnalyzeCpuCounters.py` parses raw evidence into immutable capture values before computing diagnostics.
 It reconciles counters, transition state, samples, totals, and final disabled counts.
 The final snapshot can equal disabled `endAfter`.

@@ -11,6 +11,7 @@ import unittest
 from AnalyzeMatchedPrediction import MODES, WindowCost, analyze, analyze_case, conditional_comparison, parse_window, parse_calibration
 from CpuCounterChecks import credit_fixture as counter_fixture
 from SampleMembershipChecks import fixture as membership_fixture
+from TimerPrefixChecks import fixture as timer_fixture
 
 
 def fixture(mode="profile-half"):
@@ -24,7 +25,7 @@ def fixture(mode="profile-half"):
     end["Accounting"]["Peer"]["Progress"] = 50
     if mode == "profile-half":
         end["Accounting"].update(Global=500000000, Credit=499000000, AcceptedSampleSequence=50)
-        end["Accounting"]["Peer"]["ReleasedWait"] = 499000000
+        end["Accounting"]["Peer"]["ReleasedWait"] = 10
     data = {"measurementCapture": {"status": "Complete", "start": start, "end": end},
             "timestampFrequency": 1000, "failures": [], "progress": [9999, 8888],
             "mode": mode.removeprefix("physical-"), "joined": [True, True], "expectedChecksum": 49995000,
@@ -58,6 +59,20 @@ def fixture(mode="profile-half"):
                 for item in value:
                     nanosecond_clock(item)
         nanosecond_clock(data)
+    if mode.startswith("profile-"):
+        empty = {"ReleasedJournalCount": 0, "Selected": {"ReleasedWait": 0, "Pending": None},
+                 "Peer": {"ReleasedWait": 0, "Pending": None}}
+        for boundary in (start, end):
+            boundary["Accounting"]["Timer"] = deepcopy(empty)
+        if mode == "profile-half":
+            data["journals"] = timer_fixture()["journals"]
+            accepted = data["journals"][0]["Accepted"]
+            accepted["Raw"]["Header"].update(Measured=10, Stop=1)
+            accepted["Raw"]["Children"][0]["Waited"] = 10
+            accepted["Received"][0]["Raw"]["Waited"] = 10
+            end["Accounting"]["Timer"]["ReleasedJournalCount"] = 1
+            end["Accounting"]["Timer"]["Peer"]["ReleasedWait"] = 10
+            data["waits"] = [0, 10]
     return data
 
 
@@ -117,6 +132,7 @@ def series(root):
              "workload/CozNet.LinuxPerf.dll", "workload/CozNet.dll",
              "native/libCozNet.Timer.so", "calibration/calibration.json", "calibration/calibration.json.plan.json",
              "calibration/calibration.json.blocks.jsonl", "calibration/manifest.json")
+    names += ("source/native/AnalyzeTimerPrefixes.py", "source/native/TimerPrefixChecks.py")
     hashes = {}
     for name in names:
         path = root / name
@@ -130,6 +146,45 @@ def series(root):
 
 
 class MatchedPredictionChecks(unittest.TestCase):
+    def test_invalid_timer_prefix_suppresses_only_its_block(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            series(root)
+            path = root / "block-3-profile-half.json"
+            data = json.loads(path.read_text())
+            data["measurementCapture"]["end"]["Accounting"]["Timer"]["Peer"]["ReleasedWait"] = 11
+            path.write_text(json.dumps(data))
+            result = analyze(root)
+            case = next(item for item in result["cases"] if item["name"] == "block-3-profile-half")
+            self.assertTrue(case["sampleMembershipDiagnostics"]["comparisonDomainAccepted"])
+            self.assertFalse(case["timerPrefixDiagnostics"]["reconciled"])
+            self.assertTrue(any(reason.startswith("Timer prefix evidence:") for reason in case["reasons"]))
+            self.assertIsNone(result["blocks"][2]["conditionalComparison"])
+            self.assertTrue(all(item["conditionalComparison"] is not None
+                                for item in result["blocks"] if item["block"] != 3))
+            self.assertIsNone(result["predictionSummary"])
+
+    def test_missing_timer_snapshot_rejects_profile_only(self):
+        data = fixture("profile-zero")
+        del data["measurementCapture"]["end"]["Accounting"]["Timer"]
+        result = analyze_case(data, "profile-zero", 0)
+        self.assertFalse(result["predictionEligible"])
+        self.assertFalse(result["timerPrefixDiagnostics"]["reconciled"])
+        physical = analyze_case(fixture("physical-baseline"), "physical-baseline", 0)
+        self.assertTrue(physical["predictionEligible"])
+        self.assertIsNone(physical["timerPrefixDiagnostics"])
+
+    def test_timer_prefix_diagnostics_preserve_workload_failure(self):
+        data = fixture()
+        data.update(failures=["debt exceeded"], closed=False)
+        result = analyze_case(data, "profile-half", 1)
+        prefix = result["timerPrefixDiagnostics"]
+        self.assertTrue(prefix["reconciled"], prefix["reasons"])
+        self.assertEqual(["debt exceeded"], prefix["recordedWorkloadFailures"])
+        self.assertFalse(prefix["nativeSessionClosed"])
+        self.assertFalse(prefix["nativeTailBoundEstablished"])
+        self.assertFalse(result["predictionEligible"])
+
     def test_conditional_comparison_uses_cost_ratios_and_outward_rounding(self):
         costs = {mode: WindowCost(10, 1, 0, Fraction(duration), Fraction(duration))
                  for mode, duration in zip(MODES, (100, 75, 100, 50))}
@@ -254,7 +309,8 @@ class MatchedPredictionChecks(unittest.TestCase):
             series(root)
             manifest_path = root / "manifest.json"
             original = json.loads(manifest_path.read_text())
-            for name in ("AnalyzeCpuCounters.py", "CpuCounterChecks.py", "AnalyzeSampleMembership.py", "SampleMembershipChecks.py"):
+            for name in ("AnalyzeCpuCounters.py", "CpuCounterChecks.py", "AnalyzeSampleMembership.py", "SampleMembershipChecks.py",
+                         "AnalyzeTimerPrefixes.py", "TimerPrefixChecks.py"):
                 with self.subTest(name=name):
                     manifest = deepcopy(original)
                     del manifest["files"]["source/native/" + name]

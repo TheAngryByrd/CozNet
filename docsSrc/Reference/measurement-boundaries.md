@@ -68,6 +68,8 @@ The workload still reports `predictionAccuracyEstablished = false`.
 
 ## Frozen timer prefix
 
+The [timer prefix analyzer](timer-prefix-reconciliation.md) reconciles these records against final accepted journals.
+
 Sampled timer boundaries include `Accounting.Timer`. Other producers can leave this optional field null.
 The field contains `ReleasedJournalCount`, `Selected`, and `Peer`.
 The count identifies the prefix of the controller's archived journal list at capture time.
