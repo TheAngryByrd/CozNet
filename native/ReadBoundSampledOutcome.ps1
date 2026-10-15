@@ -1,7 +1,7 @@
 function Read-BoundSampledOutcome {
     param([string]$Path, [string]$Case, [int]$ExitCode,
         [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
-        [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null)
+        [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null, [Nullable[bool]]$ExpectedChildCpu = $null)
     $passed = $false
     $recordError = $null
     try {
@@ -9,6 +9,9 @@ function Read-BoundSampledOutcome {
         if ($record.passed -isnot [bool]) { throw 'The case record lacks a Boolean outcome.' }
         if ($null -ne $ExpectedPauseTiming -and ($record.pauseTimingEnabled -isnot [bool] -or $record.pauseTimingEnabled -ne $ExpectedPauseTiming)) {
             throw 'Pause timing evidence differs from the requested setting.'
+        }
+        if ($null -ne $ExpectedChildCpu -and ($record.childCpuEnabled -isnot [bool] -or $record.childCpuEnabled -ne $ExpectedChildCpu)) {
+            throw 'Child CPU evidence differs from the requested setting.'
         }
         if ($SelectedCadence) {
             $expectedMode = if ($SelectedCadence -eq 'continuous') { 'Continuous' } else { 'QualifiedSample' }

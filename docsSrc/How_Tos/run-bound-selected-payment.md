@@ -32,3 +32,18 @@ The live containers disable Docker's seccomp filter. They retain a read-only roo
 
 See [the reference](../Reference/bound-sampled-payment.md) for the contracts and limits.
 Use [the peer-only procedure](run-bound-sampled-payment.md) for the legacy command.
+
+
+## Capture child CPU observations
+
+After the target builds the required binaries, run the optional diagnostic:
+
+```powershell
+pwsh -NoProfile -File native/VerifyBoundSampledPayment.ps1 -SelectedPayment -ChildCpu
+```
+
+Add `-PauseTiming` to retain collector pause phases in the same capture.
+Inspect `Cpu` in retired raw receipts, failure captures, and cleanup copies.
+Check each reading's status before interpreting its value.
+Retain CPU read errors and inconsistent clocks with the original service failure.
+Use the [CPU API reference](../Reference/cooperative-interop.md#optional-child-cpu-api) to interpret the records and limits.

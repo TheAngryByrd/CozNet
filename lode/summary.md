@@ -73,3 +73,10 @@ Its native contract checks pass. The first capture retains two treatment failure
 Clock accuracy, diagnostic overhead, and target execution bounds remain unverified.
 
 See [engine contracts](profiling/summary.md), [sampled accounting](profiling/delay-ledger.md), [practices](practices.md), and [future work](plans/roadmap.md).
+
+
+The native cooperative transport has an optional [child CPU journal](profiling/cooperative-interop.md#optional-cpu-records).
+Linux records owner-thread CPU readings around admitted wait attempts. Other platforms report unsupported capability.
+The separate diagnostic snapshot preserves failed children and requires mailbox quiescence.
+Managed capture and selected-payment replay retain these records, including failed service evidence.
+CPU observations do not replace wall-time payment.

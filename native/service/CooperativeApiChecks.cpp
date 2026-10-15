@@ -237,7 +237,52 @@ static void revocationAndClose(CozCooperativeSession* session, Worker& worker, W
             && result == static_cast<uint32_t>(CooperativePollResult::rejected);
     }), 46);
 }
+static void cpuSnapshotContract() {
+    CozCooperativeSession* session{};
+    require(coz_cooperative_open(2, 1, 4, &session) == COZ_COOPERATIVE_OK, 70);
+    {
+        Worker worker;
+        require(coz_cooperative_register_cpu(session, 0, 1, 3) == COZ_COOPERATIVE_ROLE, 71);
+        require(worker.run([&] { return coz_cooperative_register_cpu(session, 0, 1, 3); }) == COZ_COOPERATIVE_OK, 72);
+        uint64_t generation{};
+        require(coz_cooperative_submit(session, 0, 42, 1, &generation) == COZ_COOPERATIVE_OK, 73);
+        uint32_t required = 99;
+        CozCooperativeCpuChild cpu{};
+        require(coz_cooperative_cpu_snapshot(session, 0, generation, &cpu, 1, &required) == COZ_COOPERATIVE_BUSY
+            && required == 0, 74);
+        require(worker.run([&] {
+            uint32_t outcome{};
+            return coz_cooperative_poll(session, 0, 1, 2, 3, &outcome) == COZ_COOPERATIVE_OK
+                && outcome == COZ_COOPERATIVE_SERVICED;
+        }), 75);
+        require(worker.run([&] { return coz_cooperative_cpu_snapshot(session, 0, generation, &cpu, 1, &required); })
+            == COZ_COOPERATIVE_ROLE, 76);
+        cpu.command = 999;
+        require(coz_cooperative_cpu_snapshot(session, 0, generation, &cpu, 0, &required) == COZ_COOPERATIVE_BUFFER
+            && required == 1 && cpu.command == 999, 77);
+        require(coz_cooperative_cpu_snapshot(session, 0, generation, &cpu, 1, &required) == COZ_COOPERATIVE_OK
+            && required == 1 && cpu.command == 42 && cpu.generation == generation && cpu.ordinal == 1
+            && cpu.worker == 1 && cpu.code_version == 2 && cpu.site == 3 && cpu.requested == 1, 78);
+#if defined(__linux__)
+        require(cpu.before.status == 1 && cpu.after.status == 1 && cpu.before.clock == 1 && cpu.after.clock == 1
+            && cpu.before.resolution > 0 && cpu.after.resolution > 0 && cpu.before.error == 0 && cpu.after.error == 0
+            && cpu.after.nanoseconds >= cpu.before.nanoseconds, 79);
+#else
+        require(cpu.before.status == 0 && cpu.after.status == 0 && cpu.before.clock == 0 && cpu.after.clock == 0, 79);
+#endif
+        require(coz_cooperative_release(session, 0, generation) == COZ_COOPERATIVE_BUSY, 80);
+        CozCooperativeSnapshot snapshot{};
+        CozCooperativeChild child{};
+        require(coz_cooperative_snapshot(session, 0, generation, &snapshot, &child, 1) == COZ_COOPERATIVE_OK, 81);
+        require(coz_cooperative_release(session, 0, generation) == COZ_COOPERATIVE_OK, 82);
+        require(coz_cooperative_cpu_snapshot(session, 0, generation, &cpu, 1, &required) == COZ_COOPERATIVE_INVALID, 83);
+        require(worker.run([&] { return coz_cooperative_retire(session, 0); }) == COZ_COOPERATIVE_OK, 84);
+    }
+    require(coz_cooperative_close(session) == COZ_COOPERATIVE_OK, 85);
+}
+
 int main(int argc, char** argv) {
+    if (argc == 2 && std::string_view(argv[1]) == "cpu") { cpuSnapshotContract(); return 0; }
     if (argc == 2 && std::string_view(argv[1]) == "timing") { nativeClockAndBoundedWait(); return 0; }
     CozCooperativeSession* session{};
     require(coz_cooperative_open(0, 1, 4, &session) == COZ_COOPERATIVE_INVALID && !session, 47);

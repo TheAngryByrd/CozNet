@@ -39,6 +39,14 @@ try {
             if ($outcome.passed -ne $matches) { throw 'Pause timing settings did not control outcome acceptance.' }
         }
     }
+    foreach ($expected in @($true, $false)) {
+        foreach ($actual in @($true, $false, $null, 'true')) {
+            @{ passed = $true; childCpuEnabled = $actual } | ConvertTo-Json | Set-Content -LiteralPath $path
+            $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedChildCpu $expected
+            $matches = $actual -is [bool] -and $actual -eq $expected
+            if ($outcome.passed -ne $matches) { throw 'Child CPU settings did not control outcome acceptance.' }
+        }
+    }
     Set-Content -LiteralPath $path -Value '{'
     $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0
     if ($outcome.passed -or -not $outcome.recordError) { throw 'Malformed JSON cannot pass.' }

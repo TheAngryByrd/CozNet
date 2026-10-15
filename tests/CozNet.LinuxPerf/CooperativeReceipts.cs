@@ -35,7 +35,7 @@ record struct CooperativeNativeSnapshot
     public ulong MayHaveDelivery, Captured;
 }
 readonly record struct CooperativeClockRead(int Status, ulong Nanoseconds);
-sealed record CooperativeRawCapture(CooperativeNativeSnapshot Header, IReadOnlyList<CooperativeNativeChild> Children, CooperativeClockRead Clock, int Status);
+sealed record CooperativeRawCapture(CooperativeNativeSnapshot Header, IReadOnlyList<CooperativeNativeChild> Children, CooperativeClockRead Clock, int Status, CooperativeCpuCapture? Cpu = null);
 sealed record CooperativeReceivedChild(CooperativeNativeChild Raw, ulong FirstCaptured, ulong FirstManagedReceiptUpper, ServiceReceiptTiming Timing);
 sealed record CooperativeObservation(CooperativeRawCapture Raw, IReadOnlyList<CooperativeReceivedChild> Received);
 
@@ -49,9 +49,9 @@ sealed class CooperativeReceipts(CooperativeLeaseIdentity identity)
     public CooperativeRawCapture? FirstFailure { get; private set; }
 
     public CooperativeObservation Observe(CooperativeNativeSnapshot header, ReadOnlySpan<CooperativeNativeChild> children,
-        CooperativeClockRead clock, int status = 0)
+        CooperativeClockRead clock, int status = 0, CooperativeCpuCapture? cpu = null)
     {
-        LastRaw = new(header, Array.AsReadOnly(children.ToArray()), clock, status);
+        LastRaw = new(header, Array.AsReadOnly(children.ToArray()), clock, status, cpu);
         if (FirstFailure is not null) throw new InvalidDataException("A failed cooperative receipt cannot be repaired by a later read.");
         try
         {

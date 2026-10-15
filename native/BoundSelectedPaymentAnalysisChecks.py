@@ -96,6 +96,85 @@ def invalidated_record():
     return record
 
 
+def with_cpu(record):
+    record["childCpuEnabled"] = True
+    def visit(value):
+        if isinstance(value, list):
+            for item in value:
+                visit(item)
+        elif isinstance(value, dict):
+            if all(key in value for key in ("Header", "Children", "Status")) and value["Header"]["Visibility"] == 3:
+                header = value["Header"]
+                children = []
+                for child in value["Children"]:
+                    children.append(dict(Generation=header["Generation"], Command=header["Command"],
+                        **{key: child[key] for key in ("Ordinal", "Worker", "CodeVersion", "Site", "Requested")},
+                        Before=dict(Status=1, Clock=1, Nanoseconds=10, Resolution=1, Error=0),
+                        After=dict(Status=1, Clock=1, Nanoseconds=11, Resolution=1, Error=0)))
+                value["Cpu"] = dict(Slot=0 if children[0]["Worker"] == 2 else 1, Generation=header["Generation"],
+                    Status=0, Required=len(children), Children=children, Failure=None)
+            for key, item in value.items():
+                if key != "Cpu":
+                    visit(item)
+    visit(record)
+    return record
+
+
+class ChildCpuAnalysisChecks(unittest.TestCase):
+    def test_enabled_capture_preserves_case_outcome(self):
+        self.assertEqual(verify_record(with_cpu(valid_record()))["childCpu"]["generations"], 3)
+        self.assertFalse(verify_record(with_cpu(failed_record()))["casePassed"])
+
+    def test_missing_or_disabled_capture_rejected_through_record(self):
+        record = with_cpu(valid_record())
+        record["payments"][0]["Observation"]["Raw"]["Cpu"] = None
+        with self.assertRaisesRegex(ValueError, "lost child CPU"):
+            verify_record(record)
+        record = with_cpu(valid_record())
+        record["childCpuEnabled"] = False
+        with self.assertRaisesRegex(ValueError, "Unexpected child CPU"):
+            verify_record(record)
+
+    def test_identity_clock_and_count_corruption(self):
+        for field, value in (("Generation", 99), ("Worker", 1), ("Ordinal", 2), ("Requested", 99)):
+            record = with_cpu(valid_record())
+            record["payments"][0]["Observation"]["Raw"]["Cpu"]["Children"][0][field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                verify_record(record)
+        for field, value in (("Nanoseconds", 9), ("Nanoseconds", 100), ("Status", True), ("Clock", 0), ("Resolution", 0)):
+            record = with_cpu(valid_record())
+            record["payments"][0]["Observation"]["Raw"]["Cpu"]["Children"][0]["After"][field] = value
+            with self.subTest(field=field, value=value), self.assertRaises(ValueError):
+                verify_record(record)
+        record = with_cpu(valid_record())
+        record["payments"][0]["Observation"]["Raw"]["Cpu"]["Required"] = 0
+        with self.assertRaisesRegex(ValueError, "count differs"):
+            verify_record(record)
+
+    def test_read_failures_and_unsupported_are_not_zero_measurements(self):
+        for status, clock, error, field in ((0, 0, 0, "unsupportedReadings"), (2, 1, 5, "failedReadings")):
+            record = with_cpu(valid_record())
+            def replace(value):
+                if isinstance(value, list):
+                    for item in value:
+                        replace(item)
+                elif isinstance(value, dict):
+                    if "Before" in value and "After" in value and "Requested" in value:
+                        for side in ("Before", "After"):
+                            value[side] = dict(Status=status, Clock=clock, Nanoseconds=0, Resolution=0, Error=error)
+                    for item in value.values():
+                        replace(item)
+            replace(record)
+            self.assertEqual(verify_record(record)["childCpu"][field], 6)
+
+    def test_failed_snapshot_does_not_pass_replay(self):
+        record = with_cpu(failed_record())
+        record["payments"][0]["Observation"]["Raw"]["Cpu"]["Status"] = 7
+        with self.assertRaisesRegex(ValueError, "original service outcome"):
+            verify_record(record)
+        self.assertEqual(record["failure"], "controlled workload failure")
+
+
 class SelectedPaymentAnalysisChecks(unittest.TestCase):
     def cadence_record(self):
         record = valid_record()

@@ -260,6 +260,83 @@ def verify_counters(record, last_cpu, payment_pauses):
             "Final counter does not cover closed source evidence")
 
 
+def verify_child_cpu(record):
+    enabled = record.get("childCpuEnabled", False)
+    require(type(enabled) is bool, "Child CPU activation is not Boolean")
+    seen = {}
+    reading_failures = unsupported = 0
+
+    def visit(value):
+        nonlocal reading_failures, unsupported
+        if isinstance(value, list):
+            for item in value:
+                visit(item)
+        elif isinstance(value, dict):
+            if all(key in value for key in ("Header", "Children", "Status")):
+                cpu = value.get("Cpu")
+                header = value["Header"]
+                if not enabled or header["Visibility"] != 3:
+                    require(cpu is None, "Unexpected child CPU capture")
+                else:
+                    require(cpu is not None, "Retired receipt lost child CPU capture")
+                    require(cpu["Failure"] is None and type(cpu["Status"]) is int and cpu["Status"] == 0,
+                            "Child CPU snapshot failed; retain the original service outcome")
+                    slot, generation = count(cpu["Slot"]), count(cpu["Generation"])
+                    require(slot in (0, 1) and generation == header["Generation"], "Child CPU capture identity differs")
+                    require(count(cpu["Required"]) == len(cpu["Children"]), "Child CPU capture count differs")
+                    children = {child["Ordinal"]: child for child in value["Children"]}
+                    require(len(children) == len(value["Children"]), "CPU service journal has duplicate ordinals")
+                    ordinals = []
+                    key = slot, generation
+                    if key in seen:
+                        require(seen[key] == cpu, "Retired child CPU evidence changed")
+                    fresh = key not in seen
+                    seen[key] = cpu
+                    for observation in cpu["Children"]:
+                        for field in ("Generation", "Command", "Ordinal", "Worker", "CodeVersion", "Site", "Requested"):
+                            count(observation[field])
+                        ordinal = observation["Ordinal"]
+                        require(ordinal in children and ordinal not in ordinals, "Child CPU ordinal is missing or duplicated")
+                        ordinals.append(ordinal)
+                        child = children[ordinal]
+                        require(observation["Generation"] == generation and observation["Command"] == header["Command"]
+                                and observation["Worker"] == (2 if slot == 0 else 1)
+                                and observation["CodeVersion"] == record["binding"]["Generation"] and observation["Site"] == 2
+                                and all(observation[field] == child[field] for field in ("Worker", "CodeVersion", "Site", "Requested")),
+                                "Child CPU observation changed request or owner")
+                        for reading in (observation["Before"], observation["After"]):
+                            counts(reading, signed=("Error",))
+                            status = reading["Status"]
+                            require(status in (0, 1, 2), "Invalid child CPU reading status")
+                            if status == 0:
+                                require(all(reading[field] == 0 for field in ("Clock", "Nanoseconds", "Resolution", "Error")),
+                                        "Unsupported CPU clock contains a measurement")
+                                unsupported += int(fresh)
+                            elif status == 1:
+                                require(reading["Clock"] == 1 and reading["Resolution"] > 0 and reading["Error"] == 0,
+                                        "Observed CPU reading lacks clock metadata")
+                            else:
+                                require(reading["Clock"] == 1 and reading["Error"] != 0
+                                        and reading["Nanoseconds"] == reading["Resolution"] == 0,
+                                        "Failed CPU read lost its error")
+                                reading_failures += int(fresh)
+                        before, after = observation["Before"], observation["After"]
+                        if before["Status"] == after["Status"] == 1:
+                            require(after["Nanoseconds"] >= before["Nanoseconds"], "Child CPU clock regressed")
+                            require(child["Finished"] >= child["Started"] and
+                                    after["Nanoseconds"] - before["Nanoseconds"] <= child["Finished"] - child["Started"],
+                                    "Child CPU exceeds its enclosing wall interval")
+                    require(ordinals == sorted(ordinals), "Child CPU order differs")
+                    require(all((child["Waited"] == 0 and child["WaitStatus"] == 0) or ordinal in ordinals for ordinal, child in children.items()),
+                            "Measured wait lost child CPU evidence")
+            for key, item in value.items():
+                if key != "Cpu":
+                    visit(item)
+
+    visit(record)
+    return dict(enabled=enabled, generations=len(seen), failedReadings=reading_failures, unsupportedReadings=unsupported)
+
+
 def verify_record(record):
     require(type(record["schemaVersion"]) is int and record["schemaVersion"] in (3, 4), "Expected schema version 3 or 4")
     require(count(record["timestampFrequency"]) > 0, "Managed timestamp frequency is zero")
@@ -277,6 +354,7 @@ def verify_record(record):
     payment_pauses = verify_pauses(record)
     verify_cadence(record)
     verify_pause_timing(record)
+    child_cpu = verify_child_cpu(record)
     for key in ("selectedPeak", "peerPeak", "finalDebt"):
         debt = record[key]
         require(not record["passed"] or key == "finalDebt" and not record["completed"] or debt is not None,
@@ -375,7 +453,7 @@ def verify_record(record):
                 and record["pauses"][-1]["Resumed"] is None, "Expected selected invalidation was not verified")
     return dict(samples=len(record["sourceSamples"]), credit=credit, paid=paid, selectedPaid=selected_paid,
                 selectedPayments=len(record["selectedPayments"]), pauses=len(record["pauses"]),
-                completed=record["completed"], casePassed=record["passed"])
+                completed=record["completed"], casePassed=record["passed"], childCpu=child_cpu)
 
 
 def verify_case(record, name):

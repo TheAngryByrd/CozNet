@@ -40,6 +40,32 @@ typedef struct {
     int64_t transport_error;
     uint64_t may_have_delivery, captured_ns;
 } CozCooperativeSnapshot;
+enum CozCooperativeCpuStatus {
+    COZ_COOPERATIVE_CPU_UNSUPPORTED = 0,
+    COZ_COOPERATIVE_CPU_OBSERVED = 1,
+    COZ_COOPERATIVE_CPU_FAILED = 2
+};
+
+enum CozCooperativeCpuClock {
+    COZ_COOPERATIVE_CPU_CLOCK_NONE = 0,
+    COZ_COOPERATIVE_CPU_CLOCK_LINUX_THREAD = 1
+};
+
+typedef struct {
+    uint64_t status, clock, nanoseconds, resolution;
+    int64_t error;
+} CozCooperativeCpuReading;
+
+typedef struct {
+    uint64_t generation, command, ordinal, worker, code_version, site, requested;
+    CozCooperativeCpuReading before, after;
+} CozCooperativeCpuChild;
+
+COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_register_cpu(CozCooperativeSession* session,
+    uint32_t slot, uint64_t worker, uint64_t site);
+COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_cpu_snapshot(CozCooperativeSession* session,
+    uint32_t slot, uint64_t generation, CozCooperativeCpuChild* children, uint32_t capacity, uint32_t* required);
+
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_open(uint64_t code_version, uint32_t targets, uint32_t capacity, CozCooperativeSession** session);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_register(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_poll(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t code_version, uint64_t site, uint32_t* result);

@@ -1,5 +1,6 @@
 #include "CooperativeSpinTiming.h"
 #include <limits>
+#include <cerrno>
 #if defined(_WIN32)
 #define NOMINMAX
 #include <windows.h>
@@ -28,6 +29,29 @@ uint64_t CooperativeSpinTiming::now() noexcept {
 #endif
     if (seconds > (std::numeric_limits<uint64_t>::max() - fraction) / billion) return 0;
     return seconds * billion + fraction;
+}
+
+CooperativeCpuReading CooperativeSpinTiming::cpu() noexcept {
+#if defined(__linux__)
+    timespec value{}, resolution{};
+    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &value) != 0
+        || clock_getres(CLOCK_THREAD_CPUTIME_ID, &resolution) != 0)
+        return {CooperativeCpuStatus::failed, CooperativeCpuClock::linux_thread, 0, 0, errno};
+    const auto convert = [](timespec input) -> std::optional<uint64_t> {
+        constexpr uint64_t billion = 1000000000;
+        if (input.tv_sec < 0 || input.tv_nsec < 0 || input.tv_nsec >= static_cast<long>(billion)) return std::nullopt;
+        const auto seconds = static_cast<uint64_t>(input.tv_sec);
+        const auto fraction = static_cast<uint64_t>(input.tv_nsec);
+        if (seconds > (std::numeric_limits<uint64_t>::max() - fraction) / billion) return std::nullopt;
+        return seconds * billion + fraction;
+    };
+    const auto cpu = convert(value), precision = convert(resolution);
+    if (!cpu || !precision || *precision == 0)
+        return {CooperativeCpuStatus::failed, CooperativeCpuClock::linux_thread, 0, 0, EOVERFLOW};
+    return {CooperativeCpuStatus::observed, CooperativeCpuClock::linux_thread, *cpu, *precision, 0};
+#else
+    return {};
+#endif
 }
 
 TargetWaitStatus CooperativeSpinTiming::wait(uint64_t requested) noexcept {

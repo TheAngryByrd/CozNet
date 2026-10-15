@@ -106,6 +106,37 @@ They avoid arbitrary signal intervention at that point but require adequate cove
 The [IL rewriting decision](coz-port-and-il-rewriting.md) describes those limits.
 Neither local settlement nor bounded polling establishes physical prediction accuracy.
 
+## Cooperative waits under CPU contention
+
+A separate native diagnostic calls the actual `CooperativeSpinTiming.wait` implementation without the CLR.
+It requests 50 microseconds per call and pins the target to one available guest CPU.
+Four blocks compare the target alone with two competing threads on that same CPU.
+Each case records 10,000 measured calls after 1,000 warmup calls.
+
+All eight cases passed the diagnostic clock and record checks.
+The contended cases retained 204 waits above 5 ms across 40,000 calls.
+Every long observation bracket also recorded an involuntary context switch.
+The four cases alone retained no wait above 5 ms.
+The largest contended wait was 43.558 ms, while the largest wait alone was 0.555 ms.
+
+The median thread-CPU delta among long waits was 55 to 67 microseconds within each contended case.
+The full retained range was 24.2 microseconds to 10.265 ms.
+CPU and context-switch readings bracket the wait and include observation work.
+They do not locate a context switch inside the exact wait interval or establish calibrated clock accuracy.
+
+The seeded order placed contention first in every block, so order and time drift remain confounded.
+The diagnostic ran on Linux x64 under WSL2. It does not establish another platform's scheduling behavior.
+The non-Linux diagnostic branch reports an unsupported CPU/affinity backend.
+
+These records show that the native wait can exceed the service limit without CLR execution.
+They do not explain the earlier managed failure, which lacks matching thread-CPU and scheduler observations.
+A completed spin-wait call also does not imply a valid service child: the lease applies the separate 5 ms limit.
+No limit or payment clock changes follow from this diagnostic.
+
+The next live diagnostic needs bounded per-child CPU observations tied to the existing request identity.
+It must preserve unsupported capability, read failures, overflow, and the original service failure.
+See [the native wait evidence](../../reliability/features/native-signal/cooperative-wait-cpu.md).
+
 ## Primary sources
 
 [1] [Native Coz sampler setup](https://github.com/plasma-umass/coz/blob/256e3c389424d6a1691ee5d18b5ecb5a6c1001ec/libcoz/profiler.cpp#L598-L623).
@@ -123,3 +154,23 @@ Neither local settlement nor bounded polling establishes physical prediction acc
 [7] [Native Coz experiment result handling](https://github.com/plasma-umass/coz/blob/256e3c389424d6a1691ee5d18b5ecb5a6c1001ec/libcoz/profiler.cpp#L359-L477).
 
 [8] [JCoz experiment completion and result handling](https://github.com/ByteLab-David/JCoz/blob/1df02b0f6e319bd7df05ba5451b1814791d1849f/src/native/profiler.cc#L198-L257).
+
+
+## Owner CPU observations in the managed path
+
+The optional child CPU capture now runs in the native cooperative path.
+It retains failed waits without changing wall-time payment or service bounds.
+The first fixed-work managed capture completed 10,000 treatment batches.
+It retained 274 peer waits and 24 selected waits with no CPU read failure or clock-consistency rejection.
+The longest peer wait was 68.191 microseconds. The longest selected wait was 0.401 microseconds.
+This capture did not reproduce the earlier millisecond overrun.
+It does not establish sustained capacity or identify the cause of that failure.
+
+See [the retained contract and capture evidence](../../reliability/features/native-signal/cooperative-child-cpu.md)
+and [the capture procedure](../How_Tos/run-bound-selected-payment.md#capture-child-cpu-observations).
+
+
+A second capture used the original 50,000-batch workload length with CPU diagnostics enabled.
+Treatment completed with 1,469 peer waits and 108 selected waits.
+The longest handler interval was 234,747 ns, below the unchanged 5 ms limit.
+All three cases passed replay. The earlier failure remains unexplained.

@@ -27,6 +27,16 @@ public:
     std::atomic<bool> broken{}, hold{}, entered{}, resume{};
     std::atomic<TargetWaitStatus> outcome{TargetWaitStatus::completed};
     std::function<void()> duringWait;
+    uint64_t cpuCalls{}, cpuCost{};
+    CooperativeCpuStatus cpuStatus{CooperativeCpuStatus::observed};
+    CooperativeCpuReading cpu() noexcept override {
+        ++cpuCalls;
+        clock.fetch_add(cpuCost);
+        if (cpuStatus == CooperativeCpuStatus::unsupported) return {};
+        if (cpuStatus == CooperativeCpuStatus::failed)
+            return {cpuStatus, CooperativeCpuClock::linux_thread, 0, 0, 7};
+        return {cpuStatus, CooperativeCpuClock::linux_thread, cpuCalls * 100, 1, 0};
+    }
     uint64_t now() noexcept override {
         if (broken.load()) return 0;
         const auto value = clock.fetch_add(100);
@@ -51,11 +61,11 @@ public:
     std::shared_ptr<CooperativeCodeLifetime> code = std::make_shared<CooperativeCodeLifetime>(site());
     std::unique_ptr<CooperativeTarget> target;
     const std::thread::id controller = std::this_thread::get_id();
-    Worker() {
+    explicit Worker(bool observeCpu = false) {
         std::promise<std::unique_ptr<CooperativeTarget>> registration;
         auto registered = registration.get_future();
-        thread = std::thread([this, registration = std::move(registration)]() mutable {
-            registration.set_value(CooperativeTarget::registerCurrentThread(site(), code, controller, 4, timing));
+        thread = std::thread([this, observeCpu, registration = std::move(registration)]() mutable {
+            registration.set_value(CooperativeTarget::registerCurrentThread(site(), code, controller, 4, timing, observeCpu));
             for (;;) {
                 std::function<void()> task;
                 {
@@ -234,7 +244,82 @@ static void interruptedAndFailedWaitsKeepDistinctAccounting() {
         require(worker.target->release(*generation) && worker.run([&] { return worker.target->retire(); }), 45);
     }
 }
+static void cpuObservationsPreserveServiceAndOwnership() {
+    for (int mode = 0; mode < 7; ++mode) {
+        Worker worker(mode != 0);
+        if (mode == 2) worker.timing.cpuStatus = CooperativeCpuStatus::unsupported;
+        if (mode == 3) worker.timing.cpuStatus = CooperativeCpuStatus::failed;
+        if (mode == 4) worker.timing.outcome.store(TargetWaitStatus::failed);
+        if (mode == 5) worker.timing.cpuCost = 3000000;
+        if (mode == 6) worker.timing.zeroAt.store(1200);
+        const auto generation = worker.target->submit(42, 50000);
+        require(generation.has_value(), 70);
+        std::array<CooperativeCpuChild, 4> observations{};
+        require(!worker.target->cpuSnapshot(*generation, observations), 71);
+        const auto outcome = worker.run([&] { return worker.target->poll(site()); });
+        require(outcome == (mode >= 4 ? CooperativePollResult::failed : CooperativePollResult::serviced), 72);
+        require(!worker.run([&] { return worker.target->cpuSnapshot(*generation, observations).has_value(); }), 73);
+        const auto count = worker.target->cpuSnapshot(*generation, observations);
+        if (mode == 0) {
+            require(!count && worker.timing.cpuCalls == 0, 74);
+        } else {
+            require(count && *count == 1 && worker.timing.cpuCalls == 2, 75);
+            const auto& child = observations[0];
+            require(child.generation == *generation && child.command == 42 && child.ordinal == 1
+                && child.worker == 1 && child.code_version == 2 && child.site == 3 && child.requested == 50000, 76);
+            require(child.before.status == worker.timing.cpuStatus && child.after.status == worker.timing.cpuStatus, 77);
+            if (mode == 3) require(child.before.error == 7 && child.after.error == 7, 78);
+            if (mode != 2 && mode != 3) require(child.before.nanoseconds == 100 && child.after.nanoseconds == 200, 79);
+            observations[0].command = 999;
+            require(worker.target->cpuSnapshot(*generation, {}) == 1 && observations[0].command == 999, 80);
+        }
+        require(!worker.target->release(*generation), 81);
+        std::array<TargetLeaseChild, 4> children{};
+        const auto snapshot = read(worker, *generation, children);
+        require(children[0].waited == (mode == 6 ? 0ULL : 50100ULL) && snapshot.measured == (mode >= 4 ? 0ULL : 50100ULL), 82);
+        if (mode == 5) require(snapshot.error == TargetLeaseError::handler_bound, 83);
+        require(worker.target->release(*generation) && !worker.target->cpuSnapshot(*generation, observations), 84);
+        const auto next = worker.target->submit(43, 50000);
+        require(next && *next != *generation && worker.target->cancel(*next), 85);
+        require(worker.run([&] { return worker.target->poll(site()); }) == CooperativePollResult::serviced, 86);
+        if (mode != 0) require(worker.target->cpuSnapshot(*next, observations) == 0, 87);
+        read(worker, *next, children);
+        require(worker.target->release(*next) && worker.run([&] { return worker.target->retire(); }), 88);
+    }
+}
+
+static void cpuJournalRetainsBoundedChildren() {
+    Worker worker(true);
+    const auto generation = worker.target->submit(51, 2000000);
+    require(generation.has_value(), 90);
+    std::array<CooperativeCpuChild, 4> observations{};
+    for (std::size_t index = 0; index < observations.size(); ++index) {
+        require(!worker.target->cpuSnapshot(*generation, observations), 91);
+        const auto outcome = worker.run([&] { return worker.target->poll(site()); });
+        require(outcome == (index == 3 ? CooperativePollResult::failed : CooperativePollResult::serviced), 92);
+    }
+    require(worker.target->cpuSnapshot(*generation, observations) == 4, 93);
+    for (std::size_t index = 0; index < observations.size(); ++index) {
+        const auto& child = observations[index];
+        require(child.generation == *generation && child.command == 51 && child.ordinal == index + 1
+            && child.before.nanoseconds == (index * 2 + 1) * 100
+            && child.after.nanoseconds == (index * 2 + 2) * 100, 94);
+    }
+    std::array<TargetLeaseChild, 4> children{};
+    const auto snapshot = read(worker, *generation, children);
+    require(snapshot.error == TargetLeaseError::journal_full && snapshot.children == 4, 95);
+    require(worker.target->release(*generation), 96);
+    const auto next = worker.target->submit(52, 1);
+    require(next && worker.run([&] { return worker.target->poll(site()); }) == CooperativePollResult::serviced, 97);
+    require(worker.target->cpuSnapshot(*next, observations) == 1 && observations[0].generation == *next
+        && observations[0].command == 52 && observations[0].ordinal == 1 && observations[0].before.nanoseconds == 900, 98);
+    read(worker, *next, children);
+    require(worker.target->release(*next) && worker.run([&] { return worker.target->retire(); }), 99);
+}
+
 int main() {
+    cpuJournalRetainsBoundedChildren();
+    cpuObservationsPreserveServiceAndOwnership();
     registrationAndRoleChecks();
     finiteChildrenAndGenerationReuse();
     revocationCannotPassExecutingChild();

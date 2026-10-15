@@ -61,6 +61,7 @@ static class CooperativeManagedChecks
 
     public static void Run()
     {
+        CpuDiagnosticsPreserveFailedReceipts();
         SiteIdentityAndLayouts();
         FirstReceiptsAndImmutablePrefixes();
         FailedReceiptsRemainFailed();
@@ -68,6 +69,20 @@ static class CooperativeManagedChecks
         DeferralCancellationAndFailure();
         InvalidPaymentKeepsReservation();
     }
+    private static void CpuDiagnosticsPreserveFailedReceipts()
+    {
+        var children = Children(50000);
+        var header = Header(3, 1, children);
+        var cpu = new CooperativeCpuCapture(0, 1, null, 0, Array.Empty<CooperativeNativeCpuChild>(), "controlled CPU capture failure");
+        var tracker = Tracker();
+        Reject(() => tracker.Observe(header, children, new(2, 0), cpu: cpu), "CPU evidence repaired a failed receipt.");
+        Require(tracker.FirstFailure is { } failed && failed.Clock.Status == 2 && ReferenceEquals(failed.Cpu, cpu),
+            "The original receipt failure or its CPU diagnostic was replaced.");
+        var accepted = Tracker().Observe(header, children, new(0, header.Captured + 1), cpu: cpu);
+        Require(ReferenceEquals(accepted.Raw.Cpu, cpu) && accepted.Received.Count == 1,
+            "A diagnostic failure replaced successful receipt evidence.");
+    }
+
     private static void SiteIdentityAndLayouts()
     {
         NativeCooperativeClient.VerifyLayout();

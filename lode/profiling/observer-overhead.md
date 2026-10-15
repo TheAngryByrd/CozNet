@@ -111,3 +111,14 @@ It still fails a later selected child at 6.292 ms against the unchanged 5 ms han
 All three records pass replay. Zero speedup and expected invalidation pass.
 Preparation does not establish stable capacity or prediction accuracy.
 See [preparation evidence](../../reliability/features/native-signal/validation-preparation.md).
+
+## Native wait contention diagnostic
+
+The isolated real-spin capture `artifacts/cooperative-wait-cpu/20261015T195655436` retains four two-mode blocks and 80,000 wait observations.
+All diagnostic consistency checks pass. The contended cases retain 204 waits above 5 ms; the cases alone retain none.
+Every long observation bracket records an involuntary context switch. Long-wait CPU deltas include a 10.265 ms outlier.
+The CPU and switch brackets include diagnostic work, and all contended cases ran first within their blocks.
+This establishes neither calibrated clocks nor the cause of the earlier managed failure.
+The next integration needs bounded per-child observations through the existing timing seam, with explicit unsupported and failure states.
+Payment semantics and all bounds remain unchanged.
+See [native wait evidence](../../reliability/features/native-signal/cooperative-wait-cpu.md).

@@ -96,3 +96,43 @@ Native capture alone does not establish managed receipt, sampled capacity, or ph
 The internal managed client uses this ABI. No injected CLR probe binding uses it yet.
 Code revocation excludes guarded transport work only. Actual CLR code lifetime and probe provenance remain host responsibilities.
 See the [transport contract](cooperative-target.md) for shutdown and lifetime limits.
+
+## Optional child CPU API
+
+`coz_cooperative_register_cpu` has the same inputs and ownership rules as `register`.
+It enables a separate diagnostic journal for that slot.
+Existing registration and the two 88-byte record layouts remain unchanged.
+The internal managed client enables this capability with `observeCpu = true`.
+
+`coz_cooperative_cpu_snapshot(session, slot, generation, children, capacity, required)` copies diagnostics after mailbox quiescence.
+It requires the controller thread and an outstanding generation registered with CPU capture.
+An active generation returns `BUSY`. Disabled capture or a stale generation returns `INVALID`.
+A short buffer returns `BUFFER`, sets `required`, and writes no child records.
+A successful diagnostic copy does not authorize release.
+Copy the original service snapshot before release, even when the service failed.
+
+`CozCooperativeCpuChild` is 136 bytes.
+Its first seven unsigned 64-bit fields are generation, command, ordinal, worker, code version, site, and requested duration.
+Its two 40-byte readings are `before` and `after`.
+Each reading contains unsigned 64-bit status, clock identity, nanoseconds, and resolution, followed by a signed 64-bit error.
+Status values are `unsupported = 0`, `observed = 1`, and `failed = 2`.
+Clock values are `none = 0` and `linux_thread = 1`.
+Only `observed` readings contain CPU values. A zero value with another status is not a CPU measurement.
+
+Linux reads `CLOCK_THREAD_CPUTIME_ID` and its reported resolution on the owner thread.
+A failed native query retains its error number.
+Invalid or overflowing clock conversion records `EOVERFLOW`.
+Windows and other platforms currently report unsupported CPU capture.
+This status does not disable the existing wall-clock wait.
+
+The [target contract](cooperative-target.md#optional-child-cpu-observations) defines diagnostic retention and timing effects.
+The internal client attaches `Cpu` to retired raw receipts and cleanup copies.
+Active receipts and disabled capture use `null`.
+A capture records slot, generation, native status, required count, raw children, and a separate capture failure.
+The client reads the receipt upper clock before CPU capture.
+Diagnostic copy time still contributes to the broader managed receipt interval.
+Capture errors do not replace the original service result.
+Selected-payment replay checks these records when `childCpuEnabled` is true.
+It rejects missing records, changed identities, regressing CPU clocks, and CPU deltas beyond the enclosing child wall interval.
+Explicit failed or unsupported readings remain unavailable measurements and receive separate summary counts.
+These checks assume exact clock accounting. They do not establish calibrated accuracy.

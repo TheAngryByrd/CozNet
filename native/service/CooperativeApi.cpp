@@ -5,6 +5,8 @@
 #include <mutex>
 
 using namespace coz::service;
+static_assert(sizeof(CozCooperativeCpuReading) == 40);
+static_assert(sizeof(CozCooperativeCpuChild) == 136 && offsetof(CozCooperativeCpuChild, after) == 96);
 static_assert(sizeof(CozCooperativeChild) == 88 && offsetof(CozCooperativeChild, valid) == 80);
 static_assert(sizeof(CozCooperativeSnapshot) == 88 && offsetof(CozCooperativeSnapshot, captured_ns) == 80);
 static_assert(static_cast<uint32_t>(CooperativePollResult::idle) == COZ_COOPERATIVE_IDLE
@@ -15,6 +17,7 @@ namespace {
 struct Slot {
     std::unique_ptr<CooperativeTarget> target;
     std::vector<TargetLeaseChild> copy;
+    std::vector<CooperativeCpuChild> cpu_copy;
     std::thread::id owner;
     uint32_t generation{};
     bool copied_retired{};
@@ -74,7 +77,7 @@ int32_t COZ_COOPERATIVE_CALL coz_cooperative_open(uint64_t version, uint32_t tar
         return COZ_COOPERATIVE_OK;
     });
 }
-int32_t COZ_COOPERATIVE_CALL coz_cooperative_register(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site) {
+static int32_t registerTarget(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site, bool observeCpu) {
     return translated([&]() -> int32_t {
         std::unique_lock lock(api_gate);
         if (!session || session != active.get()) return COZ_COOPERATIVE_INVALID;
@@ -83,13 +86,46 @@ int32_t COZ_COOPERATIVE_CALL coz_cooperative_register(CozCooperativeSession* ses
         auto* value = get(*session, slot);
         if (!value || !identity) return COZ_COOPERATIVE_INVALID;
         if (value->target) return COZ_COOPERATIVE_BUSY;
-        auto target = CooperativeTarget::registerCurrentThread(*identity, session->code, session->controller, value->copy.size(), session->timing);
+        auto target = CooperativeTarget::registerCurrentThread(*identity, session->code, session->controller, value->copy.size(), session->timing, observeCpu);
         if (!target) return COZ_COOPERATIVE_BUSY;
+        if (observeCpu) value->cpu_copy.resize(value->copy.size());
         value->owner = std::this_thread::get_id();
         value->target = std::move(target);
         return COZ_COOPERATIVE_OK;
     });
 }
+int32_t COZ_COOPERATIVE_CALL coz_cooperative_register(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site) {
+    return registerTarget(session, slot, worker, site, false);
+}
+
+int32_t COZ_COOPERATIVE_CALL coz_cooperative_register_cpu(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site) {
+    return registerTarget(session, slot, worker, site, true);
+}
+
+int32_t COZ_COOPERATIVE_CALL coz_cooperative_cpu_snapshot(CozCooperativeSession* session,
+    uint32_t slot, uint64_t generation, CozCooperativeCpuChild* children, uint32_t capacity, uint32_t* required) {
+    if (!required || (capacity != 0 && !children) || capacity > 100000) return COZ_COOPERATIVE_INVALID;
+    *required = 0;
+    return access(session, true, [&](CozCooperativeSession& value) -> int32_t {
+        auto* target = request(value, slot, generation);
+        if (!target || target->cpu_copy.empty()) return COZ_COOPERATIVE_INVALID;
+        const auto count = target->target->cpuSnapshot(target->generation, target->cpu_copy);
+        if (!count) return COZ_COOPERATIVE_BUSY;
+        *required = static_cast<uint32_t>(*count);
+        if (*count > capacity) return COZ_COOPERATIVE_BUFFER;
+        const auto reading = [](const CooperativeCpuReading& input) -> CozCooperativeCpuReading {
+            return {static_cast<uint64_t>(input.status), static_cast<uint64_t>(input.clock),
+                input.nanoseconds, input.resolution, input.error};
+        };
+        for (std::size_t index = 0; index < *count; ++index) {
+            const auto& child = target->cpu_copy[index];
+            children[index] = {child.generation, child.command, child.ordinal, child.worker,
+                child.code_version, child.site, child.requested, reading(child.before), reading(child.after)};
+        }
+        return COZ_COOPERATIVE_OK;
+    });
+}
+
 int32_t COZ_COOPERATIVE_CALL coz_cooperative_poll(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t version, uint64_t site, uint32_t* result) {
     if (!result) return COZ_COOPERATIVE_INVALID;
     *result = static_cast<uint32_t>(CooperativePollResult::rejected);

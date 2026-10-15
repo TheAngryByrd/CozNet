@@ -95,6 +95,9 @@ public:
     public:
         bool shouldWait() const noexcept { return wait_; }
         uint64_t requested() const noexcept { return requested_; }
+        uint64_t generation() const noexcept { return generation_; }
+        uint64_t command() const noexcept { return command_; }
+        uint64_t ordinal() const noexcept { return ordinal_; }
     private:
         friend class TargetLease;
         Admission(const TargetLease* owner, const TargetLeasePlan& plan, uint64_t ordinal, uint64_t requested, bool wait) noexcept

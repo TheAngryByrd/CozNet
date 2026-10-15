@@ -1,6 +1,7 @@
 #include "CooperativeTarget.h"
 #include "TimerJournalSnapshot.h"
 #include <mutex>
+#include <algorithm>
 
 namespace coz::service {
 bool CooperativeCodeLifetime::tryRevoke() {
@@ -11,18 +12,18 @@ bool CooperativeCodeLifetime::tryRevoke() {
 }
 
 CooperativeTarget::CooperativeTarget(CooperativePollSite site, std::shared_ptr<CooperativeCodeLifetime> code,
-    std::thread::id controller, std::size_t capacity, CooperativeTiming& timing)
+    std::thread::id controller, std::size_t capacity, CooperativeTiming& timing, bool observeCpu)
     : site_(site), code_(std::move(code)), controller_(controller), owner_(std::this_thread::get_id()),
-      timing_(timing), journal_(capacity) {}
+      timing_(timing), journal_(capacity), observe_cpu_(observeCpu), cpu_journal_(observeCpu ? capacity : 0) {}
 
 std::unique_ptr<CooperativeTarget> CooperativeTarget::registerCurrentThread(CooperativePollSite site,
     std::shared_ptr<CooperativeCodeLifetime> code, std::thread::id controller,
-    std::size_t capacity, CooperativeTiming& timing) {
+    std::size_t capacity, CooperativeTiming& timing, bool observeCpu) {
     if (!code || controller == std::thread::id{} || controller == std::this_thread::get_id()
         || capacity == 0 || capacity > 100000 || code->version_ != site.codeVersion()) return nullptr;
     std::shared_lock guard(code->gate_);
     if (!code->active_) return nullptr;
-    return std::unique_ptr<CooperativeTarget>(new CooperativeTarget(site, code, controller, capacity, timing));
+    return std::unique_ptr<CooperativeTarget>(new CooperativeTarget(site, code, controller, capacity, timing, observeCpu));
 }
 
 std::optional<uint32_t> CooperativeTarget::submit(uint64_t command, uint64_t budget) {
@@ -39,6 +40,7 @@ std::optional<uint32_t> CooperativeTarget::submit(uint64_t command, uint64_t bud
         mailbox_.abandonConfiguration(*submission);
         return std::nullopt;
     }
+    cpu_count_ = 0;
     observed_retired_ = false;
     outstanding_.store(submission->generation(), std::memory_order_release);
     if (!mailbox_.publish(*submission)) return std::nullopt;
@@ -77,6 +79,12 @@ CooperativePollResult CooperativeTarget::poll(CooperativePollSite observed) {
     uint64_t waited = 0;
     auto status = TargetWaitStatus::completed;
     if (admission->shouldWait()) {
+        CooperativeCpuChild* observation = nullptr;
+        if (observe_cpu_) {
+            observation = &cpu_journal_[cpu_count_++];
+            *observation = {admission->generation(), admission->command(), admission->ordinal(),
+                observed.worker(), observed.codeVersion(), observed.site(), admission->requested(), timing_.cpu(), {}};
+        }
         const auto before = timing_.now();
         if (before == 0) status = TargetWaitStatus::failed;
         else {
@@ -85,6 +93,7 @@ CooperativePollResult CooperativeTarget::poll(CooperativePollSite observed) {
             if (after == 0 || after < before) status = TargetWaitStatus::failed;
             else waited = after - before;
         }
+        if (observation) observation->after = timing_.cpu();
     }
     const auto completion = lease_->prepare(*admission, waited, status, cancelled());
     if (!completion) return CooperativePollResult::failed;
@@ -108,6 +117,17 @@ std::optional<TargetLeaseSnapshot> CooperativeTarget::snapshot(uint32_t generati
     if (result && result->visibility == TargetLeaseVisibility::retired) observed_retired_ = true;
     return result;
 }
+std::optional<std::size_t> CooperativeTarget::cpuSnapshot(uint32_t generation,
+    std::span<CooperativeCpuChild> destination) noexcept {
+    if (!controller() || !observe_cpu_ || generation == 0
+        || outstanding_.load(std::memory_order_acquire) != generation) return std::nullopt;
+    auto reader = mailbox_.read(generation);
+    if (!reader || !reader->quiescent()) return std::nullopt;
+    if (destination.size() >= cpu_count_)
+        std::copy_n(cpu_journal_.begin(), cpu_count_, destination.begin());
+    return cpu_count_;
+}
+
 bool CooperativeTarget::release(uint32_t generation) noexcept {
     if (!controller() || generation == 0 || outstanding_.load(std::memory_order_acquire) != generation
         || !observed_retired_) return false;

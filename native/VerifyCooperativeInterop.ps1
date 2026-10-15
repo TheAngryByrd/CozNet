@@ -116,7 +116,7 @@ elseif ($ProbeIdentity) {
     })
 }
 elseif ($Injected) { @(1, 64, 256, 1024 | ForEach-Object { @{ mode = 'injected-paid'; interval = $_; name = "injected-$_" } }) }
-else { @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'active-cleanup', 'diagnostic' | ForEach-Object { @{ mode = $_; interval = 0; name = $_ } }) }
+else { @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'active-cleanup', 'diagnostic', 'cpu' | ForEach-Object { @{ mode = $_; interval = 0; name = $_ } }) }
 foreach ($case in $cases) {
     $mode = $case.mode
     $name = $case.name

@@ -40,10 +40,11 @@ static class CooperativeInteropChecks
     }
     public static int Run(string path, string mode, string library)
     {
-        if (mode is not ("paid" or "deferred" or "cancelled" or "late" or "clock-failure" or "active-cleanup" or "injected-paid" or "diagnostic"))
-            throw new ArgumentException("Select paid, deferred, cancelled, late, clock-failure, active-cleanup, injected-paid, or diagnostic.");
+        if (mode is not ("paid" or "deferred" or "cancelled" or "late" or "clock-failure" or "active-cleanup" or "injected-paid" or "diagnostic" or "cpu"))
+            throw new ArgumentException("Select paid, deferred, cancelled, late, clock-failure, active-cleanup, injected-paid, diagnostic, or cpu.");
         bool injected = mode == "injected-paid";
-        bool pays = mode is "paid" or "injected-paid" or "diagnostic";
+        bool diagnostic = mode is "diagnostic" or "cpu";
+        bool pays = mode is "paid" or "injected-paid" or "diagnostic" or "cpu";
         ProbePlan? plan = injected ? ProbePlan.Parse("injected", Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL")) : null;
         var injectedPayments = new List<InjectedPayment>();
         NativeLibrary.SetDllImportResolver(typeof(CooperativeNativeMethods).Assembly,
@@ -61,7 +62,7 @@ static class CooperativeInteropChecks
         var cleanupFailures = new List<string>();
         try
         {
-            client = new(2, capacity: 8);
+            client = new(2, capacity: 8, observeCpu: mode == "cpu");
             worker = new();
             registered = true;
             worker.Run(() => client.RegisterCurrentThread(0, Site));
@@ -79,7 +80,7 @@ static class CooperativeInteropChecks
                 });
             var fixture = Reserve(100000);
             ulong generation = client.Submit(0, 7, 50000);
-            if (mode == "diagnostic")
+            if (diagnostic)
             {
                 activeDiagnostic = client.CaptureDiagnostic(0);
                 Require(activeDiagnostic.Status == 0 && activeDiagnostic.Header.Visibility == 0
@@ -124,7 +125,7 @@ static class CooperativeInteropChecks
                 var header = client.Probe(0);
                 Require(header.Visibility == 3 && header.Children == 1 && header.Error == 0,
                     "The controlled cooperative child did not produce a valid retired journal.");
-                if (mode == "diagnostic")
+                if (diagnostic)
                 {
                     retiredDiagnostic = client.CaptureDiagnostic(0);
                     Require(retiredDiagnostic.Status == 0 && retiredDiagnostic.Header.Visibility == 3
@@ -176,6 +177,23 @@ static class CooperativeInteropChecks
                 var oldFailure = oldTracker.FirstFailure;
                 client.ReleaseAfterRetiredCopy(0);
                 firstCleanup = client.LastCleanup ?? throw new InvalidDataException("The first cleanup capture is missing.");
+            if (mode == "cpu")
+            {
+                Require(activeDiagnostic!.Cpu is null, "An active request has a retired CPU snapshot.");
+                var cpu = firstRaw!.Cpu ?? throw new InvalidDataException("The retired receipt lost its CPU capture.");
+                Require(cpu.Slot == 0 && cpu.Generation == generation && cpu.Status == 0 && cpu.Failure is null
+                    && cpu.Required == 1 && cpu.Children.Count == 1, "CPU capture identity or count differs.");
+                var child = cpu.Children[0];
+                Require(child.Generation == generation && child.Command == 7 && child.Ordinal == 1
+                    && child.Worker == Site.Worker && child.CodeVersion == Site.CodeVersion && child.Site == Site.Site
+                    && child.Requested == 50000, "CPU child identity differs from its service request.");
+                ulong expectedStatus = OperatingSystem.IsLinux() ? 1UL : 0UL;
+                Require(child.Before.Status == expectedStatus && child.After.Status == expectedStatus,
+                    "The CPU clock capability differs from the platform contract.");
+                Require(firstCleanup.Cpu is { Status: 0 } cleaned && cleaned.Children.SequenceEqual(cpu.Children)
+                    && retiredDiagnostic!.Cpu is { Status: 0 } captured && captured.Children.SequenceEqual(cpu.Children),
+                    "Cleanup or diagnostic capture changed CPU observations.");
+            }
                 Require(firstCleanup is { Status: 0 } && firstCleanup.Header.Generation == generation
                     && firstCleanup.Header.Children == (ulong)firstCleanup.Children.Count
                     && firstCleanup.Children.SequenceEqual(firstRaw!.Children), "Cleanup did not retain the complete first journal.");
@@ -199,7 +217,12 @@ static class CooperativeInteropChecks
                     && ReferenceEquals(oldFailure, oldTracker.FirstFailure)
                     && firstCleanup.Children.SequenceEqual(firstRaw.Children);
                 Require(reuseVerified, "A new independent lease did not reset receipt tracking or preserve the old evidence.");
-                if (mode == "diagnostic")
+            if (mode == "cpu")
+                Require(nextObservation.Raw.Cpu is { Status: 0, Required: 1 } nextCpu && nextCpu.Generation == nextGeneration
+                    && nextCpu.Children.Count == 1 && nextCpu.Children[0].Generation == nextGeneration
+                    && nextCpu.Children[0].Command == 8 && nextCpu.Children[0].Ordinal == 1,
+                    "A reused generation retained stale CPU records.");
+                if (diagnostic)
                     Require(activeDiagnostic!.Header.Visibility == 0 && activeDiagnostic.Children.Count == 0
                         && retiredDiagnostic!.Header.Generation == generation
                         && retiredDiagnostic.Children.SequenceEqual(firstCleanup.Children),

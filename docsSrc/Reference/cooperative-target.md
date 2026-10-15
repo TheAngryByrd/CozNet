@@ -70,7 +70,7 @@ Cancellation alone does not complete ownership. There is no controller-only forc
 
 `now()` returns nonzero monotonic nanoseconds from one clock domain for controller and owner calls.
 The timing adapter must support concurrent clock reads.
-`wait(requested)` returns completed, interrupted, or failed status. Both timing hooks must be nonthrowing and finite.
+`wait(requested)` returns completed, interrupted, or failed status. All timing hooks must be nonthrowing and finite.
 They must not reenter lifetime revocation or other transport operations. Recursive `poll` is explicitly rejected.
 The transport measures elapsed wait itself and keeps invalid evidence separate from accepted payment.
 A zero clock reading immediately before a wait prevents that wait and records a failed child with zero payment.
@@ -86,3 +86,33 @@ A .NET adapter must retain those checks when it connects this transport to sampl
 
 The [contract evidence](../../reliability/features/native-signal/cooperative-target.md) uses real worker threads and controlled clocks on Windows and Linux.
 It does not establish live intervention capacity, overhead, general CLR safety, or prediction accuracy.
+
+## Optional child CPU observations
+
+`registerCurrentThread(..., observeCpu = true)` allocates a separate diagnostic journal before polling starts.
+The default is `false` and performs no CPU query.
+`CooperativeTiming.cpu()` returns a raw observation with status, clock identity, nanoseconds, resolution, and native error.
+The default hook reports unsupported capability.
+
+The owner reads this hook before and after each admitted wait attempt.
+These reads lie outside the wall interval used for payment, but inside the broader child interval.
+Their cost can cause the existing handler bound to fail.
+The service result still comes from the original wall clock and wait status.
+A failed CPU query does not become a failed service or a zero CPU measurement.
+
+Each record retains generation, command, child ordinal, worker, code version, site, and requested duration.
+Failed wait attempts retain observations, including a failed pre-wait wall-clock check.
+Deferred children, cancelled admissions, and failed admissions perform no CPU query.
+The diagnostic count can therefore differ from the service child count.
+Match records by identity and ordinal, not array position.
+
+`cpuSnapshot(generation, destination)` requires the controller and mailbox quiescence.
+An active generation returns no result.
+A successful call returns the required count.
+An insufficient destination receives no records.
+This snapshot does not authorize release. The existing service journal must still be copied.
+Release ends access to both journals. The next submission resets the diagnostic count.
+
+CPU observations do not establish clock accuracy or explain a service failure by themselves.
+The CPU interval includes observation work outside the measured wait.
+No CPU delta replaces wall-time payment or relaxes a service bound.

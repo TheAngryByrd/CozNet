@@ -45,6 +45,13 @@ static class BoundSampledPaymentWorkload
             _ => throw new ArgumentException("COZNET_PAUSE_TIMING must be 0 or 1.")
         };
         Require(!pauseTimingEnabled || selectedPaymentEnabled, "Pause timing requires selected payment.");
+        bool childCpuEnabled = Environment.GetEnvironmentVariable("COZNET_CHILD_CPU") switch
+        {
+            null or "0" => false,
+            "1" => true,
+            _ => throw new ArgumentException("COZNET_CHILD_CPU must be 0 or 1.")
+        };
+        Require(!childCpuEnabled || selectedPaymentEnabled, "Child CPU capture requires selected payment.");
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
@@ -264,7 +271,7 @@ static class BoundSampledPaymentWorkload
             Require(CpuWorkload.Run() == 49995000L, "Selected warmup changed its checksum.");
             var binding = ClrProbeBinding.ReadCurrent();
             if (selectedPaymentEnabled) controller = new();
-            client = OnController(() => new BoundCooperativeClient(binding, selectedPaymentEnabled ? 2U : 1U));
+            client = OnController(() => new BoundCooperativeClient(binding, selectedPaymentEnabled ? 2U : 1U, observeCpu: childCpuEnabled));
             if (selectedPaymentEnabled)
             {
                 selectedRegistered = true;
@@ -491,7 +498,7 @@ static class BoundSampledPaymentWorkload
             sourceCleanup = collection?.Cleanup, initialCounters = collection?.InitialCounters, finalCounters = collection?.FinalCounters,
             sourceSamples = collection?.Cleanup is null ? null : collection.Diagnostics, batch = collection?.Latest,
             sourceEpochSamples = !selectedPaymentEnabled || collection?.Cleanup is null ? null : collection.EpochDiagnostics,
-            selectedPaymentEnabled, pauseTimingEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false
+            selectedPaymentEnabled, pauseTimingEnabled, childCpuEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false
         }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
         return completed || rejectionVerified ? 0 : 1;
     }

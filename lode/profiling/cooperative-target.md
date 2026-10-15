@@ -50,3 +50,25 @@ flowchart LR
 See [the reference](../../docsSrc/Reference/cooperative-target.md),
 [contract evidence](../../reliability/features/native-signal/cooperative-target.md),
 [lease admission](target-local-lease.md), and [the lifecycle plan](../plans/experiment-lifecycle.md).
+
+
+## Optional child CPU journal
+
+Registration can opt into a fixed diagnostic journal with `observeCpu = true`.
+`cpuSnapshot` copies it only under a quiescent mailbox reader for the outstanding generation.
+No CPU query runs by default. Diagnostic copies do not authorize release.
+Admission identity supplies generation, command, and ordinal. The observed site supplies owner and code identity.
+Wait attempts retain both raw CPU readings even when service fails.
+Read failures and unsupported capability remain separate from service outcomes.
+The CPU hooks surround the measured wall wait, but remain inside the handler interval.
+Their overhead can trigger the unchanged handler bound.
+The journal has the same capacity as the lease journal. Every recorded wait requires a successful lease admission.
+
+```cpp
+auto count = target->cpuSnapshot(generation, observations);
+```
+
+The [native ABI reference](../../docsSrc/Reference/cooperative-interop.md#optional-child-cpu-api) defines the separate records.
+Linux queries the owner thread CPU clock. Other platforms report unsupported capability.
+Managed capture preserves these records on retired receipts and cleanup copies.
+Selected-payment replay checks their identity and clock consistency.
