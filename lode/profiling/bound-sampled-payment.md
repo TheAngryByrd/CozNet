@@ -45,8 +45,20 @@ Expected peer lifetime rejection is retained separately from unexpected cleanup 
 Native payment remains irreversible after final evidence rejection.
 
 JSON serialization includes native struct fields. Empty objects cannot support payment analysis.
+Workload failure captures the latest immutable debt observation and native request evidence before cleanup.
+`CooperativeFailureCapture` preserves the original exception and records diagnostic exceptions separately.
+It formats both exceptions after native capture and freezes the capture timestamps before formatting.
+`NativeCooperativeClient.CaptureDiagnostic` copies raw native storage without updating receipt tracking or the ledger.
+An active snapshot contains only published children. It cannot bound an executing child's uncommitted wait.
+The native snapshot updates its retired-copy marker. Final release still takes its own retired copy.
+The captured prefix cannot reduce observed debt or turn a failed run into a passing experiment.
+The native interop runs predate capture-before-formatting and timestamp-frequency changes in the managed helper.
+Their diagnostic case calls the unchanged native capture method directly.
+The later host and Linux managed checks cover the helper changes. The reviewed-analysis directory beside run `55ac6e00` records their hashes and outcomes.
+Failed peer polling can also appear in `cleanupErrors` after controller rejection, even when ownership joins and closes successfully.
 `AnalyzeBoundSampledPayment.py` checks nominal credit, native children, receipts, release copies, and recorded debt arithmetic.
-Its fifteen portable checks reject missing fields, altered credit/payment, missing or inconsistent debt evidence, duplicated cases, broken continuation, and incomplete cleanup.
+Its seventeen portable checks reject missing fields, altered credit/payment, missing or inconsistent debt evidence, duplicated cases, broken continuation, and incomplete cleanup.
+Failure-boundary checks preserve the original error and reject inconsistent capture states, identities, or ordering.
 They also bind child requests to remaining budgets, first receipt captures to snapshots, and final cleanup to pending or released ownership.
 The analyzer preserves runtime failure even when the retained partial evidence is internally consistent.
 
@@ -65,7 +77,7 @@ It includes 1,990 normal 50-percent source records, 808,500,000 ns credit, and 1
 Observed peak debt is 467,524 ns selected and 999,929 ns peer. Final selected residual debt is 78 ns.
 The invalidation case retains one 500,083 ns payment and rejects both completion paths.
 At that time, both managed contract groups, twelve native checks, and five analyzer checks passed.
-The current analyzer has fifteen passing checks. Its retained replay uses the same live records with updated Python source hashes.
+That review used fifteen passing checks. Its retained replay uses the same live records with updated Python source hashes.
 This establishes restricted live integration in that run, not stable capacity across scheduling conditions.
 Windows run `artifacts/cooperative-interop/20261015T124752598-94a63709` passes twenty existing bound payment/lifetime cases with the shared client change.
 It does not run the Linux-only sampled workload.

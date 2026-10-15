@@ -172,7 +172,12 @@ static class BoundSampleCollectionChecks
         {
             var collection = Create();
             Source? source = null;
-            collection.Start((_, sink) => source = new(sink, samples));
+            using var release = new ManualResetEventSlim();
+            collection.Start((_, sink) => source = new(sink, samples)
+            {
+                BeforeDelivery = () => Require(release.Wait(TimeSpan.FromSeconds(5)), "Invalid sample delivery was not released.")
+            });
+            release.Set();
             Reject(() => collection.Complete());
             Require(collection.Cleanup is { CollectorJoined: true, SourceDisposed: true } && source!.Disposes == 1,
                 "Sample rejection lost the collector or source cleanup.");

@@ -6,11 +6,13 @@ using System.Runtime.CompilerServices;
 
 if (args is ["--verify-cooperative-managed"])
 {
+    CooperativeFailureCaptureChecks.Run();
     CooperativeManagedChecks.Run();
     return 0;
 }
 if (args is ["--verify-bound-cooperative-managed"])
 {
+    CooperativeFailureCaptureChecks.Run();
     CooperativeManagedChecks.Run();
     ClrProbeLifetimeChecks.Run();
     ClrBoundInstructionMapChecks.Run();

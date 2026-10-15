@@ -13,7 +13,57 @@ def count(value):
     return value
 
 
+def verify_failure_boundary(record):
+    if "failureBoundary" not in record:
+        return
+    boundary = record["failureBoundary"]
+    if record["failure"] is None:
+        require(boundary is None, "Successful body has a failure boundary")
+        return
+    require(boundary is not None, "Workload failure has no boundary capture")
+    capture = boundary["Capture"]
+    require(capture["Failure"] == record["failure"], "Diagnostic capture replaced the original failure")
+    require(count(capture["Started"]) <= count(capture["Finished"]), "Failure capture clock regressed")
+    if "TimestampFrequency" in capture:
+        require(count(capture["TimestampFrequency"]) > 0, "Failure capture frequency is zero")
+    debt = boundary["LastObservedDebt"]
+    if debt is not None:
+        for field in ("Global", "SelectedCredit", "PeerWait", "Selected", "Peer"):
+            count(debt[field])
+        require(count(debt["Timestamp"]) <= capture["Started"], "Failure debt follows capture")
+        require(debt["Selected"] == max(0, debt["Global"] - debt["SelectedCredit"])
+                and debt["Peer"] == max(0, debt["Global"] - debt["PeerWait"]), "Failure debt arithmetic differs")
+    state, raw, error = capture["State"], capture["Raw"], capture["CaptureFailure"]
+    require(type(state) is int and state in (0, 1, 2), "Invalid failure capture state")
+    if state == 0:
+        require(raw is None and error is None, "Absent request contains diagnostic evidence")
+    elif state == 2:
+        require(raw is None and isinstance(error, str) and bool(error), "Failed capture lost its diagnostic error")
+    else:
+        require(raw is not None and error is None, "Captured boundary lost its raw evidence")
+        header = raw["Header"]
+        require(type(raw["Status"]) is int and type(raw["Clock"]["Status"]) is int, "Invalid diagnostic native status")
+        count(raw["Clock"]["Nanoseconds"])
+        for field in ("Generation", "Command", "Budget", "Children", "Measured", "Visibility", "Stop", "Error", "MayHaveDelivery", "Captured"):
+            count(header[field])
+        if raw["Status"] == 0:
+            require(header["Captured"] > 0, "Diagnostic snapshot clock failed")
+            require(header["Children"] == len(raw["Children"]), "Diagnostic child prefix is incomplete")
+            if raw["Clock"]["Status"] == 0:
+                require(raw["Clock"]["Nanoseconds"] >= header["Captured"], "Diagnostic clock precedes snapshot")
+            if boundary["Generation"]:
+                require(header["Generation"] == boundary["Generation"] and header["Command"] == boundary["Command"]
+                        and header["Budget"] == boundary["Budget"], "Diagnostic request identity differs")
+        cleanup = record["nativeCleanup"]
+        if raw["Status"] == 0 and cleanup is not None and cleanup["Status"] == 0:
+            require(header["Captured"] <= cleanup["Header"]["Captured"], "Failure snapshot follows cleanup")
+            require(header["Generation"] == cleanup["Header"]["Generation"]
+                    and header["Command"] == cleanup["Header"]["Command"] and header["Budget"] == cleanup["Header"]["Budget"]
+                    and raw["Children"] == cleanup["Children"][:len(raw["Children"])], "Diagnostic prefix changed during cleanup")
+
+
 def verify_record(record):
+    verify_failure_boundary(record)
     require(type(record["passed"]) is bool and type(record["completed"]) is bool, "Invalid result flags")
     percent = record["percent"]
     require(type(percent) is int and percent in (0, 50), "Invalid speedup")

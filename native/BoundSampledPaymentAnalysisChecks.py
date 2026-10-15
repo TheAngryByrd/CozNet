@@ -33,7 +33,47 @@ def valid_record():
                 finalCounters=dict(LastReading=dict(CpuNanoseconds=2000000)))
 
 
+def failure_record():
+    record = valid_record()
+    record.update(passed=False, completed=False, failure="debt failure")
+    record["failureBoundary"] = dict(
+        LastObservedDebt=dict(Timestamp=1, **record["finalDebt"]), Command=1, Generation=1, Budget=500000,
+        RequestStarted=1, Capture=dict(Failure="debt failure", Started=2, Finished=3, TimestampFrequency=1000000000, State=1,
+                                      Raw=copy.deepcopy(record["payments"][0]["Observation"]["Raw"]), CaptureFailure=None))
+    return record
+
+
 class BoundPaymentAnalysisChecks(unittest.TestCase):
+    def test_failure_capture_outcomes_preserve_runtime_failure(self):
+        for state in (0, 1, 2):
+            with self.subTest(state=state):
+                record = failure_record()
+                capture = record["failureBoundary"]["Capture"]
+                capture.update(State=state, Raw=capture["Raw"] if state == 1 else None,
+                               CaptureFailure="snapshot error" if state == 2 else None)
+                result = verify_record(record)
+                self.assertFalse(result["casePassed"])
+                self.assertFalse(result["completed"])
+
+    def test_failure_capture_corruption_is_rejected(self):
+        for mutate, message in (
+            (lambda r: r.update(failureBoundary=None), "no boundary capture"),
+            (lambda r: r["failureBoundary"]["Capture"].update(Failure="replacement"), "original failure"),
+            (lambda r: r["failureBoundary"]["Capture"].update(Finished=0), "clock regressed"),
+            (lambda r: r["failureBoundary"]["Capture"].update(TimestampFrequency=0), "frequency is zero"),
+            (lambda r: r["failureBoundary"]["LastObservedDebt"].update(Timestamp=4), "debt follows"),
+            (lambda r: r["failureBoundary"]["Capture"].update(State=2), "diagnostic error"),
+            (lambda r: r["failureBoundary"].update(Generation=2), "identity differs"),
+            (lambda r: r["nativeCleanup"]["Header"].update(Captured=1), "follows cleanup"),
+            (lambda r: r["failureBoundary"]["Capture"]["Raw"]["Children"][0].update(Waited=1), "prefix changed"),
+            (lambda r: r["failureBoundary"]["Capture"]["Raw"]["Clock"].update(Nanoseconds=1), "clock precedes"),
+        ):
+            with self.subTest(message=message):
+                record = failure_record()
+                mutate(record)
+                with self.assertRaisesRegex(ValueError, message):
+                    verify_record(record)
+
     def test_zero_arm_clock_cannot_pass(self):
         record = valid_record()
         payment = record["payments"][0]

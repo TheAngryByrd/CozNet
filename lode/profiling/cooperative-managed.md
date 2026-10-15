@@ -26,7 +26,8 @@ Cleanup copies and releases native journals independently of receipt acceptance.
 It retains an immutable final header, child list, and status before release.
 The owner continues polling through termination, then retires only after release. The controller closes only after owner join.
 The interop fixture keeps unresolved owner state alive for process termination instead of forcing native close.
-Five cases verify tracker reset and independent settlement on a second generation, including after receipt rejection.
+Six cases verify tracker reset and independent settlement on a second generation, including after receipt rejection.
+The diagnostic case preserves raw native snapshots across reuse without updating receipt tracking or settling the ledger.
 The active-cleanup case enters cleanup with an unclaimed request and checks final cancelled-child retention.
 
 ```mermaid

@@ -76,6 +76,20 @@ It binds each record to its required case and rejects accepted results with miss
 It does not reconstruct unrecorded scheduling or prove that debt stayed bounded between observations.
 
 Cleanup stops normal peer work before it requests cancellation.
+Failures detected before cleanup produce `failureBoundary`.
+Failures detected during cleanup or final verification keep their separate error fields.
+`LastObservedDebt` is the latest ledger observation, not a new debt calculation at capture time.
+The boundary retains the last command, generation, budget, and request timestamp.
+`Capture.Started` and `Capture.Finished` bracket the diagnostic call with managed timestamps.
+`Capture.TimestampFrequency` gives managed ticks per second. Native timestamps use nanoseconds in a separate clock domain.
+Do not compare absolute managed and native timestamps without a clock mapping.
+Exception formatting follows capture and does not delay the native snapshot.
+`Capture.State` is 0 for no request, 1 for captured raw evidence, or 2 for a capture exception.
+`Capture.Failure` preserves the original workload exception. `CaptureFailure` records a separate diagnostic exception.
+`Capture.Raw` contains the native header, copied child prefix, native clock, and status without receipt acceptance.
+Captured raw evidence can contain a failed native status. State 1 does not mean valid payment evidence.
+An active snapshot excludes an executing child's uncommitted wait. The peer can advance during capture.
+This diagnostic does not reduce debt, release ownership, or replace the original failure.
 Cleanup polls bypass measurement acceptance and preserve native ownership until final copy and release.
 Failed evidence cannot undo earlier native waits. Any source, lifetime, receipt, work, or capacity failure rejects the experiment.
 

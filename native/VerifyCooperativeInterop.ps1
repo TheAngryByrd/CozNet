@@ -34,6 +34,7 @@ $sources = @('native/service/CooperativeApi.cpp', 'native/service/CooperativeApi
     'tests/CozNet.LinuxPerf/ServiceReceiptTiming.cs', 'tests/CozNet.LinuxPerf/Program.cs',
     'src/CozNet/SignalAccounting.fs', 'src/CozNet/SignalService.fs', 'src/CozNet/DelayLedger.fs', 'src/CozNet/SampleCredits.fs',
     'native/VerifyCooperativeInterop.ps1', 'native/VerifyServiceOwner.ps1', 'build/build.fs')
+$sources += @('tests/CozNet.LinuxPerf/CooperativeFailureCapture.cs', 'tests/CozNet.LinuxPerf/CooperativeFailureCaptureChecks.cs')
 $hashes = @{}
 if ($ProbeIdentity -or $BoundCooperative) {
     $sources += @('tests/CozNet.LinuxPerf/ClrBoundInstructionMap.cs', 'tests/CozNet.LinuxPerf/ClrBoundInstructionMapChecks.cs',
@@ -115,7 +116,7 @@ elseif ($ProbeIdentity) {
     })
 }
 elseif ($Injected) { @(1, 64, 256, 1024 | ForEach-Object { @{ mode = 'injected-paid'; interval = $_; name = "injected-$_" } }) }
-else { @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'active-cleanup' | ForEach-Object { @{ mode = $_; interval = 0; name = $_ } }) }
+else { @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'active-cleanup', 'diagnostic' | ForEach-Object { @{ mode = $_; interval = 0; name = $_ } }) }
 foreach ($case in $cases) {
     $mode = $case.mode
     $name = $case.name

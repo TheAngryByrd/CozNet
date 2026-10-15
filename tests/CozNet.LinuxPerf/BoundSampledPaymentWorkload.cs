@@ -11,6 +11,8 @@ static class BoundSampledPaymentWorkload
     private sealed record Payment(ulong Command, ulong Generation, long Budget, long Started,
         long Finished, CooperativeObservation Observation, CooperativeCleanupCapture Cleanup);
     private sealed record Debt(long Timestamp, long Global, long SelectedCredit, long PeerWait, long Selected, long Peer);
+    private sealed record FailureBoundary(Debt? LastObservedDebt, ulong Command, ulong Generation, long Budget,
+        long RequestStarted, CooperativeFailureCapture Capture);
 
     public static int Run(string path, SampledSignalPlan settings, string library,
         Func<CpuSampleOwner> readOwner, Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource,
@@ -46,12 +48,15 @@ static class BoundSampledPaymentWorkload
         long pendingStarted = 0, pendingBudget = 0;
         ulong represented = 0, command = 0, generation = 0;
         Debt? selectedPeak = null, peerPeak = null, finalDebt = null;
+        Debt? lastObservedDebt = null;
+        FailureBoundary? failureBoundary = null;
 
         Debt ObserveDebt()
         {
             long global = SignalAccountingModule.globalNanoseconds(state);
             var debt = new Debt(Stopwatch.GetTimestamp(), global, credit, paid,
                 Math.Max(0, global - credit), Math.Max(0, global - paid));
+            lastObservedDebt = debt;
             if (selectedPeak is null || debt.Selected > selectedPeak.Selected) selectedPeak = debt;
             if (peerPeak is null || debt.Peer > peerPeak.Peer) peerPeak = debt;
             Require(debt.Selected <= 2000000 && debt.Peer <= 2000000,
@@ -200,7 +205,11 @@ static class BoundSampledPaymentWorkload
         }
         catch (Exception error)
         {
-            failure = error.ToString();
+            var capturedDebt = lastObservedDebt;
+            var capture = CooperativeFailureCapture.Capture(error,
+                () => client is not null && client.HasPending(0) ? client.CaptureDiagnostic(0) : null);
+            failureBoundary = new(capturedDebt, command, generation, pendingBudget, pendingStarted, capture);
+            failure = capture.Failure;
             rejectedAfterPayment = invalidated && error is InvalidDataException
                 && error.GetBaseException().Message == "The CLR probe lifetime is no longer admitted.";
         }
@@ -277,7 +286,7 @@ static class BoundSampledPaymentWorkload
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
             percent = settings.Percent, passed = completed || rejectionVerified, completed, invalidateAfterPayment,
-            invalidated, rejectionVerified, rejectedAfterPayment, failure, verificationFailure, peerFailure, cleanupErrors, joined, closed,
+            invalidated, rejectionVerified, rejectedAfterPayment, failure, failureBoundary, verificationFailure, peerFailure, cleanupErrors, joined, closed,
             binding = bindingEvidence is null ? null : new { bindingEvidence.Generation, Module = (ulong)bindingEvidence.Module,
                 Function = (ulong)bindingEvidence.Function, bindingEvidence.Method, bindingEvidence.Sites }, nativeRange = collection?.Map.Range,
             selectedBatches = batches, checksum, peerBatches, peerChecksum, peerCalls,

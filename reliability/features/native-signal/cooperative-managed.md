@@ -21,7 +21,7 @@ Cleanup captures include the final child records, not only their aggregate heade
 
 Windows evidence: `artifacts/cooperative-interop/20261015T092015134-1b4f999e`.
 Linux evidence: `artifacts/cooperative-interop/20261015T092211845-5c4a4552`.
-Both runs pass all six cases, pure managed checks, and eleven native CTest entries.
+At that time, both runs passed all six cases, pure managed checks, and eleven native CTest entries.
 Both manifests report unchanged inputs. These runs include generation reuse and active cleanup.
 
 Pure checks in `CooperativeManagedChecks` cover these requirements:

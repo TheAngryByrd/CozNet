@@ -55,9 +55,32 @@ At that time, twelve native contracts, both managed contract groups, and five Py
 The analyzer checks include missing-field rejection, corrupted credit and payment rejection, and preservation of runtime failure.
 
 Review added case binding, required debt evidence, continuation ordering, invalidation cleanup, and final-debt reconciliation to the analyzer.
-All fifteen current analyzer checks pass. Offline replay of the retained complete-evidence run also passes these stronger checks.
+At that review, all fifteen analyzer checks and offline replay of the retained complete-evidence run passed.
 The reviewed replay, check log, and Python source hashes are retained beside the original run in `reviewed-analysis/`.
-Only the analyzer and its checks changed after that live run. The measured managed and native source fingerprints still match.
+That review changed only the analyzer and its checks. The measured managed and native source fingerprints matched at that revision.
+
+## Failure-boundary capture
+
+The workload now retains diagnostic native evidence before cleanup changes request ownership.
+The captured prefix does not settle payment or reduce debt. An executing child's uncommitted wait remains unknown.
+Windows run `artifacts/cooperative-interop/20261015T131829093-a24433d2` passes all seven interop cases and the managed contract group.
+The diagnostic case verifies active and retired capture without receipt tracking, followed by immutable evidence across request reuse.
+The seventeen analyzer checks cover original-failure preservation, capture states, identity, clocks, and cleanup-prefix consistency.
+Linux run `artifacts/cooperative-interop/20261015T132144062-00c3f487` passes the same seven cases and managed contract group.
+Both platform runs pass twelve native contracts with unchanged inputs.
+Live run `artifacts/bound-sampled-payment/20261015T132348027-8a4e0258` retains a 2,499,906 ns peer-debt failure.
+Its capture records retired request 122 with 499,968 ns of native wait. Those waits did not settle in the ledger.
+The same run exposed a fixture race that delivered invalid samples before `Start` returned.
+The fixture now gates invalid delivery until after startup. Its completion rejection and cleanup assertions remain unchanged.
+That first capture formatted the exception before reading native state. The helper now formats exceptions after capture.
+
+Corrected run `artifacts/bound-sampled-payment/20261015T132712330-55ac6e00` passes both managed groups, twelve native contracts, and seventeen analyzer checks.
+Zero percent completes. Invalidation after payment rejects as required and records no pending request at capture.
+The treatment rejects native request 113 after 112 accepted payments.
+Its invalid child retains 8,309,850 ns waited and an 8,310,379 ns handler interval, above the unchanged 5 ms bound.
+The raw header records `Stop=5`, `Error=4`, and `Measured=0`. The ledger retains 999,859 ns of observed peer debt.
+Offline replay verifies the evidence but preserves treatment failure. Neither run establishes stable capacity.
+Both sampled runs predate the explicit managed timestamp-frequency field. They do not establish a cross-platform clock mapping.
 
 ## Next evidence
 

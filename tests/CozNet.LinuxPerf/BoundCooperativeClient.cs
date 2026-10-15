@@ -68,6 +68,7 @@ sealed class BoundCooperativeClient
         });
     }
     public bool HasPending(uint slot) => native.HasPending(slot);
+    public CooperativeRawCapture CaptureDiagnostic(uint slot) => native.CaptureDiagnostic(slot);
     public CooperativeNativeSnapshot CleanupHeader(uint slot) => native.Probe(slot);
     public void ReleaseAfterRetiredCopy(uint slot) => native.ReleaseAfterRetiredCopy(slot);
     public void BeginCleanup()

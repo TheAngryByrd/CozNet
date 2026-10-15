@@ -61,8 +61,10 @@ The handle finalizer does not free unresolved native ownership from the finalize
 ## Verification limits
 
 The controlled interop workload uses manual polls on a dedicated managed thread.
-Its cases cover paid, deferred, cancelled, late-receipt, wrong-thread clock, and pending-cleanup outcomes.
-The first five cases also verify a second independent lease on the same native slot.
+Its cases cover paid, deferred, cancelled, late-receipt, wrong-thread clock, pending-cleanup, and diagnostic outcomes.
+The diagnostic case captures active and retired native records without changing receipt tracking.
+It verifies that later native reuse cannot change the copied diagnostic children.
+Every case except pending cleanup also verifies a second independent lease on the same native slot.
 The new tracker must not retain the previous generation's bounds or failure.
 The previous failed ledger reservation remains pending.
 Each case runs in a separate process because the native ABI permits one successful session per process.
@@ -76,5 +78,9 @@ The runner disables tiered compilation and ReadyToRun for these controlled proce
 The site still carries synthetic identities. The callback does not prove CLR code-version identity or prevent code replacement.
 
 These checks do not pin CLR code versions, drive sampled debt, or establish prediction accuracy.
+`NativeCooperativeClient.CaptureDiagnostic` returns raw native status and clock evidence without receipt parsing or ledger settlement.
+The caller retains request ownership. A later release must take its own retired copy.
+`BoundCooperativeClient` exposes this diagnostic after CLR rejection because capture does not accept the rejected binding.
+No diagnostic record can restore lifetime admission or validate payment.
 See [the native ABI](cooperative-interop.md), [the verification procedure](../How_Tos/verify-cooperative-interop.md),
 and [the contract evidence](../../reliability/features/native-signal/cooperative-managed.md).

@@ -40,7 +40,7 @@ See [timer interop](../profiling/timer-interop.md) for scope and ownership.
 Its `cooperative-target` CTest entry checks owner-thread polling, code-revocation guards, and finite lease receipts with controlled clocks.
 Its `cooperative-abi` and `cooperative-timing` entries check the shared library, copy ownership, native receipt bounds, and production clock/wait adapter.
 `CooperativeManagedVerify` checks pure managed receipts and ledger binding.
-`CooperativeInteropVerify` and `LinuxCooperativeInteropVerify` build the native boundary and retain six managed interop cases per platform.
+`CooperativeInteropVerify` and `LinuxCooperativeInteropVerify` build the native boundary and retain seven managed interop cases per platform.
 `LinuxSampledServiceVerify` builds the managed workload and native service libraries, then runs bounded zero and 50-percent sampled cases.
 It retains every outcome under `artifacts/linux-sampled-service/`. The first treatment fails during warmup.
 `LinuxSampledServicePhases` uses the same runner with bounded controller phase capture enabled.

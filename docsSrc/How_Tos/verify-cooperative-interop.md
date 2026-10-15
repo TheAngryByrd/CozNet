@@ -18,9 +18,10 @@ They do not run a sampled profiling experiment.
    ```
 
 4. Open the reported directory under `artifacts/cooperative-interop/`.
-   Inspect `summary.json`, `manifest.json`, and the six case records.
+   Inspect `summary.json`, `manifest.json`, and the seven case records.
 
-The summary must report unchanged inputs, a successful managed contract check, and six successful case checks.
+The summary must report unchanged inputs, a successful managed contract check, and seven successful case checks.
+The `diagnostic` case must retain active and retired snapshots without changing receipt tracking or losing request ownership.
 The `late` and `clock-failure` cases succeed only when receipt validation rejects the evidence permanently.
 Their ledger reservations must remain pending even after native cleanup succeeds.
 The `active-cleanup` case must cancel and poll an unclaimed request before release, retirement, and join.

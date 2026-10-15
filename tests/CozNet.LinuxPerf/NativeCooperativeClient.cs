@@ -114,6 +114,19 @@ sealed class NativeCooperativeClient
         if (status != 4) Check(status, "probe");
         return header;
     }
+    public unsafe CooperativeRawCapture CaptureDiagnostic(uint slot)
+    {
+        ulong generation = Generation(slot);
+        var buffer = new CooperativeNativeChild[buffers[slot].Length];
+        CooperativeNativeSnapshot header;
+        int status;
+        fixed (CooperativeNativeChild* children = buffer)
+            status = CooperativeNativeMethods.Snapshot(session, slot, generation, out header, children, (uint)buffer.Length);
+        var clock = ReadClock(session);
+        int count = header.Children > (ulong)buffer.Length ? buffer.Length : (int)header.Children;
+        return new(header, Array.AsReadOnly(buffer.AsSpan(0, count).ToArray()), clock, status);
+    }
+
     public unsafe CooperativeObservation Read(uint slot, Func<CooperativeSessionHandle, CooperativeClockRead>? readClock = null)
     {
         ulong generation = Generation(slot);

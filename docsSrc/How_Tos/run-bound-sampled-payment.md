@@ -11,6 +11,9 @@ Install Python 3 on the host for evidence replay and its portable checks.
 
 2. Open `summary.json`, `analysis.json`, and `manifest.json` in the reported `artifacts/bound-sampled-payment/` directory.
 3. Inspect `0.json`, `50.json`, and `invalidate-after-payment.json`.
+4. For a failed case, compare `failureBoundary.Capture` with `nativeCleanup`.
+   Check capture status and timestamps before interpreting the copied child prefix.
+   Keep `LastObservedDebt` unchanged when inspecting partial native payment.
 
 The target builds the profiler, workload, and cooperative library.
 It runs native contracts and both portable managed contract groups before the live cases.
