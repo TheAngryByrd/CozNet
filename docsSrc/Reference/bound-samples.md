@@ -33,6 +33,20 @@ An observed invalidation permanently fails the collection.
 Samples remain provisional until completion succeeds.
 The method range includes injected countdown code. These records do not establish exact application CPU attribution.
 
+### Live reads
+
+`ReadProvisional(offset)` returns an immutable copy of the records from that zero-based offset through the current end.
+An offset equal to the current count returns an empty list.
+Reads do not consume records. The caller advances its offset only after it processes the returned list.
+An invalid offset throws and permanently fails the collection's lifetime guard.
+CLR checks surround each snapshot, including empty snapshots. A failed post-check returns no snapshot.
+Reads require a started collector and reject calls after cleanup.
+The controller must serialize reads with start, cleanup, and completion. The collector can append concurrently.
+
+These records remain provisional. A later source failure or invalidation rejects the whole collection.
+`Complete` supplies the final records, including any tail produced after the last live read.
+Native payment cannot be undone when later evidence fails. A consumer must preserve that failure and reject the experiment.
+
 ## Completion and cleanup
 
 `CloseForCleanup` attempts disable, collector join, source disposal, and final counter capture.

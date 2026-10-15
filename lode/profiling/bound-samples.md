@@ -15,6 +15,12 @@ The source epoch is not a thread eligibility epoch. This collection does not iss
 The sink guards sample validation before and after execution. It checks owner, ordering, counter evidence, and exact range labels.
 Failed post-validation does not append the proposed sample.
 All samples remain provisional until final closure and lifetime acceptance.
+`ReadProvisional(offset)` supplies an immutable suffix during collection without consuming records.
+Its lifetime guard surrounds even empty reads. Invalid offsets permanently fail the guard.
+The controller serializes this API with start and cleanup. Concurrent collector appends remain protected by the capture lock.
+The final result supplies the tail after the last live read. Consumers must reject all provisional effects if completion fails.
+Native payment remains irreversible, so final rejection invalidates the experiment rather than undoing payment.
+Live reads allocate suffix copies while holding the capture lock. Their cost remains unmeasured.
 
 ```mermaid
 flowchart LR
@@ -40,8 +46,11 @@ Source clock error bounds, measurement membership, eligibility, per-sample overh
 
 ## Retained evidence
 
-`artifacts/bound-samples/20261015T120104364-2f5d3686` passes portable checks and all four live cases.
-Normal collection retains 2,009 samples, including 1,924 selected-method samples, with no reported loss or throttling.
+`artifacts/bound-samples/20261015T121526303-c63b7f05` passes portable checks and all four live cases.
+Normal collection retains 2,007 samples, including 1,883 selected-method samples, with no reported loss or throttling.
+Its 2,006 live provisional records equal the completed prefix. Completion retains one additional record after the last live read.
+`ProvisionalReadsPreservePrefixes` checks empty reads, suffix offsets, repeat reads, snapshot isolation, and final prefix equality.
+`ProvisionalReadsRejectInvalidOffsetsAndLifetime` checks offset rejection and permanent failure after a nonempty snapshot's final lifetime check.
 `FreshEpochAndFinalDrain` withholds its records until disable to verify final-drain ordering.
 The legacy map regression passes under `artifacts/linux-perf/bound-samples-legacy-regression`.
 The three invalidation cases reject completion and retain collector-join and source-disposal evidence.

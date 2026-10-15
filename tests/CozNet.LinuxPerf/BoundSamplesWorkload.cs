@@ -16,6 +16,7 @@ static class BoundSamplesWorkload
         bool invalidated = false, rejected = false, passed = false;
         string? failure = null, verificationFailure = null;
         long batches = 0, checksum = 0, calls = 0;
+        var provisional = new List<CpuSample>();
         try
         {
             if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
@@ -41,6 +42,8 @@ static class BoundSamplesWorkload
             {
                 checksum += CpuWorkload.Run();
                 batches++;
+                if (collection.LiveSamples > provisional.Count)
+                    provisional.AddRange(collection.ReadProvisional(provisional.Count));
                 if (mode == "during" && collection.LiveSamples > 0 && collection.Latest?.SelectedMethodSamples > 0)
                 {
                     ProbeIdentityChecks.InvalidateWithDuplicateModule(plan);
@@ -74,6 +77,9 @@ static class BoundSamplesWorkload
             {
                 Require(result is not null && failure is null && result.Batch.Samples > 0 && result.Batch.SelectedMethodSamples > 0
                     && result.CpuNanoseconds > 0 && collection!.LiveSamples > 0, "No real CPU samples reached the admitted bound map.");
+                Require(provisional.Any(sample => sample.Method == OverheadWorkload.SelectedSymbol)
+                    && result!.Samples.Take(provisional.Count).SequenceEqual(provisional),
+                    "Live provisional samples differ from the completed collection prefix.");
             }
             else
             {
@@ -103,6 +109,7 @@ static class BoundSamplesWorkload
                 Function = (ulong)binding.Function, binding.Method, binding.Sites }, nativeRange = collection?.Map.Range,
             initialCounters = collection?.InitialCounters, finalCounters = collection?.FinalCounters,
             samples = collection?.Diagnostics, batch = collection?.Latest,
+            provisionalSamples = provisional.Count,
             sampledPaymentCapacityEstablished = false, predictionAccuracyEstablished = false, codePinned = false
         }, new JsonSerializerOptions { WriteIndented = true }));
         return passed ? 0 : 1;

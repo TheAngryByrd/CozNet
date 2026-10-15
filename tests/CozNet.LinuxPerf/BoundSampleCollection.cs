@@ -27,7 +27,15 @@ sealed class BoundSampleCollection
         public int Count { get { lock (gate) return samples.Count; } }
         public void Open() { lock (gate) accepting = true; }
         public void Close() { lock (gate) accepting = false; }
-        public IReadOnlyList<CpuSample> Snapshot() { lock (gate) return Array.AsReadOnly(samples.ToArray()); }
+        public IReadOnlyList<CpuSample> Snapshot(int offset = 0)
+        {
+            lock (gate)
+            {
+                ArgumentOutOfRangeException.ThrowIfNegative(offset);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(offset, samples.Count);
+                return Array.AsReadOnly(samples.GetRange(offset, samples.Count - offset).ToArray());
+            }
+        }
         public void Publish(CpuSample sample)
         {
             lock (gate)
@@ -71,6 +79,13 @@ sealed class BoundSampleCollection
     public SampleBatch? Latest => collector?.Latest;
     public IReadOnlyList<CpuSample> Diagnostics => Cleanup is null
         ? throw new InvalidOperationException("Close collection before reading sample diagnostics.") : capture.Snapshot();
+
+    public IReadOnlyList<CpuSample> ReadProvisional(int offset)
+    {
+        if (collector is null || Cleanup is not null)
+            throw new InvalidOperationException("Provisional reads require an active collection.");
+        return lifetime.Execute((Capture: capture, Offset: offset), static value => value.Capture.Snapshot(value.Offset));
+    }
 
     public BoundSampleCollection(ClrProbeLifetime lifetime, CpuSampleOwner owner)
         : this(lifetime, owner, null) { }

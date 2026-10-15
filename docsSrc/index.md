@@ -79,6 +79,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Causal profiling research](Research/causal-profiling-dotnet.md).
 - [Why cooperative probes need a CLR lifetime contract](Research/cooperative-clr-lifetime.md).
 - [How native ranges support bound probes](Research/bound-native-mapping.md).
+- [Cooperative payment and sample eligibility](Research/cooperative-sample-eligibility.md).
 - [Native owner scheduling and local debt payment](Research/native-owner-scheduling.md).
 - [Target-local timer delivery design](Research/target-local-timer-delivery.md).
 

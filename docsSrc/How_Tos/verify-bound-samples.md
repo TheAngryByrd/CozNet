@@ -24,6 +24,7 @@ They retain no capabilities or network access and have a read-only root filesyst
 This setting does not change the host's syscall policy.
 
 The `collect` record must contain real selected-method samples and successful completion.
+Its `provisionalSamples` count must be positive. The workload verifies that live reads match the completed collection prefix.
 Runtime perf-map output must remain disabled in the manifest.
 The final source journal must contain one enable and one disable transition.
 

@@ -11,7 +11,7 @@ static class BoundSampleCollectionChecks
         private ulong cpu;
         public int Enables, Disposes;
         public bool DirtyInitial, DisableFails, DisposeFails, DeliverAfterDisable;
-        public Action? BeforeDelivery;
+        public Action? BeforeDelivery, AfterDelivery;
         public Func<SampleBatch, SampleBatch>? ChangeBatch;
         public ICpuCounterEvidenceSource CounterEvidence => this;
         private CpuCounterJournal? activeJournal;
@@ -35,6 +35,7 @@ static class BoundSampleCollectionChecks
             {
                 BeforeDelivery?.Invoke();
                 foreach (var sample in samples) sink.Publish(sample);
+                AfterDelivery?.Invoke();
             }
             var batch = new SampleBatch(samples.Length, samples.Select(item => item.InstructionPointer).Distinct().Count(),
                 (ulong)samples.Length * 1000000, 0, 0, 0, samples.Count(item => item.Method == OverheadWorkload.SelectedSymbol),
@@ -61,6 +62,8 @@ static class BoundSampleCollectionChecks
     public static void Run()
     {
         FreshEpochAndFinalDrain();
+        ProvisionalReadsPreservePrefixes();
+        ProvisionalReadsRejectInvalidOffsetsAndLifetime();
         RejectsForeignAndInvalidSamples();
         RejectsLossAndChangedAccounting();
         InvalidationPreservesCleanup();
@@ -96,6 +99,69 @@ static class BoundSampleCollectionChecks
         dirty.CloseForCleanup();
         Require(prior!.Enables == 0 && prior.Disposes == 1, "The collection enabled a nonempty source or lost its cleanup ownership.");
     }
+    private static void ProvisionalReadsPreservePrefixes()
+    {
+        using var release = new ManualResetEventSlim();
+        using var delivered = new ManualResetEventSlim();
+        var collection = Create();
+        bool beforeRejected = false;
+        try { collection.ReadProvisional(0); } catch (InvalidOperationException) { beforeRejected = true; }
+        Require(beforeRejected, "An unstarted collection exposed provisional records.");
+        collection.Start((_, sink) => new Source(sink, [Sample(), Sample(time: 20, cpu: 2000000)])
+        {
+            BeforeDelivery = () => Require(release.Wait(TimeSpan.FromSeconds(5)), "Sample delivery was not released."),
+            AfterDelivery = delivered.Set
+        });
+        try
+        {
+            var empty = collection.ReadProvisional(0);
+            Require(empty.Count == 0, "A paused fixture already exposed records.");
+            release.Set();
+            Require(delivered.Wait(TimeSpan.FromSeconds(5)), "The source did not deliver provisional samples.");
+            var prefix = collection.ReadProvisional(0);
+            var suffix = collection.ReadProvisional(1);
+            Require(empty.Count == 0 && prefix.Count == 2 && suffix.Count == 1 && suffix[0] == prefix[1]
+                && collection.ReadProvisional(2).Count == 0 && collection.ReadProvisional(0).SequenceEqual(prefix),
+                "Provisional offsets skipped, consumed, or changed retained samples.");
+            var completed = collection.Complete();
+            Require(completed.Samples.SequenceEqual(prefix), "Completion changed the provisional sample prefix.");
+            bool closedRejected = false;
+            try { collection.ReadProvisional(0); } catch (InvalidOperationException) { closedRejected = true; }
+            Require(closedRejected, "A closed collection exposed a live provisional read.");
+        }
+        finally { release.Set(); collection.CloseForCleanup(); }
+    }
+
+    private static void ProvisionalReadsRejectInvalidOffsetsAndLifetime()
+    {
+        foreach (int offset in new[] { -1, 1 })
+        {
+            var collection = Create();
+            collection.Start((_, sink) => new Source(sink, []));
+            try
+            {
+                bool rejected = false;
+                try { collection.ReadProvisional(offset); } catch (ArgumentOutOfRangeException) { rejected = true; }
+                Require(rejected, "A provisional read accepted an invalid offset.");
+                Reject(() => collection.Complete());
+            }
+            finally { collection.CloseForCleanup(); }
+        }
+        bool armed = false;
+        int checks = 0;
+        using var delivered = new ManualResetEventSlim();
+        var invalidated = Create(_ => !armed || Interlocked.Increment(ref checks) < 2);
+        invalidated.Start((_, sink) => new Source(sink, [Sample()]) { AfterDelivery = delivered.Set });
+        Require(delivered.Wait(TimeSpan.FromSeconds(5)), "The source did not deliver a sample before invalidation.");
+        armed = true;
+        Reject(() => invalidated.ReadProvisional(0));
+        armed = false;
+        Reject(() => invalidated.ReadProvisional(0));
+        invalidated.CloseForCleanup();
+        Require(invalidated.Diagnostics.Count == 1 && invalidated.Cleanup!.SourceDisposed,
+            "A failed provisional post-check lost diagnostic or cleanup access.");
+    }
+
     private static void RejectsForeignAndInvalidSamples()
     {
         foreach (var samples in new[] {

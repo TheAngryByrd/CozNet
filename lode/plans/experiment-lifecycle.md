@@ -73,6 +73,11 @@ The bound cooperative client now checks CLR lifetime around injected service and
 The bound native range supports guarded whole-method address resolution.
 The [bound collection](../profiling/bound-samples.md) now admits real Linux samples after range capture and rejects observed CLR invalidation.
 Next, connect those samples to cooperative payment and measure sampled intervention capacity under the existing gates.
+The collection now supports guarded, nonconsuming provisional reads for the live controller.
+The [upstream eligibility comparison](../../docsSrc/Research/cooperative-sample-eligibility.md) separates payment exclusion from injected CPU attribution.
+A first selected-owner/peer-payment diagnostic must retain selected debt from peer overshoot and fail the existing debt gate when exceeded.
+It must not claim full Coz semantics until selected-owner payment and explicit eligibility transitions are integrated.
+Final source rejection invalidates the run even after irreversible native payment.
 The [transport reference](../../docsSrc/Reference/cooperative-target.md) distinguishes implemented hooks from missing runtime integration.
 Keep cooperative receipts distinct from the timer C ABI, which carries only interrupted addresses.
 Each poll services at most one bounded child and returns to application work. Do not apply the existing 10 ms CPU cadence to pending service.
