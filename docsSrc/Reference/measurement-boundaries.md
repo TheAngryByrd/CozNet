@@ -2,7 +2,7 @@
 
 `MeasurementWindowCapture` retains immutable start and end readings for experimental workloads.
 The contract uses `TimeProvider` and contains no platform APIs.
-The sampled timer workload currently uses this contract. A matched physical workload is not yet implemented.
+The sampled timer and [matched physical workload](matched-physical.md) use this contract.
 
 ## Boundary fields
 

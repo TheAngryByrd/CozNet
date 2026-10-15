@@ -1,5 +1,7 @@
 # Lode index
 
+For shared timer/physical workers and the uninstrumented route, read [matched physical work](profiling/matched-physical.md).
+
 For frozen measurement endpoints and shutdown separation, read [measurement boundaries](profiling/measurement-boundaries.md).
 
 For native submission timing and the retained capacity failure, read [submission evidence](../reliability/features/native-signal/service-submission/README.md).

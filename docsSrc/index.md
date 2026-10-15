@@ -23,6 +23,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 ## Reference
 
 - [Measurement boundaries](Reference/measurement-boundaries.md): immutable endpoints, capture failures, and unresolved boundary uncertainty.
+- [Matched physical workload](Reference/matched-physical.md): shared workers, physical mode selection, and frozen progress.
 
 - [Sampled timer workload](Reference/sampled-timer.md): CPU sample credit, timer ownership, and retained failures.
 

@@ -24,13 +24,11 @@ static class SampledTimerWorkload
         var samples = new List<SampleRecord>();
         var boundaries = new List<Boundary>();
         var lifetimes = new[] { new TimerWorkerLifetime(), new TimerWorkerLifetime() };
-        var ready = new[] { new ManualResetEventSlim(), new ManualResetEventSlim() };
-        var start = new ManualResetEventSlim();
+        var work = new MatchedCpuWorkers(PhysicalWorkMode.Baseline);
         var scheduling = new TimerSchedulerCaptureGroup(schedulerFactory);
         TimerSchedulerCaptureGroup.Completion? schedulerCompletion = null;
         Thread?[] workers = new Thread?[2];
-        long[] progress = new long[2], peaks = new long[2];
-        int stop = 0;
+        long[] peaks = new long[2];
         NativeTimerClient? client = null;
         TimerServiceController? controller = null;
         ICpuEventSession? session = null;
@@ -67,7 +65,7 @@ static class SampledTimerWorkload
             MeasurementWindowCapture.Worker ReadWorker(uint slot)
             {
                 var operation = pending.SingleOrDefault(journal => journal.Slot == slot);
-                return new(Interlocked.Read(ref progress[slot]), ReleasedWait(slot), controller?.ConfirmedWait(slot) ?? 0,
+                return new(work.Progress((int)slot), ReleasedWait(slot), controller?.ConfirmedWait(slot) ?? 0,
                     operation is null ? null : new(operation.Command, operation.Generation));
             }
             long global = SignalAccountingModule.globalNanoseconds(state);
@@ -210,7 +208,7 @@ static class SampledTimerWorkload
                 && Environment.GetEnvironmentVariable("CORECLR_ENABLE_PROFILING") != "1",
                 "Sampled timer work requires Linux, disabled tiering and ReadyToRun, and no startup profiler.");
             if (initializeManagedPaths) Initialize();
-            Require(CpuWorkload.Run() == 49995000L, "Sampled timer warmup changed the checksum.");
+            MatchedCpuWorkers.Warmup();
             string mapPath = $"/tmp/perf-{Environment.ProcessId}.map";
             File.Copy(mapPath, path + ".initial.perf.map");
             (begin, size) = PerfMapSnapshot.Read(mapPath).UniqueRange(OverheadWorkload.SelectedSymbol);
@@ -231,20 +229,13 @@ static class SampledTimerWorkload
                         client.RegisterCurrentThread((uint)slot);
                         scheduling.Register(slot + 1);
                         if (slot == 0) session = sessionFactory(new Sink(Publish));
-                    }, ready[slot].Set,
-                    () =>
-                    {
-                        Require(start.Wait(TimeSpan.FromSeconds(5)), "The sampled timer start gate timed out.");
-                        while (Volatile.Read(ref stop) == 0)
-                        {
-                            Require(CpuWorkload.Run() == 49995000L, "A sampled timer intervention changed the checksum.");
-                            Interlocked.Increment(ref progress[slot]);
-                        }
-                    }, () => scheduling.Retire(() => client.RetireCurrentThread((uint)slot), TimeSpan.FromSeconds(5)),
+                    }, () => work.SignalReady(slot),
+                    () => work.Run(slot),
+                    () => scheduling.Retire(() => client.RetireCurrentThread((uint)slot), TimeSpan.FromSeconds(5)),
                     () => Thread.Sleep(Timeout.Infinite))) { IsBackground = true };
                 workers[slot]!.Start();
             }
-            foreach (var signal in ready) Require(signal.Wait(TimeSpan.FromSeconds(2)), "A sampled timer worker did not register.");
+            for (int slot = 0; slot < 2; slot++) Require(work.WaitReady(slot, TimeSpan.FromSeconds(2)), "A sampled timer worker did not register.");
             Require(session is not null && lifetimes.All(lifetime => lifetime.Error is null), "The sampled timer workers failed setup.");
             if (forceGc) gcStress = SampledGcStress.Start();
             stage = "measurement";
@@ -258,7 +249,7 @@ static class SampledTimerWorkload
                 enabled = accept = true;
                 timer.Start();
                 measurementStartedTimestamp = Stopwatch.GetTimestamp();
-                start.Set();
+                work.Release();
                 gcStress?.Release();
             });
             long nextBoundary = 0;
@@ -323,8 +314,7 @@ static class SampledTimerWorkload
                     if (controller.HasPending(slot) && !controller.PendingJournals.Single(journal => journal.Slot == slot).LedgerSettled)
                         try { controller.Cancel(slot, ref state); } catch (Exception error) { failures.Add(error); }
                 }
-            Volatile.Write(ref stop, 1);
-            start.Set();
+            work.RequestStop();
             for (int slot = 0; slot < 2; slot++)
             {
                 int target = slot;
@@ -332,7 +322,7 @@ static class SampledTimerWorkload
                 try
                 {
                     lifetimes[slot].StopAndJoin(() => { }, () => workers[target]!.Join(TimeSpan.FromSeconds(2)),
-                        ready[slot].Dispose, () =>
+                        () => work.DisposeReady(target), () =>
                         {
                             if (controller!.HasPending((uint)target)) Poll((uint)target);
                             Require(!controller.HasPending((uint)target), "Retired timer ownership remains unresolved.");
@@ -354,7 +344,7 @@ static class SampledTimerWorkload
             if (client is not null && (transportInitialization is null || transportInitialization.Released)
                 && workers.Select((worker, slot) => worker is null || lifetimes[slot].Joined && lifetimes[slot].Released).All(safe => safe))
             {
-                var cleanup = TimerSessionCleanup.Run(session, client.CloseAfterThreadJoin, start.Dispose);
+                var cleanup = TimerSessionCleanup.Run(session, client.CloseAfterThreadJoin, work.Dispose);
                 closed = cleanup.NativeClosed;
                 failures.AddRange(cleanup.Errors);
             }
@@ -370,7 +360,7 @@ static class SampledTimerWorkload
         }
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
-            percent, failures = failures.Select(error => error.ToString()), failureStage, failureBoundary, samples, boundaries, peaks, progress, waits = new[] { ReleasedWait(0), ReleasedWait(1) }, credit, records, stableMap, closed,
+            percent, failures = failures.Select(error => error.ToString()), failureStage, failureBoundary, samples, boundaries, peaks, progress = work.SnapshotProgress(), waits = new[] { ReleasedWait(0), ReleasedWait(1) }, credit, records, stableMap, closed,
             lifetimes = lifetimes.Select(lifetime => new { lifetime.Joined, lifetime.Retired, lifetime.Released, error = lifetime.Error?.ToString() }),
             journals = controller?.Journals, pending = controller?.PendingJournals,
             controllerPhases = phases?.Entries,

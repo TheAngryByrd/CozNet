@@ -3,6 +3,7 @@
 `SampledTimerWorkload` connects `ICpuEventSession` observations to `TimerServiceController`.
 Its current entry point uses the Linux x64 timer and perf adapters.
 It runs two synchronous arithmetic workers with fixed native method mapping.
+It shares worker gates and the checksum loop with the [matched physical workload](matched-physical.md).
 It supports cold and explicitly initialized zero and 50-percent experiments.
 Measured warmup resets are not implemented here.
 

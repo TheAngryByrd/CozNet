@@ -26,7 +26,8 @@ It closes sample acceptance and disables resume before endpoint capture, then pe
 The capture copies pending identities and global delay, reads selected then peer counters, and retains sample sequence and epoch.
 These are controller-accounted values, not an atomic view of native work.
 Unreceived sample and journal tails still need uncertainty accounting before prediction analysis.
-A matched physical harness and speedup calibration remain unimplemented.
+The [matched physical harness](matched-physical.md) uses the same boundary contract.
+Speedup calibration and prediction analysis remain unimplemented.
 
 Seven portable checks cover frozen data, release ordering, failure retention, invalid readings, clock ordering, capture transitions, and cumulative counters.
 `--verify-measurement-boundaries` runs these checks alone. `--verify-timer-layout` includes them.
