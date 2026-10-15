@@ -265,15 +265,96 @@ def analyze_counter_capture(data):
                 "disabledCpuBoundEstablished": False, "predictionAccuracyEstablished": False}
 
 
+@dataclass(frozen=True)
+class SampleCreditEvidence:
+    percent: int
+    selected_symbol: str
+    accepted_samples: int
+    qualified_samples: int
+    epoch_exclusions: int
+    location_exclusions: int
+    unaccepted_samples: int
+    qualified_nominal_nanoseconds: int
+    credit_nanoseconds: int
+    remainder: int
+
+
+def parse_sample_credits(data):
+    capture = parse_capture(data)
+    percent = number(data["percent"], "sampled timer percentage")
+    require(percent in (0, 50), "Unsupported sampled timer percentage")
+    selected = data["records"]["SelectedSymbols"]
+    require(len(selected) == 1, "Credit replay requires one declared selected symbol")
+    start, end = (data["measurementCapture"][name]["Accounting"] for name in ("start", "end"))
+    require(number(start["Credit"], "initial sample credit") == 0 and
+            number(start["Epoch"], "initial eligibility epoch") == 1, "Sample credit did not start fresh")
+    final_epoch = number(end["Epoch"], "final eligibility epoch", 1)
+    previous_epoch = 0
+    observed_epoch = 1
+    accepted = qualified = epoch_exclusions = location_exclusions = unaccepted = nominal = total = remainder = 0
+    for index, (raw, sample) in enumerate(zip(data["samples"], capture.samples)):
+        epoch = number(raw["Epoch"], "sample eligibility epoch", 1)
+        require(observed_epoch <= epoch <= final_epoch, "Sample eligibility epochs regress or exceed the frozen endpoint")
+        observed_epoch = epoch
+        saved_credit = number(raw["Credit"], "sample credit", maximum=9223372036854775807)
+        amount = 0
+        if sample.accepted:
+            accepted += 1
+            if epoch != previous_epoch:
+                epoch_exclusions += 1
+            elif raw["Sample"]["Method"] != selected[0]:
+                location_exclusions += 1
+            else:
+                qualified += 1
+                period = raw["Sample"]["PeriodNanoseconds"]
+                nominal += period
+                amount, remainder = divmod(period * percent + remainder, 100)
+            previous_epoch = epoch
+            total += amount
+            require(total <= 9223372036854775807, "Replayed credit exceeds the ledger range")
+        else:
+            unaccepted += 1
+        require(saved_credit == amount, f"Sample credit differs at record {index}")
+    require(number(data["credit"], "total sample credit", maximum=9223372036854775807) == total and
+            number(end["Credit"], "frozen sample credit", maximum=9223372036854775807) == total,
+            "Total or frozen sample credit differs from replay")
+    return SampleCreditEvidence(percent, selected[0], accepted, qualified, epoch_exclusions, location_exclusions,
+                                unaccepted, nominal, total, remainder)
+
+
+def analyze_sample_credits(data):
+    result = {"reconciled": False, "reasons": [], "basis": "nominal-periods-and-declared-epochs",
+              "eligibilityTransitionsVerified": False, "selectedCpuBoundEstablished": False,
+              "predictionAccuracyEstablished": False}
+    try:
+        evidence = parse_sample_credits(data)
+        result.update(reconciled=True, percent=evidence.percent, selectedSymbol=evidence.selected_symbol,
+                      acceptedSamples=evidence.accepted_samples, qualifiedSamples=evidence.qualified_samples,
+                      epochExcludedSamples=evidence.epoch_exclusions, locationExcludedSamples=evidence.location_exclusions,
+                      unacceptedSamples=evidence.unaccepted_samples,
+                      qualifiedNominalNanoseconds=evidence.qualified_nominal_nanoseconds,
+                      creditNanoseconds=evidence.credit_nanoseconds, remainderHundredthsNanosecond=evidence.remainder)
+    except (ValueError, KeyError, TypeError, IndexError) as error:
+        result["reasons"] = [str(error)]
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description="Reconcile one sampled timer capture without establishing prediction accuracy.")
     parser.add_argument("capture", type=pathlib.Path)
     parser.add_argument("output", type=pathlib.Path)
+    parser.add_argument("--sample-credits", action="store_true", help="Also reconcile nominal sample credit records.")
     args = parser.parse_args()
     content = None
     try:
         content = args.capture.read_bytes()
-        result = analyze_counter_capture(json.loads(content.decode("utf-8-sig")))
+        data = json.loads(content.decode("utf-8-sig"))
+        result = analyze_counter_capture(data)
+        if args.sample_credits:
+            credits = analyze_sample_credits(data)
+            result = {"reconciled": result["reconciled"] and credits["reconciled"],
+                      "counterDiagnostics": result, "sampleCreditDiagnostics": credits,
+                      "predictionAccuracyEstablished": False}
     except (OSError, ValueError) as error:
         result = {"reconciled": False, "reasons": [str(error)], "predictionAccuracyEstablished": False}
     result.update(inputFile=args.capture.name, inputSha256=hashlib.sha256(content).hexdigest() if content is not None else None,

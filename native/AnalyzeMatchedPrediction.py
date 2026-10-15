@@ -6,7 +6,7 @@ import statistics
 import sys
 from dataclasses import dataclass
 from fractions import Fraction
-from AnalyzeCpuCounters import analyze_counter_capture
+from AnalyzeCpuCounters import analyze_counter_capture, analyze_sample_credits
 
 
 MODES = ("profile-zero", "profile-half", "physical-baseline", "physical-optimized")
@@ -164,6 +164,7 @@ def _analyze_case(data, mode, exit_code):
     errors = []
     cost = None
     counters = analyze_counter_capture(data) if mode in ("profile-zero", "profile-half") else None
+    credits = analyze_sample_credits(data) if counters is not None else None
     try:
         require(mode in MODES, "Unknown case mode")
         require(type(exit_code) is int and exit_code == 0, "Workload process did not exit successfully")
@@ -204,13 +205,16 @@ def _analyze_case(data, mode, exit_code):
         errors.append(str(error))
     if counters is not None and not counters["reconciled"]:
         errors.extend("CPU counter evidence: " + reason for reason in counters["reasons"])
+    if credits is not None and not credits["reconciled"]:
+        errors.extend("Sample credit evidence: " + reason for reason in credits["reasons"])
     diagnostic_cost = cost if not errors else None
     if mode == "profile-half":
         errors.extend(["Unreceived sample-period attribution has no verified bound",
                        "Native journal suffix attribution has no verified bound"])
     return ({"predictionEligible": not errors, "reasons": errors,
              "observedAccountedCost": cost.report() if cost is not None else None,
-             "costIncludesUnboundedAttribution": mode == "profile-half", "cpuCounterDiagnostics": counters}, diagnostic_cost)
+             "costIncludesUnboundedAttribution": mode == "profile-half", "cpuCounterDiagnostics": counters,
+             "sampleCreditDiagnostics": credits}, diagnostic_cost)
 
 
 def analyze_case(data, mode, exit_code):

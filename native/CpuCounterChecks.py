@@ -7,7 +7,7 @@ import sys
 import tempfile
 import unittest
 
-from AnalyzeCpuCounters import analyze_counter_capture
+from AnalyzeCpuCounters import analyze_counter_capture, analyze_sample_credits
 
 
 def fixture():
@@ -44,6 +44,185 @@ def fixture():
                                        "Transitions": [transition(1, True, 102, 104), transition(1, False, 500, 510),
                                                        transition(2, True, 700, 710), transition(2, False, 2200, 2210)],
                                        "LastReading": reading(2, False, 2220, 2230, 120)}}}
+
+
+def credit_fixture(percent=50):
+    data = fixture()
+    data.update(percent=percent, credit=5 if percent else 0)
+    for index, sample in enumerate(data["samples"]):
+        sample.update(Epoch=1, Credit=data["credit"] if index == 1 else 0)
+    data["measurementCapture"]["start"]["Accounting"].update(Credit=0, Epoch=1)
+    data["measurementCapture"]["end"]["Accounting"].update(Credit=data["credit"], Epoch=1)
+    return data
+
+
+class SampleCreditChecks(unittest.TestCase):
+    def test_credit_cli_preserves_failure_evidence_and_rejects_invalid_credit(self):
+        script = pathlib.Path(__file__).with_name("AnalyzeCpuCounters.py")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            source, output = root / "input.json", root / "output.json"
+            data = credit_fixture()
+            data.update(failures=["debt exceeded"], closed=False)
+            source.write_text(json.dumps(data))
+            command = [sys.executable, str(script), str(source), str(output), "--sample-credits"]
+            process = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(process.returncode, 0, process.stderr)
+            result = json.loads(output.read_text())
+            self.assertTrue(result["reconciled"])
+            self.assertTrue(result["sampleCreditDiagnostics"]["reconciled"])
+            self.assertEqual(result["counterDiagnostics"]["recordedWorkloadFailures"], ["debt exceeded"])
+            self.assertFalse(result["counterDiagnostics"]["nativeSessionClosed"])
+            self.assertFalse(result["predictionAccuracyEstablished"])
+            self.assertEqual(result["inputSha256"], hashlib.sha256(source.read_bytes()).hexdigest())
+            self.assertEqual(result["analyzerSha256"], hashlib.sha256(script.read_bytes()).hexdigest())
+            self.assertEqual(result["inputFile"], "input.json")
+            data["samples"][1]["Credit"] += 1
+            source.write_text(json.dumps(data))
+            command[3] = str(root / "rejected.json")
+            process = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(process.returncode, 1, process.stderr)
+            result = json.loads((root / "rejected.json").read_text())
+            self.assertFalse(result["reconciled"])
+            self.assertTrue(result["counterDiagnostics"]["reconciled"])
+            self.assertFalse(result["sampleCreditDiagnostics"]["reconciled"])
+
+    def test_nominal_credit_replays_at_zero_and_half_speedup(self):
+        for percent in (0, 50):
+            with self.subTest(percent=percent):
+                result = analyze_sample_credits(credit_fixture(percent))
+                self.assertTrue(result["reconciled"], result["reasons"])
+                self.assertEqual(result["creditNanoseconds"], 5 if percent else 0)
+                self.assertEqual(result["qualifiedNominalNanoseconds"], 10)
+                self.assertEqual((result["acceptedSamples"], result["qualifiedSamples"],
+                                  result["epochExcludedSamples"], result["unacceptedSamples"]), (2, 1, 1, 1))
+                self.assertFalse(result["eligibilityTransitionsVerified"])
+                self.assertFalse(result["selectedCpuBoundEstablished"])
+                self.assertFalse(result["predictionAccuracyEstablished"])
+
+    def test_unaccepted_epoch_does_not_replace_credit_baseline(self):
+        data = credit_fixture()
+        data["samples"][1].update(Accepted=False, Epoch=2, Credit=0)
+        data["samples"][2].update(Accepted=True, Epoch=2, Credit=0, Timestamp=1500)
+        data["samples"][2]["Sample"].update(CumulativeCpuNanoseconds=80, Method="selected", InstructionPointer=10)
+        data["records"].update(SelectedMethodSamples=3, UnmappedSamples=0, DistinctInstructionPointers=1)
+        data["measurementCapture"]["end"]["Accounting"].update(Credit=0, Epoch=2)
+        data["credit"] = 0
+        result = analyze_sample_credits(data)
+        self.assertTrue(result["reconciled"], result["reasons"])
+        self.assertEqual((result["qualifiedSamples"], result["epochExcludedSamples"], result["unacceptedSamples"]), (0, 2, 1))
+        self.assertEqual(result["creditNanoseconds"], 0)
+
+    def test_fractional_credit_survives_excluded_location(self):
+        data = credit_fixture()
+        template = deepcopy(data["samples"][0])
+        data["samples"] = []
+        for index, method in enumerate(("selected", "selected", None, "selected")):
+            sample = deepcopy(template)
+            sample.update(Timestamp=200 + index * 200, Credit=1 if index == 3 else 0)
+            sample["Sample"].update(Timestamp=100 + index * 100, CumulativeCpuNanoseconds=30 + index * 10,
+                                    PeriodNanoseconds=1, Method=method, InstructionPointer=20 if method is None else 10)
+            data["samples"].append(sample)
+        data["records"].update(Samples=4, RepresentedCpuNanoseconds=4, SelectedMethodSamples=3)
+        data["measurementCapture"]["end"]["Accounting"].update(AcceptedSampleSequence=4, Credit=1)
+        data["credit"] = 1
+        result = analyze_sample_credits(data)
+        self.assertTrue(result["reconciled"], result["reasons"])
+        self.assertEqual((result["qualifiedSamples"], result["locationExcludedSamples"],
+                          result["qualifiedNominalNanoseconds"], result["creditNanoseconds"],
+                          result["remainderHundredthsNanosecond"]), (2, 1, 2, 1, 0))
+        data["samples"][-1]["Sample"]["PeriodNanoseconds"] = 2
+        data["records"]["RepresentedCpuNanoseconds"] = 5
+        result = analyze_sample_credits(data)
+        self.assertTrue(result["reconciled"], result["reasons"])
+        self.assertEqual(result["remainderHundredthsNanosecond"], 50)
+
+    def test_rejects_changed_record_total_and_frozen_credits(self):
+        for target in ("sample", "unaccepted", "total", "frozen"):
+            with self.subTest(target=target):
+                data = credit_fixture()
+                if target == "sample":
+                    data["samples"][1]["Credit"] += 1
+                elif target == "unaccepted":
+                    data["samples"][2]["Credit"] = 1
+                elif target == "total":
+                    data["credit"] += 1
+                else:
+                    data["measurementCapture"]["end"]["Accounting"]["Credit"] += 1
+                self.assertFalse(analyze_sample_credits(data)["reconciled"])
+
+    def test_rejects_invalid_epochs_percentages_and_missing_evidence(self):
+        for field, value in (("Epoch", 0), ("Epoch", 2), ("Epoch", True), ("Credit", True), ("Credit", -1)):
+            with self.subTest(field=field, value=value):
+                data = credit_fixture()
+                data["samples"][1][field] = value
+                self.assertFalse(analyze_sample_credits(data)["reconciled"])
+        for percent in (True, -1, 25, 100):
+            data = credit_fixture()
+            data["percent"] = percent
+            self.assertFalse(analyze_sample_credits(data)["reconciled"])
+        for field in ("Credit", "Epoch"):
+            data = credit_fixture()
+            del data["samples"][0][field]
+            self.assertFalse(analyze_sample_credits(data)["reconciled"])
+        data = credit_fixture()
+        data["measurementCapture"]["start"]["Accounting"]["Credit"] = 1
+        self.assertFalse(analyze_sample_credits(data)["reconciled"])
+
+    def test_counter_failure_rejects_credit_but_workload_failure_does_not_hide_replay(self):
+        data = credit_fixture()
+        data.update(failures=["debt exceeded"], closed=False)
+        result = analyze_sample_credits(data)
+        self.assertTrue(result["reconciled"], result["reasons"])
+        self.assertFalse(result["predictionAccuracyEstablished"])
+        data["cpuCounters"]["source"]["FailedReads"] = 1
+        self.assertFalse(analyze_sample_credits(data)["reconciled"])
+
+    def test_eligibility_epoch_cannot_regress_within_frozen_epoch_range(self):
+        data = credit_fixture()
+        data["samples"][0]["Epoch"] = 2
+        data["measurementCapture"]["end"]["Accounting"]["Epoch"] = 2
+        result = analyze_sample_credits(data)
+        self.assertFalse(result["reconciled"])
+        self.assertIn("Sample eligibility epochs regress or exceed the frozen endpoint", result["reasons"])
+
+    def test_remainder_survives_an_excluded_epoch_boundary(self):
+        data = credit_fixture()
+        template = deepcopy(data["samples"][0])
+        data["samples"] = []
+        for index, epoch in enumerate((1, 1, 2, 2)):
+            sample = deepcopy(template)
+            sample.update(Epoch=epoch, Timestamp=200 + index * 200, Credit=1 if index == 3 else 0)
+            sample["Sample"].update(Timestamp=100 + index * 100, CumulativeCpuNanoseconds=30 + index * 10,
+                                    PeriodNanoseconds=1)
+            data["samples"].append(sample)
+        data["records"].update(Samples=4, RepresentedCpuNanoseconds=4, SelectedMethodSamples=4,
+                               UnmappedSamples=0, DistinctInstructionPointers=1)
+        data["measurementCapture"]["end"]["Accounting"].update(AcceptedSampleSequence=4, Credit=1, Epoch=2)
+        data["credit"] = 1
+        result = analyze_sample_credits(data)
+        self.assertTrue(result["reconciled"], result["reasons"])
+        self.assertEqual((result["qualifiedSamples"], result["epochExcludedSamples"],
+                          result["creditNanoseconds"], result["remainderHundredthsNanosecond"]), (2, 2, 1, 0))
+
+    def test_unaccepted_record_preserves_fractional_credit(self):
+        data = credit_fixture()
+        template = deepcopy(data["samples"][0])
+        data["samples"] = []
+        for index in range(4):
+            sample = deepcopy(template)
+            sample.update(Accepted=index != 2, Timestamp=200 + index * 200, Credit=1 if index == 3 else 0)
+            sample["Sample"].update(Timestamp=100 + index * 100, CumulativeCpuNanoseconds=30 + index * 10,
+                                    PeriodNanoseconds=1)
+            data["samples"].append(sample)
+        data["records"].update(Samples=4, RepresentedCpuNanoseconds=4, SelectedMethodSamples=4,
+                               UnmappedSamples=0, DistinctInstructionPointers=1)
+        data["measurementCapture"]["end"]["Accounting"].update(AcceptedSampleSequence=3, Credit=1)
+        data["credit"] = 1
+        result = analyze_sample_credits(data)
+        self.assertTrue(result["reconciled"], result["reasons"])
+        self.assertEqual((result["qualifiedSamples"], result["unacceptedSamples"],
+                          result["creditNanoseconds"], result["remainderHundredthsNanosecond"]), (2, 1, 1, 0))
 
 
 class CpuCounterChecks(unittest.TestCase):

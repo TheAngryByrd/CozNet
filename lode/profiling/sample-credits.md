@@ -44,6 +44,14 @@ flowchart LR
 The controlled intervention workload supplies a synthetic 40-millisecond observation at zero or 50 percent.
 The resulting zero or 20-millisecond credit reaches the injected probe and its real wait.
 The Linux capability workload now feeds nominal selected event periods through this interface at manual probes.
+The sampled timer producer also feeds nominal periods and records each credited amount.
+`analyze_sample_credits` in `native/AnalyzeCpuCounters.py` replays accepted records under their declared eligibility epochs.
+It checks each credit, the final total, and frozen endpoint credit after counter reconciliation.
+Its nanosecond calculation retains a remainder in hundredths of a nanosecond through excluded samples.
+Only accepted records advance the replay baseline. The first accepted record in each epoch is excluded.
+The matched analyzer requires this replay before producing a conditional block comparison.
+The replay does not verify native ownership transitions or sampled CPU accuracy.
+See [the replay reference](../../docsSrc/Reference/cpu-counter-evidence.md).
 Its fixed-method eligibility assumption does not provide general lifecycle qualification.
 See [Linux sampling](linux-perf.md) for its measured wait overshoot and support limits.
 See [cooperative runtime](cooperative-runtime.md), [delay ledger](delay-ledger.md), and [runtime probes](runtime-probes.md).

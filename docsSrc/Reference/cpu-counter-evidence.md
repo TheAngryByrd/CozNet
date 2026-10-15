@@ -102,3 +102,37 @@ Selected CPU, missing-sample tails, disabled CPU, and prediction accuracy claim 
 
 The matched analyzer embeds this report as `cpuCounterDiagnostics` for profile cases, including failed cases.
 See [matched prediction diagnostics](matched-prediction.md) for eligibility rules.
+
+## Nominal sample credit replay
+
+`analyze_sample_credits` in `native/AnalyzeCpuCounters.py` replays the sampled timer producer's credit contract.
+`python native/AnalyzeCpuCounters.py capture.json report.json --sample-credits` includes counter and credit diagnostics in one report.
+With this option, exit code zero requires both reconciliations. Workload success is still a separate result.
+It requires reconciled counter evidence and one declared selected symbol.
+The supported percentages are zero and 50, matching the current producer.
+It uses `PeriodNanoseconds` as the sample weight. It does not substitute cumulative CPU-counter differences.
+
+The credit stream starts at eligibility epoch zero. The measurement starts at epoch one with zero credit.
+Only accepted samples advance the credit stream.
+A sample qualifies when its epoch equals the previous accepted sample's epoch and its method matches the declared selected symbol.
+The first accepted sample in each epoch earns no credit.
+Other locations, unmapped samples, and unaccepted samples earn no credit.
+Each qualified sample uses this integer calculation:
+
+```text
+numerator = periodNanoseconds * percent + remainder
+creditNanoseconds = numerator // 100
+remainder = numerator % 100
+```
+
+Excluded samples preserve the fractional remainder.
+The parser checks every recorded `Credit`, the total `credit`, and the frozen endpoint's `Accounting.Credit`.
+It rejects missing fields, regressing epochs, epochs beyond the frozen endpoint, and invalid integer values.
+Counter-source epochs and declared credit eligibility epochs remain separate identities.
+
+The report includes accepted, qualified, epoch-excluded, location-excluded, and unaccepted sample counts.
+It retains qualified nominal nanoseconds, replayed credit, and the final remainder in hundredths of a nanosecond.
+`basis` is `nominal-periods-and-declared-epochs`.
+`eligibilityTransitionsVerified`, `selectedCpuBoundEstablished`, and `predictionAccuracyEstablished` remain false.
+The replay checks arithmetic under declared eligibility. It does not verify those declarations against native service ownership.
+It also does not establish representative sampling or exact selected CPU time.

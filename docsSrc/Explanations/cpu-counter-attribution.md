@@ -26,5 +26,10 @@ An accepted sample identifies one sampled instruction, not all work represented 
 Native journal suffixes require separate attribution.
 Prediction accuracy remains unverified.
 
+Nominal credit replay answers a different question: did the producer apply its declared sampling rule consistently?
+It can reproduce every recorded credit while the sampled estimate remains biased.
+Eligibility epochs describe when the producer permits credit. Replaying those labels does not prove that each transition was correct.
+The counter parser and credit replay therefore remain separate diagnostics.
+
 See the [counter reference](../Reference/cpu-counter-evidence.md) and [clock alignment limits](sample-clock-alignment.md).
 The [Linux perf implementation](https://github.com/torvalds/linux/blob/v6.6/kernel/events/core.c) defines sample output and task-clock counter updates.

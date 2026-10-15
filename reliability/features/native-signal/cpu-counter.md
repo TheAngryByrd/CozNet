@@ -70,6 +70,35 @@ The Linux checks use `python:3.12-slim`.
 The .NET SDK image does not contain Python.
 `BuildDocs` passes. No new timed matrix has run for this analyzer increment.
 
+## Nominal credit reconciliation
+
+`sample-credit-cli-0.json` and `sample-credit-cli-50.json` retain the offline replay of the same captures.
+Each report includes counter diagnostics, credit diagnostics, input SHA-256, and analyzer SHA-256.
+Earlier reports remain unchanged. No workload ran again.
+The committed CLI produces these reports with `--sample-credits`:
+
+```powershell
+python native/AnalyzeCpuCounters.py artifacts/timer-sampled/20261015T025206017-a2af01e3/sampled-0.json artifacts/timer-sampled/20261015T025206017-a2af01e3/sample-credit-cli-0.json --sample-credits
+python native/AnalyzeCpuCounters.py artifacts/timer-sampled/20261015T025206017-a2af01e3/sampled-50.json artifacts/timer-sampled/20261015T025206017-a2af01e3/sample-credit-cli-50.json --sample-credits
+```
+
+Existing output paths are rejected. Reanalysis requires a new output filename.
+
+| Observation | Zero percent | Fifty percent |
+| --- | ---: | ---: |
+| Accepted samples | 1,940 | 405 |
+| Qualified samples | 1,915 | 392 |
+| Epoch-excluded samples | 1 | 7 |
+| Location-excluded samples | 24 | 6 |
+| Unaccepted samples | 11 | 6 |
+| Qualified nominal periods | 1,915,000,000 ns | 392,000,000 ns |
+| Replayed credit | 0 ns | 196,000,000 ns |
+
+Every per-record credit matches the replay. Both totals match their frozen endpoint and final credit fields.
+Both fractional remainders are zero.
+The treatment's original failures and incomplete native closure remain in the counter diagnostics.
+The replay verifies arithmetic under declared epochs. It does not verify native eligibility transitions or prediction accuracy.
+
 See the [counter reference](../../../docsSrc/Reference/cpu-counter-evidence.md),
 [attribution limits](../../../docsSrc/Explanations/cpu-counter-attribution.md), and
 [Linux perf contracts](../../../lode/profiling/linux-perf.md).

@@ -57,9 +57,12 @@ Shutdown progress, shutdown credit, and summed worker waits do not enter this ca
 Failed exits, workload failures, missing records, invalid boundaries, or snapshot changes reject case eligibility.
 Profile cases also require stable maps, loss-free sampling, completed native lifetimes, and the unchanged 2 ms debt bound.
 They require reconciled [CPU counter evidence](cpu-counter-evidence.md).
+They also require nominal sample credits to reconcile with each record and the frozen endpoint.
 Missing legacy evidence rejects profile eligibility. Physical cases do not require CPU counter evidence.
 `cpuCounterDiagnostics` retains counter results even when the process exits unsuccessfully or native cleanup fails.
 Counter reconciliation does not remove workload failures or establish treatment eligibility.
+`sampleCreditDiagnostics` retains credit replay results independently of workload success.
+Physical cases have null counter and credit diagnostics.
 Zero-intervention cases must contain no delay credit or native wait.
 Treatment must contain positive credit and paid intervention inside the frozen window. Later shutdown payment cannot repair this requirement.
 
@@ -79,6 +82,7 @@ It does not establish prediction eligibility or accuracy.
 
 `blocks[].conditionalComparison` compares four structurally valid case costs within one declared block.
 Both profile cases must also have reconciled counter evidence.
+They must have reconciled nominal sample credit evidence as well.
 A failed or missing case suppresses that block's comparison. Snapshot or runner errors suppress every comparison.
 `diagnosticUnavailableCases` lists cases without a usable cost. Run-level errors remain in their existing fields.
 

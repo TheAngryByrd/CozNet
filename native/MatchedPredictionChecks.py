@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 from AnalyzeMatchedPrediction import MODES, WindowCost, analyze, analyze_case, conditional_comparison, parse_window, parse_calibration
-from CpuCounterChecks import fixture as counter_fixture
+from CpuCounterChecks import credit_fixture as counter_fixture
 
 
 def fixture(mode="profile-half"):
@@ -38,10 +38,11 @@ def fixture(mode="profile-half"):
             "journals": [{}] if mode == "profile-half" else [],
             "waits": [800000000, 900000000] if mode == "profile-half" else [0, 0]}
     if mode.startswith("profile-"):
-        counter = counter_fixture()
+        counter = counter_fixture(data["percent"])
         for field in ("cpuCounters", "samples", "records"):
             data[field] = counter[field]
         end["Accounting"]["AcceptedSampleSequence"] = 2
+        data["credit"] = end["Accounting"]["Credit"] = counter["credit"]
     return data
 
 
@@ -185,6 +186,24 @@ class MatchedPredictionChecks(unittest.TestCase):
                                 for item in result["blocks"] if item["block"] != 3))
             self.assertIsNone(result["predictionSummary"])
 
+    def test_invalid_sample_credit_suppresses_only_its_block_diagnostic(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            series(root)
+            path = root / "block-3-profile-half.json"
+            data = json.loads(path.read_text())
+            data["samples"][1]["Credit"] += 1
+            path.write_text(json.dumps(data))
+            result = analyze(root)
+            case = next(item for item in result["cases"] if item["name"] == "block-3-profile-half")
+            self.assertTrue(case["cpuCounterDiagnostics"]["reconciled"])
+            self.assertFalse(case["sampleCreditDiagnostics"]["reconciled"])
+            self.assertFalse(case["predictionEligible"])
+            self.assertTrue(any(reason.startswith("Sample credit evidence:") for reason in case["reasons"]))
+            self.assertIsNone(result["blocks"][2]["conditionalComparison"])
+            self.assertTrue(all(item["conditionalComparison"] is not None for item in result["blocks"] if item["block"] != 3))
+            self.assertIsNone(result["predictionSummary"])
+
     def test_legacy_manifest_requires_both_counter_module_hashes(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
@@ -210,6 +229,8 @@ class MatchedPredictionChecks(unittest.TestCase):
         self.assertEqual(counters["recordedWorkloadFailures"], ["debt exceeded"])
         self.assertFalse(counters["nativeSessionClosed"])
         self.assertFalse(counters["predictionAccuracyEstablished"])
+        self.assertTrue(result["sampleCreditDiagnostics"]["reconciled"])
+        self.assertFalse(result["sampleCreditDiagnostics"]["predictionAccuracyEstablished"])
 
     def test_legacy_profile_requires_counters_but_physical_case_does_not(self):
         data = fixture("profile-zero")
@@ -222,6 +243,7 @@ class MatchedPredictionChecks(unittest.TestCase):
         physical = analyze_case(fixture("physical-baseline"), "physical-baseline", 0)
         self.assertTrue(physical["predictionEligible"], physical["reasons"])
         self.assertIsNone(physical["cpuCounterDiagnostics"])
+        self.assertIsNone(physical["sampleCreditDiagnostics"])
 
     def test_calibration_reconciles_all_records_and_independent_statistics(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -43,6 +43,9 @@ Disabled counts must remain stable in the same epoch.
 It reports frozen counter prefixes and suffixes plus outward-rounded disabled elapsed ranges.
 It preserves workload failures and closure state. All CPU-attribution and accuracy claims remain false.
 The matched analyzer computes these diagnostics before workload eligibility checks.
+It also computes `sampleCreditDiagnostics` by replaying nominal periods and declared eligibility epochs.
+Invalid credit evidence rejects profile eligibility and suppresses the block's conditional comparison.
+The replay preserves failed-workload diagnostics and does not establish native eligibility or CPU attribution.
 Missing or invalid counter evidence rejects profile eligibility, including legacy captures.
 Physical cases do not require it. New runner snapshots include both counter Python files and run their checks.
 `conditional_comparison` consumes parsed `WindowCost` values and computes within-block cost ratios with exact fractions.
