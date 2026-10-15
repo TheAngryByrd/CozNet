@@ -23,7 +23,8 @@ Both commands pass all nine CTest entries on the current Windows and Linux x64 e
 `cooperative-target` is the new entry. The existing eight lease, mailbox, snapshot, and service-owner entries also pass.
 No live timing comparison ran. No capacity, receipt-latency, or prediction gate changed.
 
-The next integration needs a production clock/wait adapter, cooperative receipt transport, and .NET probe binding.
+The [cooperative ABI checks](cooperative-interop.md) cover the production clock/wait adapter and native receipt records.
+The next integration needs managed receipt tracking, ledger binding, and .NET probe binding.
 The host must tie successful code revocation to actual CLR code lifetime before claiming that lifetime is protected.
 The numeric site identity alone cannot prove probe origin.
 

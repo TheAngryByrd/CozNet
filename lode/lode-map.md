@@ -20,6 +20,7 @@ For the finite active-polling prototype and its retained capacity failures, read
 
 For the portable target-local lease state machine, read [target-local leases](profiling/target-local-lease.md).
 For target-thread cooperative service and explicit code revocation, read [the cooperative transport](profiling/cooperative-target.md).
+For cooperative ABI ownership, receipt records, and production timing, read [cooperative interop](profiling/cooperative-interop.md).
 For target-local timer delivery, read [the lease plan](plans/target-local-lease.md).
 For repeated native timer generations, read [the reuse procedure](../docsSrc/How_Tos/run-target-lease-reuse.md).
 For the timer C ABI and first managed receipt, read [timer interop](profiling/timer-interop.md).

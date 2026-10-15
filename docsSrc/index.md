@@ -25,6 +25,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Reference
 
+- [Cooperative C ABI](Reference/cooperative-interop.md): portable records, native receipt bounds, and production timing.
+
 - [Cooperative target transport](Reference/cooperative-target.md): thread ownership, code-lifetime hooks, and finite poll service.
 
 - [Conditional service completion range](Reference/service-completion-range.md): valid completion states and unsupported cases.

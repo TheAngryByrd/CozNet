@@ -69,6 +69,7 @@ Existing native mailbox ownership can supply publication, claim, cancellation, a
 A cooperative poll site needs explicit admission evidence. It is not an interrupted instruction pointer.
 The portable lease core now checks a separate worker, code-version, and site identity through `arriveAtPoll`.
 The [cooperative transport](../Reference/cooperative-target.md) binds the owner thread and provides explicit code-revocation guards.
+Its [separate C ABI](../Reference/cooperative-interop.md) preserves site identity and captures native receipt timestamps.
 It still needs .NET probe binding and integration with actual CLR code lifetime.
 This identity check does not prove runtime registration or execution at that site.
 The [lease reference](../Reference/target-local-lease.md) describes the implemented contract.

@@ -1,8 +1,9 @@
 # Cooperative target transport
 
 `CooperativeTarget` is an internal portable C++ transport for finite cooperative leases.
-It uses `LeaseMailbox` and `TargetLease`. It has no C ABI or .NET probe binding yet.
-`CooperativeTiming` supplies clock and wait operations. No production timing adapter is installed by this class.
+It uses `LeaseMailbox` and `TargetLease`.
+The [cooperative C ABI](cooperative-interop.md) supplies production clock and spin-wait operations through `CooperativeTiming`.
+No .NET probe binding uses it yet.
 
 ## Registration and lifetime
 
