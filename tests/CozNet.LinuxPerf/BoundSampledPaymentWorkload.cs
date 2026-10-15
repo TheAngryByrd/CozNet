@@ -31,6 +31,7 @@ static class BoundSampledPaymentWorkload
         var selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(settings.Percent), SignalAccountingModule.create()));
         var peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
         var state = peer.Item2;
+        var accounting = new CooperativeAccountingCache(selected.Item1, peer.Item1);
         var stream = Parsed(SignalAccountingModule.sampleIdentity(selected.Item1, state));
         var samples = new List<CreditedSample>();
         var payments = new List<Payment>();
@@ -82,14 +83,14 @@ static class BoundSampledPaymentWorkload
 
         Debt ObserveDebt()
         {
-            var observed = CooperativeDebtSnapshot.Capture(selected.Item1, peer.Item1, state);
+            var observed = accounting.Observe(state);
             var debt = new Debt(Stopwatch.GetTimestamp(), observed.Global, credit, paid,
                 observed.Selected, observed.Peer, observed.SelectedLocal, observed.PeerLocal, selectedPaid);
             lastObservedDebt = debt;
             if (selectedPeak is null || debt.Selected > selectedPeak.Selected) selectedPeak = debt;
             if (peerPeak is null || debt.Peer > peerPeak.Peer) peerPeak = debt;
-            Require(debt.Selected <= 2000000 && debt.Peer <= 2000000,
-                $"Sampled cooperative debt exceeded 2 ms: selected={debt.Selected}, peer={debt.Peer}.");
+            if (debt.Selected > 2000000 || debt.Peer > 2000000)
+                throw new InvalidDataException($"Sampled cooperative debt exceeded 2 ms: selected={debt.Selected}, peer={debt.Peer}.");
             return debt;
         }
 
@@ -105,7 +106,7 @@ static class BoundSampledPaymentWorkload
             credit = checked(credit + amount);
             samples.Add(new(samples.Count, sample, amount, eligibilityEpoch));
             cadence?.Observe(eligibilityEpoch);
-            var debt = CooperativeDebtSnapshot.Capture(selected.Item1, peer.Item1, state);
+            var debt = accounting.Observe(state);
             if (debt.SelectedLocal >= debt.Global)
             {
                 var prepared = Parsed(SignalAccountingModule.prepare(selected.Item1, state));
@@ -142,7 +143,7 @@ static class BoundSampledPaymentWorkload
                 if (!admitted || ObserveDebt().Selected == 0) return;
                 admission = candidate;
             }
-            else if (CooperativeDebtSnapshot.Capture(selected.Item1, peer.Item1, state).Selected == 0) return;
+            else if (accounting.Observe(state).Selected == 0) return;
             int pauseIndex = pauses.Count;
             pauses.Add(new(Stopwatch.GetTimestamp(), samples.Count, Admission: admission));
             collection!.ExecuteExcluded(drained =>
@@ -184,7 +185,7 @@ static class BoundSampledPaymentWorkload
                         Stopwatch.GetTimestamp(), selectedReceipt, selectedCleanup!, interval));
                     selectedPending = null;
                     selectedLease = null;
-                    var debt = CooperativeDebtSnapshot.Capture(selected.Item1, peer.Item1, state);
+                    var debt = accounting.Observe(state);
                     if (debt.SelectedLocal >= debt.Global)
                     {
                         var caughtUp = Parsed(SignalAccountingModule.prepare(selected.Item1, state));
@@ -232,11 +233,11 @@ static class BoundSampledPaymentWorkload
             }
             if (pending is null)
             {
-                var prepared = Parsed(SignalAccountingModule.prepareService(peer.Item1, state));
-                state = prepared.Item2;
-                if (prepared.Item1 is not null)
+                var prepared = accounting.PreparePeer(state);
+                state = prepared.State;
+                if (prepared.Lease is not null)
                 {
-                    lease = prepared.Item1.Value;
+                    lease = prepared.Lease;
                     pendingBudget = SignalServiceLeaseModule.nanoseconds(lease);
                     command = checked(command + 1);
                     pendingStarted = Stopwatch.GetTimestamp();
@@ -321,7 +322,7 @@ static class BoundSampledPaymentWorkload
             if (selectedPaymentEnabled) PublishEpochs(collection.EpochDiagnostics, samples.Count);
             else Publish(result.Samples, samples.Count);
             var drain = Stopwatch.StartNew();
-            while (pending is not null || CooperativeDebtSnapshot.Capture(selected.Item1, peer.Item1, state).Peer > 0)
+            while (pending is not null || accounting.Observe(state).Peer > 0)
             {
                 Require(drain.Elapsed < TimeSpan.FromMilliseconds(100), "The final sampled cooperative debt did not settle within 100 ms.");
                 Service();

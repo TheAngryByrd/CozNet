@@ -44,6 +44,24 @@ Interrupted waits retain valid measured payment. Deferred sites do not pay debt.
 Every valid terminal cooperative journal must contain a child.
 Failed evidence leaves the caller's existing ledger state and reservation intact.
 
+## Immutable accounting reuse
+
+The controlled bound sampled workload uses `CooperativeAccountingCache` on its selected owner thread.
+The cache binds one selected handle and one distinct peer handle.
+It reuses a debt snapshot only when the caller supplies the same immutable `SignalAccounting` object.
+Another object requires full capture, even when its numeric debt is equal.
+
+`PreparePeer` retains the resulting state only after successful preparation returns no lease.
+A later call with that exact state returns the idle result without repeating preparation.
+Changed state requires full preparation. A reservation clears the idle entry.
+Failed capture or preparation leaves the last successful entry intact.
+Peer overshoot must pass through catch-up before its resulting idle state can be reused.
+Idle reuse requires full preparation to remain idempotent on that resulting state.
+
+The cache is not thread-safe. The workload keeps accounting mutation and cache access on the selected owner.
+Debt records still receive new timestamps, and every observation still enforces the 2 ms debt limit.
+The cache does not skip native polling, receipt checks, CLR lifetime checks, or source ownership checks.
+
 ## Ownership and cleanup
 
 The controller owns submission, snapshots, receipt tracking, cancellation, release, and close.

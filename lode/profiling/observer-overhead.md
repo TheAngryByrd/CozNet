@@ -32,9 +32,11 @@ flowchart LR
     Map --> Components[Measure accounting and lifetime components]
 ```
 
-The next component measurements must preserve legal state and all admission checks.
-Source inspection identifies repeated debt snapshots and idle service preparation as measurement candidates, not proven dominant costs.
-The full history optimization does not establish low profiler overhead.
+The workload uses [immutable accounting reuse](accounting-reuse.md) after component measurements identified repeated-state allocation.
+The latest zero-speedup reference capture retains a median ratio of 2.95 with all 16 records valid.
+Its reference timings differ from the earlier capture, so their ratios do not isolate the change's exact effect.
+Probe lifetime checks remain a measurement candidate, not a proven dominant cost.
+These optimizations do not establish low profiler overhead or prediction accuracy.
 See [the retained evidence](../../reliability/features/native-signal/fixed-work-observer.md),
 [the explanation](../../docsSrc/Explanations/bound-observer-overhead.md),
 [counter history](counter-history.md), and [the index](../lode-map.md).

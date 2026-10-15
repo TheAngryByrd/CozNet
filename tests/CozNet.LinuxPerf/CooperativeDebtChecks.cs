@@ -20,6 +20,7 @@ static class CooperativeDebtChecks
 
     public static void Run()
     {
+        CooperativeAccountingCacheChecks.Run();
         FreshThreadsHaveNoDebt();
         UnsettledWaitDoesNotReduceLedgerDebt();
         SelectedWaitAndCatchUpPreserveOvershoot();

@@ -35,6 +35,7 @@ The checks run in both cooperative managed command groups on Windows and Linux.
 It also checks that resume excludes the baseline and retains the fractional credit remainder.
 Settlement and overshoot publication are separate transitions. Tests must exercise both.
 This does not establish native selected payment, stable capacity, or profiler CPU exclusion.
-Two immutable thread captures per observation add unmeasured controller cost.
+Two immutable thread captures allocate 672 bytes per isolated observation in the retained zero-debt measurement.
+The bound workload uses [immutable accounting reuse](accounting-reuse.md) to avoid repeated capture for the same state.
 
 See [the sampled payment path](bound-sampled-payment.md), [the ledger](delay-ledger.md), and [pausable collection](pausable-collector.md).

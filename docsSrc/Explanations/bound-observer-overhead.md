@@ -50,9 +50,25 @@ The post-run map does not prove code lifetime at each sample timestamp.
 Its labels do not replace the admitted CLR map or alter sample credits.
 Enabling map output also changes the observed process.
 
-The next useful comparison separates unchanged-state debt capture, idle service preparation, and probe lifetime checks.
-Removing a correctness check would change the experiment contract.
-Physical prediction accuracy remains unverified.
+These labels identify candidates for separate component measurements.
+They do not justify removing correctness checks.
+
+## Effect of immutable-state reuse
+
+The controlled workload now reuses validated accounting results for the same immutable state object.
+An isolated repeated-state call allocates zero bytes, compared with 1,000 bytes for uncached idle preparation and debt capture.
+State changes still require full accounting operations.
+
+A subsequent eight-pair capture retained a median profile/reference elapsed ratio of 2.95.
+All 16 cases completed. The earlier capture retained a ratio of 7.37.
+Reference timings also changed, and both captures contain slower cases that remain in the results.
+The separate captures do not isolate the change's exact elapsed-time effect.
+
+The subsequent selected-payment matrix passed all twelve cases with unchanged timing bounds.
+Continuous mode still performed thousands of pauses and admitted few selected intervals.
+One passing matrix does not establish stable capacity or physical prediction accuracy.
+See [the reuse evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/accounting-reuse.md)
+and [the cache contract](../Reference/cooperative-managed.md#immutable-accounting-reuse).
 
 See [the cadence contract](../Reference/bound-selected-cadence.md),
 [the cadence procedure](../How_Tos/run-bound-selected-cadence.md), and

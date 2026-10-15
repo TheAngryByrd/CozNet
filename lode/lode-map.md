@@ -1,5 +1,7 @@
 # Lode index
 
+For reuse of validated idle accounting results and debt snapshots, read [accounting reuse](profiling/accounting-reuse.md).
+
 For the zero-speedup fixed-work reference and diagnostic runtime maps, read [observer overhead](profiling/observer-overhead.md).
 
 For shared immutable counter snapshots and prefix validation, read [counter history](profiling/counter-history.md).
