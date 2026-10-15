@@ -96,6 +96,205 @@ module SignalAccountingTests =
     [<Tests>]
     let tests =
         testList "Signal accounting" [
+            testCase "Thread snapshot resets empty prefix sequence on reused service"
+            <| fun _ ->
+                let selected, peer, state = credited 100000UL
+                let first, reserved = service peer state
+
+                let terminal =
+                    SignalAccounting.sentService first reserved
+                    |> parsed
+                    |> accept first 1L 7UL 50000L 50000L 2
+
+                let _, released =
+                    SignalAccounting.completeService first terminal
+                    |> parsed
+
+                let _, creditedAgain =
+                    observe selected 2UL 200000UL 0UL released
+                    |> parsed
+
+                let _, published = prepare selected creditedAgain
+                let next, reservedAgain = service peer published
+
+                let snapshot =
+                    SignalAccounting.captureThread peer reservedAgain
+                    |> parsed
+
+                Expect.notEqual
+                    (SignalServiceLease.identity next)
+                    (SignalServiceLease.identity first)
+                    "The replacement must own a new service identity."
+
+                Expect.equal
+                    snapshot.Operation
+                    (SignalOperationSnapshot.Service(
+                        next,
+                        {
+                            Count = 0L
+                            LastSequence = 0UL
+                            MeasuredNanoseconds = 0L
+                        }
+                    ))
+                    "An empty replacement prefix must not inherit the previous native sequence."
+
+                Expect.equal
+                    (DelayTicks.value snapshot.Ledger.Local)
+                    50000L
+                    "A new reservation must retain the previous settled payment."
+
+            testCase
+                "Thread snapshot separates accepted service wait from settlement and publication"
+            <| fun _ ->
+                let _, peer, state = credited 200000UL
+                let lease, reserved = service peer state
+
+                let active =
+                    SignalAccounting.sentService lease reserved
+                    |> parsed
+                    |> accept lease 1L 1UL 50000L 50000L 2
+
+                let frozen =
+                    SignalAccounting.captureThread peer active
+                    |> parsed
+
+                let terminal =
+                    active
+                    |> accept lease 2L 2UL 50000L 55000L 2
+
+                let _, settled =
+                    SignalAccounting.completeService lease terminal
+                    |> parsed
+
+                let completed =
+                    SignalAccounting.captureThread peer settled
+                    |> parsed
+
+                let _, published = prepare peer settled
+
+                let after =
+                    SignalAccounting.captureThread peer published
+                    |> parsed
+
+                Expect.equal
+                    frozen.Operation
+                    (SignalOperationSnapshot.Service(
+                        lease,
+                        {
+                            Count = 1L
+                            LastSequence = 1UL
+                            MeasuredNanoseconds = 50000L
+                        }
+                    ))
+                    "The frozen service must retain its accepted prefix and lease."
+
+                Expect.equal
+                    frozen.Ledger.Phase
+                    LedgerThreadPhase.Delaying
+                    "Accepted wait must not release the ledger."
+
+                Expect.equal
+                    (DelayTicks.value frozen.Ledger.Local)
+                    0L
+                    "Accepted service wait is not settled local credit."
+
+                Expect.equal
+                    (DelayTicks.value frozen.Ledger.Global)
+                    100000L
+                    "Observation must not publish accepted wait."
+
+                Expect.equal
+                    completed.Operation
+                    SignalOperationSnapshot.Idle
+                    "Settlement must remove unsettled service wait."
+
+                Expect.equal
+                    (DelayTicks.value completed.Ledger.Local)
+                    105000L
+                    "The full accepted sum must enter local credit once."
+
+                Expect.equal
+                    (DelayTicks.value completed.Ledger.Global)
+                    100000L
+                    "Settlement must leave overshoot unpublished."
+
+                Expect.equal
+                    (DelayTicks.value after.Ledger.Global)
+                    105000L
+                    "Catch-up must publish overshoot separately."
+
+                Expect.equal
+                    (SignalAccounting.captureThread peer active
+                     |> parsed)
+                    frozen
+                    "Later transitions must preserve the frozen snapshot."
+
+            testCase "Thread snapshot retains reservation and individual request ownership"
+            <| fun _ ->
+                let _, peer, state = credited 100000UL
+
+                let idle =
+                    SignalAccounting.captureThread peer state
+                    |> parsed
+
+                let lease, reserved = service peer state
+
+                let snapshot =
+                    SignalAccounting.captureThread peer reserved
+                    |> parsed
+
+                let rejected =
+                    SignalAccounting.rejectedServiceBeforeSend lease reserved
+                    |> parsed
+
+                let request, pending = required peer rejected
+
+                let requestSnapshot =
+                    SignalAccounting.captureThread peer pending
+                    |> parsed
+
+                Expect.equal
+                    idle.Operation
+                    SignalOperationSnapshot.Idle
+                    "Unpaid debt alone must not invent ownership."
+
+                Expect.equal
+                    snapshot.Operation
+                    (SignalOperationSnapshot.Service(
+                        lease,
+                        {
+                            Count = 0L
+                            LastSequence = 0UL
+                            MeasuredNanoseconds = 0L
+                        }
+                    ))
+                    "An unsubmitted reservation must retain its identity with an empty prefix."
+
+                Expect.equal
+                    requestSnapshot.Operation
+                    (SignalOperationSnapshot.Request request)
+                    "An individual request must not become an idle or service state."
+
+                Expect.equal
+                    requestSnapshot.Ledger.Phase
+                    LedgerThreadPhase.Delaying
+                    "The request must retain delaying state."
+
+                Expect.equal
+                    (DelayTicks.value requestSnapshot.Ledger.Global)
+                    50000L
+                    "Rejection must not forgive unpaid debt."
+
+            testCase "Thread snapshot rejects foreign registration"
+            <| fun _ ->
+                let _, peer, _ = start 50
+                let _, _, other = start 50
+
+                Expect.equal
+                    (SignalAccounting.captureThread peer other)
+                    (Error "The signal thread is not registered.")
+                    "Snapshot lookup must preserve signal registration ownership."
+
             testCase "Selected service pays peer overshoot and excludes stale samples"
             <| fun _ ->
                 let selected, peer, state = credited 100000UL

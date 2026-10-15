@@ -71,7 +71,9 @@ static class SampledTimerWorkload
                 var worker = slot == 0 ? timerAccounting?.Selected : timerAccounting?.Peer;
                 var operation = worker?.Pending;
                 return new(work.Progress((int)slot), worker?.ReleasedWait ?? 0, operation?.ConfirmedWait ?? 0,
-                    operation is null ? null : new(operation.Command, operation.Generation));
+                    operation is null ? null : new(operation.Command, operation.Generation),
+                    worker is null ? null : MeasurementLedgerReading.Capture(
+                        Parsed(SignalAccountingModule.captureThread(handles[slot], state)), worker));
             }
             long global = SignalAccountingModule.globalNanoseconds(state);
             var selectedWorker = ReadWorker(0);

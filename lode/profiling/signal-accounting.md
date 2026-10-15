@@ -4,6 +4,14 @@
 It performs no sampling, native calls, or waits.
 One controller must serialize transitions and retain the latest state.
 The ledger clock uses nanoseconds.
+
+`captureThread` returns a private immutable `SignalThreadSnapshot` from one accounting state.
+It combines `LedgerObservation` with idle, individual-request, or service ownership.
+Service ownership retains the lease and accepted prefix count, native sequence, and measured wait.
+Lease release removes that service snapshot when it transfers the accepted sum into settled local credit.
+Controller ownership can outlive this ledger settlement. Native archival remains a separate event.
+Capture does not publish credit or imply that an unreceived native suffix is zero.
+See [the lifecycle plan](../plans/experiment-lifecycle.md).
 An alternative [peer service model](signal-service.md) reserves finite debt snapshots and accepts separate bounded child acknowledgments.
 It shares this ledger and blocks individual requests while a lease owns the peer.
 The live workload does not use that path yet.

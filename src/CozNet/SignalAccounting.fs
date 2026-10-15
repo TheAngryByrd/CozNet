@@ -59,6 +59,20 @@ type internal SignalServiceProgress = {
 }
 
 [<RequireQualifiedAccess>]
+type internal SignalOperationSnapshot =
+    | Idle
+    | Request of request: SignalDelayRequest
+    | Service of lease: SignalServiceLease * progress: SignalServiceProgress
+
+type internal SignalThreadSnapshot = private {
+    ObservedLedger: LedgerObservation
+    ObservedOperation: SignalOperationSnapshot
+} with
+
+    member this.Ledger = this.ObservedLedger
+    member this.Operation = this.ObservedOperation
+
+[<RequireQualifiedAccess>]
 module internal SignalAccounting =
     let create () = {
         Ledger = DelayLedger.create ()
@@ -81,6 +95,40 @@ module internal SignalAccounting =
     let private find thread state =
         Map.tryFind thread state.Threads
         |> require "The signal thread is not registered."
+
+    let captureThread thread state =
+        find thread state
+        |> Result.bind (fun entry ->
+            DelayLedger.observe thread state.Ledger
+            |> Result.bind (fun ledger ->
+                let operation =
+                    match Map.tryFind thread state.Services, Map.tryFind thread state.Pending with
+                    | Some service, None ->
+                        Ok(
+                            SignalOperationSnapshot.Service(
+                                service.Lease,
+                                {
+                                    Count = service.Count
+                                    LastSequence =
+                                        if service.Count = 0L then
+                                            0UL
+                                        else
+                                            entry.LastNativeSequence
+                                    MeasuredNanoseconds = service.Measured
+                                }
+                            )
+                        )
+                    | None, Some pending -> Ok(SignalOperationSnapshot.Request pending.Request)
+                    | None, None -> Ok SignalOperationSnapshot.Idle
+                    | Some _, Some _ -> Error "Signal request and service ownership overlap."
+
+                operation
+                |> Result.map (fun value -> {
+                    ObservedLedger = ledger
+                    ObservedOperation = value
+                })
+            )
+        )
 
     let requiredEpoch thread state =
         find thread state

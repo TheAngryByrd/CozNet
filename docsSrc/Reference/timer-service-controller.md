@@ -3,7 +3,7 @@
 `TimerServiceController` coordinates reserved timer leases through `ITimerTransport`.
 It is an internal prototype in `tests/CozNet.LinuxPerf`.
 It does not extend the public serial engine.
-Nineteen portable controller checks run through `TimerLayoutVerify`.
+Twenty-one portable controller checks run through `TimerLayoutVerify`.
 The [sampled timer workload](sampled-timer.md) connects real CPU samples to this controller.
 Its first treatment fails the lease capacity bound. Sampled capacity remains unverified.
 
@@ -81,6 +81,8 @@ No sampled capacity or prediction-accuracy claim follows from this draft.
 
 | Check | Required result |
 | --- | --- |
+| `FrozenLedgerSeparatesSettlementFromNativeRelease` | Accepted wait remains separate from local credit. Failed native release cannot count settled wait as unsettled again. |
+| `FrozenLedgerRejectsMismatchedControllerState` | Service mismatches, missing evidence, duplicate threads, and changed worker identities reject boundary capture. |
 | `PartialPrefixDoesNotPayTwice` | Repeated peer prefixes pay once. Cancellation retains unpaid debt. |
 | `SelectedPrefixPreservesUnpaidDebt` | Selected prefixes pay once. Cancellation preserves remaining selected debt after published peer overshoot. |
 | `EquivalentRetiredReceiptReleases` | Quiescence settles the ledger. Equivalent retired receipt values permit release without paying deferred debt. |

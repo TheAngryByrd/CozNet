@@ -41,7 +41,7 @@ General CLR safety and prediction accuracy remain unverified.
 
 `TimerServiceController` owns selected slot 0 and peer slot 1 through `ITimerTransport`.
 It separates ledger settlement from native release and retains ownership after ambiguous failure.
-Nineteen portable controller checks verify prefix payment, cancellation, failure evidence, release behavior, frozen prefixes, and unavailable-target accounting.
+Twenty-one portable controller checks verify prefix payment, cancellation, failure evidence, release behavior, frozen prefixes, ledger observations, and unavailable-target accounting.
 Cumulative wait checks release two generations in one slot and reject replacement of the first payment by the second.
 An active empty journal earns no wait credit as selected samples increase global debt.
 The shared `TimerDebtLimit` gate accepts 1,999,999 and 2,000,000 ns and rejects 2,000,001 ns for either slot.

@@ -19,10 +19,10 @@ Do not add an unnecessary warmup drain or claim that it fixes the endpoint.
    Preserve the distinction between runnable, delaying, and blocked states.
    It includes global and settled local values from the same immutable ledger.
    It rejects foreign and unregistered handles. Observation does not publish credit or change state.
-2. Expose that observation through signal accounting at the frozen boundary.
-   Preserve service identity and accepted unsettled wait separately.
-   Prove that release transfers wait into local credit exactly once.
-   Do not count an accepted prefix twice after release but before native archival.
+2. Implemented: `SignalAccounting.captureThread` retains ledger and operation state at the frozen boundary.
+   `MeasurementLedgerReading` preserves service identity and accepted unsettled wait separately.
+   Checks distinguish prefix acceptance, release into local credit, and later global publication.
+   A native release failure retains controller ownership without counting settled wait as unsettled again.
 3. Define a parsed boundary assessment from those observations and native ownership.
    Distinguish known settled residuals from unknown native suffixes.
    Reject unsupported or unbounded states. Do not infer a bound from the requested child duration.

@@ -1,5 +1,27 @@
 # Measurement boundaries
 
+## Ledger observations
+
+The sampled timer producer includes `Ledger` in each worker reading.
+Physical producers and older captures can omit it.
+Both workers must provide ledger readings together, and their presence cannot change between endpoints.
+Each worker must retain the same ledger thread identity between endpoints.
+
+`Global` and `Local` contain published global delay and settled local credit in nanoseconds.
+`Phase` is `runnable` or `delaying`.
+`ServiceLease`, `AcceptedChildren`, `LastSequence`, and `UnsettledWait` describe an accepted service prefix that still owns the ledger.
+An idle ledger observation has no service identity and zero prefix fields.
+Individual requests and blocked states are unsupported by this timer boundary producer.
+
+The global value must equal the enclosing measurement reading.
+Service identity, child count, and unsettled wait must match the controller's unsettled pending prefix.
+A settled controller prefix can remain owned after native release failure.
+Its wait is already in local credit, so `UnsettledWait` is zero.
+Malformed or mismatched readings fail capture before worker release at the start boundary.
+
+These observations do not bound unreceived native waits or change the global-delay correction.
+See [the lifecycle explanation](../Explanations/experiment-lifecycle.md).
+
 `MeasurementWindowCapture` retains immutable start and end readings for experimental workloads.
 The contract uses `TimeProvider` and contains no platform APIs.
 The sampled timer and [matched physical workload](matched-physical.md) use this contract.

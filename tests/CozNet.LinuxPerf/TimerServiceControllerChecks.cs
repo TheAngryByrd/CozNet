@@ -93,6 +93,8 @@ static class TimerServiceControllerChecks
 
     public static void Run()
     {
+        FrozenLedgerSeparatesSettlementFromNativeRelease();
+        FrozenLedgerRejectsMismatchedControllerState();
         PartialPrefixDoesNotPayTwice();
         SelectedPrefixPreservesUnpaidDebt();
         EquivalentRetiredReceiptReleases();
@@ -112,6 +114,96 @@ static class TimerServiceControllerChecks
         FrozenAccountingRetainsAcceptedPrefixAcrossRelease();
         FrozenAccountingRetainsUnresolvedOwnership();
         FrozenAccountingExcludesRejectedObservation();
+    }
+
+    private static MeasurementLedgerReading Ledger(Fixture fixture, uint slot,
+        TimerServiceController.WorkerAccounting worker) => MeasurementLedgerReading.Capture(
+            Parsed(SignalAccountingModule.captureThread(slot == 0 ? fixture.Selected : fixture.Peer, fixture.State)), worker);
+
+    private static void FrozenLedgerSeparatesSettlementFromNativeRelease()
+    {
+        var f = new Fixture();
+        f.Submit();
+        f.Transport.Observation = Observation(0, 0, 50000, 100);
+        Require(!f.Poll().Released, "The partial journal must retain ownership.");
+        var active = f.Controller.CaptureAccounting();
+        var frozen = Ledger(f, 1, active.Peer);
+        Require(frozen.Global == 110000 && frozen.Local == 0 && frozen.Phase == "delaying"
+            && frozen.ServiceLease == SignalServiceLeaseModule.identity(f.Lease)
+            && frozen.AcceptedChildren == 1 && frozen.LastSequence == (1UL << 32 | 1)
+            && frozen.UnsettledWait == 50000, "The frozen ledger must keep accepted wait separate from settled credit.");
+        f.Controller.Cancel(1, ref f.State);
+        f.Transport.Observation = Observation(3, 3, 50000, 100);
+        f.Transport.FailRelease = true;
+        Require(Failure(() => f.Poll()) is IOException, "Native release must fail after ledger settlement.");
+        var retained = f.Controller.CaptureAccounting();
+        var settled = Ledger(f, 1, retained.Peer);
+        Require(retained.Peer.Pending is { LedgerSettled: true, ConfirmedWait: 50000 }
+            && settled.Local == 50000 && settled.Global == 110000 && settled.Phase == "runnable"
+            && settled.ServiceLease is null && settled.UnsettledWait == 0,
+            "A settled but retained native journal must not count as unsettled wait again.");
+        Require(frozen.Local == 0 && frozen.UnsettledWait == 50000,
+            "Later settlement must not change the frozen prefix.");
+        using var json = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(settled));
+        Require(json.RootElement.GetProperty("Local").GetInt64() == 50000
+            && json.RootElement.GetProperty("UnsettledWait").GetInt64() == 0,
+            "Serialized ledger evidence must preserve settled and unsettled amounts.");
+    }
+
+    private static void FrozenLedgerRejectsMismatchedControllerState()
+    {
+        var f = new Fixture();
+        Require(Failure(() => Ledger(f, 1, f.Controller.CaptureAccounting().Peer)) is InvalidDataException,
+            "A reservation without controller ownership must reject capture.");
+        f.Submit();
+        f.Transport.Observation = Observation(0, 0, 50000, 100);
+        f.Poll();
+        var timer = f.Controller.CaptureAccounting();
+        foreach (var changed in new[] {
+            timer.Peer with { Pending = timer.Peer.Pending! with { Lease = Guid.NewGuid() } },
+            timer.Peer with { Pending = timer.Peer.Pending! with { AcceptedChildren = 0 } },
+            timer.Peer with { Pending = timer.Peer.Pending! with { ConfirmedWait = 0 } },
+            timer.Peer with { Pending = timer.Peer.Pending! with { LedgerSettled = true } } })
+            Require(Failure(() => Ledger(f, 1, changed)) is InvalidDataException,
+                "Ledger capture must reject identity, prefix, and settlement mismatches.");
+        var peer = Ledger(f, 1, timer.Peer);
+        var selected = Ledger(f, 0, timer.Selected);
+        MeasurementWindowCapture.Worker Worker(TimerServiceController.WorkerAccounting worker, MeasurementLedgerReading ledger) =>
+            new(0, worker.ReleasedWait, worker.Pending?.ConfirmedWait ?? 0,
+                worker.Pending is { } pending ? new(pending.Command, pending.Generation) : null, ledger);
+        var valid = new MeasurementWindowCapture.Readings(110000, 110000, 1, 0,
+            Worker(timer.Selected, selected), Worker(timer.Peer, peer), timer);
+        foreach (var invalid in new[] {
+            valid with { Global = 110001 },
+            valid with { Selected = valid.Selected with { Ledger = null } },
+            valid with { Selected = valid.Selected with { Ledger = peer } },
+            valid with { Timer = null } })
+        {
+            var capture = new MeasurementWindowCapture(TimeProvider.System);
+            bool released = false;
+            Require(Failure(() => capture.Begin(() => invalid, () => released = true)) is InvalidDataException && !released,
+                "Mismatched frozen ledger readings must reject before worker release.");
+        }
+        var window = new MeasurementWindowCapture(TimeProvider.System);
+        window.Begin(() => valid, () => { });
+        Require(Failure(() => window.Finish(() => valid with {
+            Selected = valid.Selected with { Ledger = null }, Peer = valid.Peer with { Ledger = null }
+        })) is InvalidDataException, "Ledger evidence cannot disappear at the end boundary.");
+        var other = new Fixture();
+        var foreignSelected = Ledger(other, 0, other.Controller.CaptureAccounting().Selected);
+        var changedIdentity = new MeasurementWindowCapture(TimeProvider.System);
+        changedIdentity.Begin(() => valid, () => { });
+        Require(Failure(() => changedIdentity.Finish(() => valid with {
+            Selected = valid.Selected with { Ledger = foreignSelected }
+        })) is InvalidDataException, "A new registration with equal counters cannot replace a frozen worker identity.");
+        var idleWorker = Worker(timer.Selected, selected);
+        var duplicate = valid with {
+            Selected = idleWorker, Peer = idleWorker,
+            Timer = new(0, timer.Selected, timer.Selected)
+        };
+        var duplicated = new MeasurementWindowCapture(TimeProvider.System);
+        Require(Failure(() => duplicated.Begin(() => duplicate, () => { })) is InvalidDataException,
+            "Two idle worker readings cannot identify the same ledger thread.");
     }
 
     private static void FrozenAccountingExcludesRejectedObservation()

@@ -2,8 +2,8 @@
 
 ## Contract checks
 
-The portable `--verify-timer-layout` route passes on Windows and Linux x64.
-It includes nineteen controller groups and nine measurement-boundary groups.
+For this retained capture, the portable `--verify-timer-layout` route passed on Windows and Linux x64.
+At that time, it included nineteen controller groups and nine measurement-boundary groups.
 The new checks retain an accepted 50,000 ns prefix through cancellation and release, then inspect its serialized boundary.
 They also retain failed submission and release ownership.
 An additional check rejects a changed native child and preserves the older accepted capture timestamp and prefix.

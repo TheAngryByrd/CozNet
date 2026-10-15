@@ -51,6 +51,7 @@ $sources += @('tests/CozNet.LinuxPerf/PerfAttribute.cs', 'tests/CozNet.LinuxPerf
     'tests/CozNet.LinuxPerf/LinuxSampleClockEvidenceSource.cs')
 $sources += @('tests/CozNet.LinuxPerf/TimerSessionCleanup.cs', 'tests/CozNet.LinuxPerf/TimerSessionCleanupChecks.cs')
 $sources += @('tests/CozNet.LinuxPerf/MeasurementWindowCapture.cs', 'tests/CozNet.LinuxPerf/MeasurementWindowCaptureChecks.cs')
+$sources += 'tests/CozNet.LinuxPerf/MeasurementLedgerReading.cs'
 $sources += @('tests/CozNet.LinuxPerf/MatchedCpuWorkers.cs', 'tests/CozNet.LinuxPerf/MatchedPhysicalWorkload.cs')
 $sources += 'tests/CozNet.LinuxPerf/MatchedCpuWorkersChecks.cs'
 $sources += @('tests/CozNet.LinuxPerf/ChecksumArithmetic.cs', 'tests/CozNet.LinuxPerf/PhysicalCalibration.cs')

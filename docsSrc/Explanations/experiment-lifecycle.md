@@ -48,12 +48,18 @@ The proposed lifecycle retains the existing estimator inputs: frozen global dela
 The observation preserves runnable, delaying, and blocked states.
 For blocked threads, it also preserves global delay at block entry.
 Observation neither settles waits nor publishes credit.
-Connecting these observations to the controller boundary remains planned.
-It will keep accepted unsettled waits separate from that local delay.
+`SignalAccounting.captureThread` combines this ledger observation with its current request or service ownership.
+For a service, it retains accepted wait separately from settled local credit.
+Release removes the service from this snapshot when it adds the accepted wait to local credit.
+The sampled timer workload captures these observations at both frozen boundaries.
+It rejects mismatched service identity, accepted prefix, or settlement state.
+An accepted prefix can remain in controller ownership after ledger settlement if native release fails.
+That prefix is no longer unsettled wait in the ledger observation.
 Outstanding native work remains unknown until evidence bounds it.
 An unknown value cannot become zero.
 
-The prototype will reject unsupported boundary states before it permits an accuracy claim.
+Boundary capture rejects unsupported accounting states.
+An assessment of residual bounds remains planned before an accuracy claim is possible.
 A requested wait duration cannot bound scheduler delay or actual wait overshoot.
 Successful cleanup cannot prove physical equivalence.
 Physical comparison must test the complete sampling and intervention behavior under the existing gates.

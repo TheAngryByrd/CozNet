@@ -3,7 +3,8 @@ enum MeasurementCaptureStatus { NotStarted, Active, Complete, StartFailed, Finis
 sealed class MeasurementWindowCapture
 {
     internal sealed record PendingService(ulong Command, ulong Generation);
-    internal sealed record Worker(long Progress, long ReleasedWait, long ActiveWait, PendingService? Pending);
+    internal sealed record Worker(long Progress, long ReleasedWait, long ActiveWait, PendingService? Pending,
+        MeasurementLedgerReading? Ledger = null);
     internal sealed record Readings(long Global, long Credit, ulong AcceptedSampleSequence, ulong Epoch, Worker Selected, Worker Peer,
         TimerServiceController.AccountingSnapshot? Timer = null);
 
@@ -43,7 +44,11 @@ sealed class MeasurementWindowCapture
 
     private static bool ValidTimer(Readings readings)
     {
-        if (readings.Timer is not { } timer) return true;
+        if (readings.Timer is not { } timer) return readings.Selected.Ledger is null && readings.Peer.Ledger is null;
+        if ((readings.Selected.Ledger is null) != (readings.Peer.Ledger is null)) return false;
+        if (readings.Selected.Ledger is { } selected && readings.Peer.Ledger is { } peer
+            && (selected.Thread.Equals(peer.Thread) || !selected.Matches(readings.Global, timer.Selected)
+                || !peer.Matches(readings.Global, timer.Peer))) return false;
         bool Matches(Worker worker, TimerServiceController.WorkerAccounting? state) => state is not null
             && state.ReleasedWait == worker.ReleasedWait
             && worker.ActiveWait == (state.Pending?.ConfirmedWait ?? 0)
@@ -96,7 +101,13 @@ sealed class MeasurementWindowCapture
         if ((before.Timer is null) != (after.Timer is null)
             || (before.Timer is { } timer && after.Timer!.ReleasedJournalCount < timer.ReleasedJournalCount))
             throw new InvalidDataException("The frozen timer journal inventory changed capability or regressed.");
+        if (!SameLedger(before.Selected, after.Selected) || !SameLedger(before.Peer, after.Peer))
+            throw new InvalidDataException("The frozen ledger observation changed capability or thread identity.");
         End = end;
         Status = MeasurementCaptureStatus.Complete;
     }
+
+    private static bool SameLedger(Worker before, Worker after) =>
+        before.Ledger is null ? after.Ledger is null
+            : after.Ledger is { } ledger && before.Ledger.Thread.Equals(ledger.Thread);
 }

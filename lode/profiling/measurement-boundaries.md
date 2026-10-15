@@ -22,6 +22,16 @@ stateDiagram-v2
 ```
 
 The sampled timer workload uses this contract for `measurementCapture` and its legacy progress fields.
+Each sampled worker includes a `MeasurementLedgerReading` from `SignalAccounting.captureThread`.
+It preserves settled local and global credit plus the separate unsettled service prefix.
+Capture reconciles service identity, child count, wait, and settlement with the controller snapshot.
+Settled-but-unreleased native ownership contributes zero unsettled ledger wait.
+Both worker observations must be present together and retain thread identity across endpoints.
+Physical producers and historical captures can omit this capability.
+The producer rejects blocked and individual-request accounting states.
+These values do not replace global delay or bound unknown native suffixes.
+The timer runner hashes `MeasurementLedgerReading.cs`.
+The matched runner captures it with the workload source directory.
 It closes sample acceptance and disables resume before endpoint capture, then performs shutdown separately.
 The capture copies controller accounting and global delay, reads selected then peer counters, and retains sample sequence and epoch.
 These are controller-accounted values, not an atomic view of native work.
