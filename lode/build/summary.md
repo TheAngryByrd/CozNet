@@ -59,6 +59,8 @@ It retains each run under `artifacts/service-interop/` and uses a 30-second proc
 
 `build/build.fs` owns the FAKE target graph. Its baseline is MiniScaffold's `v0.40.0-beta001` library template.
 `LinuxFastTimerScheduler` adds controller and target scheduler capture to the sampled timer forced-GC comparison.
+`LinuxFastTimerSchedulerNoGc` captures the same scheduler streams without the forced-GC worker.
+It selects `--sampled-timer-scheduler` with `no-gc` and preserves the prepared short-interval capacity settings.
 It retains all outcomes under `artifacts/timer-sampled/` and fails after writing evidence when any case fails.
 `LinuxTimerSchedulerCost` uses the same runner for eight seeded pairs at zero percent with capture enabled or disabled.
 The [release package](https://github.com/TheAngryByrd/MiniScaffold/releases/tag/v0.40.0-beta001) matches commit `bb58c5acb91c6bc34648ec8829d7866ffaa049e2` for these build files.

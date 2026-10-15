@@ -92,6 +92,21 @@ dotnet run --project build/build.fsproj -- -t LinuxFastTimerCapacity
 Confirm that the manifest has `controllerPhases = false` and that workload phase fields are null.
 The result still includes samples, timer journals, accounting boundaries, and failures.
 
+## Capture scheduler events without forced GC
+
+To capture scheduler events without forced GC, run:
+
+```powershell
+dotnet run --project build/build.fsproj -- -t LinuxFastTimerSchedulerNoGc
+```
+
+Check `sampledGc = false` in the manifest and `forceGc = false` in each workload record.
+Each outcome must use `--sampled-timer-scheduler` with the `no-gc` argument.
+Check scheduler termination and loss counters before interpreting switched-out intervals.
+This mode retains ordinary runtime GC activity. It does not disable GC.
+It keeps the same initialization, timer interval, debt limits, and handler limits as `LinuxFastTimerCapacity`.
+The [retained no-forced-GC capture](../../reliability/features/native-signal/timer-scheduler-no-gc.md) includes a failed treatment and its scheduler analysis.
+
 ## Check sampled capacity during forced GC
 
 Run the forced-GC capacity cases:

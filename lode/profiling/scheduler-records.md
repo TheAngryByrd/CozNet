@@ -1,5 +1,16 @@
 # Scheduler observations
 
+`LinuxFastTimerSchedulerNoGc` uses the existing timer workload scheduler backend without forced GC.
+The runner requires prepared short-interval capacity mode and passes an explicit `no-gc` argument.
+Ordinary runtime collections remain possible. Native timing and debt gates stay unchanged.
+Use the three thread streams to compare observed switch-outs with retained timer handler intervals.
+Loss, censored boundaries, and guest-versus-host scheduling limit any inference.
+The [no-forced-GC timer capture](../../reliability/features/native-signal/timer-scheduler-no-gc.md) retains a 2,444,062 ns peer-debt failure.
+All streams report zero loss. The three longest handlers have no observed target switch-out overlap.
+Command 460 has a 3,378,738 ns submission-to-first-handler interval without observed switch-out overlap on any captured thread.
+Only one child completed before the violating checkpoint. Later shutdown payment cannot remove that earlier violation.
+The previous 9.684 ms invalid wait did not recur. Its cause remains unresolved.
+
 `LinuxServiceSchedulerTiming` connects the existing scheduler backend to the initialized native-service workload with submission timing.
 `AnalyzeServiceSnapshotLag.py --scheduler` requires stopped, loss-free captures with distinct thread identities in one process.
 Current service runs contain four streams: controller, selected target, peer target, and native owner.

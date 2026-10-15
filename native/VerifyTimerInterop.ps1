@@ -1,7 +1,7 @@
 param([string]$EvidenceDirectory, [switch]$ManagedWorkload, [switch]$ForceGc, [switch]$TransitionMatrix, [switch]$SampledTimer, [switch]$ControllerPhases, [switch]$InitializeManagedPaths, [switch]$InitializeNativeTransport, [switch]$ShortInitialInterval, [switch]$SampledGc, [switch]$SchedulerCapture, [switch]$SchedulerCost)
 $ErrorActionPreference = 'Stop'
 if ($SchedulerCost -and (-not $SampledTimer -or -not $SampledGc -or $SchedulerCapture)) { throw 'SchedulerCost requires sampled GC capacity mode without SchedulerCapture.' }
-if ($SchedulerCapture -and (-not $SampledTimer -or -not $SampledGc)) { throw 'SchedulerCapture requires SampledTimer and SampledGc.' }
+if ($SchedulerCapture -and (-not $SampledTimer -or -not $InitializeNativeTransport -or $ControllerPhases -or -not $ShortInitialInterval)) { throw 'SchedulerCapture requires prepared short-interval sampled capacity mode.' }
 if ($SampledGc -and (-not $InitializeNativeTransport -or $ControllerPhases -or -not $ShortInitialInterval)) { throw 'SampledGc requires prepared short-interval capacity mode.' }
 if ($ControllerPhases -and -not $SampledTimer) { throw 'ControllerPhases requires SampledTimer.' }
 if ($InitializeManagedPaths -and (-not $SampledTimer -or (-not $ControllerPhases -and -not $InitializeNativeTransport))) { throw 'InitializeManagedPaths requires SampledTimer and either ControllerPhases or InitializeNativeTransport.' }
@@ -128,6 +128,7 @@ if ($ManagedWorkload -or $TransitionMatrix -or $SampledTimer) {
             $intervalArguments = @(if ($ShortInitialInterval) { '10us' })
             $workloadArguments = @($sampledMode, "/output/$name.json", $case.percent) + $intervalArguments
             if ($SampledGc) { $workloadArguments += 'gc' }
+            elseif ($case.capture) { $workloadArguments += 'no-gc' }
             & docker @managedRuntime @workloadArguments *> (Join-Path $run "$name.log")
             $outcomes += @{ mode = $name; arguments = $workloadArguments; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "$name.json") }
             $outcomes | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'outcomes.json')

@@ -576,6 +576,15 @@ let linuxFastTimerScheduler _ =
         "-SchedulerCapture"
     ]
 
+let linuxFastTimerSchedulerNoGc _ =
+    nativeScriptWithArgs "VerifyTimerInterop.ps1" [
+        "-SampledTimer"
+        "-InitializeManagedPaths"
+        "-InitializeNativeTransport"
+        "-ShortInitialInterval"
+        "-SchedulerCapture"
+    ]
+
 let linuxTimerSchedulerCost _ =
     nativeScriptWithArgs "VerifyTimerInterop.ps1" [
         "-SampledTimer"
@@ -1185,6 +1194,7 @@ let initTargets () =
     Target.create "LinuxMatchedPrediction" linuxMatchedPrediction
     Target.create "LinuxFastTimerGc" linuxFastTimerGc
     Target.create "LinuxFastTimerScheduler" linuxFastTimerScheduler
+    Target.create "LinuxFastTimerSchedulerNoGc" linuxFastTimerSchedulerNoGc
     Target.create "LinuxTimerSchedulerCost" linuxTimerSchedulerCost
     Target.create "LinuxTimerManagedGc" linuxTimerManagedGc
     Target.create "LinuxTimerTransitions" linuxTimerTransitions
@@ -1310,6 +1320,10 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxFastTimerScheduler"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxFastTimerSchedulerNoGc"
     |> ignore
 
     "LinuxPerfWorkload"
