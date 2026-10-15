@@ -42,6 +42,12 @@ Invalid prefix evidence suppresses the affected block. Physical cases remain exe
 Workload failures retain prefix diagnostics without becoming eligible.
 The runner snapshots `AnalyzeTimerPrefixes.py` and `TimerPrefixChecks.py` and runs the checks before timed cases.
 Both source hashes are required. Reconciliation does not establish a native-tail bound.
+`timerWaitMembershipDiagnostics` adds recorded native overlap under the observed clock policy.
+Invalid wait evidence suppresses the affected block. Physical cases remain exempt.
+Failed profile cases retain diagnostics, but unclosed inventories have no range.
+The runner snapshots and checks both wait-membership Python files. Both hashes are required.
+Recorded overlap never replaces the frozen global delta: `DelayLedger.catchUp` publishes local credit,
+while `SignalAccounting.acceptServiceChild` can retain measured wait without `completeDelay` settlement.
 `AnalyzeCpuCounters.py` parses raw evidence into immutable capture values before computing diagnostics.
 It reconciles counters, transition state, samples, totals, and final disabled counts.
 The final snapshot can equal disabled `endAfter`.

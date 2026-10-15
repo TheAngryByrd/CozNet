@@ -9,6 +9,7 @@ from fractions import Fraction
 from AnalyzeCpuCounters import analyze_counter_capture, analyze_sample_credits
 from AnalyzeSampleMembership import analyze_membership, finite_float, reject_constant
 from AnalyzeTimerPrefixes import analyze_prefixes
+from AnalyzeTimerWaitMembership import analyze_timer_waits
 
 
 MODES = ("profile-zero", "profile-half", "physical-baseline", "physical-optimized")
@@ -169,6 +170,7 @@ def _analyze_case(data, mode, exit_code):
     credits = analyze_sample_credits(data) if counters is not None else None
     membership = analyze_membership(data, include_credits=True) if counters is not None else None
     prefixes = analyze_prefixes(data) if counters is not None else None
+    waits = analyze_timer_waits(data) if counters is not None else None
     try:
         require(mode in MODES, "Unknown case mode")
         require(type(exit_code) is int and exit_code == 0, "Workload process did not exit successfully")
@@ -215,6 +217,8 @@ def _analyze_case(data, mode, exit_code):
         errors.extend("Sample membership evidence: " + reason for reason in membership["reasons"])
     if prefixes is not None and not prefixes["reconciled"]:
         errors.extend("Timer prefix evidence: " + reason for reason in prefixes["reasons"])
+    if waits is not None and not waits["comparisonDomainAccepted"]:
+        errors.extend("Timer wait membership evidence: " + reason for reason in waits["reasons"])
     diagnostic_cost = cost if not errors else None
     if mode == "profile-half":
         errors.extend(["Unreceived sample-period attribution has no verified bound",
@@ -223,7 +227,7 @@ def _analyze_case(data, mode, exit_code):
              "observedAccountedCost": cost.report() if cost is not None else None,
              "costIncludesUnboundedAttribution": mode == "profile-half", "cpuCounterDiagnostics": counters,
              "sampleCreditDiagnostics": credits, "sampleMembershipDiagnostics": membership,
-             "timerPrefixDiagnostics": prefixes}, diagnostic_cost)
+             "timerPrefixDiagnostics": prefixes, "timerWaitMembershipDiagnostics": waits}, diagnostic_cost)
 
 
 def analyze_case(data, mode, exit_code):
@@ -272,6 +276,7 @@ def analyze(root):
     require(all(name in manifest["files"] for name in ("plan.json", "source/native/AnalyzeMatchedPrediction.py", "source/native/AnalyzeCpuCounters.py",
         "source/native/CpuCounterChecks.py", "source/native/AnalyzeSampleMembership.py", "source/native/SampleMembershipChecks.py",
         "source/native/AnalyzeTimerPrefixes.py", "source/native/TimerPrefixChecks.py",
+        "source/native/AnalyzeTimerWaitMembership.py", "source/native/TimerWaitMembershipChecks.py",
             "workload/CozNet.LinuxPerf.dll", "workload/CozNet.dll", "native/libCozNet.Timer.so",
             "calibration/calibration.json", "calibration/calibration.json.plan.json",
             "calibration/calibration.json.blocks.jsonl", "calibration/manifest.json")), "Required snapshot hashes are missing")

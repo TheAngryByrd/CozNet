@@ -21,7 +21,8 @@ Frozen accounting cannot include a native capture timestamp after its upper endp
 The clock policy is conditional on the current Linux monotonic backend and observed sample clock assumptions.
 Declarations are not binary attestation. These ranges do not establish physical accuracy or unseen native-tail bounds.
 Frozen accepted wait remains a separate value. Later acceptance does not imply later execution.
-Failed workload evidence remains intact. Matched prediction eligibility is unchanged.
+Failed workload evidence remains intact. Matched diagnostics require this evidence before conditional block comparison.
+This requirement does not establish treatment eligibility or change frozen global-delay correction.
 
 The small-domain exhaustive check enumerates possible wait placements and endpoint choices.
 It verifies that the reported range contains every resulting overlap.

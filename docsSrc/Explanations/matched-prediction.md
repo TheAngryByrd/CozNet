@@ -9,6 +9,10 @@ This measures the selected progress point under a controlled two-worker workload
 The global-delay correction is a measurement-window delta.
 Shutdown can publish later waits and progress, so shutdown totals cannot replace the frozen endpoints.
 Summing worker waits would also count concurrent payments more than once.
+The ledger advances global delay during per-thread catch-up operations.
+An accepted partial native wait can remain unsettled in a service lease.
+Thus, recorded native overlap does not directly determine the global-delay correction.
+The matched report keeps native overlap, sample-credit membership, and frozen global delay separate.
 Boundary brackets and one-batch progress quantization describe uncertainty in the captured endpoints.
 
 These brackets do not bound all attribution error.

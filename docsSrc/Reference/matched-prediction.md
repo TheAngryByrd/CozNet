@@ -70,6 +70,13 @@ Physical cases have null membership diagnostics.
 `timerPrefixDiagnostics` reconciles frozen controller prefixes with final accepted journals, including failed workloads.
 Missing or invalid timer prefixes suppress the case's conditional comparison.
 Physical cases have null timer prefix diagnostics.
+`timerWaitMembershipDiagnostics` retains recorded native overlap under the observed clock policy.
+Missing or contradictory wait evidence suppresses the affected block's conditional comparison.
+Physical cases have null wait membership diagnostics.
+Failed profile cases retain these diagnostics. Unclosed inventories produce no wait range.
+Wait ranges do not replace `Accounting.Global` or change its frozen delta.
+The runner snapshots the wait analyzer and checks. The manifest requires both hashes.
+See [recorded timer wait membership](timer-wait-membership.md) for its assumptions and limits.
 The runner snapshots the prefix analyzer and checks. The manifest must include both hashes.
 See [timer prefix reconciliation](timer-prefix-reconciliation.md) for the input contract and unknown suffix fields.
 Reports keep source-inside samples rejected during measurement separate from samples received after the endpoint.
@@ -98,6 +105,7 @@ Both profile cases must also have reconciled counter evidence.
 They must have reconciled nominal sample credit evidence as well.
 Both profile cases must also pass observed membership parsing.
 Both profile cases must have reconciled timer prefixes.
+Both profile cases must pass recorded wait membership checks.
 A failed or missing case suppresses that block's comparison. Snapshot or runner errors suppress every comparison.
 `diagnosticUnavailableCases` lists cases without a usable cost. Run-level errors remain in their existing fields.
 

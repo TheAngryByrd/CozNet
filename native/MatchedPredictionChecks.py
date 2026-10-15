@@ -70,6 +70,13 @@ def fixture(mode="profile-half"):
             accepted["Raw"]["Header"].update(Measured=10, Stop=1)
             accepted["Raw"]["Children"][0]["Waited"] = 10
             accepted["Received"][0]["Raw"]["Waited"] = 10
+            data["journals"][0].update(StartedTimestamp=150000000, ObservedTimestamp=200000000)
+            for child in (accepted["Raw"]["Children"][0], accepted["Received"][0]["Raw"]):
+                child.update(Armed=160000000, Started=160000001, Finished=160000011)
+            accepted["Received"][0].update(FirstCaptured=160000012, FirstManagedReceiptUpper=160000013,
+                                           Timing=dict(UpperNanoseconds=13))
+            accepted["Raw"]["Header"]["Captured"] = 160000014
+            accepted["Raw"]["Clock"]["Nanoseconds"] = 160000015
             end["Accounting"]["Timer"]["ReleasedJournalCount"] = 1
             end["Accounting"]["Timer"]["Peer"]["ReleasedWait"] = 10
             data["waits"] = [0, 10]
@@ -133,6 +140,7 @@ def series(root):
              "native/libCozNet.Timer.so", "calibration/calibration.json", "calibration/calibration.json.plan.json",
              "calibration/calibration.json.blocks.jsonl", "calibration/manifest.json")
     names += ("source/native/AnalyzeTimerPrefixes.py", "source/native/TimerPrefixChecks.py")
+    names += ("source/native/AnalyzeTimerWaitMembership.py", "source/native/TimerWaitMembershipChecks.py")
     hashes = {}
     for name in names:
         path = root / name
@@ -146,6 +154,53 @@ def series(root):
 
 
 class MatchedPredictionChecks(unittest.TestCase):
+    def test_invalid_wait_membership_suppresses_only_its_block(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            series(root)
+            path = root / "block-3-profile-half.json"
+            data = json.loads(path.read_text())
+            native = data["journals"][0]["Accepted"]["Raw"]
+            native["Header"]["Captured"] = 3000000000
+            native["Clock"]["Nanoseconds"] = 3000000001
+            path.write_text(json.dumps(data))
+            result = analyze(root)
+            case = next(item for item in result["cases"] if item["name"] == "block-3-profile-half")
+            self.assertTrue(case["timerPrefixDiagnostics"]["reconciled"])
+            self.assertTrue(case["sampleMembershipDiagnostics"]["comparisonDomainAccepted"])
+            self.assertFalse(case["timerWaitMembershipDiagnostics"]["comparisonDomainAccepted"])
+            self.assertTrue(any(reason.startswith("Timer wait membership evidence:") for reason in case["reasons"]))
+            self.assertIsNone(result["blocks"][2]["conditionalComparison"])
+            self.assertTrue(all(item["conditionalComparison"] is not None
+                                for item in result["blocks"] if item["block"] != 3))
+            self.assertIsNone(result["predictionSummary"])
+
+    def test_wait_membership_preserves_failure_and_physical_exemption(self):
+        for closed in (False, True):
+            with self.subTest(closed=closed):
+                data = fixture()
+                data.update(failures=["debt exceeded"], closed=closed)
+                result = analyze_case(data, "profile-half", 1)
+                waits = result["timerWaitMembershipDiagnostics"]
+                self.assertEqual(closed, waits["comparisonDomainAccepted"], waits["reasons"])
+                self.assertEqual(["debt exceeded"], waits["recordedWorkloadFailures"])
+                self.assertFalse(result["predictionEligible"])
+        for mode in ("physical-baseline", "physical-optimized"):
+            with self.subTest(mode=mode):
+                result = analyze_case(fixture(mode), mode, 0)
+                self.assertTrue(result["predictionEligible"], result["reasons"])
+                self.assertIsNone(result["timerWaitMembershipDiagnostics"])
+
+    def test_wait_membership_does_not_replace_frozen_global_delay(self):
+        result = analyze_case(fixture(), "profile-half", 0)
+        waits = result["timerWaitMembershipDiagnostics"]
+        self.assertTrue(waits["comparisonDomainAccepted"], waits["reasons"])
+        self.assertEqual(dict(lower=10, upper=10), waits["workers"][1]["recordedWaitInObservedWindow"])
+        self.assertEqual(500000000, result["observedAccountedCost"]["measurementGlobalDeltaNanoseconds"])
+        self.assertEqual(1.5, result["observedAccountedCost"]["effectiveSecondsLower"])
+        self.assertFalse(result["predictionEligible"])
+        self.assertFalse(waits["nativeTailBoundEstablished"])
+
     def test_invalid_timer_prefix_suppresses_only_its_block(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
@@ -310,7 +365,7 @@ class MatchedPredictionChecks(unittest.TestCase):
             manifest_path = root / "manifest.json"
             original = json.loads(manifest_path.read_text())
             for name in ("AnalyzeCpuCounters.py", "CpuCounterChecks.py", "AnalyzeSampleMembership.py", "SampleMembershipChecks.py",
-                         "AnalyzeTimerPrefixes.py", "TimerPrefixChecks.py"):
+                         "AnalyzeTimerPrefixes.py", "TimerPrefixChecks.py", "AnalyzeTimerWaitMembership.py", "TimerWaitMembershipChecks.py"):
                 with self.subTest(name=name):
                     manifest = deepcopy(original)
                     del manifest["files"]["source/native/" + name]

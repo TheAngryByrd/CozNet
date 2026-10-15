@@ -56,6 +56,8 @@ The range covers recorded waits under the stated clock assumptions.
 It does not bound missing native work, verify instruction eligibility, or measure exact CPU time.
 Wait duration can include descheduling inside the wait interval.
 Physical-clock accuracy, exact event ordering, native-tail bounds, and prediction accuracy remain unverified.
-The analyzer does not combine worker waits into global delay or change prediction eligibility.
+The analyzer does not combine worker waits into global delay.
+[Matched diagnostics](matched-prediction.md) require this evidence before conditional block comparison.
+Acceptance does not establish treatment prediction eligibility.
 
 See [the procedure](../How_Tos/inspect-timer-wait-membership.md) and [measurement boundaries](measurement-boundaries.md).
