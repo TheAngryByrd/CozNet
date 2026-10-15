@@ -1,5 +1,7 @@
 # Lode index
 
+For the zero-speedup fixed-work reference and diagnostic runtime maps, read [observer overhead](profiling/observer-overhead.md).
+
 For shared immutable counter snapshots and prefix validation, read [counter history](profiling/counter-history.md).
 
 For the fixed-work cadence comparison, read [selected cadence](plans/selected-cadence.md).

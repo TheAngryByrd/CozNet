@@ -73,6 +73,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Explanation
 
+- [Observer overhead in the bound workload](Explanations/bound-observer-overhead.md).
+
 - [Limits on valid service completion](Explanations/service-completion-limits.md).
 
 - [Experiment boundaries and unpublished delay](Explanations/experiment-lifecycle.md).
