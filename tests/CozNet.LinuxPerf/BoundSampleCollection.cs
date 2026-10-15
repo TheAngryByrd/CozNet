@@ -85,10 +85,10 @@ sealed class BoundSampleCollection
     private readonly Capture capture;
     private ICpuEventSession? source;
     private LiveSampleCollector? collector;
-    private PausableSampleCollector? pausableCollector;
+    private IPausableSampleCollector? pausableCollector;
     private BoundCpuSession? session;
     private readonly int owner = Environment.CurrentManagedThreadId;
-    private bool pausable, excluding, sourceDisabled = true;
+    private bool pausable, excluding, drainingOnOwner, sourceDisabled = true;
     private bool started, enableAttempted, completed;
     private SampleBatch? finalBatch;
     private ulong cpuNanoseconds;
@@ -134,7 +134,22 @@ sealed class BoundSampleCollection
         StartCore((map, sink) => createSource(map, sink), true);
     }
 
-    private void StartCore(Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource, bool allowPause)
+    public void StartOwnerPausable(Func<IInstructionMap, ICpuSampleSink, IOwnerStoppedCpuEventSession> createSource)
+    {
+        ArgumentNullException.ThrowIfNull(createSource);
+        RequireOwner();
+        StartCore((map, sink) => createSource(map, sink), true, true);
+    }
+
+    public void DrainOnOwner()
+    {
+        RequireOwner();
+        if (pausableCollector is not OwnerSampleCollector ownerCollector || Cleanup is not null || excluding || drainingOnOwner)
+            throw new InvalidOperationException("Owner draining requires an active owner collection outside excluded execution.");
+        ownerCollector.Drain();
+    }
+
+    private void StartCore(Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource, bool allowPause, bool ownerDriven = false)
     {
         ArgumentNullException.ThrowIfNull(createSource);
         if (started || Cleanup is not null) throw new InvalidOperationException("A bound collection can start only once.");
@@ -163,17 +178,23 @@ sealed class BoundSampleCollection
             {
                 _ = counters.ReadCounter();
                 session = session!.Enable(counters.DescribeCounters());
-                pausableCollector = new PausableSampleCollector(() =>
+                Action drain = () =>
                 {
-                    lifetime.Execute((Self: this, Source: source), static value =>
+                    if (ownerDriven) drainingOnOwner = true;
+                    try
                     {
-                        var batch = value.Source.Drain();
-                        Volatile.Write(ref value.Self.finalBatch, batch with { SelectedSymbols = Array.AsReadOnly(batch.SelectedSymbols.ToArray()) });
-                        if (batch.LostRecords != 0 || batch.LostSamples != 0 || batch.Throttles != 0)
-                            throw new InvalidDataException("The pausable source reported cumulative loss or throttling.");
-                        return true;
-                    });
-                });
+                        lifetime.Execute((Self: this, Source: source), static value =>
+                        {
+                            var batch = value.Source.Drain();
+                            Volatile.Write(ref value.Self.finalBatch, batch with { SelectedSymbols = Array.AsReadOnly(batch.SelectedSymbols.ToArray()) });
+                            if (batch.LostRecords != 0 || batch.LostSamples != 0 || batch.Throttles != 0)
+                                throw new InvalidDataException("The pausable source reported cumulative loss or throttling.");
+                            return true;
+                        });
+                    }
+                    finally { if (ownerDriven) drainingOnOwner = false; }
+                };
+                pausableCollector = ownerDriven ? new OwnerSampleCollector(drain) : new PausableSampleCollector(drain);
             }
             else collector = new LiveSampleCollector(source.Drain);
             return true;
@@ -214,7 +235,7 @@ sealed class BoundSampleCollection
     {
         ArgumentNullException.ThrowIfNull(action);
         RequireOwner();
-        if (pausableCollector is null || Cleanup is not null || excluding)
+        if (pausableCollector is null || Cleanup is not null || excluding || drainingOnOwner)
             throw new InvalidOperationException("Excluded execution requires an active pausable collection without an excluded callback.");
         if (timing is not null) timing.Started = System.Diagnostics.Stopwatch.GetTimestamp();
         lifetime.Execute(action, callback =>
@@ -257,7 +278,7 @@ sealed class BoundSampleCollection
         if (pausable)
         {
             RequireOwner();
-            if (excluding) throw new InvalidOperationException("Collection cannot close inside its excluded callback.");
+            if (excluding || drainingOnOwner) throw new InvalidOperationException("Collection cannot close inside an excluded callback or owner drain.");
         }
         if (Cleanup is not null) return Cleanup;
         var errors = new List<BoundSampleCleanupError>();

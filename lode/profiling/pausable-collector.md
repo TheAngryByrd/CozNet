@@ -64,3 +64,33 @@ See [the reference](../../docsSrc/Reference/pausable-sample-collector.md),
 [source sessions](../../docsSrc/Reference/bound-cpu-session.md),
 [perf ownership](../../docsSrc/Research/perf-pause-ownership.md),
 [sample eligibility](../../docsSrc/Research/cooperative-sample-eligibility.md), and [the lifecycle plan](../plans/experiment-lifecycle.md).
+
+## Owner-driven mode
+
+`StartOwnerPausable` selects a separate `OwnerSampleCollector` through `IPausableSampleCollector`.
+The source never has a background reader in this mode.
+`DrainOnOwner` rejects excluded execution, cleanup, and foreign threads.
+The collector rejects recursive control and retains the first drain failure.
+Collection cleanup and excluded execution reject reentry from an active owner drain before they change the source.
+Pause drains synchronously after producer stop. Completion drains only a running collector.
+`CollectorJoined` means drain ownership has ended, including when no worker exists.
+
+```csharp
+collection.StartOwnerPausable(CreateOwnerStoppedSource);
+collection.DrainOnOwner();
+var samples = collection.ReadEpochProvisional(0);
+```
+
+The workload enables this mode with `COZNET_OWNER_DRAIN=1` and an explicit selected cadence.
+It drains before selected-probe sample counts and after selected batches.
+The runner exposes `-OwnerDrain`. The first ordinary-CPU-set owner run passes all three cases. Its paired background treatment fails selected debt. Stable capacity remains unverified.
+Owner drain CPU can enter selected sample periods. The credit rule is unchanged, but observer CPU is not excluded.
+The Linux reader captures one ring head per drain. It does not chase a moving producer.
+
+```mermaid
+flowchart LR
+    Owner --> Drain --> PublishedSamples --> DebtCheck
+    ProducerStop --> FinalDrain --> PauseToken --> ExcludedPayment
+```
+
+See [the first owner comparison](../../docsSrc/Research/native-owner-scheduling.md#first-owner-driven-drain-comparison) for retained failures and the single-pair overhead limit.

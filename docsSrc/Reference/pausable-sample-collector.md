@@ -2,7 +2,7 @@
 
 `PausableSampleCollector` is an internal drain-ownership component for selected-owner payment.
 `BoundSampleCollection.StartPausable` uses it for excluded owner callbacks.
-The sampled payment workload still uses the existing one-shot source contract.
+The legacy peer-only sampled payment command uses the existing one-shot source contract.
 
 ## Control operations
 
@@ -44,3 +44,35 @@ These checks do not establish live perf pause semantics, CLR safety, payment cap
 See [sample eligibility](../Research/cooperative-sample-eligibility.md) for the source and eligibility epoch distinction.
 See [perf pause ownership](../Research/perf-pause-ownership.md) for the restricted task-clock source analysis.
 See [bound CPU sessions](bound-cpu-session.md) for the separate counter-journal parser.
+
+## Owner-driven collection
+
+`IPausableSampleCollector` defines the shared pause and completion contract.
+`CollectorPause` is the common token. Resume requires the current token by reference identity.
+`PausableSampleCollector` retains its background worker.
+`OwnerSampleCollector` performs each drain synchronously on its constructing thread.
+It does not start a worker or drain during construction.
+
+`BoundSampleCollection.StartOwnerPausable` selects the owner collector.
+`DrainOnOwner()` performs one drain before the caller reads provisional samples.
+It rejects foreign threads, excluded execution, completed cleanup, and other collector modes.
+Recursive drains, excluded execution, and cleanup fail while an owner drain remains active.
+A drain failure permanently rejects further drains and preserves the original exception.
+
+The caller stops the producer before requesting pause.
+The owner collector then performs the final drain and returns its pause token.
+Completion drains a running collector once. Completion does not drain a paused or failed collector.
+For this mode, `CollectorJoined` means that no drain retains source ownership. No worker exists to join.
+
+The selected-payment workload accepts `COZNET_OWNER_DRAIN=1` only with an explicit selected cadence.
+Unset and `0` select background collection. Other values fail.
+The runner exposes this setting through `-OwnerDrain` with `-SelectedPayment` and `-SelectedCadence`.
+The owner drains before the sample-count check at selected probes and after each selected batch.
+The Linux ring reader processes only the head captured at drain entry.
+
+This mode changes publication timing. The credit rule, payment exclusion, and timing bounds remain unchanged.
+Owner drain CPU runs on the sampled thread and can enter selected sample periods.
+`profilerCpuExcluded` remains false.
+`DrainAcknowledged` includes the synchronous final drain in this mode.
+`Dispose()` calls `Complete()` and can drain a running source or throw its stored failure.
+Its effect on capacity, overhead, and prediction accuracy remains unverified.

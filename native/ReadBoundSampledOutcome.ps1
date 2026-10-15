@@ -1,7 +1,7 @@
 function Read-BoundSampledOutcome {
     param([string]$Path, [string]$Case, [int]$ExitCode,
         [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
-        [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null, [Nullable[bool]]$ExpectedChildCpu = $null)
+        [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null, [Nullable[bool]]$ExpectedChildCpu = $null, [Nullable[bool]]$ExpectedOwnerDrain = $null)
     $passed = $false
     $recordError = $null
     try {
@@ -13,6 +13,7 @@ function Read-BoundSampledOutcome {
         if ($null -ne $ExpectedChildCpu -and ($record.childCpuEnabled -isnot [bool] -or $record.childCpuEnabled -ne $ExpectedChildCpu)) {
             throw 'Child CPU evidence differs from the requested setting.'
         }
+        if ($null -ne $ExpectedOwnerDrain -and ($record.ownerDrainEnabled -isnot [bool] -or $record.ownerDrainEnabled -ne $ExpectedOwnerDrain)) { throw 'Owner drain evidence differs from the requested setting.' }
         if ($SelectedCadence) {
             $expectedMode = if ($SelectedCadence -eq 'continuous') { 'Continuous' } else { 'QualifiedSample' }
             $integerSchema = $record.schemaVersion -is [int] -or $record.schemaVersion -is [long]

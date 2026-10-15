@@ -17,6 +17,7 @@ static class PausableCollectorChecks
 
     public static void Run()
     {
+        OwnerCollectorChecks.Run();
         PauseAcknowledgesFinalDrain();
         StopSupersedesPendingPause();
         DrainFailureReachesPauseAndCompletion();
@@ -35,7 +36,7 @@ static class PausableCollectorChecks
             if (Interlocked.Increment(ref drains) == 1) { entered.Set(); Wait(release); }
             assignments.Enqueue(Volatile.Read(ref admissionEpoch));
         });
-        PausableSampleCollector.Pause pause;
+        CollectorPause pause;
         try
         {
             Wait(entered);

@@ -1,12 +1,7 @@
 using System.Runtime.ExceptionServices;
 
-sealed class PausableSampleCollector : IDisposable
+sealed class PausableSampleCollector : IPausableSampleCollector
 {
-    internal sealed class Pause(ulong sequence)
-    {
-        public ulong Sequence { get; } = sequence;
-    }
-
     private enum State { Running, PauseRequested, Paused, StopRequested, Stopped, Failed }
     private readonly int owner = Environment.CurrentManagedThreadId;
     private readonly object gate = new();
@@ -14,8 +9,8 @@ sealed class PausableSampleCollector : IDisposable
     private readonly Task worker;
     private readonly TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private State state;
-    private TaskCompletionSource<Pause>? pendingPause;
-    private Pause? paused;
+    private TaskCompletionSource<CollectorPause>? pendingPause;
+    private CollectorPause? paused;
     private ExceptionDispatchInfo? failure;
     private ulong sequence;
     private bool drainOnStop, disposed;
@@ -34,7 +29,7 @@ sealed class PausableSampleCollector : IDisposable
         ObjectDisposedException.ThrowIf(disposed, this);
     }
 
-    public Task<Pause> RequestPause()
+    public Task<CollectorPause> RequestPause()
     {
         RequireOwner();
         lock (gate)
@@ -48,7 +43,7 @@ sealed class PausableSampleCollector : IDisposable
         }
     }
 
-    public void Resume(Pause admission)
+    public void Resume(CollectorPause admission)
     {
         RequireOwner();
         lock (gate)

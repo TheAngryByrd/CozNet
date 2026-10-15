@@ -209,3 +209,44 @@ The inspected native Coz path processes target samples before checking delay deb
 An owner-driven mode could remove one collector scheduling dependency.
 It must preserve sample integrity and payment exclusion, measure probe cost, and retain the existing failure gates.
 No implementation or capacity improvement is claimed for that proposed mode.
+
+## First owner-driven drain comparison
+
+The opt-in owner collector removes the background publication step from selected sample processing.
+It drains the ring before selected-probe sample counts and debt checks.
+The source still stops during selected payment. All debt, child-wait, handler, and receipt bounds remain unchanged.
+Owner drain CPU runs on the sampled thread while its source is enabled.
+That observer work can enter selected sample periods even though the credit rule remains unchanged.
+
+Both captures used qualified-sample cadence, child CPU observations, and 10,000 requested selected batches.
+They used the ordinary container CPU set. They did not repeat the single-CPU restriction.
+
+| Collection | Zero-speedup elapsed | Treatment result | Invalidation |
+| --- | ---: | --- | --- |
+| Background | 88.097 ms | Failed after 2,390 batches at 3,385,057 ns selected debt | Passed |
+| Owner | 109.662 ms | Completed 10,000 batches in 197.249 ms | Passed |
+
+Background evidence: `artifacts/owner-drain-background/20261015T210451753-63dd4ae6`.
+Owner evidence: `artifacts/owner-drain-owner/20261015T210705271-a5d31f30`.
+Both captures retained unchanged source and binary hashes during execution.
+Replay verified all six records, including the failed background treatment.
+
+An earlier owner activation attempt failed before any selected batch because the workload still selected the background collector.
+The ownership guard rejected all three cases.
+That failed capture remains at `artifacts/owner-drain-owner/20261015T210542258-aa05b764`.
+The corrected workload selects `StartOwnerPausable` when owner draining is enabled.
+
+The zero-speedup owner duration was about 24.5% higher in this pair.
+This is one fixed-order observation, not an isolated overhead estimate or a stable capacity result.
+The failed background treatment has no completed elapsed endpoint for a paired treatment comparison.
+The captures do not establish prediction accuracy or resolve the earlier single-CPU failure.
+
+See [the collector contract](../Reference/pausable-sample-collector.md#owner-driven-collection)
+and [the comparison procedure](../How_Tos/run-bound-selected-cadence.md#compare-owner-driven-collection).
+
+A final capture includes the cleanup-reentry guard:
+`artifacts/owner-drain-final/20261015T211653127-b8a9d532`.
+All three cases pass, and replay verifies their records.
+The zero-speedup and treatment cases each complete 10,000 selected batches.
+Source and binary hashes remain unchanged during this capture.
+This verifies the final guarded path. It does not establish stable capacity or prediction accuracy.

@@ -52,6 +52,14 @@ static class BoundSampledPaymentWorkload
             _ => throw new ArgumentException("COZNET_CHILD_CPU must be 0 or 1.")
         };
         Require(!childCpuEnabled || selectedPaymentEnabled, "Child CPU capture requires selected payment.");
+        bool ownerDrainEnabled = Environment.GetEnvironmentVariable("COZNET_OWNER_DRAIN") switch
+        {
+            null or "0" => false,
+            "1" => true,
+            _ => throw new ArgumentException("COZNET_OWNER_DRAIN must be 0 or 1.")
+        };
+        Require(!ownerDrainEnabled || selectedPaymentEnabled && cadencePlan is not null,
+            "Owner draining requires selected payment with an explicit cadence.");
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
@@ -147,6 +155,7 @@ static class BoundSampledPaymentWorkload
             Require(client!.PollFromProbe(1, version, point) == CooperativePollOutcome.Idle,
                 "The selected owner entered a probe with an unexpected native request.");
             if (point != 2) return;
+            if (ownerDrainEnabled) collection!.DrainOnOwner();
             BoundSelectedAdmission? admission = null;
             if (cadence is not null)
             {
@@ -303,7 +312,8 @@ static class BoundSampledPaymentWorkload
             collection = new(new ClrProbeLifetime(binding), readOwner());
             if (selectedPaymentEnabled)
             {
-                collection.StartPausable(selectedPaymentSource!);
+                if (ownerDrainEnabled) collection.StartOwnerPausable(selectedPaymentSource!);
+                else collection.StartPausable(selectedPaymentSource!);
                 selectedCallback = InjectedProbes.BindBound(PaySelected);
             }
             else collection.Start(createSource);
@@ -315,6 +325,7 @@ static class BoundSampledPaymentWorkload
                 Require(!peerLoop.IsCompleted, "The paying peer stopped during sample collection.");
                 checksum += CpuWorkload.Run();
                 batches++;
+                if (ownerDrainEnabled) collection.DrainOnOwner();
                 if (collection.LiveSamples > samples.Count)
                 {
                     if (selectedPaymentEnabled) PublishEpochs(collection.ReadEpochProvisional(samples.Count));
@@ -498,7 +509,7 @@ static class BoundSampledPaymentWorkload
             sourceCleanup = collection?.Cleanup, initialCounters = collection?.InitialCounters, finalCounters = collection?.FinalCounters,
             sourceSamples = collection?.Cleanup is null ? null : collection.Diagnostics, batch = collection?.Latest,
             sourceEpochSamples = !selectedPaymentEnabled || collection?.Cleanup is null ? null : collection.EpochDiagnostics,
-            selectedPaymentEnabled, pauseTimingEnabled, childCpuEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false
+            selectedPaymentEnabled, pauseTimingEnabled, childCpuEnabled, ownerDrainEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false
         }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
         return completed || rejectionVerified ? 0 : 1;
     }

@@ -24,3 +24,23 @@ Use completed records to compare selected work duration, sample coverage, pauses
 Keep failed capacity and reach outcomes beside those measurements.
 The comparison does not isolate each observer cost or establish prediction accuracy.
 See [the reference](../Reference/bound-selected-cadence.md) for admission and schema contracts.
+
+## Compare owner-driven collection
+
+After the target builds the required binaries, capture the background baseline:
+
+```powershell
+pwsh -NoProfile -File native/VerifyBoundSampledPayment.ps1 -SelectedPayment -ChildCpu -SelectedCadence qualified-sample -SelectedBatches 10000 -EvidenceDirectory artifacts/owner-drain-background
+```
+
+Capture the owner-driven case with the same work and diagnostics:
+
+```powershell
+pwsh -NoProfile -File native/VerifyBoundSampledPayment.ps1 -SelectedPayment -ChildCpu -OwnerDrain -SelectedCadence qualified-sample -SelectedBatches 10000 -EvidenceDirectory artifacts/owner-drain-owner
+```
+
+Run the commands serially. Keep every failed case.
+Check `ownerDrainEnabled` in each runtime record and its manifest.
+Compare completed work duration, samples, pauses, and native receipts at the same batch count.
+Do not infer prediction accuracy from a capacity pass.
+See [the collector reference](../Reference/pausable-sample-collector.md#owner-driven-collection) for ownership and failure behavior.

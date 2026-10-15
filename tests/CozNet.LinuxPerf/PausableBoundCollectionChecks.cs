@@ -87,6 +87,10 @@ static class PausableBoundCollectionChecks
 
     public static void Run()
     {
+        OwnerDrainRejectsCleanupReentry();
+        OwnerDrainRejectsBackgroundCollection();
+        OwnerDrainsPreserveExclusionAndEpochs();
+        OwnerDrainFailureRetainsLossAndStopsCollection();
         FinalDrainPreservesEpochAndCallbackBoundary();
         CallbackFailureDoesNotResume();
         InvalidationDoesNotResume();
@@ -99,6 +103,85 @@ static class PausableBoundCollectionChecks
         InconsistentPausePreventsCallback();
         WrongThreadControlIsRejected();
         EpochReadsPreserveOwnershipAndRejectInvalidOffsets();
+    }
+
+    private static void OwnerDrainRejectsCleanupReentry()
+    {
+        var collection = Create();
+        Source? source = null;
+        collection.StartOwnerPausable((_, sink) => source = new Source(sink));
+        source!.BeforeDrain = () =>
+        {
+            Fails<InvalidOperationException>(() => collection.CloseForCleanup());
+            Fails<InvalidOperationException>(() => collection.Complete());
+            Fails<InvalidOperationException>(() => collection.ExecuteExcluded(_ => throw new InvalidDataException("Recursive exclusion ran.")));
+            Fails<InvalidOperationException>(collection.DrainOnOwner);
+            Require(source.Disposes == 0 && collection.Cleanup is null, "Cleanup disposed a source with an active owner drain.");
+        };
+        collection.DrainOnOwner();
+        var result = collection.Complete();
+        Require(result.Cleanup.CollectorJoined && result.Cleanup.SourceDisposed && result.Cleanup.Errors.Length == 0,
+            "Rejected cleanup reentry prevented final ownership release.");
+    }
+
+    private static void OwnerDrainRejectsBackgroundCollection()
+    {
+        var collection = Create();
+        collection.StartPausable((_, sink) => new Source(sink));
+        try { Fails<InvalidOperationException>(collection.DrainOnOwner); }
+        finally { collection.CloseForCleanup(); }
+        Require(collection.Cleanup!.Errors.Length == 0, "The rejected owner drain disrupted background cleanup.");
+    }
+
+    private static void OwnerDrainsPreserveExclusionAndEpochs()
+    {
+        var collection = Create();
+        Source? source = null;
+        int owner = Environment.CurrentManagedThreadId;
+        collection.StartOwnerPausable((_, sink) => source = new(sink)
+        {
+            BeforeDrain = () => Require(Environment.CurrentManagedThreadId == owner, "A drain left the source owner.")
+        });
+        Require(source!.Drains == 1, "Owner collection started a background drain.");
+        Task.Run(() => Fails<InvalidOperationException>(collection.DrainOnOwner)).GetAwaiter().GetResult();
+        collection.DrainOnOwner();
+        collection.ExecuteExcluded(samples =>
+        {
+            Require(samples.Count == 1 && samples[0].EligibilityEpoch == 1, "The final owner drain lost the old epoch.");
+            int before = source.Drains;
+            Fails<InvalidOperationException>(collection.DrainOnOwner);
+            Fails<InvalidOperationException>(() => collection.CloseForCleanup());
+            Require(source.Drains == before && source.Enables == 1, "Excluded execution admitted a drain or resume.");
+        });
+        Require(source.Enables == 2, "Owner collection did not resume its source.");
+        collection.DrainOnOwner();
+        collection.ExecuteExcluded(samples => Require(samples.Count == 2 && samples[1].EligibilityEpoch == 2,
+            "The next final drain used the wrong eligibility epoch."));
+        var result = collection.Complete();
+        Require(result.Cleanup.CollectorJoined && result.Cleanup.SourceDisposed && result.Cleanup.Errors.Length == 0,
+            "Owner collection did not release source ownership cleanly.");
+        Require(collection.EpochDiagnostics.Select(item => item.EligibilityEpoch).SequenceEqual(new ulong[] { 1, 2, 3 }),
+            "Owner cleanup lost cumulative sample epochs.");
+        Fails<InvalidOperationException>(collection.DrainOnOwner);
+    }
+
+    private static void OwnerDrainFailureRetainsLossAndStopsCollection()
+    {
+        var collection = Create();
+        Source? source = null;
+        collection.StartOwnerPausable((_, sink) => source = new(sink));
+        collection.ExecuteExcluded(_ => { });
+        collection.ExecuteExcluded(_ => { });
+        source!.LateLoss = true;
+        var original = Fails<InvalidDataException>(collection.DrainOnOwner);
+        Require(collection.Latest!.LostRecords == 1, "Owner draining discarded cumulative loss evidence.");
+        int drains = source.Drains;
+        Require(ReferenceEquals(original, Fails<InvalidDataException>(collection.DrainOnOwner)),
+            "Owner collection replaced its first drain failure.");
+        var cleanup = collection.CloseForCleanup();
+        Require(source.Drains == drains && cleanup.CollectorJoined && cleanup.SourceDisposed
+            && cleanup.Errors.Any(error => error.Stage == "collector"),
+            "Failed owner collection retried its drain or lost cleanup evidence.");
     }
 
     private static void FinalDrainPreservesEpochAndCallbackBoundary()

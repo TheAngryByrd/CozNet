@@ -1,5 +1,7 @@
 # Lode index
 
+For opt-in owner-thread draining and its first comparison, read [the collector contract](profiling/pausable-collector.md#owner-driven-mode).
+
 For the managed one-CPU capacity failure and wall/CPU divergence, read [the scheduling evidence](../reliability/features/native-signal/cooperative-single-cpu.md).
 
 For optional owner-thread CPU observations around cooperative child waits, read [the native contract](profiling/cooperative-interop.md#optional-cpu-records) and [its checks](../reliability/features/native-signal/cooperative-child-cpu.md).
