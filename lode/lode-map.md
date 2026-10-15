@@ -1,5 +1,7 @@
 # Lode index
 
+For observed source timestamps and endpoint ambiguity, read [sample membership](profiling/sample-membership.md).
+
 For matched collection, frozen cost parsing, and unresolved attribution, read [matched prediction diagnostics](profiling/matched-prediction.md).
 
 For fixed-work CPU calibration and its retained uncertainty, read [physical calibration](profiling/physical-calibration.md).

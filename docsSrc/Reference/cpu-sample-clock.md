@@ -60,6 +60,7 @@ The two brackets must enclose the frozen measurement endpoints.
 The result proves consistency of those observations only.
 Sample timestamps still use the ring reader's regression checks.
 
+The [observed membership policy](sample-membership.md) compares source timestamps under an explicit fast-clock assumption.
 Prediction eligibility and kernel clock error bounds remain unresolved.
 Existing captures retain their original clock configuration.
 

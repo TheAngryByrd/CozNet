@@ -23,7 +23,15 @@ The adapter rejects this difference instead of treating the child's offset as th
 
 Two consistent observations do not bound every clock reading between them.
 They also do not measure the difference between the kernel fast clock and userspace `CLOCK_MONOTONIC`.
-A source-event correlation check and a justified uncertainty bound remain necessary.
+Exact event ordering needs stronger evidence than these observations provide.
+
+Recorded timestamp comparison is a narrower claim.
+The kernel fast clock and userspace monotonic clock derive from the same timekeeper state.
+With the supported runtime, nanosecond units, and zero namespace offset, the observed membership policy uses identity conversion.
+It retains endpoint ambiguity instead of assigning every sample to one side of a boundary.
+It assumes that no unobserved fast-timekeeper anomaly changes membership.
+Checks for source regressions and source timestamps after receipt can contradict that assumption. They cannot prove it.
+This policy permits sample-accounting diagnostics without claiming physical-clock accuracy or exact event ordering.
 
 Clock alignment also cannot establish the CPU interval represented by a sample.
 A nominal task-clock period is not a measured elapsed CPU interval.
@@ -31,6 +39,7 @@ Disable and enable can preserve a remaining period across enabled intervals.
 Missing samples and native journal tails still need independent bounds.
 
 See the [CPU sample clock reference](../Reference/cpu-sample-clock.md) for implemented configuration.
+See [observed sample membership](../Reference/sample-membership.md) for the policy and output fields.
 See [matched physical prediction](matched-prediction.md) for the current accuracy limits.
 
 ## Sources

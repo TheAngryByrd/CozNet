@@ -54,6 +54,36 @@ The final adapter also catches `InvalidDataException` and retains structured fai
 Deterministic capture checks cover this failure path on Windows and Linux.
 The retained timed runs precede this correction.
 
-See [the clock reference](../../../docsSrc/Reference/cpu-sample-clock.md),
+## Observed membership replay
+
+The later counter capture `20261015T025206017-a2af01e3` also retains clock evidence.
+The versioned observed membership policy accepts both captures without another timed run.
+These commands produce `source-membership-v2-0.json` and `source-membership-v2-50.json` in that directory.
+Earlier reports remain unchanged.
+
+```powershell
+python native/AnalyzeSampleMembership.py artifacts/timer-sampled/20261015T025206017-a2af01e3/sampled-0.json artifacts/timer-sampled/20261015T025206017-a2af01e3/source-membership-v2-0.json
+python native/AnalyzeSampleMembership.py artifacts/timer-sampled/20261015T025206017-a2af01e3/sampled-50.json artifacts/timer-sampled/20261015T025206017-a2af01e3/source-membership-v2-50.json
+```
+
+Existing output paths are rejected. Reanalysis requires a new output filename.
+
+| Observed membership | Zero percent | Fifty percent |
+| --- | ---: | ---: |
+| Inside samples | 1,941 | 409 |
+| After samples | 10 | 2 |
+| Before or ambiguous samples | 0 | 0 |
+| Selected inside samples | 1,917 | 402 |
+| Selected inside nominal weight | 1,917,000,000 ns | 402,000,000 ns |
+
+The reports preserve raw records and input, analyzer, and counter-parser hashes.
+Inside totals include late receipts that the producer did not accept for credit.
+They do not replace the producer's credit replay or bound exact selected CPU time.
+The treatment retains its debt and native journal failures, cancellation status, and incomplete closure.
+Both reports keep physical-clock accuracy, exact event ordering, and prediction accuracy false.
+Eight portable checks pass on Windows and Linux with Python.
+
+See [observed membership](../../../docsSrc/Reference/sample-membership.md),
+[the clock reference](../../../docsSrc/Reference/cpu-sample-clock.md),
 [alignment limits](../../../docsSrc/Explanations/sample-clock-alignment.md), and
 [Linux perf contracts](../../../lode/profiling/linux-perf.md).

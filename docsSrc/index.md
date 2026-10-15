@@ -25,6 +25,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Reference
 
+- [Observed sample membership](Reference/sample-membership.md): source timestamps, endpoint ambiguity, and nominal weight totals.
+
 - [CPU counter evidence](Reference/cpu-counter-evidence.md): cumulative samples, transition journals, and endpoint count ranges.
 - [CPU sample clock](Reference/cpu-sample-clock.md): explicit Linux timestamp selection and ABI checks.
 - [Measurement boundaries](Reference/measurement-boundaries.md): immutable endpoints, capture failures, and unresolved boundary uncertainty.
