@@ -10,6 +10,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Analyze cooperative peer progress](How_Tos/analyze-cooperative-peer-progress.md).
+
 - [Verify cooperative interop](How_Tos/verify-cooperative-interop.md).
 - [Verify injected probe identity](How_Tos/verify-probe-identity.md).
 - [Verify CLR-bound cooperative payment](How_Tos/verify-bound-cooperative.md).
@@ -34,6 +36,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Cooperative peer progress analysis](Reference/cooperative-peer-progress.md): conditional child timing from retained submit brackets.
 
 - [Pausable sample collector](Reference/pausable-sample-collector.md) for the internal drain-ownership component under development.
 - [Bound CPU session](Reference/bound-cpu-session.md) for repeated source transitions and cumulative counter evidence.

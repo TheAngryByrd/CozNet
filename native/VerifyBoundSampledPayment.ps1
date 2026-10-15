@@ -21,6 +21,7 @@ $native = Join-Path $run 'native'
 New-Item -ItemType Directory -Force $native | Out-Null
 $sources = @('build/build.fs', 'native/VerifyBoundSampledPayment.ps1', 'native/AnalyzeBoundSampledPayment.py', 'native/BoundSampledPaymentAnalysisChecks.py', 'native/VerifyServiceOwner.ps1', 'native/Profiler.cpp', 'native/ProbeLifetime.h', 'native/Sampler.h', 'native/BuildLinux.ps1', 'native/GenerateCallbacks.ps1', 'tests/Shared/IL.cs', 'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/service/CMakeLists.txt')
 $sources += @('native/AnalyzeBoundSelectedPayment.py', 'native/BoundSelectedPaymentAnalysisChecks.py')
+$sources += @('native/AnalyzeCooperativePeerProgress.py', 'native/CooperativePeerProgressChecks.py')
 $sources += 'native/VerifyBoundSelectedCadence.ps1'
 $sources += @('native/ReadBoundSampledOutcome.ps1', 'native/BoundSampledOutcomeChecks.ps1')
 $sources += @(Get-ChildItem (Join-Path $root 'tests/CozNet.LinuxPerf') -Filter '*.cs' | ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName).Replace('\', '/') })
@@ -38,7 +39,7 @@ foreach ($name in $sources) {
 $outcomeChecksExit = $LASTEXITCODE
 $analysisChecksExit = 0
 $analysisChecks = @('BoundSampledPaymentAnalysisChecks.py')
-if ($SelectedPayment) { $analysisChecks += 'BoundSelectedPaymentAnalysisChecks.py' }
+if ($SelectedPayment) { $analysisChecks += @('BoundSelectedPaymentAnalysisChecks.py', 'CooperativePeerProgressChecks.py') }
 foreach ($check in $analysisChecks) {
     & python (Join-Path $run "source/native/$check") *> (Join-Path $run "$check.log")
     if ($LASTEXITCODE -ne 0) { $analysisChecksExit = $LASTEXITCODE }

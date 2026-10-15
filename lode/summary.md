@@ -1,5 +1,8 @@
 # Project scope
 
+The [peer-progress analyzer](profiling/peer-progress.md) places one direct trial's first child after its debt observation under explicit clock-rate assumptions.
+A later retired journal does not establish payment before the gate. Peer scheduling remains unresolved.
+
 An opt-in [receipt-readiness query](profiling/receipt-readiness.md) replaces normal controller header polling with atomic observation.
 Full receipt validation and cleanup retain controller ownership. Capacity and overhead benefits remain unverified.
 Its two one-CPU treatments fail peer debt earlier than the interleaved controller trials. Controller polling remains the default.

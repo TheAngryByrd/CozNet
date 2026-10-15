@@ -1,5 +1,7 @@
 # Lode index
 
+For conditional first-child timing relative to a debt observation, read [peer progress](profiling/peer-progress.md).
+
 For opt-in direct observation without controller header dispatches, read [receipt readiness](profiling/receipt-readiness.md).
 
 For opt-in controller queue, action, and return brackets, read [dispatch timing](profiling/controller-dispatch.md).
