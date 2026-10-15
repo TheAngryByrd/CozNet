@@ -24,6 +24,9 @@ Do not add an unnecessary warmup drain or claim that it fixes the endpoint.
    Checks distinguish prefix acceptance, release into local credit, and later global publication.
    A native release failure retains controller ownership without counting settled wait as unsettled again.
 3. Define a parsed boundary assessment from those observations and native ownership.
+   `SignalAccounting.completionRange` now bounds valid completion states of the existing finite service.
+   Its conditional endpoints do not establish a bound on actual unreceived execution.
+   Native closure and final-journal validation must qualify any use in an endpoint assessment.
    Distinguish known settled residuals from unknown native suffixes.
    Reject unsupported or unbounded states. Do not infer a bound from the requested child duration.
 4. Integrate the assessment into the finite workload lifecycle.
@@ -57,5 +60,9 @@ flowchart LR
 
 The first implementation is a ledger observation, not another offline membership analyzer.
 No residual formula is accepted until its state transitions and unknown inputs are explicit.
+The [live ledger capture](../../reliability/features/native-signal/ledger-boundaries.md) fails the existing handler gate and native closure in treatment.
+The conditional model cannot qualify that run.
+Address intervention capacity before using the model for prediction eligibility.
+Reuse the existing wait and scheduling evidence. Do not repeat unchanged timing cases to obtain a pass.
 See [delay accounting](../profiling/delay-ledger.md), [timer accounting](../profiling/timer-accounting.md),
 [measurement boundaries](../profiling/measurement-boundaries.md), and [the roadmap](roadmap.md).

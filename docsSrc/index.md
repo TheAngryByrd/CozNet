@@ -25,6 +25,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Reference
 
+- [Conditional service completion range](Reference/service-completion-range.md): valid completion states and unsupported cases.
+
 - [Observed sample membership](Reference/sample-membership.md): source timestamps, endpoint ambiguity, and nominal weight totals.
 
 - [CPU counter evidence](Reference/cpu-counter-evidence.md): cumulative samples, transition journals, and endpoint count ranges.
@@ -48,6 +50,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Timer worker lifecycle](Reference/timer-worker-lifetime.md): retirement, join, release, and fault-check scope.
 
 ## Explanation
+
+- [Limits on valid service completion](Explanations/service-completion-limits.md).
 
 - [Experiment boundaries and unpublished delay](Explanations/experiment-lifecycle.md).
 

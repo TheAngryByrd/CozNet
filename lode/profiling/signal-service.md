@@ -80,6 +80,14 @@ stateDiagram-v2
 
 ## Completion and scope
 
+`SignalAccounting.completionRange` returns conditional local-credit endpoints from one immutable state.
+For an active service, the lower endpoint includes accepted wait and the upper endpoint includes `budget - 1 + maximumHandlerNanoseconds`.
+A stopped journal has exact prospective local credit. An idle runnable ledger has exact current local credit.
+The result rejects unsupported operations and unrepresentable endpoints without changing ownership.
+This is a range of valid completion states under no new accounting work, not a bound on unfinished native execution.
+It neither changes global delay nor authorizes prediction eligibility.
+See [the derivation](../../docsSrc/Explanations/service-completion-limits.md) and [the reference](../../docsSrc/Reference/service-completion-range.md).
+
 `completeService` requires a terminal child and settles the complete measured sum once.
 It returns that sum and the state with its reservation removed.
 Duplicate and foreign completion fail. Arithmetic overflow retains the terminal reservation and its accepted journal sum.

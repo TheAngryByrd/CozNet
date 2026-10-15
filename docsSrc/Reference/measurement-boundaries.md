@@ -20,6 +20,8 @@ Its wait is already in local credit, so `UnsettledWait` is zero.
 Malformed or mismatched readings fail capture before worker release at the start boundary.
 
 These observations do not bound unreceived native waits or change the global-delay correction.
+The [retained native capture](../../reliability/features/native-signal/ledger-boundaries.md) verifies both endpoint records.
+Its treatment retains an invalid child above the handler limit and does not complete native closure.
 See [the lifecycle explanation](../Explanations/experiment-lifecycle.md).
 
 `MeasurementWindowCapture` retains immutable start and end readings for experimental workloads.

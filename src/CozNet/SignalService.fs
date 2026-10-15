@@ -39,6 +39,8 @@ type internal SignalServiceChild = private {
 
 [<RequireQualifiedAccess>]
 module internal SignalServiceChild =
+    let internal maximumHandlerNanoseconds = 5000000L
+
     let tryCreate
         leaseIdentity
         ordinal
@@ -67,7 +69,7 @@ module internal SignalServiceChild =
         elif
             measured < 0L
             || handler < measured
-            || handler > 5000000L
+            || handler > maximumHandlerNanoseconds
             || observed < handler
             || observed > 100000000L
         then

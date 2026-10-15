@@ -96,6 +96,287 @@ module SignalAccountingTests =
     [<Tests>]
     let tests =
         testList "Signal accounting" [
+            testCase
+                "Conditional completion range retains paid local credit while cancellation is unresolved"
+            <| fun _ ->
+                let selected, peer, state = credited 100000UL
+                let first, reserved = service peer state
+
+                let firstTerminal =
+                    SignalAccounting.sentService first reserved
+                    |> parsed
+                    |> accept first 1L 1UL 50000L 50000L 2
+
+                let _, released =
+                    SignalAccounting.completeService first firstTerminal
+                    |> parsed
+
+                let _, creditedAgain =
+                    observe selected 2UL 200002UL 0UL released
+                    |> parsed
+
+                let _, published = prepare selected creditedAgain
+                let lease, reservedAgain = service peer published
+
+                let active =
+                    SignalAccounting.sentService lease reservedAgain
+                    |> parsed
+                    |> accept lease 1L 2UL 50000L 50000L 2
+
+                let before =
+                    SignalAccounting.completionRange peer active
+                    |> parsed
+
+                let cancelling =
+                    SignalAccounting.requestServiceCancellation lease active
+                    |> parsed
+
+                let after =
+                    SignalAccounting.completionRange peer cancelling
+                    |> parsed
+
+                Expect.equal
+                    (SignalServiceLease.nanoseconds lease)
+                    50001L
+                    "The replacement must have the intended snapshot debt."
+
+                Expect.equal
+                    (DelayTicks.value before.MinimumLocal, DelayTicks.value before.MaximumLocal)
+                    (100000L, 5100000L)
+                    "Both endpoints must include the previous settled local credit."
+
+                Expect.equal
+                    after
+                    before
+                    "Cancellation intent alone cannot remove possible in-flight payment."
+
+                Expect.isTrue
+                    after.RequiresServiceCompletion
+                    "An unresolved cancellation must still require completion."
+
+            testCase "Conditional completion range contains the maximum valid final overshoot"
+            <| fun _ ->
+                let selected, peer, state = credited 100002UL
+                let lease, reserved = service peer state
+
+                let empty =
+                    SignalAccounting.completionRange peer reserved
+                    |> parsed
+
+                let active =
+                    SignalAccounting.sentService lease reserved
+                    |> parsed
+                    |> accept lease 1L 1UL 50000L 50000L 2
+
+                let prefix =
+                    SignalAccounting.completionRange peer active
+                    |> parsed
+
+                let _, moreCredit =
+                    observe selected 2UL 200002UL 0UL active
+                    |> parsed
+
+                let _, moreGlobal = prepare selected moreCredit
+
+                let afterCredit =
+                    SignalAccounting.completionRange peer moreGlobal
+                    |> parsed
+
+                let last =
+                    SignalServiceChild.tryCreate
+                        (SignalServiceLease.identity lease)
+                        2L
+                        2UL
+                        1L
+                        5000000L
+                        5000000L
+                        5000000L
+                        2
+                        true
+                    |> parsed
+
+                let terminal =
+                    SignalAccounting.acceptServiceChild lease last moreGlobal
+                    |> parsed
+
+                let stopped =
+                    SignalAccounting.completionRange peer terminal
+                    |> parsed
+
+                let _, settled =
+                    SignalAccounting.completeService lease terminal
+                    |> parsed
+
+                let complete =
+                    SignalAccounting.completionRange peer settled
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value empty.MinimumLocal, DelayTicks.value empty.MaximumLocal)
+                    (0L, 5050000L)
+                    "An empty service must include all valid payments up to final-child overshoot."
+
+                Expect.equal
+                    (DelayTicks.value prefix.MinimumLocal, DelayTicks.value prefix.MaximumLocal)
+                    (50000L, 5050000L)
+                    "A partial accepted prefix must narrow only the lower endpoint."
+
+                Expect.equal
+                    (DelayTicks.value afterCredit.Global)
+                    100001L
+                    "Concurrent selected credit must remain visible."
+
+                Expect.equal
+                    afterCredit.MaximumLocal
+                    prefix.MaximumLocal
+                    "New global debt must not enlarge an existing lease."
+
+                Expect.equal
+                    (DelayTicks.value prefix.Global)
+                    50001L
+                    "The earlier range must preserve its frozen global counter."
+
+                Expect.equal
+                    (DelayTicks.value stopped.MinimumLocal, DelayTicks.value stopped.MaximumLocal)
+                    (5050000L, 5050000L)
+                    "A terminal journal at the exact limit must have no remaining valid suffix."
+
+                Expect.isTrue
+                    stopped.RequiresServiceCompletion
+                    "A terminal prefix still requires ledger settlement."
+
+                Expect.equal
+                    (DelayTicks.value complete.MinimumLocal, DelayTicks.value complete.MaximumLocal)
+                    (5050000L, 5050000L)
+                    "Settlement must preserve the exact completed local credit."
+
+                Expect.isFalse
+                    complete.RequiresServiceCompletion
+                    "Settled local credit must not retain a service dependency."
+
+                Expect.equal complete.Thread peer "The range must retain its worker identity."
+
+            testCase "Conditional completion range closes on a deferred journal below its budget"
+            <| fun _ ->
+                let _, peer, state = credited 100002UL
+                let lease, reserved = service peer state
+
+                let stopped =
+                    SignalAccounting.sentService lease reserved
+                    |> parsed
+                    |> accept lease 1L 1UL 50000L 50000L 2
+                    |> accept lease 2L 2UL 1L 0L 1
+
+                let range =
+                    SignalAccounting.completionRange peer stopped
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value range.MinimumLocal, DelayTicks.value range.MaximumLocal)
+                    (50000L, 50000L)
+                    "Deferral forbids further accepted payment even when snapshot debt remains."
+
+                Expect.isTrue
+                    range.RequiresServiceCompletion
+                    "An accepted stop does not settle the ledger."
+
+            testCase
+                "Conditional completion range preserves unpublished credit and rejects individual requests"
+            <| fun _ ->
+                let selected, peer, state = start 50
+
+                let _, creditedState =
+                    observe selected 1UL 100000UL 0UL state
+                    |> parsed
+
+                let range =
+                    SignalAccounting.completionRange selected creditedState
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value range.Global,
+                     DelayTicks.value range.MinimumLocal,
+                     DelayTicks.value range.MaximumLocal)
+                    (0L, 50000L, 50000L)
+                    "An idle range must not publish local credit."
+
+                let _, published = prepare selected creditedState
+                let _, pending = required peer published
+
+                Expect.equal
+                    (SignalAccounting.completionRange peer pending)
+                    (Error "The completion range requires runnable or service-owned accounting.")
+                    "Individual requests do not use the finite service journal contract."
+
+                Expect.equal
+                    (SignalAccounting.globalNanoseconds creditedState)
+                    0L
+                    "Range capture must leave accounting unchanged."
+
+            testCase "Conditional completion range rejects unrepresentable potential settlement"
+            <| fun _ ->
+                let selected, state =
+                    SignalAccounting.register (Some 100) (SignalAccounting.create ())
+                    |> parsed
+
+                let _, state =
+                    observe
+                        selected
+                        1UL
+                        (uint64 (
+                            Int64.MaxValue
+                            - 2L
+                        ))
+                        0UL
+                        state
+                    |> parsed
+
+                let _, state = prepare selected state
+
+                let peer, state =
+                    SignalAccounting.register None state
+                    |> parsed
+
+                let _, state =
+                    observe selected 2UL (uint64 Int64.MaxValue) 0UL state
+                    |> parsed
+
+                let _, state = prepare selected state
+                let lease, reserved = service peer state
+
+                Expect.equal
+                    (SignalAccounting.completionRange peer reserved)
+                    (Error "The conditional completion range exceeds the ledger capacity.")
+                    "An upper endpoint must not wrap or silently truncate near the counter limit."
+
+                let exactTerminal =
+                    SignalAccounting.sentService lease reserved
+                    |> parsed
+                    |> accept lease 1L 1UL 2L 2L 2
+
+                let exact =
+                    SignalAccounting.completionRange peer exactTerminal
+                    |> parsed
+
+                Expect.equal
+                    (DelayTicks.value exact.MinimumLocal, DelayTicks.value exact.MaximumLocal)
+                    (Int64.MaxValue, Int64.MaxValue)
+                    "The exact ledger capacity must remain representable."
+
+                let terminal =
+                    SignalAccounting.sentService lease reserved
+                    |> parsed
+                    |> accept lease 1L 1UL 2L 3L 2
+
+                Expect.isError
+                    (SignalAccounting.completionRange peer terminal)
+                    "An exact overflowing terminal value must also reject."
+
+                Expect.equal
+                    (SignalAccounting.pendingCount reserved)
+                    1
+                    "Range rejection must retain ownership."
+
             testCase "Thread snapshot resets empty prefix sequence on reused service"
             <| fun _ ->
                 let selected, peer, state = credited 100000UL

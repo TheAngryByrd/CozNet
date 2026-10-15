@@ -72,6 +72,20 @@ type internal SignalThreadSnapshot = private {
     member this.Ledger = this.ObservedLedger
     member this.Operation = this.ObservedOperation
 
+type internal ConditionalSignalCompletion = private {
+    CompletionThread: LedgerThread
+    FrozenGlobal: DelayTicks
+    Minimum: DelayTicks
+    Maximum: DelayTicks
+    PendingService: bool
+} with
+
+    member this.Thread = this.CompletionThread
+    member this.Global = this.FrozenGlobal
+    member this.MinimumLocal = this.Minimum
+    member this.MaximumLocal = this.Maximum
+    member this.RequiresServiceCompletion = this.PendingService
+
 [<RequireQualifiedAccess>]
 module internal SignalAccounting =
     let create () = {
@@ -127,6 +141,57 @@ module internal SignalAccounting =
                     ObservedLedger = ledger
                     ObservedOperation = value
                 })
+            )
+        )
+
+    let completionRange thread state =
+        captureThread thread state
+        |> Result.bind (fun snapshot ->
+            let local = DelayTicks.value snapshot.Ledger.Local
+
+            let range =
+                match snapshot.Operation, snapshot.Ledger.Phase with
+                | SignalOperationSnapshot.Idle, LedgerThreadPhase.Runnable -> Ok(0L, 0L, false)
+                | SignalOperationSnapshot.Service(lease, progress), LedgerThreadPhase.Delaying ->
+                    let service = state.Services[thread]
+
+                    let maximum =
+                        if service.Stopped then
+                            progress.MeasuredNanoseconds
+                        else
+                            SignalServiceLease.nanoseconds lease
+                            - 1L
+                            + SignalServiceChild.maximumHandlerNanoseconds
+
+                    Ok(progress.MeasuredNanoseconds, maximum, true)
+                | _ -> Error "The completion range requires runnable or service-owned accounting."
+
+            range
+            |> Result.bind (fun (minimum, maximum, pending) ->
+                if
+                    maximum < minimum
+                    || maximum > Int64.MaxValue
+                                 - local
+                then
+                    Error "The conditional completion range exceeds the ledger capacity."
+                else
+                    DelayTicks.tryCreate (
+                        local
+                        + minimum
+                    )
+                    |> Result.bind (fun lower ->
+                        DelayTicks.tryCreate (
+                            local
+                            + maximum
+                        )
+                        |> Result.map (fun upper -> {
+                            CompletionThread = thread
+                            FrozenGlobal = snapshot.Ledger.Global
+                            Minimum = lower
+                            Maximum = upper
+                            PendingService = pending
+                        })
+                    )
             )
         )
 

@@ -30,6 +30,9 @@ Both worker observations must be present together and retain thread identity acr
 Physical producers and historical captures can omit this capability.
 The producer rejects blocked and individual-request accounting states.
 These values do not replace global delay or bound unknown native suffixes.
+The [live ledger capture](../../reliability/features/native-signal/ledger-boundaries.md) retains both worker readings at both endpoints.
+Zero percent closes successfully. Treatment rejects a 9.684 ms wait and retains one unclosed selected journal.
+The failed result cannot qualify a conditional completion range or a prediction claim.
 The timer runner hashes `MeasurementLedgerReading.cs`.
 The matched runner captures it with the workload source directory.
 It closes sample acceptance and disables resume before endpoint capture, then performs shutdown separately.
