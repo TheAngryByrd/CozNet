@@ -1,5 +1,7 @@
 # Lode index
 
+For frozen measurement endpoints and shutdown separation, read [measurement boundaries](profiling/measurement-boundaries.md).
+
 For native submission timing and the retained capacity failure, read [submission evidence](../reliability/features/native-signal/service-submission/README.md).
 For owner preemption and upstream debt-payment differences, read [the scheduling comparison](../docsSrc/Research/native-owner-scheduling.md).
 For the finite active-polling prototype and its retained capacity failures, read [owner polling](profiling/owner-polling.md).

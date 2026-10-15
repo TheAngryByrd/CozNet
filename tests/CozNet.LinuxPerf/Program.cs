@@ -42,10 +42,17 @@ if (args is ["--sampled-timer-scheduler", var timerSchedulerPath, var timerSched
         initialInterval: TimerInitialInterval.Parse(schedulerInterval), forceGc: TimerGcReach.ParseMode(timerSchedulerGc),
         schedulerFactory: () => new LinuxSchedulerEventSession());
 
+if (args is ["--verify-measurement-boundaries"])
+{
+    MeasurementWindowCaptureChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-timer-layout"])
 {
     TimerSchedulerCaptureGroupChecks.Run();
     TimerSessionCleanupChecks.Run();
+    MeasurementWindowCaptureChecks.Run();
     NativeTimerClient.VerifyLayout();
     TimerInitialIntervalChecks.Run();
     TargetLeaseReceiptsChecks.Run();

@@ -59,13 +59,32 @@ static class SampledTimerWorkload
         long measurementStartedTimestamp = 0, measurementFinishedTimestamp = 0;
         long[]? measurementProgress = null;
         long progressCapturedBeforeTimestamp = 0, progressCapturedAfterTimestamp = 0;
+        var measurement = new MeasurementWindowCapture(TimeProvider.System);
+
+        MeasurementWindowCapture.Readings ReadMeasurement()
+        {
+            var pending = controller?.PendingJournals ?? [];
+            MeasurementWindowCapture.Worker ReadWorker(uint slot)
+            {
+                var operation = pending.SingleOrDefault(journal => journal.Slot == slot);
+                return new(Interlocked.Read(ref progress[slot]), ReleasedWait(slot), controller?.ConfirmedWait(slot) ?? 0,
+                    operation is null ? null : new(operation.Command, operation.Generation));
+            }
+            long global = SignalAccountingModule.globalNanoseconds(state);
+            var selectedWorker = ReadWorker(0);
+            var peerWorker = ReadWorker(1);
+            return new(global, credit, sequence, epoch, selectedWorker, peerWorker);
+        }
 
         void CaptureProgress()
         {
-            if (measurementProgress is not null || measurementStartedTimestamp == 0) return;
-            progressCapturedBeforeTimestamp = Stopwatch.GetTimestamp();
-            measurementProgress = [Interlocked.Read(ref progress[0]), Interlocked.Read(ref progress[1])];
-            progressCapturedAfterTimestamp = Stopwatch.GetTimestamp();
+            if (measurement.Start is null) return;
+            accept = running = false;
+            measurement.Finish(ReadMeasurement);
+            if (measurement.End is not { } end) return;
+            progressCapturedBeforeTimestamp = end.BeforeTimestamp;
+            measurementProgress = [end.Accounting.Selected.Progress, end.Accounting.Peer.Progress];
+            progressCapturedAfterTimestamp = end.AfterTimestamp;
         }
 
         void Publish(CpuSample sample)
@@ -231,13 +250,17 @@ static class SampledTimerWorkload
             stage = "measurement";
             phases?.Begin("setup", "phase-clock", 0);
             phases?.End();
-            running = true;
-            session!.Enable();
-            enabled = accept = true;
-            var timer = Stopwatch.StartNew();
-            measurementStartedTimestamp = Stopwatch.GetTimestamp();
-            start.Set();
-            gcStress?.Release();
+            var timer = new Stopwatch();
+            measurement.Begin(ReadMeasurement, () =>
+            {
+                running = true;
+                session!.Enable();
+                enabled = accept = true;
+                timer.Start();
+                measurementStartedTimestamp = Stopwatch.GetTimestamp();
+                start.Set();
+                gcStress?.Release();
+            });
             long nextBoundary = 0;
             while (timer.ElapsedMilliseconds < 2000)
             {
@@ -277,7 +300,7 @@ static class SampledTimerWorkload
             if (measurementStartedTimestamp != 0 && measurementFinishedTimestamp == 0)
                 measurementFinishedTimestamp = Stopwatch.GetTimestamp();
             failures.Add(error);
-            CaptureProgress();
+            try { CaptureProgress(); } catch (Exception captureError) { failures.Add(captureError); }
             try { phases?.End(false); } catch (Exception phaseError) { failures.Add(phaseError); }
             failureStage = stage;
             failureBoundary = Snapshot();
@@ -357,6 +380,7 @@ static class SampledTimerWorkload
             initialIntervalNanoseconds = (initialInterval ?? TimerInitialInterval.Default).Nanoseconds,
             forceGc, gcObservations, gcError, gcJoined, gcReachedMeasurement, gcCallBoundMilliseconds = 250,
             measurementStartedTimestamp, measurementFinishedTimestamp,
+            measurementCapture = new { status = measurement.Status.ToString(), start = measurement.Start, end = measurement.End },
             measurementProgress, progressCapturedBeforeTimestamp, progressCapturedAfterTimestamp,
             schedulerTiming = schedulerFactory is not null, schedulerStopped = schedulerCompletion?.Stopped,
             schedulerCaptures = schedulerCompletion?.Captures,

@@ -45,6 +45,7 @@ $sources += @('tests/CozNet.LinuxPerf/SchedulerEventSession.cs', 'tests/CozNet.L
 $sources += @('tests/CozNet.LinuxPerf/TimerSchedulerCaptureGroup.cs', 'tests/CozNet.LinuxPerf/TimerSchedulerCaptureGroupChecks.cs')
 $sources += 'tests/CozNet.LinuxPerf/TimerDebtLimit.cs'
 $sources += @('tests/CozNet.LinuxPerf/TimerSessionCleanup.cs', 'tests/CozNet.LinuxPerf/TimerSessionCleanupChecks.cs')
+$sources += @('tests/CozNet.LinuxPerf/MeasurementWindowCapture.cs', 'tests/CozNet.LinuxPerf/MeasurementWindowCaptureChecks.cs')
 $hashes = @{}
 $sources += 'native/service/TimerJournalSnapshot.h'
 $sources += @('tests/CozNet.LinuxPerf/ITimerTransport.cs', 'tests/CozNet.LinuxPerf/TimerServiceController.cs',

@@ -69,9 +69,12 @@ Any cleanup error still fails the workload. `closed` reports native close only.
 | `forceGc`, `gcObservations` | Whether forced GC was requested, and each collection's timestamps, index, and pause records. |
 | `gcJoined`, `gcReachedMeasurement`, `gcError` | GC worker cleanup, complete measurement-window reach, and worker error. |
 | `measurementStartedTimestamp`, `measurementFinishedTimestamp` | Process-clock boundaries for GC reach and measurement duration. |
+| `measurementCapture` | Immutable start and end readings with timestamp brackets and explicit capture status. |
 
 Timer journals retain their own schema. Their timestamps do not represent the older signal transport's queue phases.
 The workload does not compare predictions with a physical optimization.
+The [measurement boundary contract](measurement-boundaries.md) keeps its endpoint separate from shutdown accounting.
+Unreceived sample and journal tails still prevent a prediction claim from these records alone.
 `predictionAccuracyEstablished` therefore remains `false`.
 
 ## Remaining validation limits

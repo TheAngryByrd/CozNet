@@ -3,6 +3,8 @@
 `SampledTimerWorkload` connects real `ICpuEventSession` observations to `TimerServiceController` for two synchronous arithmetic workers.
 Linux x64 supplies the native timer, thread CPU clock, and perf adapters. The public engine remains serial and synchronous.
 The controller alone owns immutable accounting. Each registered native target retains its own ledger thread and generation sequence.
+The [measurement capture](measurement-boundaries.md) freezes progress and controller-accounted delay before shutdown.
+Its failed endpoints cannot be replaced by later shutdown snapshots. Tail attribution and prediction accuracy remain unverified.
 
 ```powershell
 dotnet run --project build/build.fsproj -- -t LinuxFastTimerCapacity

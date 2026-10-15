@@ -22,6 +22,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Reference
 
+- [Measurement boundaries](Reference/measurement-boundaries.md): immutable endpoints, capture failures, and unresolved boundary uncertainty.
+
 - [Sampled timer workload](Reference/sampled-timer.md): CPU sample credit, timer ownership, and retained failures.
 
 - [Timer service controller draft](Reference/timer-service-controller.md): transport boundary, slot ownership, and unverified failure behavior.
