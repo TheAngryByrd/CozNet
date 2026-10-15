@@ -52,6 +52,11 @@ The native clock reading cannot replace the missing managed endpoint.
 The next diagnostic must retain that endpoint and the request identity.
 A larger receipt limit would conceal the distinction rather than explain it.
 
+The workload now [retains rejected parser arguments](../Reference/cooperative-managed.md#rejected-managed-receipt-intervals).
+Controlled checks cover both slots and serialized failure evidence.
+The first new single-CPU capture fails peer debt before reaching receipt rejection.
+The older missing endpoint remains unknown.
+
 ## Native Coz applies a batch before its delay check
 
 In [Linux Coz's processing loop][processing], the target applies selected credits from the captured ring batch before calling `add_delays`.

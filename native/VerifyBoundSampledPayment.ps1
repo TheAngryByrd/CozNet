@@ -74,7 +74,7 @@ foreach ($case in $caseNames) {
         else { @('--sampled-bound-cooperative', "/evidence/$case.json", $case, '/native/libCozNet.Cooperative.so') }
     & docker @container @activation $image timeout -k 2s 30s dotnet /workload/CozNet.LinuxPerf.dll @arguments *> (Join-Path $run "$case.log")
     $caseExit = $LASTEXITCODE
-    $outcomes += Read-BoundSampledOutcome -Path (Join-Path $run "$case.json") -Case $case -ExitCode $caseExit -SelectedCadence $SelectedCadence -SelectedBatches $SelectedBatches -ExpectedPauseTiming ([bool]$PauseTiming) -ExpectedChildCpu ([bool]$ChildCpu) -ExpectedOwnerDrain ([bool]$OwnerDrain)
+    $outcomes += Read-BoundSampledOutcome -Path (Join-Path $run "$case.json") -Case $case -ExitCode $caseExit -SelectedCadence $SelectedCadence -SelectedBatches $SelectedBatches -ExpectedPauseTiming ([bool]$PauseTiming) -ExpectedChildCpu ([bool]$ChildCpu) -ExpectedOwnerDrain ([bool]$OwnerDrain) -ExpectedReceiptCaptureVersion 1
 }
 & python (Join-Path $run "source/native/$analysisScript") $run *> (Join-Path $run 'analysis.log')
 $analysisExit = $LASTEXITCODE

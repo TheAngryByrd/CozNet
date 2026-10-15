@@ -28,6 +28,40 @@ def verify_receipt_interval(payment, frequency=None):
             and (observed - started) * 10 <= recorded_frequency, "Request-to-receipt interval exceeds 100 ms or has invalid ordering")
 
 
+def verify_rejected_receipt_interval(record):
+    if "receiptIntervalCaptureVersion" not in record:
+        require("receiptIntervalRejection" not in record, "Receipt rejection has no capture version")
+        return
+    require(type(record["receiptIntervalCaptureVersion"]) is int and record["receiptIntervalCaptureVersion"] == 1,
+            "Unsupported receipt capture version")
+    rejected = record["receiptIntervalRejection"]
+    message = "System.IO.InvalidDataException: The cooperative request-to-receipt interval exceeds 100 ms or has invalid clock evidence."
+    interval_failure = isinstance(record["failure"], str) and bool(record["failure"]) and record["failure"].splitlines()[0] == message
+    require((rejected is not None) == interval_failure, "Receipt rejection evidence differs from the original failure")
+    if rejected is None:
+        return
+    require(not record["passed"] and not record["completed"], "Rejected receipt belongs to an accepted result")
+    request = rejected["Request"]
+    worker = count(request["Worker"])
+    require(worker in (1, 2), "Rejected receipt has an invalid worker")
+    boundary = record["selectedFailureBoundary" if worker == 1 else "failureBoundary"]
+    require(boundary is not None, "Rejected receipt lost its request boundary")
+    for key in ("Command", "Generation", "Budget"):
+        require(count(request[key]) > 0 and request[key] == boundary[key], "Rejected receipt request differs: " + key)
+    require(type(record["timestampFrequency"]) is int and record["timestampFrequency"] > 0
+            and record["timestampFrequency"] == boundary["Capture"]["TimestampFrequency"],
+            "Rejected receipt clock differs from its request")
+    started, observed, frequency = (signed_count(rejected[key]) for key in ("Started", "Observed", "TimestampFrequency"))
+    require(started == boundary["RequestStarted"] and frequency == record["timestampFrequency"],
+            "Rejected receipt clock differs from its request")
+    require(started < 0 or observed < started or frequency <= 0 or (observed - started) * 10 > frequency,
+            "Rejected receipt interval satisfies the acceptance bound")
+    require(observed <= record["failureBoundary"]["Capture"]["Started"], "Rejected receipt follows its failure capture")
+    payments = record["selectedPayments"] if worker == 1 else record["payments"]
+    require(not any(payment["Command"] == request["Command"] and payment["Generation"] == request["Generation"]
+                    for payment in payments), "Rejected receipt entered accepted payments")
+
+
 def verify_failure_boundary(record):
     if "failureBoundary" not in record:
         return
@@ -130,6 +164,7 @@ def verify_payments(payments, binding, worker):
 
 
 def verify_record(record):
+    verify_rejected_receipt_interval(record)
     require(type(record.get("schemaVersion", 1)) is int and record.get("schemaVersion", 1) == 1,
             "This replay accepts only sampled-payment schema version 1")
     verify_failure_boundary(record)

@@ -1,5 +1,7 @@
 # Lode index
 
+For raw managed receipt rejection arguments and request binding, read [the receipt capture contract](profiling/cooperative-managed.md#rejected-managed-receipt-intervals).
+
 For owner/background one-CPU failures and the missing managed receipt endpoint, read [the constrained comparison](../reliability/features/native-signal/owner-drain-single-cpu.md).
 
 For opt-in owner-thread draining and its first comparison, read [the collector contract](profiling/pausable-collector.md#owner-driven-mode).

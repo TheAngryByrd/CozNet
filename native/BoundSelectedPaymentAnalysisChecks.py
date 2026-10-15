@@ -541,5 +541,78 @@ class PauseTimingChecks(unittest.TestCase):
             verify_pause_timing(record)
 
 
+class RejectedReceiptAnalysisChecks(unittest.TestCase):
+    @staticmethod
+    def record(worker):
+        record = failed_record()
+        record["failure"] = "System.IO.InvalidDataException: The cooperative request-to-receipt interval exceeds 100 ms or has invalid clock evidence."
+        for key, started in (("failureBoundary", 200000000), ("selectedFailureBoundary", 200000002)):
+            record[key]["Capture"].update(Failure=record["failure"], Started=started, Finished=started + 1)
+        boundary = record["selectedFailureBoundary" if worker == 1 else "failureBoundary"]
+        boundary.update(Command=8, Generation=9, Budget=500000, RequestStarted=1)
+        record.update(receiptIntervalCaptureVersion=1, receiptIntervalRejection=dict(
+            Request=dict(Worker=worker, Command=8, Generation=9, Budget=500000),
+            Started=1, Observed=100000002, TimestampFrequency=1000000000))
+        return record
+
+    def test_rejected_receipts_verify_both_request_slots_without_acceptance(self):
+        for worker in (1, 2):
+            with self.subTest(worker=worker):
+                self.assertFalse(verify_record(self.record(worker))["casePassed"])
+
+    def test_rejected_receipt_precedes_first_failure_capture(self):
+        for worker in (1, 2):
+            with self.subTest(worker=worker):
+                record = self.record(worker)
+                record["receiptIntervalRejection"]["Observed"] = record["failureBoundary"]["Capture"]["Started"]
+                self.assertFalse(verify_record(record)["casePassed"])
+                record["receiptIntervalRejection"]["Observed"] += 1
+                with self.assertRaisesRegex(ValueError, "Rejected receipt follows its failure capture"):
+                    verify_record(record)
+
+    def test_missing_rejection_and_changed_request_are_rejected(self):
+        for worker in (1, 2):
+            for mutate in (
+                lambda r: r.update(receiptIntervalRejection=None),
+                lambda r: r["receiptIntervalRejection"]["Request"].update(Worker=3),
+                lambda r: r["receiptIntervalRejection"]["Request"].update(Command=7),
+                lambda r: r["receiptIntervalRejection"]["Request"].update(Generation=10),
+                lambda r: r["receiptIntervalRejection"]["Request"].update(Budget=1),
+                lambda r: r["receiptIntervalRejection"].update(Started=2),
+                lambda r: r["receiptIntervalRejection"].update(TimestampFrequency=1),
+                lambda r: r["receiptIntervalRejection"].update(Observed=400000000),
+                lambda r: r.update(receiptIntervalCaptureVersion=True),
+                lambda r: r.update(failure="a different failure"),
+            ):
+                record = self.record(worker)
+                mutate(record)
+                with self.assertRaises(ValueError):
+                    verify_record(record)
+
+    def test_valid_interval_cannot_be_reported_as_rejected(self):
+        record = self.record(2)
+        record["receiptIntervalRejection"]["Observed"] = 100000001
+        with self.assertRaisesRegex(ValueError, "acceptance bound"):
+            verify_record(record)
+
+    def test_rejected_request_cannot_enter_accepted_payments(self):
+        for worker in (1, 2):
+            record = self.record(worker)
+            record["selectedPayments" if worker == 1 else "payments"].append(dict(Command=8, Generation=9))
+            with self.assertRaisesRegex(ValueError, "accepted payments"):
+                verify_record(record)
+
+    def test_completed_run_cannot_carry_a_rejection(self):
+        record = self.record(2)
+        record.update(passed=True, completed=True)
+        with self.assertRaisesRegex(ValueError, "accepted result"):
+            verify_record(record)
+
+    def test_successful_capture_version_requires_no_rejection(self):
+        record = valid_record()
+        record.update(receiptIntervalCaptureVersion=1, receiptIntervalRejection=None)
+        self.assertTrue(verify_record(record)["casePassed"])
+
+
 if __name__ == "__main__":
     unittest.main()

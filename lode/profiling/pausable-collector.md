@@ -102,6 +102,7 @@ Zero-speedup and expected-invalidation cases pass. Replay verifies all twelve re
 One owner failure receives new selected credits after peer arming, before the first peer child executes.
 The other rejects a managed receipt interval whose exact endpoint is not retained.
 Owner draining does not remove these capacity limits.
-The next diagnostic must retain rejected managed receipt endpoints without changing the 100 ms gate.
+The [receipt capture](cooperative-managed.md#rejected-managed-receipt-intervals) now retains rejected parser arguments without changing the 100 ms gate.
+Its first constrained run fails peer debt before reaching a receipt rejection.
 Native Coz applies a full captured batch before its delay check; this workload still services peer receipts between samples.
 See [the explanation](../../docsSrc/Explanations/owner-drain-capacity.md).

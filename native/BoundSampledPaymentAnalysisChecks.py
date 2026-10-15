@@ -44,6 +44,36 @@ def failure_record():
 
 
 class BoundPaymentAnalysisChecks(unittest.TestCase):
+    def test_rejected_receipt_frequency_matches_failure_capture(self):
+        record = failure_record()
+        message = "System.IO.InvalidDataException: The cooperative request-to-receipt interval exceeds 100 ms or has invalid clock evidence."
+        record.update(failure=message, timestampFrequency=1000000000, receiptIntervalCaptureVersion=1,
+                      receiptIntervalRejection=dict(Request=dict(Worker=2, Command=2, Generation=2, Budget=500000),
+                                                    Started=1, Observed=100000002, TimestampFrequency=1000000000))
+        record["failureBoundary"].update(Command=2, Generation=2)
+        record["failureBoundary"]["Capture"].update(Failure=message, Started=200000000, Finished=200000001,
+                                                  State=2, Raw=None, CaptureFailure="snapshot failed")
+        self.assertFalse(verify_record(record)["casePassed"])
+        changed = copy.deepcopy(record)
+        changed["failureBoundary"]["Capture"]["TimestampFrequency"] = 10000000
+        with self.assertRaisesRegex(ValueError, "Rejected receipt clock differs"):
+            verify_record(changed)
+        for frequency in (0, -1, True, 100000000):
+            with self.subTest(frequency=frequency):
+                changed = copy.deepcopy(record)
+                changed["timestampFrequency"] = frequency
+                changed["receiptIntervalRejection"]["TimestampFrequency"] = frequency
+                with self.assertRaisesRegex(ValueError, "Rejected receipt clock differs"):
+                    verify_record(changed)
+
+    def test_new_receipt_capture_is_checked_in_legacy_workload(self):
+        record = valid_record()
+        record.update(receiptIntervalCaptureVersion=1, receiptIntervalRejection=None)
+        self.assertTrue(verify_record(record)["completed"])
+        record["failure"] = "System.IO.InvalidDataException: The cooperative request-to-receipt interval exceeds 100 ms or has invalid clock evidence."
+        with self.assertRaisesRegex(ValueError, "rejection evidence"):
+            verify_record(record)
+
     def test_schema_versions_do_not_use_legacy_replay_silently(self):
         record = valid_record()
         verify_record(record)

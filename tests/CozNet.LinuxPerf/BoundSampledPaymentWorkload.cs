@@ -99,6 +99,7 @@ static class BoundSampledPaymentWorkload
         Debt? selectedPeak = null, peerPeak = null, finalDebt = null;
         Debt? lastObservedDebt = null;
         FailureBoundary? failureBoundary = null;
+        var receiptIntervals = new CooperativeReceiptIntervalCapture();
 
         T OnController<T>(Func<T> action) => controller is null ? action() : controller.Run(action);
         void Control(Action action) => OnController(() => { action(); return true; });
@@ -197,7 +198,8 @@ static class BoundSampledPaymentWorkload
                     Require(Stopwatch.GetElapsedTime(selectedStarted) <= TimeSpan.FromMilliseconds(100),
                         "A selected cooperative receipt exceeded 100 ms.");
                     var accepted = OnController(() => client.ReadAndAccept(1, selectedPending, state));
-                    var interval = CooperativeReceiptInterval.Parse(selectedStarted, Stopwatch.GetTimestamp(), Stopwatch.Frequency);
+                    var interval = receiptIntervals.Parse(new(1, selectedCommand, selectedGeneration, selectedBudget),
+                        selectedStarted, Stopwatch.GetTimestamp(), Stopwatch.Frequency);
                     selectedPending = accepted.Adapter;
                     state = accepted.State;
                     Require(selectedPending.IsTerminal, "The selected cooperative lease did not settle.");
@@ -239,7 +241,8 @@ static class BoundSampledPaymentWorkload
                 if (OnController(() => client!.CleanupHeader(0)).Visibility == 3)
                 {
                     var accepted = OnController(() => client!.ReadAndAccept(0, pending, state));
-                    var interval = CooperativeReceiptInterval.Parse(pendingStarted, Stopwatch.GetTimestamp(), Stopwatch.Frequency);
+                    var interval = receiptIntervals.Parse(new(2, command, generation, pendingBudget),
+                        pendingStarted, Stopwatch.GetTimestamp(), Stopwatch.Frequency);
                     Require(accepted.Adapter.IsTerminal, "A retired cooperative request did not settle its ledger lease.");
                     pending = accepted.Adapter;
                     state = accepted.State;
@@ -497,6 +500,7 @@ static class BoundSampledPaymentWorkload
             percent = settings.Percent, passed = completed || rejectionVerified, completed, invalidateAfterPayment,
             invalidateAfterSelectedPayment,
             invalidated, rejectionVerified, rejectedAfterPayment, failure, failureBoundary, verificationFailure, peerFailure, cleanupErrors, joined, controllerJoined, closed,
+            receiptIntervalCaptureVersion = 1, receiptIntervalRejection = receiptIntervals.Rejected,
             binding = bindingEvidence is null ? null : new { bindingEvidence.Generation, Module = (ulong)bindingEvidence.Module,
                 Function = (ulong)bindingEvidence.Function, bindingEvidence.Method, bindingEvidence.Sites }, nativeRange = collection?.Map.Range,
             selectedBatches = batches, checksum, peerBatches, peerChecksum, peerCalls,

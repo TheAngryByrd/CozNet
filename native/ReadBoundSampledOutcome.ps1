@@ -1,12 +1,14 @@
 function Read-BoundSampledOutcome {
     param([string]$Path, [string]$Case, [int]$ExitCode,
         [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
-        [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null, [Nullable[bool]]$ExpectedChildCpu = $null, [Nullable[bool]]$ExpectedOwnerDrain = $null)
+        [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null, [Nullable[bool]]$ExpectedChildCpu = $null, [Nullable[bool]]$ExpectedOwnerDrain = $null,
+        [Nullable[int]]$ExpectedReceiptCaptureVersion = $null)
     $passed = $false
     $recordError = $null
     try {
         $record = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
         if ($record.passed -isnot [bool]) { throw 'The case record lacks a Boolean outcome.' }
+        if ($null -ne $ExpectedReceiptCaptureVersion -and (($record.receiptIntervalCaptureVersion -isnot [int] -and $record.receiptIntervalCaptureVersion -isnot [long]) -or $record.receiptIntervalCaptureVersion -ne $ExpectedReceiptCaptureVersion)) { throw 'Receipt capture version differs from the requested version.' }
         if ($null -ne $ExpectedPauseTiming -and ($record.pauseTimingEnabled -isnot [bool] -or $record.pauseTimingEnabled -ne $ExpectedPauseTiming)) {
             throw 'Pause timing evidence differs from the requested setting.'
         }

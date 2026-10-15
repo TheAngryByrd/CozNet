@@ -88,3 +88,6 @@ No handler exceeds 5 ms. An opt-in owner-driven collector now drains before sele
 The [one-CPU owner/background comparison](../reliability/features/native-signal/owner-drain-single-cpu.md) fails all four treatments with verified evidence.
 One owner failure accrues new credit after peer arming. Another rejects a managed receipt interval without retaining its exact endpoint.
 Owner draining does not establish stable service capacity.
+
+The bound sampled workload retains rejected managed receipt interval arguments and request identity.
+Controlled Windows/Linux checks cover both slots. The first new constrained capture fails peer debt before exercising live receipt rejection.

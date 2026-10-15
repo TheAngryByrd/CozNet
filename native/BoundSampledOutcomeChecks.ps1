@@ -55,6 +55,12 @@ try {
             if ($outcome.passed -ne $matches) { throw 'Owner drain settings did not control outcome acceptance.' }
         }
     }
+    foreach ($version in @(1, 0, 2, $null, '1', $true)) {
+        @{ passed = $true; receiptIntervalCaptureVersion = $version } | ConvertTo-Json | Set-Content -LiteralPath $path
+        $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedReceiptCaptureVersion 1
+        $matches = $version -is [int] -and $version -eq 1
+        if ($outcome.passed -ne $matches) { throw 'Receipt capture version did not control outcome acceptance.' }
+    }
     Set-Content -LiteralPath $path -Value '{'
     $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0
     if ($outcome.passed -or -not $outcome.recordError) { throw 'Malformed JSON cannot pass.' }

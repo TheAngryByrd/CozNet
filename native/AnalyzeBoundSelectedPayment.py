@@ -2,7 +2,7 @@ import json
 import pathlib
 import sys
 
-from AnalyzeBoundSampledPayment import count, require, signed_count, verify_payments, verify_receipt_interval
+from AnalyzeBoundSampledPayment import count, require, signed_count, verify_payments, verify_receipt_interval, verify_rejected_receipt_interval
 
 
 def counts(mapping, signed=()):
@@ -338,6 +338,7 @@ def verify_child_cpu(record):
 
 
 def verify_record(record):
+    verify_rejected_receipt_interval(record)
     require(type(record["schemaVersion"]) is int and record["schemaVersion"] in (3, 4), "Expected schema version 3 or 4")
     require(count(record["timestampFrequency"]) > 0, "Managed timestamp frequency is zero")
     require(record["selectedPaymentEnabled"] is True, "Selected payment mode is absent")

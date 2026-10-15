@@ -102,3 +102,28 @@ The caller retains request ownership. A later release must take its own retired 
 No diagnostic record can restore lifetime admission or validate payment.
 See [the native ABI](cooperative-interop.md), [the verification procedure](../How_Tos/verify-cooperative-interop.md),
 and [the contract evidence](../../reliability/features/native-signal/cooperative-managed.md).
+
+## Rejected managed receipt intervals
+
+The bound sampled workload reports receiptIntervalCaptureVersion as 1.
+receiptIntervalRejection is null unless CooperativeReceiptInterval.Parse rejects an interval.
+A rejection retains the exact Started, Observed, and TimestampFrequency arguments.
+Its Request retains Worker, Command, Generation, and Budget.
+Worker 1 identifies the selected slot. Worker 2 identifies the peer slot.
+These values are raw failure evidence. They do not authorize payment.
+
+CooperativeReceiptIntervalCapture preserves the first parser exception and rejects later recovery attempts.
+The workload parses the interval before it assigns the returned accounting state or appends accepted payment.
+Successful intervals retain the existing ReceiptInterval contract.
+Earlier request watchdog checks do not produce this parser-rejection record.
+
+Replay binds each rejection to its failure boundary and original failure.
+The rejection, result, and failure capture must use the same positive timestamp frequency.
+The rejected endpoint must precede or equal the first failure capture, which captures the peer slot.
+It rejects a valid interval reported as failed, mismatched identity, or the same request in accepted payments.
+Legacy records without the capture version remain readable.
+The current runner requires capture version 1 in every result.
+
+Controlled checks cover the capture helper and replay rules.
+They do not force rejection through either workload call site or verify its ledger assignment order at runtime.
+The retained live captures contain no parser rejection.
