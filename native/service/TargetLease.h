@@ -4,20 +4,52 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <variant>
 
 namespace coz::service {
+class CooperativePollSite {
+public:
+    static std::optional<CooperativePollSite> parse(uint64_t worker, uint64_t codeVersion, uint64_t site) noexcept {
+        if (worker == 0 || codeVersion == 0 || site == 0) return std::nullopt;
+        return CooperativePollSite(worker, codeVersion, site);
+    }
+    uint64_t worker() const noexcept { return worker_; }
+    uint64_t codeVersion() const noexcept { return code_version_; }
+    uint64_t site() const noexcept { return site_; }
+    bool operator==(const CooperativePollSite&) const = default;
+private:
+    CooperativePollSite(uint64_t worker, uint64_t codeVersion, uint64_t site) noexcept
+        : worker_(worker), code_version_(codeVersion), site_(site) {}
+    uint64_t worker_, code_version_, site_;
+};
+
 class TargetLeasePlan {
 public:
     static std::optional<TargetLeasePlan> parse(uint64_t generation, uint64_t command,
         uint64_t budget, uint64_t begin, uint64_t size) noexcept;
+    static std::optional<TargetLeasePlan> parseCooperative(uint64_t generation, uint64_t command,
+        uint64_t budget, CooperativePollSite site) noexcept;
     uint64_t generation() const noexcept { return generation_; }
     uint64_t command() const noexcept { return command_; }
     uint64_t budget() const noexcept { return budget_; }
-    bool eligible(uint64_t ip) const noexcept { return ip >= begin_ && ip - begin_ < size_; }
+    bool eligible(uint64_t ip) const noexcept {
+        const auto* range = std::get_if<InstructionRange>(&eligibility_);
+        return range && ip >= range->begin && ip - range->begin < range->size;
+    }
+    bool eligible(CooperativePollSite site) const noexcept {
+        const auto* expected = std::get_if<CooperativePollSite>(&eligibility_);
+        return expected && *expected == site;
+    }
 private:
+    friend class TargetLease;
+    struct InstructionRange { uint64_t begin, size; };
+    bool cooperative() const noexcept { return std::holds_alternative<CooperativePollSite>(eligibility_); }
     TargetLeasePlan(uint64_t generation, uint64_t command, uint64_t budget, uint64_t begin, uint64_t size) noexcept
-        : generation_(generation), command_(command), budget_(budget), begin_(begin), size_(size) {}
-    uint64_t generation_, command_, budget_, begin_, size_;
+        : generation_(generation), command_(command), budget_(budget), eligibility_(InstructionRange{begin, size}) {}
+    TargetLeasePlan(uint64_t generation, uint64_t command, uint64_t budget, CooperativePollSite site) noexcept
+        : generation_(generation), command_(command), budget_(budget), eligibility_(site) {}
+    uint64_t generation_, command_, budget_;
+    std::variant<InstructionRange, CooperativePollSite> eligibility_;
 };
 
 class TimerArmResult {
@@ -44,6 +76,7 @@ struct TargetLeaseChild {
     uint64_t ordinal{}, requested{}, armed{}, started{}, finished{}, waited{}, ip{};
     TargetWaitStatus wait_status{TargetWaitStatus::completed};
     bool valid{};
+    std::optional<CooperativePollSite> poll_site{};
     bool operator==(const TargetLeaseChild&) const = default;
 };
 enum class TargetLeaseVisibility : uint64_t { active, terminal, quiesced, retired };
@@ -88,6 +121,7 @@ public:
     bool start(TimerArmResult result) noexcept;
     bool rejectInitialArm(int error) noexcept;
     std::optional<Admission> arrive(uint64_t generation, uint64_t ip, uint64_t timestamp, bool cancelled) noexcept;
+    std::optional<Admission> arriveAtPoll(uint64_t generation, CooperativePollSite site, uint64_t timestamp, bool cancelled) noexcept;
     std::optional<Completion> prepare(const Admission& admission, uint64_t waited, TargetWaitStatus status, bool cancelled) noexcept;
     bool publish(const Completion& completion, uint64_t finished, TimerArmResult next, bool cancelled) noexcept;
     bool cancelPending() noexcept;
@@ -114,6 +148,8 @@ private:
     std::atomic<uint64_t> published_count_{};
     std::atomic<TargetLeaseVisibility> visibility_{TargetLeaseVisibility::active};
     TargetLeaseSnapshot terminal_snapshot_{};
+    std::optional<Admission> admit(uint64_t generation, uint64_t ip, std::optional<CooperativePollSite> site,
+        uint64_t timestamp, bool cancelled, bool eligible) noexcept;
     void fail(TargetLeaseError error, int transport = 0) noexcept;
     void publishVisibility() noexcept;
 };

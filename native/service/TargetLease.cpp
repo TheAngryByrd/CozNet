@@ -6,11 +6,19 @@
 namespace coz::service {
 static_assert(std::atomic<uint64_t>::is_always_lock_free);
 static_assert(std::atomic<TargetLeaseVisibility>::is_always_lock_free);
+static bool validLease(uint64_t generation, uint64_t command, uint64_t budget) noexcept {
+    return generation != 0 && command != 0 && budget != 0 && budget <= 2000000;
+}
 std::optional<TargetLeasePlan> TargetLeasePlan::parse(uint64_t generation, uint64_t command,
     uint64_t budget, uint64_t begin, uint64_t size) noexcept {
-    if (generation == 0 || command == 0 || budget == 0 || budget > 2000000 || begin == 0
+    if (!validLease(generation, command, budget) || begin == 0
         || size == 0 || size > std::numeric_limits<uint64_t>::max() - begin) return std::nullopt;
     return TargetLeasePlan(generation, command, budget, begin, size);
+}
+std::optional<TargetLeasePlan> TargetLeasePlan::parseCooperative(uint64_t generation, uint64_t command,
+    uint64_t budget, CooperativePollSite site) noexcept {
+    if (!validLease(generation, command, budget)) return std::nullopt;
+    return TargetLeasePlan(generation, command, budget, site);
 }
 
 TargetLease::TargetLease(TargetLeasePlan plan, std::span<TargetLeaseChild> journal) noexcept
@@ -42,18 +50,29 @@ bool TargetLease::rejectInitialArm(int error) noexcept {
 }
 std::optional<TargetLease::Admission> TargetLease::arrive(uint64_t generation, uint64_t ip,
     uint64_t timestamp, bool cancelled) noexcept {
+    if (plan_.cooperative()) return std::nullopt;
+    return admit(generation, ip, std::nullopt, timestamp, cancelled, plan_.eligible(ip));
+}
+std::optional<TargetLease::Admission> TargetLease::arriveAtPoll(uint64_t generation, CooperativePollSite site,
+    uint64_t timestamp, bool cancelled) noexcept {
+    if (!plan_.cooperative()) return std::nullopt;
+    return admit(generation, 0, site, timestamp, cancelled, plan_.eligible(site));
+}
+std::optional<TargetLease::Admission> TargetLease::admit(uint64_t generation, uint64_t ip, std::optional<CooperativePollSite> site,
+    uint64_t timestamp, bool cancelled, bool eligible) noexcept {
     if (generation != plan_.generation() || phase_ != TargetLeasePhase::waiting) return std::nullopt;
     pending_ = false;
     if (count_ == journal_.size()) { fail(TargetLeaseError::journal_full); publishVisibility(); return std::nullopt; }
     auto& child = journal_[count_];
     child = {count_ + 1, std::min<uint64_t>(50000, plan_.budget() - measured_), armed_, timestamp, 0, 0, ip};
+    child.poll_site = site;
     if (timestamp == 0 || timestamp < armed_) {
         ++count_;
         fail(TargetLeaseError::clock);
         publishVisibility();
         return std::nullopt;
     }
-    stop_ = cancelled ? TargetLeaseStop::cancelled : plan_.eligible(ip) ? TargetLeaseStop::none : TargetLeaseStop::deferred;
+    stop_ = cancelled ? TargetLeaseStop::cancelled : eligible ? TargetLeaseStop::none : TargetLeaseStop::deferred;
     phase_ = TargetLeasePhase::executing;
     return Admission(this, plan_, child.ordinal, child.requested, stop_ == TargetLeaseStop::none);
 }

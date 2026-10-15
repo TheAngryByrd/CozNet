@@ -1,14 +1,20 @@
 # Target-local lease contract
 
 `TargetLease` is an internal portable C++ state machine.
-The Linux timer fixture uses it for one finite lease per process.
-It is not yet a .NET backend or a public API.
+The Linux timer backend uses its interrupted-address admission path.
+Cooperative-site admission exists in the portable core. It has no .NET transport yet.
 
 ## Plan and storage
 
 `TargetLeasePlan::parse` requires nonzero generation and command values.
 The budget is from 1 through 2,000,000 ns.
 The eligible instruction range must be nonempty and must not wrap.
+
+`CooperativePollSite::parse(worker, codeVersion, site)` requires three nonzero identities.
+`TargetLeasePlan::parseCooperative` accepts this value with the same generation, command, and budget limits.
+Its eligibility requires an exact match for all three identities.
+Parsing establishes identity shape. It does not prove thread registration, code lifetime, or execution at the declared site.
+A future transport must establish those facts before it calls `arriveAtPoll`.
 
 The lease uses caller-owned journal storage with 1 through 100,000 child slots.
 It allocates no memory and calls no OS functions.
@@ -25,7 +31,8 @@ Other accessors remain restricted to the owner or a synchronized caller.
 | --- | --- | --- |
 | `start` | Unarmed | Retains arm ownership, including an accepted arm with invalid timing. |
 | `rejectInitialArm` | Waiting, no child admitted | Requires a positive transport error and seals an arm-failed terminal snapshot without wait credit. |
-| `arrive` | Waiting | Checks generation and fresh instruction eligibility. Creates one admission. |
+| `arrive` | Waiting, interrupted-address plan | Checks generation and fresh instruction eligibility. Creates one admission. |
+| `arriveAtPoll` | Waiting, cooperative-site plan | Checks generation and site identity. Creates one admission. |
 | `prepare` | Executing | Records wait evidence and decides whether another timer can be armed. |
 | `publish` | Prepared | Validates final timing and publishes the child after timer rearming. |
 | `cancelPending` | Waiting | Stops new child admission but retains pending delivery ownership. |
@@ -35,6 +42,15 @@ Other accessors remain restricted to the owner or a synchronized caller.
 Admission and completion values belong to a specific lease address, generation, command, and ordinal.
 Stale or duplicate values cannot prepare or publish another child.
 A foreign generation cannot consume a pending delivery.
+Using the wrong admission kind also leaves the lease unchanged.
+A mismatched cooperative site produces deferred service with zero payment, like an ineligible interrupted address.
+
+The portable child journal retains cooperative site identity in `poll_site` and stores zero in `ip`.
+Interrupted-address children retain `ip` and have no `poll_site`.
+Snapshot copies preserve this distinction, including deferred and invalid children.
+This increases portable journal storage per child. It does not change the existing timer C ABI.
+That ABI still carries interrupted addresses only. Cooperative receipts require a separate transport contract.
+The [portable admission checks](../../reliability/features/native-signal/cooperative-admission.md) cover both kinds on Windows and Linux x64.
 
 ## Accounting
 
@@ -47,6 +63,7 @@ A rearm failure preserves the completed child and its valid wait.
 
 Invalid wait or handler timing remains in the raw journal but does not increase accepted measured time.
 The measured handler interval must not exceed 5,000,000 ns.
+The same duration bound applies to a cooperative child, although no signal handler delivers it.
 The final handler clock reading follows journal preparation and rearming.
 It excludes the final timestamp store, terminal publication, epilogue, and signal return.
 

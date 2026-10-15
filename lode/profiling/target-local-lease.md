@@ -1,6 +1,16 @@
 # Portable target-local lease
 
 `TargetLeasePlan` parses a nonzero generation and command, a 1..2,000,000 ns budget, and a nonwrapping instruction range.
+Its alternative `parseCooperative` accepts a parsed `CooperativePollSite` with nonzero worker, code-version, and site identities.
+The plan stores eligibility as a variant. `arrive` cannot consume a cooperative plan.
+`arriveAtPoll` cannot consume an interrupted-address plan.
+Wrong kinds and generations leave state unchanged. A same-kind mismatch records deferred zero-payment service.
+Cooperative child records retain the full site value and zero `ip`.
+Timer children retain `ip` and no site.
+The shared prepare/publish path keeps all existing duration, payment, cancellation, and snapshot rules.
+Site parsing proves identity shape only. A transport must bind real thread ownership, code lifetime, and probe provenance.
+No cooperative transport or managed receipt parser consumes this path yet. The existing timer C ABI is unchanged.
+The [admission evidence](../../reliability/features/native-signal/cooperative-admission.md) records portable checks and timer interop regression checks.
 `TargetLease` has one target owner and caller-owned journal storage. It has no OS calls or allocation.
 It is noncopyable, nonmovable, and single-use. Its address stays stable through retirement.
 
@@ -8,6 +18,11 @@ It is noncopyable, nonmovable, and single-use. Its address stays stable through 
 auto plan = TargetLeasePlan::parse(1, 1, 110000, 100, 20);
 std::array<TargetLeaseChild, 4> records;
 TargetLease lease(*plan, records);
+```
+
+```cpp
+auto site = CooperativePollSite::parse(1, 2, 3);
+auto cooperative = TargetLeasePlan::parseCooperative(1, 1, 50000, *site);
 ```
 
 ```mermaid

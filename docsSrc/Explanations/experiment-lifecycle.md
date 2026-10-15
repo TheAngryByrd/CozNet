@@ -67,6 +67,9 @@ The existing ten-millisecond CPU cadence cannot gate these requests under the tw
 The request must retain worker, command, and generation identity until valid terminal settlement.
 Existing native mailbox ownership can supply publication, claim, cancellation, and retirement rules.
 A cooperative poll site needs explicit admission evidence. It is not an interrupted instruction pointer.
+The portable lease core now checks a separate worker, code-version, and site identity through `arriveAtPoll`.
+This identity check does not prove runtime registration or execution at that site.
+The [lease reference](../Reference/target-local-lease.md) describes the implemented contract.
 The timer receipt contract cannot accept a fabricated address as proof of cooperative eligibility.
 
 The experiment must retain the 50 µs child request, 2 ms lease, 5 ms child duration, and 100 ms receipt limits.

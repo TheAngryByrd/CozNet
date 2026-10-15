@@ -6,6 +6,7 @@
 #include <utility>
 #include <thread>
 #include <chrono>
+#include <type_traits>
 
 using namespace coz::service;
 static void require(bool value, int code) { if (!value) std::_Exit(code); }
@@ -331,6 +332,109 @@ static void rejectedInitialArm() {
     }
 }
 
+static CooperativePollSite pollSite(uint64_t worker = 1, uint64_t codeVersion = 2, uint64_t site = 3) {
+    const auto parsed = CooperativePollSite::parse(worker, codeVersion, site);
+    require(parsed.has_value(), 118);
+    return *parsed;
+}
+static TargetLeasePlan cooperativePlan(uint64_t budget = 50001) {
+    const auto parsed = TargetLeasePlan::parseCooperative(1, 1, budget, pollSite());
+    require(parsed.has_value(), 119);
+    return *parsed;
+}
+static void cooperativeSitesAndPlansAreParsed() {
+    static_assert(!std::is_default_constructible_v<CooperativePollSite>);
+    static_assert(!std::is_aggregate_v<CooperativePollSite>);
+    require(!CooperativePollSite::parse(0, 2, 3) && !CooperativePollSite::parse(1, 0, 3)
+        && !CooperativePollSite::parse(1, 2, 0), 120);
+    const auto maximum = std::numeric_limits<uint64_t>::max();
+    const auto upper = CooperativePollSite::parse(maximum, maximum, maximum);
+    require(upper && upper->worker() == maximum && upper->codeVersion() == maximum && upper->site() == maximum, 121);
+    require(!TargetLeasePlan::parseCooperative(0, 1, 1, pollSite())
+        && !TargetLeasePlan::parseCooperative(1, 0, 1, pollSite())
+        && !TargetLeasePlan::parseCooperative(1, 1, 0, pollSite())
+        && !TargetLeasePlan::parseCooperative(1, 1, 2000001, pollSite()), 122);
+    require(TargetLeasePlan::parseCooperative(1, 1, 1, pollSite()).has_value()
+        && TargetLeasePlan::parseCooperative(1, 1, 2000000, pollSite()).has_value(), 123);
+    require(cooperativePlan().eligible(pollSite()) && !cooperativePlan().eligible(3)
+        && !plan().eligible(pollSite()), 124);
+}
+static void wrongAdmissionKindDoesNotConsumeLease() {
+    std::array<TargetLeaseChild, 2> timerJournal{}, cooperativeJournal{};
+    timerJournal[0].poll_site = pollSite();
+    TargetLease timer(plan(), timerJournal), cooperative(cooperativePlan(), cooperativeJournal);
+    require(timer.start(TimerArmResult::accepted(1000)) && cooperative.start(TimerArmResult::accepted(1000)), 125);
+    require(!timer.arriveAtPoll(1, pollSite(), 2000, false)
+        && !cooperative.arrive(1, 100, 2000, false)
+        && !cooperative.arriveAtPoll(2, pollSite(), 2000, false), 126);
+    require(timer.phase() == TargetLeasePhase::waiting && timer.deliveryPending() && timer.journal().empty()
+        && cooperative.phase() == TargetLeasePhase::waiting && cooperative.deliveryPending()
+        && cooperative.journal().empty(), 127);
+    const auto timerAdmission = timer.arrive(1, 100, 2000, false);
+    const auto pollAdmission = cooperative.arriveAtPoll(1, pollSite(), 2000, false);
+    require(timerAdmission && timerAdmission->shouldWait() && pollAdmission && pollAdmission->shouldWait()
+        && !cooperative.arriveAtPoll(1, pollSite(), 2001, false), 128);
+    const auto completed = timer.prepare(*timerAdmission, 50000, TargetWaitStatus::completed, false);
+    require(completed && timer.publish(*completed, 53000, TimerArmResult::accepted(52500), false)
+        && timer.journal()[0].ip == 100 && !timer.journal()[0].poll_site, 147);
+}
+static void mismatchedCooperativeSitesDeferWithoutPayment() {
+    for (const auto site : {pollSite(4, 2, 3), pollSite(1, 4, 3), pollSite(1, 2, 4)}) {
+        std::array<TargetLeaseChild, 2> journal{}, copy{};
+        TargetLease lease(cooperativePlan(), journal);
+        require(lease.start(TimerArmResult::accepted(1000)), 129);
+        const auto child = lease.arriveAtPoll(1, site, 2000, false);
+        require(child && !child->shouldWait(), 130);
+        const auto done = lease.prepare(*child, 0, TargetWaitStatus::completed, false);
+        require(done && !done->shouldRearm() && lease.publish(*done, 2100, TimerArmResult::notRequested(), false), 131);
+        std::size_t count = 0;
+        const auto snapshot = lease.snapshot(copy, count);
+        require(snapshot && count == 1 && snapshot->stop == TargetLeaseStop::deferred
+            && snapshot->measured == 0 && copy[0].valid && copy[0].ip == 0
+            && copy[0].poll_site == site, 132);
+    }
+}
+static void cooperativeChildrenRetainSiteAndBounds() {
+    std::array<TargetLeaseChild, 2> journal{}, copy{};
+    TargetLease lease(cooperativePlan(), journal);
+    require(lease.start(TimerArmResult::accepted(1000)), 133);
+    auto first = lease.arriveAtPoll(1, pollSite(), 2000, false);
+    require(first && first->shouldWait() && first->requested() == 50000, 134);
+    auto completed = lease.prepare(*first, 50000, TargetWaitStatus::completed, false);
+    require(completed && completed->shouldRearm()
+        && lease.publish(*completed, 53000, TimerArmResult::accepted(52500), false), 135);
+    std::size_t count = 0;
+    auto snapshot = lease.snapshot(copy, count);
+    require(snapshot && count == 1 && snapshot->visibility == TargetLeaseVisibility::active
+        && snapshot->measured == 50000 && copy[0].valid && copy[0].ip == 0 && copy[0].poll_site == pollSite(), 136);
+    auto last = lease.arriveAtPoll(1, pollSite(), 54000, false);
+    require(last && last->requested() == 1 && !lease.prepare(*first, 1, TargetWaitStatus::completed, false), 137);
+    auto done = lease.prepare(*last, 7, TargetWaitStatus::completed, false);
+    require(done && !done->shouldRearm() && lease.publish(*done, 55000, TimerArmResult::notRequested(), false), 138);
+    snapshot = lease.snapshot(copy, count);
+    require(snapshot && count == 2 && snapshot->measured == 50007 && snapshot->stop == TargetLeaseStop::completed
+        && copy[1].poll_site == pollSite() && copy[1].ip == 0 && copy[1].valid, 139);
+    require(!lease.retire() && lease.quiesced() && lease.retire(), 140);
+}
+static void cooperativeCancellationAndInvalidWaitPreserveAccounting() {
+    for (int scenario = 0; scenario != 3; ++scenario) {
+        std::array<TargetLeaseChild, 2> journal{};
+        TargetLease lease(cooperativePlan(), journal);
+        require(lease.start(TimerArmResult::accepted(1000)), 141);
+        const auto child = lease.arriveAtPoll(1, pollSite(), 2000, scenario == 0);
+        require(child && child->shouldWait() == (scenario != 0), 142);
+        const uint64_t waited = scenario == 0 ? 0 : scenario == 1 ? 5000001 : 50000;
+        const auto done = lease.prepare(*child, waited, TargetWaitStatus::completed, false);
+        require(done.has_value(), 143);
+        const auto arm = done->shouldRearm() ? TimerArmResult::accepted(52500) : TimerArmResult::notRequested();
+        require(lease.publish(*done, scenario == 0 ? 2100 : scenario == 1 ? 5002000 : 5002001, arm, false), 144);
+        require(lease.stop() == (scenario == 0 ? TargetLeaseStop::cancelled : TargetLeaseStop::failed)
+            && lease.measured() == 0 && lease.journal()[0].valid == (scenario == 0), 145);
+        require(lease.error() == (scenario == 0 ? TargetLeaseError::none
+            : scenario == 1 ? TargetLeaseError::invalid_wait : TargetLeaseError::handler_bound), 146);
+    }
+}
+
 int main() {
     boundaries();
     settlement();
@@ -341,4 +445,9 @@ int main() {
     snapshotBoundaries();
     concurrentSnapshots();
     rejectedInitialArm();
+    cooperativeSitesAndPlansAreParsed();
+    wrongAdmissionKindDoesNotConsumeLease();
+    mismatchedCooperativeSitesDeferWithoutPayment();
+    cooperativeChildrenRetainSiteAndBounds();
+    cooperativeCancellationAndInvalidWaitPreserveAccounting();
 }
