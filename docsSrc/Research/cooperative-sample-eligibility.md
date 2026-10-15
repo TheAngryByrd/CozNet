@@ -1,7 +1,7 @@
 # Cooperative payment and sample eligibility
 
 This explanation separates sample ownership, intervention overlap, and injected CPU cost.
-It compares pinned source implementations with a proposed restricted .NET integration.
+It compares pinned source implementations with the restricted .NET diagnostic.
 The source review does not establish runtime safety, payment capacity, or prediction accuracy.
 
 ## The next boundary
@@ -82,7 +82,7 @@ Their marker APIs cannot resolve cooperative sampling overlap in CozNet.
 
 ## A restricted first integration
 
-The proposed first diagnostic samples only the selected owner and permits payment only on a separate peer owner.
+The [first diagnostic](../Reference/bound-sampled-payment.md) samples only the selected owner and permits payment only on a separate peer owner.
 Both owners execute the same bound method. The selected owner's callback never pays a lease.
 The source remains attached to the selected native thread, and every retained record must identify that owner.
 

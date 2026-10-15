@@ -72,10 +72,10 @@ Managed receipt parsing and ledger binding now support manual owner polls.
 The bound cooperative client now checks CLR lifetime around injected service and receipt acceptance.
 The bound native range supports guarded whole-method address resolution.
 The [bound collection](../profiling/bound-samples.md) now admits real Linux samples after range capture and rejects observed CLR invalidation.
-Next, connect those samples to cooperative payment and measure sampled intervention capacity under the existing gates.
+The [sampled cooperative diagnostic](../profiling/bound-sampled-payment.md) now connects those samples to peer payment under the existing gates.
 The collection now supports guarded, nonconsuming provisional reads for the live controller.
 The [upstream eligibility comparison](../../docsSrc/Research/cooperative-sample-eligibility.md) separates payment exclusion from injected CPU attribution.
-A first selected-owner/peer-payment diagnostic must retain selected debt from peer overshoot and fail the existing debt gate when exceeded.
+The selected-owner/peer-payment diagnostic retains selected debt from peer overshoot and fails the existing debt gate when exceeded.
 It must not claim full Coz semantics until selected-owner payment and explicit eligibility transitions are integrated.
 Final source rejection invalidates the run even after irreversible native payment.
 The [transport reference](../../docsSrc/Reference/cooperative-target.md) distinguishes implemented hooks from missing runtime integration.

@@ -29,6 +29,14 @@ if (args is ["--verify-bound-samples-managed"])
 }
 if (args is ["--verify-bound-samples", var boundSamplesPath, var boundSamplesMode])
     return BoundSamplesWorkload.Run(boundSamplesPath, boundSamplesMode);
+if (args is ["--sampled-bound-cooperative", var sampledBoundPath, var sampledBoundPercent, var sampledBoundLibrary])
+    return BoundSampledPaymentWorkload.Run(sampledBoundPath, SampledSignalPlan.Parse(sampledBoundPercent), sampledBoundLibrary,
+        () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
+        (map, sink) => new LinuxCpuEventSession(sink, map));
+if (args is ["--invalidate-sampled-bound-cooperative", var invalidatedBoundPath, var invalidatedBoundLibrary])
+    return BoundSampledPaymentWorkload.Run(invalidatedBoundPath, SampledSignalPlan.Parse("50"), invalidatedBoundLibrary,
+        () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
+        (map, sink) => new LinuxCpuEventSession(sink, map), invalidateAfterPayment: true);
 if (args is ["--verify-bound-cooperative", var boundPath, var boundMode, var boundLibrary])
     return BoundCooperativeChecks.Run(boundPath, boundMode, boundLibrary);
 if (args is ["--verify-cooperative-interop", var cooperativePath, var cooperativeMode, var cooperativeLibrary])

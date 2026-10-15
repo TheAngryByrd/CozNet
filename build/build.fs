@@ -686,6 +686,9 @@ let boundSamplesManagedVerify _ =
 let linuxBoundSamplesVerify _ =
     nativeScriptWithArgs "VerifyBoundSamples.ps1" []
 
+let linuxBoundSampledPayment _ =
+    nativeScriptWithArgs "VerifyBoundSampledPayment.ps1" []
+
 let linuxTargetLeaseDrainFailure _ =
     nativeScriptWithArgs "VerifyTargetLeaseReuse.ps1" [
         "-Mode"
@@ -1259,6 +1262,7 @@ let initTargets () =
     Target.create "LinuxBoundCooperativeVerify" (boundCooperativeVerify "LinuxContainer")
     Target.create "BoundSamplesManagedVerify" boundSamplesManagedVerify
     Target.create "LinuxBoundSamplesVerify" linuxBoundSamplesVerify
+    Target.create "LinuxBoundSampledPayment" linuxBoundSampledPayment
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
@@ -1453,6 +1457,14 @@ let initTargets () =
 
     "NativeLinuxBuild"
     ==> "LinuxBoundSamplesVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxBoundSampledPayment"
+    |> ignore
+
+    "NativeLinuxBuild"
+    ==> "LinuxBoundSampledPayment"
     |> ignore
 
     "LinuxPerfWorkload"

@@ -10,6 +10,7 @@ sealed class BoundCooperativeClient
     private bool closed, completed;
     public Exception? FirstFailure => lifetime.FirstFailure;
     public CooperativeCleanupCapture? LastCleanup => native.LastCleanup;
+    public CooperativeObservation? LastAccountingObservation { get; private set; }
     public ClrProbeBinding Binding => lifetime.Binding;
 
     public BoundCooperativeClient(ClrProbeBinding binding, uint targets = 1, uint capacity = 64)
@@ -58,8 +59,13 @@ sealed class BoundCooperativeClient
         CooperativeAccountingAdapter adapter, SignalAccounting state)
     {
         RequireActive();
-        return lifetime.Execute((Native: native, Slot: slot, Adapter: adapter, State: state),
-            static value => value.Adapter.Accept(value.Native.Read(value.Slot), value.State));
+        LastAccountingObservation = null;
+        return lifetime.Execute((Self: this, Slot: slot, Adapter: adapter, State: state), static value =>
+        {
+            var observation = value.Self.native.Read(value.Slot);
+            value.Self.LastAccountingObservation = observation;
+            return value.Adapter.Accept(observation, value.State);
+        });
     }
     public bool HasPending(uint slot) => native.HasPending(slot);
     public CooperativeNativeSnapshot CleanupHeader(uint slot) => native.Probe(slot);

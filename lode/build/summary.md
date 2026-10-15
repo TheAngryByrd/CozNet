@@ -62,6 +62,9 @@ It retains each run under `artifacts/service-interop/` and uses a 30-second proc
 `LinuxServiceInteropVerify` also runs the `ServiceAccountingVerify` checks in Linux and verifies live journal settlement or rejection.
 
 `BoundSamplesManagedVerify` builds the workload and runs portable bound collection checks on the host.
+`LinuxBoundSampledPayment` builds the Linux profiler and shared workload, then builds and tests the cooperative native library.
+It runs zero-percent, 50-percent, and after-payment invalidation cases and replays their JSON evidence with Python.
+The target retains all outcomes under `artifacts/bound-sampled-payment/` before reporting failure.
 `LinuxBoundSamplesVerify` also builds the Linux profiler, repeats portable checks in Linux, and runs four live collection cases.
 It retains every outcome under `artifacts/bound-samples/` with runtime perf-map output disabled.
 See [bound sample collection](../profiling/bound-samples.md) for admission and completion limits.
