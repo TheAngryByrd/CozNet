@@ -24,6 +24,12 @@ let action, ledger = DelayLedger.catchUp thread ledger |> Result.defaultWith fai
 ```
 
 A selected CPU sample adds local credit. The adapter must exclude blocked time and profiler delay from samples.
+`observe` returns an immutable `LedgerObservation` for a registered thread without changing accounting.
+Its private record retains typed global and settled local ticks, the thread identity, and a `LedgerThreadPhase`.
+The phase distinguishes runnable, delaying, and blocked states. Blocked state retains global ticks at block entry.
+Foreign and unregistered handles return the existing registration error.
+The observation does not include native pending wait or infer an uncertainty bound.
+The [lifecycle plan](../plans/experiment-lifecycle.md) defines its intended boundary integration.
 `catchUp` publishes credit above global delay or requests payment of debt below global delay.
 Equal overlapping local credits advance global delay once.
 `completeDelay` records actual elapsed wait. Partial waits leave debt for the next check.

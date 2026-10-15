@@ -34,6 +34,24 @@ type private ThreadDelay =
     | Blocked of local: int64 * globalAtBlock: int64
     | Delaying of local: int64
 
+[<RequireQualifiedAccess>]
+type internal LedgerThreadPhase =
+    | Runnable
+    | Blocked of globalAtBlock: DelayTicks
+    | Delaying
+
+type internal LedgerObservation = private {
+    ObservedThread: LedgerThread
+    ObservedGlobal: DelayTicks
+    ObservedLocal: DelayTicks
+    ObservedPhase: LedgerThreadPhase
+} with
+
+    member this.Thread = this.ObservedThread
+    member this.Global = this.ObservedGlobal
+    member this.Local = this.ObservedLocal
+    member this.Phase = this.ObservedPhase
+
 type internal DelayLedger = private {
     Identity: Guid
     Global: int64
@@ -69,6 +87,24 @@ module internal DelayLedger =
         match Map.tryFind thread ledger.Threads with
         | Some state -> Ok state
         | None -> Error "The thread is not registered in this ledger."
+
+    let observe thread ledger =
+        find thread ledger
+        |> Result.map (fun state ->
+            let local, phase =
+                match state with
+                | Runnable local -> local, LedgerThreadPhase.Runnable
+                | Blocked(local, globalAtBlock) ->
+                    local, LedgerThreadPhase.Blocked(DelayTicks globalAtBlock)
+                | Delaying local -> local, LedgerThreadPhase.Delaying
+
+            {
+                ObservedThread = thread
+                ObservedGlobal = DelayTicks ledger.Global
+                ObservedLocal = DelayTicks local
+                ObservedPhase = phase
+            }
+        )
 
     let private update thread state ledger = {
         ledger with

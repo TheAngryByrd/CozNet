@@ -66,6 +66,179 @@ module DelayLedgerTests =
     [<Tests>]
     let tests =
         testList "Sampled delay ledger" [
+            testCase "Observation preserves unpublished credit across later publication"
+            <| fun _ ->
+                let selected, _, ledger = pair ()
+
+                let credited =
+                    ledger
+                    |> credit selected 100L
+
+                let frozen =
+                    DelayLedger.observe selected credited
+                    |> parsed
+
+                let _, published = catchUp selected credited
+
+                let after =
+                    DelayLedger.observe selected published
+                    |> parsed
+
+                Expect.equal frozen.Thread selected "The observation must retain its owning thread."
+
+                Expect.equal
+                    frozen.Phase
+                    LedgerThreadPhase.Runnable
+                    "Credit must retain runnable state."
+
+                Expect.equal
+                    (DelayTicks.value frozen.Local)
+                    100L
+                    "Local credit must be visible before publication."
+
+                Expect.equal
+                    (DelayTicks.value frozen.Global)
+                    0L
+                    "Later publication must not alter frozen global credit."
+
+                Expect.equal
+                    (DelayTicks.value after.Global)
+                    100L
+                    "Catch-up must still publish the local lead."
+
+                Expect.equal
+                    (DelayLedger.observe selected credited
+                     |> parsed)
+                    frozen
+                    "Observation must not mutate its ledger."
+
+            testCase "Observation separates delaying local credit from settled overshoot"
+            <| fun _ ->
+                let selected, worker, ledger = pair ()
+
+                let _, pending =
+                    ledger
+                    |> credit worker 20L
+                    |> publish selected 100L
+                    |> catchUp worker
+
+                let frozen =
+                    DelayLedger.observe worker pending
+                    |> parsed
+
+                let settled = completed worker 85L pending
+
+                let beforePublication =
+                    DelayLedger.observe worker settled
+                    |> parsed
+
+                let _, published = catchUp worker settled
+
+                Expect.equal
+                    frozen.Phase
+                    LedgerThreadPhase.Delaying
+                    "A pending wait must remain explicit."
+
+                Expect.equal
+                    (DelayTicks.value frozen.Local)
+                    20L
+                    "An unfinished wait must preserve earlier settled local credit."
+
+                Expect.equal
+                    (DelayTicks.value frozen.Global)
+                    100L
+                    "The reservation must preserve the published debt."
+
+                Expect.equal
+                    beforePublication.Phase
+                    LedgerThreadPhase.Runnable
+                    "Settlement must return the worker to runnable state."
+
+                Expect.equal
+                    (DelayTicks.value beforePublication.Local)
+                    105L
+                    "Settlement must include measured overshoot."
+
+                Expect.equal
+                    (DelayTicks.value beforePublication.Global)
+                    100L
+                    "Settlement must not publish overshoot."
+
+                Expect.equal
+                    (globalTicks published)
+                    105L
+                    "The next catch-up must publish overshoot."
+
+            testCase "Observation preserves block entry global across concurrent credit and wake"
+            <| fun _ ->
+                let selected, worker, ledger = pair ()
+
+                let waiting =
+                    ledger
+                    |> credit worker 10L
+                    |> publish selected 20L
+                    |> blocked worker
+                    |> publish selected 30L
+
+                let frozen =
+                    DelayLedger.observe worker waiting
+                    |> parsed
+
+                let resumedLedger = resumed worker WakeReason.Dependency waiting
+
+                let after =
+                    DelayLedger.observe worker resumedLedger
+                    |> parsed
+
+                Expect.equal
+                    frozen.Phase
+                    (LedgerThreadPhase.Blocked(ticks 20L))
+                    "Block entry must not use the later global value."
+
+                Expect.equal
+                    (DelayTicks.value frozen.Global)
+                    50L
+                    "The observation must retain current global credit."
+
+                Expect.equal
+                    (DelayTicks.value frozen.Local)
+                    10L
+                    "A blocked observation must preserve local credit without applying wake credit."
+
+                Expect.equal
+                    after.Phase
+                    LedgerThreadPhase.Runnable
+                    "The wake must restore runnable state."
+
+                Expect.equal
+                    (DelayTicks.value after.Local)
+                    40L
+                    "Only credit accumulated during the block is skipped."
+
+            testCase "Observation rejects foreign and unregistered handles"
+            <| fun _ ->
+                let thread, ledger =
+                    DelayLedger.create ()
+                    |> register None
+
+                let _, other =
+                    DelayLedger.create ()
+                    |> register None
+
+                let retired =
+                    DelayLedger.unregister thread ledger
+                    |> parsed
+
+                Expect.equal
+                    (DelayLedger.observe thread other)
+                    (Error "The thread is not registered in this ledger.")
+                    "A matching ordinal from another ledger must fail."
+
+                Expect.equal
+                    (DelayLedger.observe thread retired)
+                    (Error "The thread is not registered in this ledger.")
+                    "An unregistered thread must fail."
+
             testCase "Peer snapshot aggregate retains credit that arrives during child service"
             <| fun _ ->
                 let selected, worker, ledger = pair ()

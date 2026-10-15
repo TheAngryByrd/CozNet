@@ -49,6 +49,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Explanation
 
+- [Experiment boundaries and unpublished delay](Explanations/experiment-lifecycle.md).
+
 - [CPU periods and missing tails](Explanations/cpu-counter-attribution.md).
 - [Sample time and measurement time](Explanations/sample-clock-alignment.md).
 - [Calibration variation and overhead sensitivity](Explanations/calibration-sensitivity.md).

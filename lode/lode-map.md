@@ -1,5 +1,7 @@
 # Lode index
 
+For the next finite experiment lifecycle and explicit residual states, read [the lifecycle plan](plans/experiment-lifecycle.md).
+
 For recorded native wait overlap at frozen endpoints, read [timer wait membership](profiling/timer-wait-membership.md).
 
 For observed source timestamps and endpoint ambiguity, read [sample membership](profiling/sample-membership.md).
