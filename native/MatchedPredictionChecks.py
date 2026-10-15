@@ -2,12 +2,13 @@ from copy import deepcopy
 from fractions import Fraction
 import hashlib
 import json
+import math
 import pathlib
 import subprocess
 import sys
 import tempfile
 import unittest
-from AnalyzeMatchedPrediction import MODES, analyze, analyze_case, parse_window, parse_calibration
+from AnalyzeMatchedPrediction import MODES, WindowCost, analyze, analyze_case, conditional_comparison, parse_window, parse_calibration
 from CpuCounterChecks import fixture as counter_fixture
 
 
@@ -112,6 +113,78 @@ def series(root):
 
 
 class MatchedPredictionChecks(unittest.TestCase):
+    def test_conditional_comparison_uses_cost_ratios_and_outward_rounding(self):
+        costs = {mode: WindowCost(10, 1, 0, Fraction(duration), Fraction(duration))
+                 for mode, duration in zip(MODES, (100, 75, 100, 50))}
+        result = conditional_comparison(costs)
+        expected = {"predictedElapsedReduction": (Fraction(1, 12), Fraction(17, 44)),
+                    "physicalElapsedReduction": (Fraction(7, 18), Fraction(13, 22)),
+                    "nominalPredictionMinusPhysical": (Fraction(-67, 132), Fraction(-1, 396))}
+        for field, (lower, upper) in expected.items():
+            with self.subTest(field=field):
+                actual = result[field]
+                self.assertLessEqual(Fraction(actual["lower"]), lower)
+                self.assertGreater(Fraction(math.nextafter(actual["lower"], math.inf)), lower)
+                self.assertGreaterEqual(Fraction(actual["upper"]), upper)
+                self.assertLess(Fraction(math.nextafter(actual["upper"], -math.inf)), upper)
+        self.assertEqual(result["requestedLocalSpeedup"], 0.5)
+        self.assertTrue(result["includesUnboundedAttribution"])
+        self.assertFalse(result["isAccuracyBound"])
+
+    def test_conditional_comparison_retains_negative_reductions(self):
+        costs = {mode: WindowCost(100, 1, 0, Fraction(duration), Fraction(duration))
+                 for mode, duration in zip(MODES, (100, 200, 100, 300))}
+        result = conditional_comparison(costs)
+        self.assertLess(result["predictedElapsedReduction"]["upper"], 0)
+        self.assertLess(result["physicalElapsedReduction"]["upper"], 0)
+
+    def test_conditional_comparison_uses_each_duration_and_progress_endpoint(self):
+        inputs = ((10, 100, 110), (20, 75, 80), (30, 150, 180), (40, 60, 90))
+        costs = {mode: WindowCost(progress, 1, 0, Fraction(lower), Fraction(upper))
+                 for mode, (progress, lower, upper) in zip(MODES, inputs)}
+        result = conditional_comparison(costs)
+        expected = {"predictedElapsedReduction": (Fraction(51, 95), Fraction(109, 154)),
+                    "physicalElapsedReduction": (Fraction(34, 65), Fraction(94, 123)),
+                    "nominalPredictionMinusPhysical": (Fraction(-2657, 11685), Fraction(1849, 10010))}
+        for field, (lower, upper) in expected.items():
+            with self.subTest(field=field):
+                self.assertLessEqual(Fraction(result[field]["lower"]), lower)
+                self.assertGreater(Fraction(math.nextafter(result[field]["lower"], math.inf)), lower)
+                self.assertGreaterEqual(Fraction(result[field]["upper"]), upper)
+                self.assertLess(Fraction(math.nextafter(result[field]["upper"], -math.inf)), upper)
+
+    def test_complete_blocks_have_only_conditional_comparisons(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            series(root)
+            result = analyze(root)
+            self.assertEqual(len(result["blocks"]), 8)
+            for block in result["blocks"]:
+                self.assertIsNotNone(block["conditionalComparison"])
+                self.assertFalse(block["conditionalComparison"]["isAccuracyBound"])
+                self.assertEqual(block["diagnosticUnavailableCases"], [])
+                self.assertFalse(block["predictionEligible"])
+                self.assertIsNone(block["prediction"])
+            self.assertIsNone(result["predictionSummary"])
+            self.assertFalse(result["predictionAccuracyEstablished"])
+            self.assertFalse(result["passed"])
+
+    def test_invalid_counter_evidence_suppresses_only_its_block_diagnostic(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            series(root)
+            path = root / "block-3-profile-half.json"
+            data = json.loads(path.read_text())
+            data["cpuCounters"]["source"]["FailedReads"] = 1
+            path.write_text(json.dumps(data))
+            result = analyze(root)
+            block = result["blocks"][2]
+            self.assertIsNone(block["conditionalComparison"])
+            self.assertEqual(block["diagnosticUnavailableCases"], ["block-3-profile-half"])
+            self.assertTrue(all(item["conditionalComparison"] is not None
+                                for item in result["blocks"] if item["block"] != 3))
+            self.assertIsNone(result["predictionSummary"])
+
     def test_legacy_manifest_requires_both_counter_module_hashes(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
@@ -276,6 +349,9 @@ class MatchedPredictionChecks(unittest.TestCase):
             self.assertFalse(result["collectionComplete"])
             self.assertIsNone(result["predictionSummary"])
             self.assertTrue(all(block["prediction"] is None and not block["predictionEligible"] for block in result["blocks"]))
+            self.assertIsNone(result["blocks"][0]["conditionalComparison"])
+            self.assertIsNone(result["blocks"][1]["conditionalComparison"])
+            self.assertTrue(all(block["conditionalComparison"] is not None for block in result["blocks"][2:]))
 
     def test_rejects_missing_reordered_or_duplicate_outcomes(self):
         for mutation in (lambda rows: rows[:-1], lambda rows: rows[::-1], lambda rows: rows[:-1] + rows[:1]):
@@ -295,6 +371,7 @@ class MatchedPredictionChecks(unittest.TestCase):
             result = analyze(root)
             self.assertEqual(len(result["integrityErrors"]), 1)
             self.assertTrue(all(not item["predictionEligible"] for item in result["cases"]))
+            self.assertTrue(all(item["conditionalComparison"] is None for item in result["blocks"]))
 
     def test_missing_hashes_and_runner_failure_cannot_complete_collection(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -304,6 +381,7 @@ class MatchedPredictionChecks(unittest.TestCase):
             result = analyze(root)
             self.assertFalse(result["collectionComplete"])
             self.assertEqual(result["runnerErrors"], ["failed to persist outcome"])
+            self.assertTrue(all(item["conditionalComparison"] is None for item in result["blocks"]))
             (root / "manifest.json").write_text('{"files": {}}')
             with self.assertRaisesRegex(ValueError, "Required snapshot hashes"):
                 analyze(root)

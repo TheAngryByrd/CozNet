@@ -160,7 +160,7 @@ def parse_window(data, mode):
     return WindowCost(*progress, global_delta, lower, upper)
 
 
-def analyze_case(data, mode, exit_code):
+def _analyze_case(data, mode, exit_code):
     errors = []
     cost = None
     counters = analyze_counter_capture(data) if mode in ("profile-zero", "profile-half") else None
@@ -199,16 +199,45 @@ def analyze_case(data, mode, exit_code):
                 require(integer(data["credit"], "selected credit", 1) > 0
                         and sum(integer(value, "paid wait") for value in data["waits"]) > 0
                         and len(data["journals"]) > 0, "Treatment has no paid intervention")
-        cost = parse_window(data, mode).report()
+        cost = parse_window(data, mode)
     except (ValueError, KeyError, TypeError, IndexError) as error:
         errors.append(str(error))
     if counters is not None and not counters["reconciled"]:
         errors.extend("CPU counter evidence: " + reason for reason in counters["reasons"])
+    diagnostic_cost = cost if not errors else None
     if mode == "profile-half":
         errors.extend(["Unreceived sample-period attribution has no verified bound",
                        "Native journal suffix attribution has no verified bound"])
-    return {"predictionEligible": not errors, "reasons": errors, "observedAccountedCost": cost,
-            "costIncludesUnboundedAttribution": mode == "profile-half", "cpuCounterDiagnostics": counters}
+    return ({"predictionEligible": not errors, "reasons": errors,
+             "observedAccountedCost": cost.report() if cost is not None else None,
+             "costIncludesUnboundedAttribution": mode == "profile-half", "cpuCounterDiagnostics": counters}, diagnostic_cost)
+
+
+def analyze_case(data, mode, exit_code):
+    return _analyze_case(data, mode, exit_code)[0]
+
+
+def conditional_comparison(costs):
+    def reduction(baseline, variant):
+        a, b = costs[baseline], costs[variant]
+        return (1 - (b.upper_seconds / (b.selected_progress - 1)) / (a.lower_seconds / (a.selected_progress + 1)),
+                1 - (b.lower_seconds / (b.selected_progress + 1)) / (a.upper_seconds / (a.selected_progress - 1)))
+
+    def bounds(interval):
+        lower, upper = interval
+        a, b = float(lower), float(upper)
+        if Fraction(a) > lower:
+            a = math.nextafter(a, -math.inf)
+        if Fraction(b) < upper:
+            b = math.nextafter(b, math.inf)
+        return {"lower": a, "upper": b}
+
+    predicted = reduction("profile-zero", "profile-half")
+    physical = reduction("physical-baseline", "physical-optimized")
+    difference = (predicted[0] - physical[1], predicted[1] - physical[0])
+    return {"requestedLocalSpeedup": 0.5, "predictedElapsedReduction": bounds(predicted),
+            "physicalElapsedReduction": bounds(physical), "nominalPredictionMinusPhysical": bounds(difference),
+            "includesUnboundedAttribution": True, "isAccuracyBound": False}
 
 
 def analyze(root):
@@ -242,12 +271,14 @@ def analyze(root):
         require(path.is_relative_to(root.resolve()), "Manifest path escapes evidence directory")
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest().lower() != digest.lower():
             integrity_errors.append(f"Snapshot hash mismatch: {name}")
-    cases = []
+    cases, costs = [], {}
     for planned, outcome in zip(order, outcomes):
         path = root / (planned["name"] + ".json")
         try:
             require(outcome["executed"] is True and outcome["recordExists"] is True, "Case was not executed or has no result")
-            result = analyze_case(read(path), planned["mode"], outcome["exitCode"])
+            result, cost = _analyze_case(read(path), planned["mode"], outcome["exitCode"])
+            if cost is not None:
+                costs[planned["name"]] = cost
         except (OSError, ValueError, KeyError, TypeError) as error:
             result = {"predictionEligible": False, "reasons": [str(error)], "observedAccountedCost": None}
         if integrity_errors:
@@ -258,9 +289,16 @@ def analyze(root):
     calibration_reasons = ["Calibration clock uncertainty has no verified bound",
                            "Calibration overhead sensitivity is not a verified bound",
                            "Local speedup uncertainty has not been propagated into the prediction-error gate"]
-    blocks = [{"block": block, "predictionEligible": False, "prediction": None,
-               "ineligibleCases": [item["name"] for item in cases if item["block"] == block and not item["predictionEligible"]]}
-              for block in range(1, 9)]
+    blocks = []
+    for block in range(1, 9):
+        members = [item for item in cases if item["block"] == block]
+        unavailable = [item["name"] for item in members if item["name"] not in costs]
+        comparison = None
+        if not unavailable and not integrity_errors and not runner_errors:
+            comparison = conditional_comparison({item["mode"]: costs[item["name"]] for item in members})
+        blocks.append({"block": block, "predictionEligible": False, "prediction": None,
+                       "ineligibleCases": [item["name"] for item in members if not item["predictionEligible"]],
+                       "conditionalComparison": comparison, "diagnosticUnavailableCases": unavailable})
     return {"protocol": plan["protocol"], "cases": cases, "blocks": blocks,
             "integrityErrors": integrity_errors, "runnerErrors": runner_errors, "calibrationReasons": calibration_reasons,
             "calibrationDiagnostic": {"meanReduction": calibration.mean, "intervalHalfWidth": calibration.half_width, "maxObservedOverheadShift": calibration.sensitivity},

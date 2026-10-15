@@ -26,6 +26,8 @@ Select a retained [interleaved calibration](run-interleaved-calibration.md) dire
 4. Open the printed directory under `artifacts/matched-prediction/`.
    Read `runner-errors.json`, `outcomes.json`, and `analysis.json`.
    Inspect each rejected case's reasons and retained log.
+   Inspect `blocks[].conditionalComparison` for complete blocks.
+   Treat these values as endpoint sensitivity diagnostics, not accuracy results.
 
 5. Retain the full directory. Do not repeat unchanged cases to obtain a better result.
 

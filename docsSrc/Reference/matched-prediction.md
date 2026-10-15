@@ -70,10 +70,37 @@ Caller-supplied success flags cannot bypass this rule.
 
 Calibration clock error and overhead sensitivity also lack verified bounds.
 Local-speedup uncertainty has not yet been propagated into the two-point prediction-error gate.
-The analyzer retains all eight block outcomes but publishes no block prediction or series prediction statistics.
+The analyzer retains all eight block outcomes but publishes no validated block prediction or series prediction statistics.
 `passed` and `predictionAccuracyEstablished` remain false. The runner returns failure after saving its diagnostic result.
 `collectionComplete` means all declared case records produced structurally valid costs with successful process exits.
 It does not establish prediction eligibility or accuracy.
+
+## Conditional block diagnostics
+
+`blocks[].conditionalComparison` compares four structurally valid case costs within one declared block.
+Both profile cases must also have reconciled counter evidence.
+A failed or missing case suppresses that block's comparison. Snapshot or runner errors suppress every comparison.
+`diagnosticUnavailableCases` lists cases without a usable cost. Run-level errors remain in their existing fields.
+
+Let `Z`, `T`, `B`, and `O` be the cost ranges for profile-zero, profile-half, physical-baseline, and physical-optimized.
+Each cost uses the frozen duration brackets and progress quantization above.
+
+| Field | Range |
+| --- | --- |
+| `predictedElapsedReduction` | `[1-T.upper/Z.lower, 1-T.lower/Z.upper]` |
+| `physicalElapsedReduction` | `[1-O.upper/B.lower, 1-O.lower/B.upper]` |
+| `nominalPredictionMinusPhysical` | `[predicted.lower-physical.upper, predicted.upper-physical.lower]` |
+
+The calculation uses exact rational arithmetic. JSON bounds round outward to floating-point values.
+Negative reductions remain negative. They indicate increased observed cost under these assumptions.
+These ranges cover endpoint and progress uncertainty only. They are not confidence intervals or accuracy bounds.
+They omit sample attribution, native journal tails, clock error, and observer cost.
+The requested virtual speedup is 0.5. The physical optimization can have a different calibrated local speedup.
+Thus, the signed difference is not a verified prediction error at matching local speedups.
+
+`includesUnboundedAttribution` remains true. `isAccuracyBound` remains false.
+The existing `prediction` field remains null, and `predictionEligible` remains false for every block.
+No average, confidence interval, or pass result is computed from the subset of blocks with comparisons.
 
 See [the procedure](../How_Tos/run-matched-prediction.md), [the measurement model](../Explanations/matched-prediction.md), and [calibration limits](../Explanations/calibration-sensitivity.md).
 

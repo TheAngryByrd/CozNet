@@ -19,7 +19,7 @@ It requires treatment credit and confirmed payment inside the frozen window, not
 The shared calibration parser reconciles all 2,700 segments, the plan, journal, result, and statistics before the runner creates a run directory.
 Profile-half costs remain conditional because sample-period and native-journal tails have no verified attribution bounds.
 Calibration clock, overhead, and local-speedup uncertainty also prevent the final accuracy gate.
-No block prediction, subset inference, or series accuracy result is published.
+No validated block prediction, subset inference, or series accuracy result is published.
 The target deliberately returns failure after retaining diagnostics.
 
 The first matrix ran all 32 cases. Treatments in blocks 1, 4, 5, 6, and 7 failed unchanged capacity or debt gates.
@@ -45,4 +45,11 @@ It preserves workload failures and closure state. All CPU-attribution and accura
 The matched analyzer computes these diagnostics before workload eligibility checks.
 Missing or invalid counter evidence rejects profile eligibility, including legacy captures.
 Physical cases do not require it. New runner snapshots include both counter Python files and run their checks.
+`conditional_comparison` consumes parsed `WindowCost` values and computes within-block cost ratios with exact fractions.
+Output bounds round outward. Negative reductions remain visible.
+Each complete block can retain a conditional predicted reduction, physical reduction, and signed nominal difference.
+Failed cases or invalid counters suppress their block. Snapshot and runner errors suppress every comparison.
+These ranges cover endpoint and progress uncertainty only. They do not establish sampling, journal-tail, clock, or calibration bounds.
+No subset aggregate is computed. All validated prediction fields and accuracy flags remain unchanged.
+The Coz sampling approximation needs physical validation, not deterministic assignment of every CPU interval to one sampled IP.
 See [the reference](../../docsSrc/Reference/matched-prediction.md), [matched workers](matched-physical.md), and [boundaries](measurement-boundaries.md).
