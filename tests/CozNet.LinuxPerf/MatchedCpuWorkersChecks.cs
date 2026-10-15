@@ -5,6 +5,52 @@ static class MatchedCpuWorkersChecks
         InvalidModeIsRejected();
         StopBeforeReleaseProducesNoProgress();
         BothWorkersPublishProgress();
+        OnlySelectedWorkerUsesOptimizedArithmetic();
+        WrongChecksumCannotPublishProgress();
+    }
+
+    private sealed class Calls { public int Count; }
+    private readonly struct Arithmetic(Calls calls, MatchedCpuWorkers work, long result) : IChecksumArithmetic
+    {
+        public long Run()
+        {
+            calls.Count++;
+            work.RequestStop();
+            return result;
+        }
+    }
+
+    private static void OnlySelectedWorkerUsesOptimizedArithmetic()
+    {
+        foreach (string mode in new[] { "baseline", "optimized" })
+        foreach (int slot in new[] { 0, 1 })
+        {
+            using var work = new MatchedCpuWorkers(PhysicalWorkMode.Parse(mode));
+            var original = new Calls();
+            var optimized = new Calls();
+            work.Release();
+            work.Run(slot, new Arithmetic(original, work, 49995000), new Arithmetic(optimized, work, 49995000));
+            bool expectedOptimized = mode == "optimized" && slot == 0;
+            Require(original.Count == (expectedOptimized ? 0 : 1) && optimized.Count == (expectedOptimized ? 1 : 0)
+                && work.Progress(slot) == 1 && work.Progress(1 - slot) == 0,
+                $"Mode {mode}, slot {slot} must call only its declared arithmetic and publish one verified batch.");
+            work.DisposeReady(0);
+            work.DisposeReady(1);
+        }
+    }
+
+    private static void WrongChecksumCannotPublishProgress()
+    {
+        using var work = new MatchedCpuWorkers(PhysicalWorkMode.Baseline);
+        var calls = new Calls();
+        work.Release();
+        Exception? failure = null;
+        try { work.Run(0, new Arithmetic(calls, work, 0), new OptimizedChecksumArithmetic()); }
+        catch (InvalidDataException error) { failure = error; }
+        Require(failure is not null && calls.Count == 1 && work.Progress(0) == 0 && work.Progress(1) == 0,
+            "A wrong checksum must fail before any progress is published.");
+        work.DisposeReady(0);
+        work.DisposeReady(1);
     }
 
     private static void InvalidModeIsRejected()

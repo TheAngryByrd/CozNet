@@ -726,6 +726,9 @@ let nativeCountdownVerify script _ =
             </> string interval
         ]
 
+let linuxPhysicalCalibration _ =
+    nativeScript "VerifyPhysicalCalibration.ps1"
+
 let linuxPerfWorkload _ =
     DotNet.build
         (fun options -> {
@@ -1160,6 +1163,7 @@ let initTargets () =
     Target.create "LinuxPreparedTimer" linuxPreparedTimer
     Target.create "LinuxFastTimer" linuxFastTimer
     Target.create "LinuxFastTimerCapacity" linuxFastTimerCapacity
+    Target.create "LinuxPhysicalCalibration" linuxPhysicalCalibration
     Target.create "LinuxFastTimerGc" linuxFastTimerGc
     Target.create "LinuxFastTimerScheduler" linuxFastTimerScheduler
     Target.create "LinuxTimerSchedulerCost" linuxTimerSchedulerCost
@@ -1245,16 +1249,49 @@ let initTargets () =
     ==> "LinuxTimerInterop"
     |> ignore
 
-    "LinuxPerfWorkload" ==> "LinuxSampledTimer" |> ignore
-    "LinuxPerfWorkload" ==> "LinuxSampledTimerPhases" |> ignore
-    "LinuxPerfWorkload" ==> "LinuxInitializedTimer" |> ignore
-    "LinuxPerfWorkload" ==> "LinuxPreparedTimer" |> ignore
-    "LinuxPerfWorkload" ==> "LinuxFastTimer" |> ignore
-    "LinuxPerfWorkload" ==> "LinuxFastTimerCapacity" |> ignore
-    "LinuxPerfWorkload" ==> "LinuxFastTimerGc" |> ignore
-    "LinuxPerfWorkload" ==> "LinuxFastTimerScheduler" |> ignore
-    "LinuxPerfWorkload" ==> "LinuxTimerSchedulerCost" |> ignore
-    "LinuxPerfWorkload" ==> "LinuxFastTimerTransitions" |> ignore
+    "LinuxPerfWorkload"
+    ==> "LinuxSampledTimer"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxSampledTimerPhases"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxInitializedTimer"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxPreparedTimer"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxFastTimer"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxFastTimerCapacity"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxPhysicalCalibration"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxFastTimerGc"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxFastTimerScheduler"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxTimerSchedulerCost"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxFastTimerTransitions"
+    |> ignore
 
     "LinuxPerfWorkload"
     ==> "LinuxTimerManaged"

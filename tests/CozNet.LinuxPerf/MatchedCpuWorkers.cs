@@ -44,25 +44,24 @@ sealed class MatchedCpuWorkers : IDisposable
         start.Set();
     }
 
-    public void Run(int slot)
+    public void Run(int slot) => Run(slot, new OriginalChecksumArithmetic(), new OptimizedChecksumArithmetic());
+
+    internal void Run<TOriginal, TOptimized>(int slot, TOriginal original, TOptimized optimized)
+        where TOriginal : struct, IChecksumArithmetic
+        where TOptimized : struct, IChecksumArithmetic
     {
         if (!start.Wait(TimeSpan.FromSeconds(5)))
             throw new InvalidDataException("The matched CPU worker start gate timed out.");
-        if (slot == 0 && mode.Optimized)
+        if (slot == 0 && mode.Optimized) RunLoop(slot, optimized);
+        else RunLoop(slot, original);
+    }
+
+    private void RunLoop<T>(int slot, T arithmetic) where T : struct, IChecksumArithmetic
+    {
+        while (Volatile.Read(ref stop) == 0)
         {
-            while (Volatile.Read(ref stop) == 0)
-            {
-                Check(CpuWorkload.RunOptimized());
-                Interlocked.Increment(ref progress[slot]);
-            }
-        }
-        else
-        {
-            while (Volatile.Read(ref stop) == 0)
-            {
-                Check(CpuWorkload.Run());
-                Interlocked.Increment(ref progress[slot]);
-            }
+            Check(arithmetic.Run());
+            Interlocked.Increment(ref progress[slot]);
         }
     }
 

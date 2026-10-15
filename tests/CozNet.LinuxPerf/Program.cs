@@ -4,6 +4,15 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--calibrate-physical", var calibrationPath])
+    return PhysicalCalibration.Run(calibrationPath, () => new LinuxThreadCpuClock());
+
+if (args is ["--verify-physical-calibration"])
+{
+    PhysicalCalibrationChecks.Run();
+    return 0;
+}
+
 if (args is ["--timer-physical", var timerPhysicalPath, var timerPhysicalMode])
     return MatchedPhysicalWorkload.Run(timerPhysicalPath, PhysicalWorkMode.Parse(timerPhysicalMode));
 
@@ -59,6 +68,7 @@ if (args is ["--verify-measurement-boundaries"])
 
 if (args is ["--verify-timer-layout"])
 {
+    PhysicalCalibrationChecks.Run();
     MatchedCpuWorkersChecks.Run();
     TimerSchedulerCaptureGroupChecks.Run();
     TimerSessionCleanupChecks.Run();

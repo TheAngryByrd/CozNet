@@ -32,6 +32,7 @@ flowchart LR
     End --> Cleanup[Stop and join]
 ```
 
-Calibration and prediction analysis remain absent. No nominal 50-percent accuracy claim follows from the optimized implementation.
+[CPU calibration](physical-calibration.md) measures paired call costs, but its current uncertainty does not justify an exact 50-percent comparison.
+Prediction analysis remains absent. No nominal 50-percent accuracy claim follows from the optimized implementation.
 The older physical route remains separate for previous experiment scripts.
 See [the reference](../../docsSrc/Reference/matched-physical.md), [boundaries](measurement-boundaries.md), and [sampled timers](timer-sampled.md).

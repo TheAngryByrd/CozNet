@@ -45,7 +45,8 @@ Both workers must complete progress for a successful run.
 The worker and physical implementations use portable .NET APIs.
 Runtime checks have exercised Windows x64 and Linux x64. Other platforms remain unverified.
 The timer adapter remains Linux-specific.
-Physical optimization calibration, randomized comparison blocks, and uncertainty-aware prediction analysis remain unimplemented.
+[CPU calibration](physical-calibration.md) retains paired call-cost measurements with unresolved uncertainty.
+Randomized prediction blocks and uncertainty-aware prediction analysis remain unimplemented.
 Halving arithmetic iterations does not prove an exact 50-percent CPU-cost reduction.
 
 The older `--physical` route retains its original topology for existing evidence scripts.

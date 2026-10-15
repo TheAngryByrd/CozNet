@@ -9,6 +9,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 ## How-to guides
 
 - [Run the sampled timer experiment](How_Tos/run-sampled-timer.md).
+- [Run physical CPU calibration](How_Tos/run-physical-calibration.md).
 
 - [Verify the deterministic contract](How_Tos/verify-the-contract.md).
 - [Inspect measurement evidence](How_Tos/inspect-measurements.md).
@@ -24,6 +25,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 - [Measurement boundaries](Reference/measurement-boundaries.md): immutable endpoints, capture failures, and unresolved boundary uncertainty.
 - [Matched physical workload](Reference/matched-physical.md): shared workers, physical mode selection, and frozen progress.
+- [Physical CPU calibration](Reference/physical-calibration.md): fixed-work pairs, retained failures, and statistical limits.
 
 - [Sampled timer workload](Reference/sampled-timer.md): CPU sample credit, timer ownership, and retained failures.
 
