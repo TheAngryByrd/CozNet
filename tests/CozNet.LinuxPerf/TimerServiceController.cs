@@ -8,6 +8,11 @@ sealed class TimerServiceController
         int? SubmissionStatus, TimerObservation? Accepted, TimerObservation? Attempted, TimerNativeCapture? RawAttempt,
         bool LedgerSettled, bool CancellationRequested, bool ReleaseAttempted, string? Failure);
     internal readonly record struct PollResult(bool Released, long SettledWait);
+    internal sealed record PendingAccounting(Guid Lease, ulong Command, ulong Generation, int AcceptedChildren,
+        long ConfirmedWait, ulong? LastAcceptedCapture, bool LedgerSettled, bool CancellationRequested,
+        bool ReleaseAttempted, string? Failure);
+    internal sealed record WorkerAccounting(long ReleasedWait, PendingAccounting? Pending);
+    internal sealed record AccountingSnapshot(int ReleasedJournalCount, WorkerAccounting Selected, WorkerAccounting Peer);
 
     private sealed class Pending(SignalServiceLease lease, Journal journal)
     {
@@ -58,6 +63,21 @@ sealed class TimerServiceController
 
     public bool HasPending(uint slot) => At(slot) is not null;
     public long ConfirmedWait(uint slot) => At(slot)?.Adapter?.ConfirmedNanoseconds ?? 0;
+
+    public AccountingSnapshot CaptureAccounting()
+    {
+        WorkerAccounting Capture(uint slot)
+        {
+            var operation = At(slot);
+            var journal = operation?.Journal;
+            var prefix = journal is null ? null : new PendingAccounting(journal.Lease, journal.Command,
+                journal.Generation, operation!.Adapter?.AcceptedCount ?? 0, operation.Adapter?.ConfirmedNanoseconds ?? 0,
+                journal.Accepted?.Raw.Header.Captured, journal.LedgerSettled, journal.CancellationRequested,
+                journal.ReleaseAttempted, journal.Failure);
+            return new(releasedWaits[slot], prefix);
+        }
+        return new(journals.Count, Capture(0), Capture(1));
+    }
 
     public void Submit(uint slot, SignalServiceLease lease, ref SignalAccounting state, string stage, int iteration = 0)
     {

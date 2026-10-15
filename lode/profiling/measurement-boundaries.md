@@ -23,13 +23,20 @@ stateDiagram-v2
 
 The sampled timer workload uses this contract for `measurementCapture` and its legacy progress fields.
 It closes sample acceptance and disables resume before endpoint capture, then performs shutdown separately.
-The capture copies pending identities and global delay, reads selected then peer counters, and retains sample sequence and epoch.
+The capture copies controller accounting and global delay, reads selected then peer counters, and retains sample sequence and epoch.
 These are controller-accounted values, not an atomic view of native work.
+`Readings.Timer` retains an immutable `TimerServiceController.AccountingSnapshot` for sampled timer producers.
+It includes the released-journal prefix count and per-slot released wait and pending accepted-prefix evidence.
+The producer derives worker totals and identities from this same snapshot.
+Boundary capture rejects mismatched totals or identities. End capture rejects journal count regression or changed snapshot presence.
+Later controller release cannot change the frozen child count, confirmed wait, capture timestamp, or ownership flags.
+The snapshot performs no native read and does not determine unreceived native tails.
+Legacy captures without this field cannot supply the exact accepted prefix at the frozen endpoint.
 Unreceived sample and journal tails still need uncertainty accounting before prediction analysis.
 The [matched physical harness](matched-physical.md) uses the same boundary contract.
 [CPU calibration](physical-calibration.md) retains paired measurements. [Matched diagnostics](matched-prediction.md) parse costs but reject unbounded attribution.
 
-Seven portable checks cover frozen data, release ordering, failure retention, invalid readings, clock ordering, capture transitions, and cumulative counters.
+Nine portable checks cover frozen data, release ordering, failure retention, invalid readings, clock ordering, capture transitions, cumulative counters, and timer-prefix consistency.
 `--verify-measurement-boundaries` runs these checks alone. `--verify-timer-layout` includes them.
 The [retained live evidence](../../reliability/features/native-signal/measurement-boundaries.md) verifies frozen pending identities and progress across cleanup.
 The duration clock starts inside worker release, so capture setup does not shorten the requested window.

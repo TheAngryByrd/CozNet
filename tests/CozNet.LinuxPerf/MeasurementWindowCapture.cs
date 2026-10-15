@@ -4,7 +4,8 @@ sealed class MeasurementWindowCapture
 {
     internal sealed record PendingService(ulong Command, ulong Generation);
     internal sealed record Worker(long Progress, long ReleasedWait, long ActiveWait, PendingService? Pending);
-    internal sealed record Readings(long Global, long Credit, ulong AcceptedSampleSequence, ulong Epoch, Worker Selected, Worker Peer);
+    internal sealed record Readings(long Global, long Credit, ulong AcceptedSampleSequence, ulong Epoch, Worker Selected, Worker Peer,
+        TimerServiceController.AccountingSnapshot? Timer = null);
 
     internal sealed class Boundary
     {
@@ -26,7 +27,8 @@ sealed class MeasurementWindowCapture
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(frequency);
             long before = clock.GetTimestamp();
             var values = read();
-            if (values is null || values.Global < 0 || values.Credit < 0 || !Valid(values.Selected) || !Valid(values.Peer))
+            if (values is null || values.Global < 0 || values.Credit < 0 || !Valid(values.Selected) || !Valid(values.Peer)
+                || !ValidTimer(values))
                 throw new InvalidDataException("Measurement readings contain invalid counters or pending ownership.");
             release?.Invoke();
             long after = clock.GetTimestamp();
@@ -37,6 +39,16 @@ sealed class MeasurementWindowCapture
         private static bool Valid(Worker? worker) => worker is not null && worker.Progress >= 0
             && worker.ReleasedWait >= 0 && worker.ActiveWait >= 0
             && (worker.Pending is null ? worker.ActiveWait == 0 : worker.Pending.Command != 0);
+    }
+
+    private static bool ValidTimer(Readings readings)
+    {
+        if (readings.Timer is not { } timer) return true;
+        bool Matches(Worker worker, TimerServiceController.WorkerAccounting? state) => state is not null
+            && state.ReleasedWait == worker.ReleasedWait
+            && worker.ActiveWait == (state.Pending?.ConfirmedWait ?? 0)
+            && worker.Pending == (state.Pending is { } pending ? new PendingService(pending.Command, pending.Generation) : null);
+        return timer.ReleasedJournalCount >= 0 && Matches(readings.Selected, timer.Selected) && Matches(readings.Peer, timer.Peer);
     }
 
     private readonly TimeProvider clock;
@@ -81,6 +93,9 @@ sealed class MeasurementWindowCapture
             || after.Selected.Progress < before.Selected.Progress || after.Peer.Progress < before.Peer.Progress
             || after.Selected.ReleasedWait < before.Selected.ReleasedWait || after.Peer.ReleasedWait < before.Peer.ReleasedWait)
             throw new InvalidDataException("Cumulative measurement counters regressed.");
+        if ((before.Timer is null) != (after.Timer is null)
+            || (before.Timer is { } timer && after.Timer!.ReleasedJournalCount < timer.ReleasedJournalCount))
+            throw new InvalidDataException("The frozen timer journal inventory changed capability or regressed.");
         End = end;
         Status = MeasurementCaptureStatus.Complete;
     }

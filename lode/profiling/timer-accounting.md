@@ -41,7 +41,7 @@ General CLR safety and prediction accuracy remain unverified.
 
 `TimerServiceController` owns selected slot 0 and peer slot 1 through `ITimerTransport`.
 It separates ledger settlement from native release and retains ownership after ambiguous failure.
-Sixteen portable controller checks verify prefix payment, cancellation, failure evidence, release behavior, and unavailable-target accounting.
+Nineteen portable controller checks verify prefix payment, cancellation, failure evidence, release behavior, frozen prefixes, and unavailable-target accounting.
 Cumulative wait checks release two generations in one slot and reject replacement of the first payment by the second.
 An active empty journal earns no wait credit as selected samples increase global debt.
 The shared `TimerDebtLimit` gate accepts 1,999,999 and 2,000,000 ns and rejects 2,000,001 ns for either slot.
@@ -54,6 +54,16 @@ Failed phase closure preserves both the original operation error and the diagnos
 Cumulative released wait remains available even when phase closure throws after native release.
 Archived journals retain that diagnostic failure. The workload reads released totals directly for debt and output snapshots.
 Failed native cancellation remains explicitly unresolved on subsequent cancellation calls.
+
+`CaptureAccounting` copies scalar pending-prefix evidence and the archived journal count without transport calls.
+The single controller caller must serialize capture with submission, polling, and cancellation.
+Each pending snapshot retains lease, command, generation, accepted child count, confirmed wait, last accepted native capture,
+settlement, cancellation intent, release attempt, and failure.
+Submission failure can retain an owned generation with no accepted prefix. Release failure retains a settled prefix without archival.
+Sampled measurement boundaries keep these immutable records before shutdown.
+The controller checks exercise prefix persistence through cancellation and release, serialization, and unresolved ownership.
+The [retained frozen-prefix capture](../../reliability/features/native-signal/frozen-timer-prefix.md) distinguishes an empty accepted peer prefix from its later deferred child.
+The treatment still fails the unchanged debt limit and completes native cleanup.
 
 See the [controller reference](../../docsSrc/Reference/timer-service-controller.md) for the full contract.
 See [sampled timer execution](timer-sampled.md) for live integration, initialization, diagnostics, and current limits.

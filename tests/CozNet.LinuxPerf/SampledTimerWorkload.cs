@@ -65,17 +65,18 @@ static class SampledTimerWorkload
 
         MeasurementWindowCapture.Readings ReadMeasurement()
         {
-            var pending = controller?.PendingJournals ?? [];
+            var timerAccounting = controller?.CaptureAccounting();
             MeasurementWindowCapture.Worker ReadWorker(uint slot)
             {
-                var operation = pending.SingleOrDefault(journal => journal.Slot == slot);
-                return new(work.Progress((int)slot), ReleasedWait(slot), controller?.ConfirmedWait(slot) ?? 0,
+                var worker = slot == 0 ? timerAccounting?.Selected : timerAccounting?.Peer;
+                var operation = worker?.Pending;
+                return new(work.Progress((int)slot), worker?.ReleasedWait ?? 0, operation?.ConfirmedWait ?? 0,
                     operation is null ? null : new(operation.Command, operation.Generation));
             }
             long global = SignalAccountingModule.globalNanoseconds(state);
             var selectedWorker = ReadWorker(0);
             var peerWorker = ReadWorker(1);
-            return new(global, credit, sequence, epoch, selectedWorker, peerWorker);
+            return new(global, credit, sequence, epoch, selectedWorker, peerWorker, timerAccounting);
         }
 
         void CaptureProgress()

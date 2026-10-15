@@ -26,6 +26,55 @@ static class MeasurementWindowCaptureChecks
         ClockRegressionCannotPublishBoundary();
         InvalidTransitionsDoNotInvokeCallbacks();
         CumulativeCountersCannotRegress();
+        TimerSnapshotMustMatchWorkerAccounting();
+        TimerInventoryCannotRegressOrChangeCapability();
+    }
+
+    private static void TimerSnapshotMustMatchWorkerAccounting()
+    {
+        var worker = new TimerServiceController.WorkerAccounting(0, null);
+        var timer = new TimerServiceController.AccountingSnapshot(0, worker, worker);
+        var prefix = new TimerServiceController.PendingAccounting(Guid.NewGuid(), 1, 7, 1, 10, 100, false, false, false, null);
+        var valid = Empty() with { Timer = timer };
+        MeasurementWindowCapture.Readings[] invalid =
+        [
+            valid with { Timer = timer with { ReleasedJournalCount = -1 } },
+            valid with { Timer = timer with { Selected = null! } },
+            valid with { Timer = timer with { Peer = null! } },
+            valid with { Timer = timer with { Selected = worker with { ReleasedWait = 1 } } },
+            valid with { Timer = timer with { Peer = worker with { ReleasedWait = 1 } } },
+            valid with { Timer = timer with { Peer = worker with { Pending = prefix } } },
+            valid with { Peer = new(0, 0, 9, new(1, 7)), Timer = timer with { Peer = worker with { Pending = prefix } } },
+            valid with { Peer = new(0, 0, 10, new(2, 7)), Timer = timer with { Peer = worker with { Pending = prefix } } },
+            valid with { Peer = new(0, 0, 10, new(1, 8)), Timer = timer with { Peer = worker with { Pending = prefix } } }
+        ];
+        foreach (var reading in invalid)
+        {
+            var capture = new MeasurementWindowCapture(new Clock(100, 110));
+            bool released = false;
+            Require(Failure(() => capture.Begin(() => reading, () => released = true)) is InvalidDataException
+                && !released && capture.Start is null && capture.Status == MeasurementCaptureStatus.StartFailed,
+                "Mismatched timer totals, identity, or journal inventory must fail before worker release.");
+        }
+    }
+
+    private static void TimerInventoryCannotRegressOrChangeCapability()
+    {
+        var worker = new TimerServiceController.WorkerAccounting(0, null);
+        var timer = new TimerServiceController.AccountingSnapshot(2, worker, worker);
+        foreach (var pair in new[]
+        {
+            (Empty() with { Timer = timer }, Empty() with { Timer = timer with { ReleasedJournalCount = 1 } }),
+            (Empty() with { Timer = timer }, Empty()),
+            (Empty(), Empty() with { Timer = timer })
+        })
+        {
+            var capture = new MeasurementWindowCapture(new Clock(100, 110, 200, 210));
+            capture.Begin(() => pair.Item1, () => { });
+            Require(Failure(() => capture.Finish(() => pair.Item2)) is InvalidDataException
+                && capture.End is null && capture.Status == MeasurementCaptureStatus.FinishFailed,
+                "The end boundary must not lose timer journals or change the captured timer capability.");
+        }
     }
 
     private static void FrozenEndExcludesShutdownChanges()

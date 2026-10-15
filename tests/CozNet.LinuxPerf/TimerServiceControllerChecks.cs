@@ -109,6 +109,89 @@ static class TimerServiceControllerChecks
         ClosingClockFailurePreservesReleasedWait();
         CancellationCanObserveCompletedOrDeferredJournal();
         ReleasedWaitAccumulatesAcrossGenerations();
+        FrozenAccountingRetainsAcceptedPrefixAcrossRelease();
+        FrozenAccountingRetainsUnresolvedOwnership();
+        FrozenAccountingExcludesRejectedObservation();
+    }
+
+    private static void FrozenAccountingExcludesRejectedObservation()
+    {
+        var f = new Fixture();
+        f.Submit();
+        f.Transport.Observation = Observation(0, 0, 50000, 100);
+        Require(!f.Poll().Released, "The first accepted prefix must remain active.");
+        var before = f.Controller.CaptureAccounting();
+        f.Transport.Observation = Observation(0, 0, 60000, 100);
+        Require(Failure(() => f.Poll()) is InvalidDataException, "A changed accepted child must reject the later observation.");
+        var after = f.Controller.CaptureAccounting();
+        var journal = f.Controller.PendingJournals.Single();
+        Require(journal.Attempted!.Raw.Header.Captured == 62002 && journal.Accepted!.Raw.Header.Captured == 52002
+            && after.Peer.Pending is { AcceptedChildren: 1, ConfirmedWait: 50000, LastAcceptedCapture: 52002, LedgerSettled: false }
+            && after.Peer.Pending.Failure is not null && after.ReleasedJournalCount == 0
+            && before.Peer.Pending!.Failure is null
+            && before.Peer.Pending == after.Peer.Pending with { Failure = null },
+            "A failed observation must preserve the accepted prefix and earlier snapshot while retaining the new failure separately.");
+    }
+
+    private static void FrozenAccountingRetainsAcceptedPrefixAcrossRelease()
+    {
+        var f = new Fixture();
+        var measurement = new MeasurementWindowCapture(TimeProvider.System);
+        MeasurementWindowCapture.Readings Read()
+        {
+            var timer = f.Controller.CaptureAccounting();
+            MeasurementWindowCapture.Worker Worker(TimerServiceController.WorkerAccounting worker) =>
+                new(0, worker.ReleasedWait, worker.Pending?.ConfirmedWait ?? 0,
+                    worker.Pending is { } pending ? new(pending.Command, pending.Generation) : null);
+            return new(SignalAccountingModule.globalNanoseconds(f.State), 110000, 1, 0,
+                Worker(timer.Selected), Worker(timer.Peer), timer);
+        }
+        measurement.Begin(Read, () => { });
+        f.Submit();
+        f.Transport.Observation = Observation(0, 0, 50000, 100);
+        Require(!f.Poll().Released, "An active prefix must retain its controller ownership.");
+        measurement.Finish(Read);
+        var frozen = measurement.End!.Accounting.Timer!;
+        var expected = new TimerServiceController.PendingAccounting(SignalServiceLeaseModule.identity(f.Lease),
+            1, 1, 1, 50000, 52002, false, false, false, null);
+        Require(frozen.ReleasedJournalCount == 0 && frozen.Peer == new TimerServiceController.WorkerAccounting(0, expected)
+            && frozen.Selected == new TimerServiceController.WorkerAccounting(0, null),
+            "The frozen prefix must retain identity, accepted count, confirmed wait, native capture, and ownership state.");
+        f.Controller.Cancel(1, ref f.State);
+        f.Transport.Observation = Observation(3, 3, 50000, 100);
+        Require(f.Poll().Released, "Shutdown must release the cancelled accepted prefix.");
+        var released = f.Controller.CaptureAccounting();
+        measurement.Finish(() => throw new InvalidOperationException("Shutdown cannot replace the frozen timer state."));
+        Require(released.ReleasedJournalCount == 1 && released.Peer == new TimerServiceController.WorkerAccounting(50000, null)
+            && measurement.End.Accounting.Timer == frozen && frozen.Peer.Pending == expected
+            && measurement.Start!.Accounting.Timer!.ReleasedJournalCount == 0
+            && measurement.Start.Accounting.Timer.Peer == new TimerServiceController.WorkerAccounting(0, null),
+            "Later release must advance the journal inventory without changing either frozen boundary.");
+        using var json = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(measurement.End));
+        var saved = json.RootElement.GetProperty("Accounting").GetProperty("Timer").GetProperty("Peer").GetProperty("Pending");
+        Require(saved.GetProperty("AcceptedChildren").GetInt32() == 1 && saved.GetProperty("ConfirmedWait").GetInt64() == 50000
+            && saved.GetProperty("LastAcceptedCapture").GetUInt64() == 52002 && !saved.GetProperty("CancellationRequested").GetBoolean(),
+            "Serialized measurement evidence must preserve the pre-shutdown accepted prefix.");
+    }
+
+    private static void FrozenAccountingRetainsUnresolvedOwnership()
+    {
+        var failed = new Fixture();
+        failed.Transport.FailSubmit = true;
+        Require(Failure(failed.Submit) is IOException, "The fixture must retain a failed native submission.");
+        var submission = failed.Controller.CaptureAccounting();
+        Require(submission.ReleasedJournalCount == 0 && submission.Peer.Pending is
+            { Command: 1, Generation: 1, AcceptedChildren: 0, ConfirmedWait: 0, LastAcceptedCapture: null, LedgerSettled: false, ReleaseAttempted: false }
+            && submission.Peer.Pending.Failure is not null, "An unresolved submission must retain ownership without inventing an accepted prefix.");
+        var f = new Fixture();
+        f.Submit();
+        f.Transport.Observation = Observation(3, 1, 110000, 100);
+        f.Transport.FailRelease = true;
+        Require(Failure(() => f.Poll()) is IOException, "The fixture must retain a failed native release.");
+        var release = f.Controller.CaptureAccounting();
+        Require(release.ReleasedJournalCount == 0 && release.Peer.ReleasedWait == 0 && release.Peer.Pending is
+            { AcceptedChildren: 1, ConfirmedWait: 110000, LastAcceptedCapture: 112002, LedgerSettled: true, ReleaseAttempted: true }
+            && release.Peer.Pending.Failure is not null, "A failed release must retain settled prefix ownership without adding an archived journal.");
     }
 
     private static Exception Failure(Action action)

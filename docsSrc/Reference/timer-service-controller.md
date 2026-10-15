@@ -3,7 +3,7 @@
 `TimerServiceController` coordinates reserved timer leases through `ITimerTransport`.
 It is an internal prototype in `tests/CozNet.LinuxPerf`.
 It does not extend the public serial engine.
-Sixteen portable controller checks run through `TimerLayoutVerify`.
+Nineteen portable controller checks run through `TimerLayoutVerify`.
 The [sampled timer workload](sampled-timer.md) connects real CPU samples to this controller.
 Its first treatment fails the lease capacity bound. Sampled capacity remains unverified.
 
@@ -31,6 +31,7 @@ The constructor requires distinct ledger threads and a nonzero, nonwrapping inst
 | `ReleasedWait` | Reports cumulative confirmed wait for successfully released journals in the specified slot. Diagnostic failure does not reset this total. |
 | `Journals` | Contains operations whose native release succeeded. |
 | `PendingJournals` | Contains operations that still own their slots, including failed operations. |
+| `CaptureAccounting` | Copies the archived journal count, released waits, and accepted pending prefixes without reading the transport. |
 
 `Submit`, `Poll`, and `Cancel` update the caller's accounting through `ref SignalAccounting`.
 The caller must reserve each lease before submission.
@@ -55,6 +56,11 @@ Read and validation failures retain attempted evidence where available.
 Each read clears the previous attempt from the pending journal.
 A failed read retains a new raw capture only if the transport published one during that read.
 The last accepted observation remains separate from failed attempts.
+
+`CaptureAccounting` returns immutable scalar records. The caller must serialize it with other controller operations.
+An unresolved submission retains ownership with zero accepted children and no accepted capture timestamp.
+A failed release retains its settled prefix and release-attempt state without increasing the archived journal count.
+The [measurement boundary](measurement-boundaries.md) stores this snapshot before shutdown.
 
 An `AggregateException` retains both the operation error and a diagnostic closing-clock error when both occur.
 Phase closure consumes the active phase before reading the closing clock. A failed clock does not prevent later phases.
@@ -87,6 +93,9 @@ No sampled capacity or prediction-accuracy claim follows from this draft.
 | `PhaseCaptureKeepsServiceAfterIdlePolls` | Discarded drains and unchanged polls do not consume phase capacity. Later service and failed submission retain records. |
 | `UnavailableTargetRetainsGrowingDebt` | An empty active journal retains new debt across the inclusive 2 ms gate. Cancellation releases ownership without debt forgiveness. |
 | `DelayedDeliveryCreditsOnlyConfirmedWait` | A long arm-to-handler interval earns no credit. Only the later measured child wait settles once. |
+| `FrozenAccountingRetainsAcceptedPrefixAcrossRelease` | Later release cannot replace frozen prefix evidence or its serialized values. |
+| `FrozenAccountingRetainsUnresolvedOwnership` | Failed submission and release preserve their distinct prefix and ownership states. |
+| `FrozenAccountingExcludesRejectedObservation` | A rejected observation cannot replace accepted prefix values or mutate an earlier snapshot. |
 | `CombinedOperationAndPhaseFailuresRemainVisible` | Submission, read, or accounting failure survives a simultaneous closing-clock failure. Later phases remain usable. |
 | `ClosingClockFailurePreservesReleasedWait` | Diagnostic failure after native release preserves committed wait and archived failure evidence without duplicate release. |
 | `ReleasedWaitAccumulatesAcrossGenerations` | Two generations accumulate released wait in one slot. The other slot and later idle polls cannot alter that total. |

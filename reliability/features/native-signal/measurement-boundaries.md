@@ -5,7 +5,7 @@ It does not establish sampled prediction accuracy or assign unreceived samples a
 
 ## Portable checks
 
-Seven checks run through `--verify-measurement-boundaries` and the existing `--verify-timer-layout` entry point.
+At that time, seven checks ran through `--verify-measurement-boundaries` and the existing `--verify-timer-layout` entry point.
 
 | Check | Required behavior |
 | --- | --- |
