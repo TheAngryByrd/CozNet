@@ -46,6 +46,12 @@ The matched analyzer computes these diagnostics before workload eligibility chec
 It also computes `sampleCreditDiagnostics` by replaying nominal periods and declared eligibility epochs.
 Invalid credit evidence rejects profile eligibility and suppresses the block's conditional comparison.
 The replay preserves failed-workload diagnostics and does not establish native eligibility or CPU attribution.
+`sampleMembershipDiagnostics` requires the observed clock policy and reconciled credit before partitioning samples.
+Its groups separate source membership, receipt membership, producer acceptance, and selected status.
+Invalid membership suppresses the case's conditional comparison. Physical cases have no membership diagnostic.
+Failed workload diagnostics remain available. Recorded credit ranges do not establish missing-credit or native-journal bounds.
+The runner snapshots both membership Python files and runs the portable checks before timed cases.
+The analyzer requires their hashes and rejects non-finite JSON constants and overflowing exponents at file input.
 Missing or invalid counter evidence rejects profile eligibility, including legacy captures.
 Physical cases do not require it. New runner snapshots include both counter Python files and run their checks.
 `conditional_comparison` consumes parsed `WindowCost` values and computes within-block cost ratios with exact fractions.

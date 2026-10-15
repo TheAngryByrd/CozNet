@@ -83,6 +83,31 @@ The treatment retains its debt and native journal failures, cancellation status,
 Both reports keep physical-clock accuracy, exact event ordering, and prediction accuracy false.
 Eight portable checks pass on Windows and Linux with Python.
 
+## Recorded credit membership
+
+The combined mode produces `credit-membership-0.json` and `credit-membership-50.json` from the same retained captures.
+
+```powershell
+python native/AnalyzeSampleMembership.py artifacts/timer-sampled/20261015T025206017-a2af01e3/sampled-0.json artifacts/timer-sampled/20261015T025206017-a2af01e3/credit-membership-0.json --sample-credits
+python native/AnalyzeSampleMembership.py artifacts/timer-sampled/20261015T025206017-a2af01e3/sampled-50.json artifacts/timer-sampled/20261015T025206017-a2af01e3/credit-membership-50.json --sample-credits
+```
+
+| Group | Zero percent | Fifty percent |
+| --- | ---: | ---: |
+| Recorded credit with inside source time | 0 ns | 196,000,000 ns |
+| Recorded credit with ambiguous source time | 0 ns | 0 ns |
+| Selected inside samples received after the endpoint | 1 | 3 |
+| Their nominal weight | 1,000,000 ns | 3,000,000 ns |
+| Unaccepted inside samples received inside the window | 0 | 1 |
+
+The treatment's inside rejection is not a selected sample. It remains separate from the three late selected samples.
+All rejected samples retain zero recorded credit. The replay does not add their nominal weights to the ledger.
+The treatment's recorded credit lies inside the observed window under the declared clock policy.
+This does not verify native eligibility transitions, missing-credit bounds, native payment, or prediction accuracy.
+The original failures remain unchanged. No timed workload ran again.
+Fourteen membership checks and twenty-eight matched checks pass on Windows and Linux.
+The updated timed runner was not executed for this offline increment.
+
 See [observed membership](../../../docsSrc/Reference/sample-membership.md),
 [the clock reference](../../../docsSrc/Reference/cpu-sample-clock.md),
 [alignment limits](../../../docsSrc/Explanations/sample-clock-alignment.md), and

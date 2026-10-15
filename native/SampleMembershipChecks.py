@@ -1,3 +1,4 @@
+from copy import deepcopy
 import hashlib
 import json
 import pathlib
@@ -37,7 +38,116 @@ def fixture():
     return data
 
 
+def credit_fixture(percent=50):
+    data = fixture()
+    data.update(percent=percent, credit=5 if percent else 0)
+    for index, raw in enumerate(data["samples"]):
+        raw.update(Epoch=1, Credit=data["credit"] if index == 1 else 0)
+    data["measurementCapture"]["start"]["Accounting"].update(Credit=0, Epoch=1)
+    data["measurementCapture"]["end"]["Accounting"].update(Credit=data["credit"], Epoch=1)
+    return data
+
+
 class SampleMembershipChecks(unittest.TestCase):
+    def test_same_group_accumulates_counts_periods_and_multiple_credits(self):
+        data = credit_fixture()
+        data["samples"][0]["Sample"]["Timestamp"] = 110
+        data["samples"][1]["Sample"]["PeriodNanoseconds"] = 3
+        data["samples"][1]["Credit"] = 1
+        extra = deepcopy(data["samples"][1])
+        extra.update(Timestamp=2000, Credit=4)
+        extra["Sample"].update(Timestamp=2000, PeriodNanoseconds=7, CumulativeCpuNanoseconds=80)
+        data["samples"].insert(2, extra)
+        data["records"].update(Samples=4, SelectedMethodSamples=3)
+        data["measurementCapture"]["end"]["Accounting"]["AcceptedSampleSequence"] = 3
+        result = analyze_membership(data, include_credits=True)
+        self.assertTrue(result["comparisonDomainAccepted"], result["reasons"])
+        credit = result["creditMembership"]
+        groups = [group for group in credit["sampleAccountingGroups"] if group["accepted"]]
+        self.assertEqual(groups, [dict(sourceMembership="Inside", receiptMembership="Inside", accepted=True,
+                                      selected=True, samples=3, nominalNanoseconds=20, recordedCreditNanoseconds=5)])
+        self.assertEqual(sum(group["samples"] for group in credit["sampleAccountingGroups"]), 4)
+        self.assertEqual(sum(group["nominalNanoseconds"] for group in credit["sampleAccountingGroups"]), 30)
+        self.assertEqual(sum(group["recordedCreditNanoseconds"] for group in credit["sampleAccountingGroups"]), 5)
+        self.assertEqual(credit["replayedCreditNanoseconds"], 5)
+        self.assertEqual(credit["recordedCreditBySourceMembership"], dict(Before=0, Inside=5, After=0, BoundaryAmbiguous=0))
+
+    def test_recorded_credit_partition_preserves_ambiguity_and_zero_speedup(self):
+        for percent in (0, 50):
+            data = credit_fixture(percent)
+            data["samples"][1]["Sample"]["Timestamp"] = 109
+            result = analyze_membership(data, include_credits=True)
+            self.assertTrue(result["comparisonDomainAccepted"], result["reasons"])
+            credit = result["creditMembership"]
+            expected = 5 if percent else 0
+            self.assertEqual(credit["recordedCreditBySourceMembership"],
+                             dict(Before=0, Inside=0, After=0, BoundaryAmbiguous=expected))
+            self.assertEqual(credit["recordedCreditInObservedWindow"], dict(lower=0, upper=expected))
+            self.assertEqual(credit["replayedCreditNanoseconds"], expected)
+            self.assertFalse(credit["unreceivedCreditBoundEstablished"])
+            self.assertFalse(credit["eligibilityTransitionsVerified"])
+            self.assertFalse(credit["predictionAccuracyEstablished"])
+
+    def test_inside_rejection_and_late_receipt_remain_separate_without_credit(self):
+        data = credit_fixture()
+        data["samples"][1].update(Accepted=False, Credit=0)
+        data["samples"][2]["Sample"].update(Timestamp=2109, Method="selected", PeriodNanoseconds=13)
+        data["records"].update(SelectedMethodSamples=3, UnmappedSamples=0, RepresentedCpuNanoseconds=33)
+        data["credit"] = 0
+        data["measurementCapture"]["end"]["Accounting"].update(AcceptedSampleSequence=1, Credit=0)
+        result = analyze_membership(data, include_credits=True)
+        self.assertTrue(result["comparisonDomainAccepted"], result["reasons"])
+        groups = result["creditMembership"]["sampleAccountingGroups"]
+        rejected = [group for group in groups if not group["accepted"]]
+        self.assertEqual(rejected, [
+            dict(sourceMembership="Inside", receiptMembership="After", accepted=False, selected=True,
+                 samples=1, nominalNanoseconds=13, recordedCreditNanoseconds=0),
+            dict(sourceMembership="Inside", receiptMembership="Inside", accepted=False, selected=True,
+                 samples=1, nominalNanoseconds=10, recordedCreditNanoseconds=0)])
+        self.assertEqual(result["creditMembership"]["recordedCreditInObservedWindow"], dict(lower=0, upper=0))
+
+    def test_invalid_credit_rejects_optional_partition_but_not_default_membership(self):
+        data = credit_fixture()
+        data["samples"][1]["Credit"] += 1
+        self.assertTrue(analyze_membership(data)["comparisonDomainAccepted"])
+        self.assertNotIn("creditMembership", analyze_membership(data))
+        result = analyze_membership(data, include_credits=True)
+        self.assertFalse(result["comparisonDomainAccepted"])
+        self.assertIsNone(result["creditMembership"])
+        self.assertIn("Sample credit differs at record 1", result["reasons"])
+
+    def test_selected_and_other_accepted_samples_have_separate_groups(self):
+        data = credit_fixture()
+        data["samples"][0]["Sample"].update(Timestamp=110, Method="other", PeriodNanoseconds=3)
+        data["records"].update(SelectedMethodSamples=1, RepresentedCpuNanoseconds=23)
+        result = analyze_membership(data, include_credits=True)
+        self.assertTrue(result["comparisonDomainAccepted"], result["reasons"])
+        groups = [group for group in result["creditMembership"]["sampleAccountingGroups"] if group["accepted"]]
+        self.assertEqual(groups, [
+            dict(sourceMembership="Inside", receiptMembership="Inside", accepted=True, selected=False,
+                 samples=1, nominalNanoseconds=3, recordedCreditNanoseconds=0),
+            dict(sourceMembership="Inside", receiptMembership="Inside", accepted=True, selected=True,
+                 samples=1, nominalNanoseconds=10, recordedCreditNanoseconds=5)])
+
+    def test_credit_cli_partitions_credit_and_rejects_invalid_replay(self):
+        script = pathlib.Path(__file__).with_name("AnalyzeSampleMembership.py")
+        with tempfile.TemporaryDirectory() as directory:
+            source, output = pathlib.Path(directory) / "capture.json", pathlib.Path(directory) / "report.json"
+            data = credit_fixture()
+            source.write_text(json.dumps(data))
+            command = [sys.executable, str(script), str(source), str(output), "--sample-credits"]
+            run = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            report = json.loads(output.read_bytes())
+            self.assertEqual(report["creditMembership"]["recordedCreditInObservedWindow"], dict(lower=5, upper=5))
+            self.assertEqual(sum(group["recordedCreditNanoseconds"] for group in
+                                 report["creditMembership"]["sampleAccountingGroups"]), 5)
+            data["credit"] += 1
+            source.write_text(json.dumps(data))
+            command[3] = str(output.with_name("invalid.json"))
+            self.assertEqual(subprocess.run(command, capture_output=True).returncode, 1)
+            self.assertIsNone(json.loads(pathlib.Path(command[3]).read_bytes())["creditMembership"])
+
     def test_endpoint_equalities_and_adjacent_values(self):
         for value, expected in ((99, "Before"), (100, "BoundaryAmbiguous"), (109, "BoundaryAmbiguous"),
                                 (110, "Inside"), (111, "Inside"), (2109, "Inside"),

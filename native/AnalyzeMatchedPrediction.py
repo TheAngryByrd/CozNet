@@ -7,6 +7,7 @@ import sys
 from dataclasses import dataclass
 from fractions import Fraction
 from AnalyzeCpuCounters import analyze_counter_capture, analyze_sample_credits
+from AnalyzeSampleMembership import analyze_membership, finite_float, reject_constant
 
 
 MODES = ("profile-zero", "profile-half", "physical-baseline", "physical-optimized")
@@ -23,7 +24,7 @@ def integer(value, name, minimum=0):
 
 
 def read(path):
-    return json.loads(path.read_text(encoding="utf-8-sig"))
+    return json.loads(path.read_text(encoding="utf-8-sig"), parse_float=finite_float, parse_constant=reject_constant)
 
 
 @dataclass(frozen=True)
@@ -165,6 +166,7 @@ def _analyze_case(data, mode, exit_code):
     cost = None
     counters = analyze_counter_capture(data) if mode in ("profile-zero", "profile-half") else None
     credits = analyze_sample_credits(data) if counters is not None else None
+    membership = analyze_membership(data, include_credits=True) if counters is not None else None
     try:
         require(mode in MODES, "Unknown case mode")
         require(type(exit_code) is int and exit_code == 0, "Workload process did not exit successfully")
@@ -207,6 +209,8 @@ def _analyze_case(data, mode, exit_code):
         errors.extend("CPU counter evidence: " + reason for reason in counters["reasons"])
     if credits is not None and not credits["reconciled"]:
         errors.extend("Sample credit evidence: " + reason for reason in credits["reasons"])
+    if membership is not None and not membership["comparisonDomainAccepted"]:
+        errors.extend("Sample membership evidence: " + reason for reason in membership["reasons"])
     diagnostic_cost = cost if not errors else None
     if mode == "profile-half":
         errors.extend(["Unreceived sample-period attribution has no verified bound",
@@ -214,7 +218,7 @@ def _analyze_case(data, mode, exit_code):
     return ({"predictionEligible": not errors, "reasons": errors,
              "observedAccountedCost": cost.report() if cost is not None else None,
              "costIncludesUnboundedAttribution": mode == "profile-half", "cpuCounterDiagnostics": counters,
-             "sampleCreditDiagnostics": credits}, diagnostic_cost)
+             "sampleCreditDiagnostics": credits, "sampleMembershipDiagnostics": membership}, diagnostic_cost)
 
 
 def analyze_case(data, mode, exit_code):
@@ -261,7 +265,7 @@ def analyze(root):
     manifest = read(root / "manifest.json")
     require(isinstance(manifest["files"], dict), "Snapshot hashes must be a mapping")
     require(all(name in manifest["files"] for name in ("plan.json", "source/native/AnalyzeMatchedPrediction.py", "source/native/AnalyzeCpuCounters.py",
-        "source/native/CpuCounterChecks.py",
+        "source/native/CpuCounterChecks.py", "source/native/AnalyzeSampleMembership.py", "source/native/SampleMembershipChecks.py",
             "workload/CozNet.LinuxPerf.dll", "workload/CozNet.dll", "native/libCozNet.Timer.so",
             "calibration/calibration.json", "calibration/calibration.json.plan.json",
             "calibration/calibration.json.blocks.jsonl", "calibration/manifest.json")), "Required snapshot hashes are missing")

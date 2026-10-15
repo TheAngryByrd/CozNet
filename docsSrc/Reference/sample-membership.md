@@ -58,6 +58,22 @@ These weights do not measure exact CPU intervals or verify selected instruction 
 Rejected reports have null membership totals and no classified observations.
 `assumption` states that no unobserved fast-timekeeper anomaly changes membership.
 `physicalClockAccuracyEstablished`, `exactEventOrderingEstablished`, and `predictionAccuracyEstablished` remain false.
-This diagnostic does not change matched-prediction eligibility or credit replay.
+## Recorded credit membership
+
+`--sample-credits` also requires [nominal credit reconciliation](cpu-counter-evidence.md).
+Exit code zero then requires both clock membership and credit reconciliation.
+Invalid credit evidence rejects the optional report even when clock evidence alone passes.
+The default mode does not require credit fields.
+
+`creditMembership.sampleAccountingGroups` groups records by source membership, receipt membership, acceptance, and selected status.
+Each group retains its sample count, nominal periods, and recorded credit.
+A source-inside sample rejected during measurement differs from one received after the endpoint.
+Neither gains credit through this analysis.
+
+`recordedCreditBySourceMembership` partitions all replayed credit across the four source classifications.
+`recordedCreditInObservedWindow` includes inside credit in both limits and ambiguous credit only in the upper limit.
+`replayedCreditNanoseconds` retains the reconciled total.
+These ranges describe credit already recorded. They do not bound hypothetical missing credit or paid native delay.
+Eligibility-transition verification, unreceived-credit bounds, and prediction accuracy remain false.
 
 See [clock alignment](../Explanations/sample-clock-alignment.md), [CPU clock evidence](cpu-sample-clock.md), and [counter evidence](cpu-counter-evidence.md).

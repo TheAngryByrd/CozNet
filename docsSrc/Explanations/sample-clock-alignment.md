@@ -33,6 +33,12 @@ It assumes that no unobserved fast-timekeeper anomaly changes membership.
 Checks for source regressions and source timestamps after receipt can contradict that assumption. They cannot prove it.
 This policy permits sample-accounting diagnostics without claiming physical-clock accuracy or exact event ordering.
 
+Receipt time and producer acceptance answer different questions.
+A source-inside sample can arrive after the frozen endpoint. Another can arrive inside the window while the producer has disabled credit acceptance.
+Combining these categories would confuse delayed delivery with an intentional sampling exclusion.
+The credit membership report keeps both dimensions and the selected status.
+It partitions recorded credit but does not award hypothetical credit to rejected samples.
+
 Clock alignment also cannot establish the CPU interval represented by a sample.
 A nominal task-clock period is not a measured elapsed CPU interval.
 Disable and enable can preserve a remaining period across enabled intervals.

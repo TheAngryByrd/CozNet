@@ -22,7 +22,13 @@ JSON parsing rejects non-finite constants and overflowing floating-point exponen
 
 The explicit model assumption excludes unobserved fast-timekeeper anomalies that alter membership.
 Observed consistency does not prove this assumption, physical-clock accuracy, or exact event ordering.
-Prediction accuracy remains false. Matched-prediction eligibility and credit replay do not consume this diagnostic yet.
+Prediction accuracy remains false.
+The optional `--sample-credits` mode requires nominal credit reconciliation before partitioning recorded credit.
+`RecordedCreditMembership` keeps the parsed membership, immutable replay result, and recorded credit values together.
+Groups retain source membership, receipt membership, producer acceptance, selected status, counts, nominal periods, and recorded credit.
+Source-inside rejection with an inside receipt remains separate from a source-inside sample received after the endpoint.
+The recorded-credit window range includes ambiguous credit only in its upper limit.
+No unaccepted sample earns credit. This range does not bound hypothetical missing credit, native payment, or exact selected CPU.
 
 ```mermaid
 flowchart LR

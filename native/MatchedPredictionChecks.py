@@ -10,6 +10,7 @@ import tempfile
 import unittest
 from AnalyzeMatchedPrediction import MODES, WindowCost, analyze, analyze_case, conditional_comparison, parse_window, parse_calibration
 from CpuCounterChecks import credit_fixture as counter_fixture
+from SampleMembershipChecks import fixture as membership_fixture
 
 
 def fixture(mode="profile-half"):
@@ -43,6 +44,20 @@ def fixture(mode="profile-half"):
             data[field] = counter[field]
         end["Accounting"]["AcceptedSampleSequence"] = 2
         data["credit"] = end["Accounting"]["Credit"] = counter["credit"]
+        data["sampleClock"] = membership_fixture()["sampleClock"]
+        def nanosecond_clock(value):
+            if isinstance(value, dict):
+                for key in value:
+                    if key in ("TimestampFrequency", "timestampFrequency"):
+                        value[key] = 1000000000
+                    elif key in ("BeforeTimestamp", "AfterTimestamp", "Timestamp", "Before", "After", "NativeNanoseconds"):
+                        value[key] *= 1000000
+                    else:
+                        nanosecond_clock(value[key])
+            elif isinstance(value, list):
+                for item in value:
+                    nanosecond_clock(item)
+        nanosecond_clock(data)
     return data
 
 
@@ -98,7 +113,8 @@ def series(root):
         (root / (item["name"] + ".json")).write_text(json.dumps(fixture(item["mode"])))
     calibration(root / "calibration")
     names = ("plan.json", "source/native/AnalyzeMatchedPrediction.py", "source/native/AnalyzeCpuCounters.py",
-             "source/native/CpuCounterChecks.py", "workload/CozNet.LinuxPerf.dll", "workload/CozNet.dll",
+             "source/native/CpuCounterChecks.py", "source/native/AnalyzeSampleMembership.py", "source/native/SampleMembershipChecks.py",
+             "workload/CozNet.LinuxPerf.dll", "workload/CozNet.dll",
              "native/libCozNet.Timer.so", "calibration/calibration.json", "calibration/calibration.json.plan.json",
              "calibration/calibration.json.blocks.jsonl", "calibration/manifest.json")
     hashes = {}
@@ -204,13 +220,41 @@ class MatchedPredictionChecks(unittest.TestCase):
             self.assertTrue(all(item["conditionalComparison"] is not None for item in result["blocks"] if item["block"] != 3))
             self.assertIsNone(result["predictionSummary"])
 
+    def test_invalid_membership_suppresses_only_its_block_diagnostic(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            series(root)
+            path = root / "block-3-profile-half.json"
+            data = json.loads(path.read_text())
+            data["sampleClock"]["end"]["ContextIdentity"] = "changed"
+            path.write_text(json.dumps(data))
+            result = analyze(root)
+            case = next(item for item in result["cases"] if item["name"] == "block-3-profile-half")
+            self.assertTrue(case["cpuCounterDiagnostics"]["reconciled"])
+            self.assertTrue(case["sampleCreditDiagnostics"]["reconciled"])
+            self.assertFalse(case["sampleMembershipDiagnostics"]["comparisonDomainAccepted"])
+            self.assertFalse(case["predictionEligible"])
+            self.assertTrue(any(reason.startswith("Sample membership evidence:") for reason in case["reasons"]))
+            self.assertIsNone(result["blocks"][2]["conditionalComparison"])
+            self.assertTrue(all(item["conditionalComparison"] is not None for item in result["blocks"] if item["block"] != 3))
+            self.assertIsNone(result["predictionSummary"])
+
+    def test_missing_clock_evidence_rejects_profile_but_not_physical_case(self):
+        data = fixture("profile-zero")
+        del data["sampleClock"]
+        result = analyze_case(data, "profile-zero", 0)
+        self.assertFalse(result["predictionEligible"])
+        self.assertFalse(result["sampleMembershipDiagnostics"]["comparisonDomainAccepted"])
+        self.assertTrue(result["sampleCreditDiagnostics"]["reconciled"])
+        self.assertTrue(analyze_case(fixture("physical-baseline"), "physical-baseline", 0)["predictionEligible"])
+
     def test_legacy_manifest_requires_both_counter_module_hashes(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
             series(root)
             manifest_path = root / "manifest.json"
             original = json.loads(manifest_path.read_text())
-            for name in ("AnalyzeCpuCounters.py", "CpuCounterChecks.py"):
+            for name in ("AnalyzeCpuCounters.py", "CpuCounterChecks.py", "AnalyzeSampleMembership.py", "SampleMembershipChecks.py"):
                 with self.subTest(name=name):
                     manifest = deepcopy(original)
                     del manifest["files"]["source/native/" + name]
@@ -231,6 +275,12 @@ class MatchedPredictionChecks(unittest.TestCase):
         self.assertFalse(counters["predictionAccuracyEstablished"])
         self.assertTrue(result["sampleCreditDiagnostics"]["reconciled"])
         self.assertFalse(result["sampleCreditDiagnostics"]["predictionAccuracyEstablished"])
+        membership = result["sampleMembershipDiagnostics"]
+        self.assertTrue(membership["comparisonDomainAccepted"], membership["reasons"])
+        self.assertEqual(membership["recordedWorkloadFailures"], ["debt exceeded"])
+        self.assertFalse(membership["nativeSessionClosed"])
+        self.assertEqual(membership["creditMembership"]["replayedCreditNanoseconds"], 5)
+        self.assertFalse(membership["predictionAccuracyEstablished"])
 
     def test_legacy_profile_requires_counters_but_physical_case_does_not(self):
         data = fixture("profile-zero")
@@ -244,6 +294,7 @@ class MatchedPredictionChecks(unittest.TestCase):
         self.assertTrue(physical["predictionEligible"], physical["reasons"])
         self.assertIsNone(physical["cpuCounterDiagnostics"])
         self.assertIsNone(physical["sampleCreditDiagnostics"])
+        self.assertIsNone(physical["sampleMembershipDiagnostics"])
 
     def test_calibration_reconciles_all_records_and_independent_statistics(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -426,6 +477,25 @@ class MatchedPredictionChecks(unittest.TestCase):
             self.assertIn("Analysis already exists", second.stderr)
             self.assertNotIn("Traceback", second.stderr)
             self.assertEqual(result_path.read_bytes(), original)
+
+    def test_nonfinite_case_evidence_produces_complete_cli_report(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            series(root)
+            for block, token in ((1, "1e999"), (2, "NaN")):
+                path = root / f"block-{block}-profile-zero.json"
+                path.write_text(path.read_text()[:-1] + ', "extra": ' + token + '}')
+            command = [sys.executable, str(pathlib.Path(__file__).with_name("AnalyzeMatchedPrediction.py")), str(root)]
+            run = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(run.returncode, 1, run.stderr)
+            self.assertNotIn("Traceback", run.stderr)
+            result = json.loads((root / "analysis.json").read_bytes())
+            for block, token in ((1, "1e999"), (2, "NaN")):
+                case = next(row for row in result["cases"] if row["name"] == f"block-{block}-profile-zero")
+                self.assertEqual(case["reasons"], [f"Non-finite JSON number: {token}"])
+                self.assertIsNone(result["blocks"][block - 1]["conditionalComparison"])
+            self.assertTrue(all(row["conditionalComparison"] is not None for row in result["blocks"][2:]))
+            self.assertFalse(result["predictionAccuracyEstablished"])
 
     def test_boolean_is_not_a_clock_counter(self):
         data = fixture()

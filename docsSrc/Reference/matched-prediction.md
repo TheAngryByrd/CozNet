@@ -63,6 +63,14 @@ Missing legacy evidence rejects profile eligibility. Physical cases do not requi
 Counter reconciliation does not remove workload failures or establish treatment eligibility.
 `sampleCreditDiagnostics` retains credit replay results independently of workload success.
 Physical cases have null counter and credit diagnostics.
+`sampleMembershipDiagnostics` retains observed clock membership and recorded-credit partitions, including failed workloads.
+It uses the [observed membership policy](sample-membership.md) with credit reconciliation enabled.
+Missing or invalid clock evidence suppresses the case's conditional comparison.
+Physical cases have null membership diagnostics.
+Reports keep source-inside samples rejected during measurement separate from samples received after the endpoint.
+Neither category adds hypothetical credit to the ledger.
+The runner snapshots the membership analyzer and checks. The manifest must include both hashes.
+Non-finite JSON constants and overflowing exponents produce a rejected case instead of an incomplete report.
 Zero-intervention cases must contain no delay credit or native wait.
 Treatment must contain positive credit and paid intervention inside the frozen window. Later shutdown payment cannot repair this requirement.
 
@@ -83,6 +91,7 @@ It does not establish prediction eligibility or accuracy.
 `blocks[].conditionalComparison` compares four structurally valid case costs within one declared block.
 Both profile cases must also have reconciled counter evidence.
 They must have reconciled nominal sample credit evidence as well.
+Both profile cases must also pass observed membership parsing.
 A failed or missing case suppresses that block's comparison. Snapshot or runner errors suppress every comparison.
 `diagnosticUnavailableCases` lists cases without a usable cost. Run-level errors remain in their existing fields.
 
