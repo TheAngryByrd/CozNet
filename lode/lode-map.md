@@ -30,6 +30,7 @@ For sampled experiment accounting, read [the delay ledger](profiling/delay-ledge
 For live managed delay settlement, read [the cooperative runtime](profiling/cooperative-runtime.md).
 For sample-to-ledger conversion, read [sample credits](profiling/sample-credits.md).
 For a Linux CPU-event source, read [Linux perf feasibility](profiling/linux-perf.md).
+For cumulative counts and frozen endpoint ranges, read [the counter reference](../docsSrc/Reference/cpu-counter-evidence.md) and [retained evidence](../reliability/features/native-signal/cpu-counter.md).
 For explicit sample timestamp selection and unresolved clock mapping, read [the CPU clock reference](../docsSrc/Reference/cpu-sample-clock.md).
 For per-thread switch records and trailing loss, read [scheduler observations](profiling/scheduler-records.md).
 For simultaneous scheduler and runtime capture, read [the combined trace](../reliability/features/native-signal/scheduler-runtime.md).

@@ -27,6 +27,7 @@ sealed class OverheadPlan
 interface ICpuEventSession : IDisposable
 {
     ISampleClockEvidenceSource? ClockEvidence => null;
+    ICpuCounterEvidenceSource? CounterEvidence => null;
     void Enable();
     ulong Disable();
     SampleBatch Drain();

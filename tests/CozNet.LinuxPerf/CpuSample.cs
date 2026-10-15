@@ -6,9 +6,10 @@ sealed record CpuSample
     public ulong PeriodNanoseconds { get; }
     public ulong InstructionPointer { get; }
     public string? Method { get; }
+    public ulong? CumulativeCpuNanoseconds { get; }
 
     private CpuSample(uint processId, uint threadId, ulong timestamp, ulong period,
-        ulong instructionPointer, string? method)
+        ulong instructionPointer, string? method, ulong? cumulativeCpuNanoseconds)
     {
         ProcessId = processId;
         ThreadId = threadId;
@@ -16,14 +17,15 @@ sealed record CpuSample
         PeriodNanoseconds = period;
         InstructionPointer = instructionPointer;
         Method = method;
+        CumulativeCpuNanoseconds = cumulativeCpuNanoseconds;
     }
 
     public static CpuSample Create(uint processId, uint threadId, ulong timestamp, ulong period,
-        ulong instructionPointer, string? method)
+        ulong instructionPointer, string? method, ulong? cumulativeCpuNanoseconds = null)
     {
         if (processId == 0 || threadId == 0 || period == 0 || instructionPointer == 0)
             throw new InvalidDataException("Invalid CPU sample identity, period, or instruction address.");
-        return new CpuSample(processId, threadId, timestamp, period, instructionPointer, method);
+        return new CpuSample(processId, threadId, timestamp, period, instructionPointer, method, cumulativeCpuNanoseconds);
     }
 }
 

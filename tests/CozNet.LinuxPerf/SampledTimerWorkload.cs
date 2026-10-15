@@ -60,6 +60,8 @@ static class SampledTimerWorkload
         var measurement = new MeasurementWindowCapture(TimeProvider.System);
         ISampleClockEvidenceSource? clockEvidenceSource = null;
         SampleClockReading? clockStart = null, clockEnd = null;
+        ICpuCounterEvidenceSource? counterSource = null;
+        CpuCounterReading? counterStartBefore = null, counterStartAfter = null, counterEndBefore = null, counterEndAfter = null;
 
         MeasurementWindowCapture.Readings ReadMeasurement()
         {
@@ -80,7 +82,9 @@ static class SampledTimerWorkload
         {
             if (measurement.Start is null) return;
             accept = running = false;
+            if (counterEndBefore is null) counterEndBefore = counterSource?.ReadCounter();
             measurement.Finish(ReadMeasurement);
+            if (counterEndAfter is null) counterEndAfter = counterSource?.ReadCounter();
             if (clockEnd is null) clockEnd = clockEvidenceSource?.Read();
             if (measurement.End is not { } end) return;
             progressCapturedBeforeTimestamp = end.BeforeTimestamp;
@@ -247,6 +251,8 @@ static class SampledTimerWorkload
             var timer = new Stopwatch();
             clockEvidenceSource = session!.ClockEvidence;
             clockStart = clockEvidenceSource?.Read();
+            counterSource = session.CounterEvidence;
+            counterStartBefore = counterSource?.ReadCounter();
             measurement.Begin(ReadMeasurement, () =>
             {
                 running = true;
@@ -257,6 +263,7 @@ static class SampledTimerWorkload
                 work.Release();
                 gcStress?.Release();
             });
+            counterStartAfter = counterSource?.ReadCounter();
             long nextBoundary = 0;
             while (timer.ElapsedMilliseconds < 2000)
             {
@@ -365,6 +372,8 @@ static class SampledTimerWorkload
         }
         var clockMapping = ConsistentSampleClockReadings.Parse(clockEvidenceSource?.Description, clockStart, clockEnd,
             measurement.Start, measurement.End);
+        var counterRange = EnabledCpuCountRange.Parse(counterStartBefore, counterStartAfter, counterEndBefore, counterEndAfter,
+            measurement.Start, measurement.End);
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
             percent, failures = failures.Select(error => error.ToString()), failureStage, failureBoundary, samples, boundaries, peaks, progress = work.SnapshotProgress(), waits = new[] { ReleasedWait(0), ReleasedWait(1) }, credit, records, stableMap, closed,
@@ -382,6 +391,12 @@ static class SampledTimerWorkload
             schedulerTiming = schedulerFactory is not null, schedulerStopped = schedulerCompletion?.Stopped,
             schedulerCaptures = schedulerCompletion?.Captures,
             timestampFrequency = Stopwatch.Frequency, predictionAccuracyEstablished = false,
+            cpuCounters = new
+            {
+                startBefore = counterStartBefore, startAfter = counterStartAfter, endBefore = counterEndBefore, endAfter = counterEndAfter,
+                enabledCountRange = counterRange.Value, rejection = counterRange.Error, source = counterSource?.DescribeCounters(),
+                selectedCpuBoundEstablished = false, missingSampleTailBoundEstablished = false
+            },
             sampleClock = new
             {
                 source = clockEvidenceSource?.Description, metadata = clockEvidenceSource?.Metadata,

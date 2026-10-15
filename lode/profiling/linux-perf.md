@@ -4,7 +4,15 @@
 It opens `PERF_COUNT_SW_TASK_CLOCK` for the calling thread with a one-millisecond period of thread CPU time.
 This clock includes user and kernel execution. Ticks in kernel mode produce no sample.
 `representedCpuNanoseconds` sums emitted sample periods. It does not measure selected-method user CPU duration.
-The ring records contain user instruction pointers, process/thread IDs, timestamps, and sample periods.
+The 48-byte ring records contain user instruction pointers, process/thread IDs, timestamps, sample periods, and cumulative task-clock counts.
+`PERF_SAMPLE_READ` with `ReadFormat=0` appends the count at offset 40. `CpuSample.CumulativeCpuNanoseconds` retains it separately from nominal periods.
+The reader rejects count regression and legacy 40-byte samples. Synthetic direct samples can retain null counter evidence.
+The optional `ICpuEventSession.CounterEvidence` exposes bracketed reads and a finite enable/disable journal.
+The sampled timer takes four counter readings around frozen endpoints and parses an observed enabled-count range.
+Disabled CPU, selected-location attribution, source clock errors, and native journal suffixes remain unresolved.
+See [the counter reference](../../docsSrc/Reference/cpu-counter-evidence.md) and [attribution explanation](../../docsSrc/Explanations/cpu-counter-attribution.md).
+The [retained counter run](../../reliability/features/native-signal/cpu-counter.md) has ordered counts and consistent ranges at both percentages.
+Its treatment still fails debt and native journal checks, with incomplete lease cleanup.
 Both CPU event paths use `PerfAttribute.TaskClock()` with a 96-byte explicit layout, `use_clockid`, and `CLOCK_MONOTONIC`.
 The syscall fails without a default-clock fallback if the kernel rejects that configuration.
 `PerfAttributeChecks.TaskClockUsesMonotonicAbi` checks the serialized ABI, including zero unused fields and clock ID at offset 92.
@@ -26,7 +34,7 @@ It supports records that cross the ring boundary and applies the documented memo
 The reader reuses its immutable `SampleBatch` snapshot when the validated ring head has not advanced.
 New records invalidate that snapshot before decoding. Lost and throttle records also update it.
 The selected-symbol collection rejects caller mutation. Earlier snapshots retain their counters after later drains.
-Six synthetic-ring checks run on Windows and Linux, including zero managed allocation across 10,000 warmed empty drains.
+Nine synthetic-ring checks include zero managed allocation across 10,000 warmed empty drains, counter preservation, counter regression, and invalid legacy layouts.
 `IInstructionMap` separates address resolution from Linux record decoding.
 `PerfMapSnapshot` reads the runtime perf map after workload warmup and before sampling starts.
 The snapshot rejects incomplete entries and ambiguous address matches.

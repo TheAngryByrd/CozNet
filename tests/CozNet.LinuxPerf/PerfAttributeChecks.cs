@@ -12,7 +12,7 @@ static class PerfAttributeChecks
         Require(BinaryPrimitives.ReadUInt32LittleEndian(bytes[4..]) == 96, "The declared attribute size must include clockid.");
         Require(BinaryPrimitives.ReadUInt64LittleEndian(bytes[8..]) == 1, "The event must count task-clock CPU.");
         Require(BinaryPrimitives.ReadUInt64LittleEndian(bytes[16..]) == 1000000, "The nominal period must remain one millisecond.");
-        Require(BinaryPrimitives.ReadUInt64LittleEndian(bytes[24..]) == 263, "The sample must retain IP, TID, TIME, and PERIOD.");
+        Require(BinaryPrimitives.ReadUInt64LittleEndian(bytes[24..]) == 279, "The sample must retain IP, TID, TIME, PERIOD, and READ.");
         Require(BinaryPrimitives.ReadUInt64LittleEndian(bytes[32..]) == 0, "The counter read format must remain a single value.");
         Require(BinaryPrimitives.ReadUInt64LittleEndian(bytes[40..]) == 33554529, "The flags must select disabled, exclude_kernel, exclude_hv, and use_clockid.");
         Require(BinaryPrimitives.ReadUInt32LittleEndian(bytes[48..]) == 1, "Each event must trigger wakeup.");

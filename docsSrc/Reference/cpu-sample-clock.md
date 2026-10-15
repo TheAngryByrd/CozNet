@@ -8,12 +8,15 @@ Both `LinuxCpuEventSession` and the direct perf workload use this configuration.
 | Attribute size | 96 bytes |
 | Event | `PERF_TYPE_SOFTWARE`, `PERF_COUNT_SW_TASK_CLOCK` |
 | Nominal sample period | 1,000,000 ns of task-clock CPU |
-| Sample fields | IP, TID, TIME, PERIOD |
+| Sample fields | IP, TID, TIME, PERIOD, READ |
 | Initial state | Disabled |
 | Exclusions | Kernel and hypervisor samples |
 | Timestamp selection | `use_clockid`, flag bit 25 |
 | Clock | `CLOCK_MONOTONIC`, ID 1 at byte offset 92 |
 | Counter read format | One unsigned 64-bit counter |
+
+Sample records occupy 48 bytes. The cumulative counter follows the nominal period at byte offset 40.
+See [CPU counter evidence](cpu-counter-evidence.md) for counter semantics and endpoint readings.
 
 The sampler fails if `perf_event_open` rejects the configuration.
 It does not retry with the default clock.

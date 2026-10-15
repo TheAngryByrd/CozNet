@@ -4,6 +4,14 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-cpu-counters"])
+{
+    PerfAttributeChecks.TaskClockUsesMonotonicAbi();
+    RingReaderChecks.Run();
+    CpuCounterEvidenceChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-cpu-event-clock"])
 {
     PerfAttributeChecks.TaskClockUsesMonotonicAbi();
@@ -84,6 +92,8 @@ if (args is ["--verify-measurement-boundaries"])
 
 if (args is ["--verify-timer-layout"])
 {
+    RingReaderChecks.Run();
+    CpuCounterEvidenceChecks.Run();
     PerfAttributeChecks.TaskClockUsesMonotonicAbi();
     SampleClockEvidenceChecks.Run();
     InterleavedCalibrationChecks.Run();
@@ -545,6 +555,7 @@ sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid,
     private SampleBatch? snapshot;
     private ulong tail = (ulong)Marshal.ReadInt64(mapping, 1032);
     private ulong priorTime;
+    private ulong priorCpu;
     private int samples = 0, lostRecords = 0, throttles = 0;
     private ulong lostSamples = 0, periods = 0;
     private readonly HashSet<ulong> ips = new();
@@ -576,17 +587,20 @@ sealed class RingReader(IntPtr mapping, ulong offset, ulong size, long tid,
             byte[] record = Copy(tail, length);
             if (type == 9)
             {
-                if (length != 40 || (misc & 7) != 2) throw new Exception("Unexpected sample layout or CPU mode.");
+                if (length != 48 || (misc & 7) != 2) throw new Exception("Unexpected sample layout or CPU mode.");
                 ulong ip = BinaryPrimitives.ReadUInt64LittleEndian(record.AsSpan(8));
                 uint recordedPid = BinaryPrimitives.ReadUInt32LittleEndian(record.AsSpan(16));
                 uint recordedTid = BinaryPrimitives.ReadUInt32LittleEndian(record.AsSpan(20));
                 ulong timestamp = BinaryPrimitives.ReadUInt64LittleEndian(record.AsSpan(24));
                 ulong period = BinaryPrimitives.ReadUInt64LittleEndian(record.AsSpan(32));
+                ulong cpu = BinaryPrimitives.ReadUInt64LittleEndian(record.AsSpan(40));
                 if (ip == 0 || recordedPid != Environment.ProcessId || recordedTid != tid || timestamp < priorTime || period == 0)
                     throw new Exception("Invalid sample attribution metadata.");
+                if (cpu < priorCpu) throw new InvalidDataException("The cumulative sample CPU counter regressed.");
+                priorCpu = cpu;
                 ips.Add(ip); priorTime = timestamp; periods += period; samples++;
                 string? symbol = codeMap.Resolve(ip);
-                sink.Publish(CpuSample.Create(recordedPid, recordedTid, timestamp, period, ip, symbol));
+                sink.Publish(CpuSample.Create(recordedPid, recordedTid, timestamp, period, ip, symbol, cpu));
 
                 if (symbol is null) unmapped++;
                 else if (string.Equals(symbol, selectedSymbol, StringComparison.Ordinal)) { selected++; selectedSymbols.Add(symbol); }

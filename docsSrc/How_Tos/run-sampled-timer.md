@@ -25,6 +25,8 @@ They retain a read-only root filesystem, no network, and dropped capabilities.
 5. Retain failed records with their manifest and logs.
 6. Inspect `sampleClock.start`, `sampleClock.end`, and `sampleClock.rejection` for clock evidence.
    A true `observedMappingConsistent` value does not establish prediction accuracy.
+7. Inspect `cpuCounters`, including its four endpoint readings, `enabledCountRange`, and source failure flags.
+   Compare cumulative sample counts separately from nominal periods. See the [counter reference](../Reference/cpu-counter-evidence.md).
 
 The runner executes both percentages even when the first workload fails.
 It checks source and binary hashes after both processes finish.

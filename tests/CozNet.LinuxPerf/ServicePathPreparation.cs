@@ -15,15 +15,16 @@ sealed class ServicePathPreparation : IServiceInterventionBackend, ICpuEventSess
     {
         Marshal.Copy(new byte[Offset + Capacity], 0, mapping, Offset + Capacity);
         reader = new(mapping, Offset, Capacity, 42, this, OverheadWorkload.SelectedSymbol, sink);
-        var record = new byte[40];
+        var record = new byte[48];
         BinaryPrimitives.WriteUInt32LittleEndian(record, 9);
         BinaryPrimitives.WriteUInt16LittleEndian(record.AsSpan(4), 2);
-        BinaryPrimitives.WriteUInt16LittleEndian(record.AsSpan(6), 40);
+        BinaryPrimitives.WriteUInt16LittleEndian(record.AsSpan(6), 48);
         BinaryPrimitives.WriteUInt64LittleEndian(record.AsSpan(8), 100);
         BinaryPrimitives.WriteUInt32LittleEndian(record.AsSpan(16), checked((uint)Environment.ProcessId));
         BinaryPrimitives.WriteUInt32LittleEndian(record.AsSpan(20), 42);
         BinaryPrimitives.WriteUInt64LittleEndian(record.AsSpan(24), 1);
         BinaryPrimitives.WriteUInt64LittleEndian(record.AsSpan(32), 80000);
+        BinaryPrimitives.WriteUInt64LittleEndian(record.AsSpan(40), 80000);
         Marshal.Copy(record, 0, mapping + Offset, record.Length);
         Marshal.WriteInt64(mapping, 1024, record.Length);
     }

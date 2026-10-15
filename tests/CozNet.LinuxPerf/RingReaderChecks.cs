@@ -16,6 +16,9 @@ static class RingReaderChecks
         WrappedSampleUpdatesCachedCounters();
         CorruptHeadIsRejectedAfterCachedDrain();
         SelectedSymbolsCannotBeChangedByCaller();
+        CumulativeCountersRemainDistinctFromPeriods();
+        CounterRegressionCannotReachSink();
+        LegacySampleLayoutIsRejected();
     }
 
     private static void EmptyDrainsDoNotAllocate()
@@ -67,17 +70,17 @@ static class RingReaderChecks
     private static void WrappedSampleUpdatesCachedCounters()
     {
         using var ring = new Fixture();
-        for (ulong time = 1; time <= 3; time++)
+        for (ulong time = 1; time <= 2; time++)
         {
             ring.Sample(0x1000, time, 1000000);
             ring.Reader.Drain();
         }
-        ring.Sample(0x3000, 4, 1000000);
+        ring.Sample(0x3000, 3, 1000000);
         var result = ring.Reader.Drain();
-        Require(result.Samples == 4 && result.UnmappedSamples == 1 && result.SelectedMethodSamples == 3
-            && result.RepresentedCpuNanoseconds == 4000000 && ring.Delivered.Count == 4,
+        Require(result.Samples == 3 && result.UnmappedSamples == 1 && result.SelectedMethodSamples == 2
+            && result.RepresentedCpuNanoseconds == 3000000 && ring.Delivered.Count == 3,
             "A sample across the ring boundary must update the cached snapshot once.");
-        Require(ring.Delivered[3].Method is null && ring.Delivered[3].Timestamp == 4,
+        Require(ring.Delivered[2].Method is null && ring.Delivered[2].Timestamp == 3 && ring.Delivered[2].CumulativeCpuNanoseconds == 3000000,
             "A wrapped record must preserve unmapped attribution and its timestamp.");
     }
 
@@ -105,6 +108,43 @@ static class RingReaderChecks
             "A caller must not mutate symbols retained by the cache.");
     }
 
+    private static void CumulativeCountersRemainDistinctFromPeriods()
+    {
+        using var ring = new Fixture();
+        ring.Sample(0x1000, 1, 1000000, 1234567);
+        ring.Reader.Drain();
+        ring.Sample(0x1000, 2, 1000000, 3456789);
+        var result = ring.Reader.Drain();
+        Require(result.RepresentedCpuNanoseconds == 2000000 &&
+            ring.Delivered[0].CumulativeCpuNanoseconds == 1234567 && ring.Delivered[1].CumulativeCpuNanoseconds == 3456789,
+            "Cumulative CPU counts must not replace nominal periods or lose precision.");
+        ring.Sample(0x1000, 3, 1000000, 3456789);
+        ring.Reader.Drain();
+        Require(ring.Delivered.Count == 3, "Equal cumulative readings must remain observable.");
+    }
+
+    private static void CounterRegressionCannotReachSink()
+    {
+        using var ring = new Fixture();
+        ring.Sample(0x1000, 1, 1000000, 2000000);
+        ring.Reader.Drain();
+        ring.Sample(0x1000, 2, 1000000, 1999999);
+        bool rejected = false;
+        try { ring.Reader.Drain(); }
+        catch (InvalidDataException error) when (error.Message == "The cumulative sample CPU counter regressed.") { rejected = true; }
+        Require(rejected && ring.Delivered.Count == 1, "A regressing counter must fail before publication.");
+    }
+
+    private static void LegacySampleLayoutIsRejected()
+    {
+        using var ring = new Fixture();
+        ring.Append(Record(9, 40));
+        bool rejected = false;
+        try { ring.Reader.Drain(); }
+        catch (Exception error) when (error.Message == "Unexpected sample layout or CPU mode.") { rejected = true; }
+        Require(rejected && ring.Delivered.Count == 0, "A record without the required counter must be rejected.");
+    }
+
     private static byte[] Record(uint type, ushort length)
     {
         var result = new byte[length];
@@ -119,6 +159,7 @@ static class RingReaderChecks
         private const int Offset = 4096, Size = 128;
         private readonly IntPtr mapping = Marshal.AllocHGlobal(Offset + Size);
         private ulong head;
+        private ulong cpu;
         public List<CpuSample> Delivered { get; } = new();
         public RingReader Reader { get; }
 
@@ -132,14 +173,16 @@ static class RingReaderChecks
         public void Publish(CpuSample sample) => Delivered.Add(sample);
         public void SetHead(ulong value) => Marshal.WriteInt64(mapping, 1024, checked((long)value));
 
-        public void Sample(ulong address, ulong timestamp, ulong period)
+        public void Sample(ulong address, ulong timestamp, ulong period, ulong? cumulative = null)
         {
-            var record = Record(9, 40);
+            var record = Record(9, 48);
             BinaryPrimitives.WriteUInt64LittleEndian(record.AsSpan(8), address);
             BinaryPrimitives.WriteUInt32LittleEndian(record.AsSpan(16), checked((uint)Environment.ProcessId));
             BinaryPrimitives.WriteUInt32LittleEndian(record.AsSpan(20), 42);
             BinaryPrimitives.WriteUInt64LittleEndian(record.AsSpan(24), timestamp);
             BinaryPrimitives.WriteUInt64LittleEndian(record.AsSpan(32), period);
+            cpu = cumulative ?? checked(cpu + period);
+            BinaryPrimitives.WriteUInt64LittleEndian(record.AsSpan(40), cpu);
             Append(record);
         }
 
