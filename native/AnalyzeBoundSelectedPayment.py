@@ -97,6 +97,33 @@ def verify_source(record):
     return credit, last_cpu
 
 
+def verify_cadence(record):
+    if record["schemaVersion"] == 3:
+        return
+    mode = record["selectedCadence"]
+    require(mode in ("Continuous", "QualifiedSample"), "Unknown bound selected cadence")
+    requested = count(record["requestedBatches"])
+    require(0 < requested <= 2147483647 and count(record["selectedBatches"]) <= requested,
+            "Invalid fixed selected work")
+    if record["completed"]:
+        require(record["selectedBatches"] == requested, "Completed cadence case changed fixed selected work")
+        require(count(record["checksum"]) == requested * 49995000, "Cadence checksum differs from fixed selected work")
+        require(0 < count(record["selectedWorkStarted"]) <= count(record["selectedWorkFinished"]),
+                "Completed cadence case lacks its selected work interval")
+    require(count(record["selectedChecks"]) >= len(record["pauses"]), "Pauses exceed admitted checks")
+    for epoch, pause in enumerate(record["pauses"], 1):
+        admission = pause["Admission"]
+        prefix = count(admission["SampleCount"])
+        require(count(admission["Epoch"]) == epoch and prefix == pause["FirstUnprocessed"],
+                "Cadence admission changed its epoch or sample prefix")
+        require(type(admission["Qualified"]) is bool, "Invalid cadence qualification")
+        qualified = prefix >= 2 and all(
+            item["EligibilityEpoch"] == epoch for item in record["samples"][prefix - 2:prefix])
+        require(not admission["Qualified"] or qualified, "Cadence qualification differs from original sample epochs")
+        require(mode != "QualifiedSample" or admission["Qualified"] and qualified,
+                "Selected pause lacks a complete current-epoch interval")
+
+
 def verify_pauses(record):
     pauses, epochs = record["pauses"], record["sourceEpochSamples"]
     cursor = previous_processed = previous_finished = 0
@@ -193,7 +220,7 @@ def verify_counters(record, last_cpu, payment_pauses):
 
 
 def verify_record(record):
-    require(type(record["schemaVersion"]) is int and record["schemaVersion"] == 3, "Expected schema version 3")
+    require(type(record["schemaVersion"]) is int and record["schemaVersion"] in (3, 4), "Expected schema version 3 or 4")
     require(count(record["timestampFrequency"]) > 0, "Managed timestamp frequency is zero")
     require(record["selectedPaymentEnabled"] is True, "Selected payment mode is absent")
     for key in ("passed", "completed", "invalidateAfterPayment", "invalidateAfterSelectedPayment", "invalidated",
@@ -207,6 +234,7 @@ def verify_record(record):
         verify_receipt_interval(payment, record["timestampFrequency"])
     require(paid == count(record["paid"]) and selected_paid == count(record["selectedPaid"]), "Settled payment totals differ")
     payment_pauses = verify_pauses(record)
+    verify_cadence(record)
     for key in ("selectedPeak", "peerPeak", "finalDebt"):
         debt = record[key]
         require(not record["passed"] or key == "finalDebt" and not record["completed"] or debt is not None,

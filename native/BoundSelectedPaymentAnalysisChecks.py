@@ -97,6 +97,70 @@ def invalidated_record():
 
 
 class SelectedPaymentAnalysisChecks(unittest.TestCase):
+    def cadence_record(self):
+        record = valid_record()
+        record.update(schemaVersion=4, selectedCadence="QualifiedSample", requestedBatches=5,
+                      selectedBatches=5, selectedChecks=1, checksum=5 * 49995000,
+                      selectedWorkStarted=1, selectedWorkFinished=99)
+        record["pauses"][0]["Admission"] = dict(SampleCount=2, Epoch=1, Qualified=True)
+        return record
+
+    def test_fixed_work_qualified_cadence(self):
+        self.assertTrue(verify_record(self.cadence_record())["casePassed"])
+
+    def two_pause_cadence_record(self):
+        record = self.cadence_record()
+        record["selectedChecks"] = 2
+        record["pauses"].append(dict(Started=91, FirstUnprocessed=4, FinalDrainCount=4,
+                                     CallbackFinished=95, Resumed=100,
+                                     Admission=dict(SampleCount=4, Epoch=2, Qualified=True)))
+        final = record["finalCounters"]
+        final["Epoch"] = 3
+        final["Transitions"][-1].update(Before=92, After=93)
+        final["Transitions"].extend([
+            dict(Epoch=3, Enabling=True, Completed=True, Before=98, After=99,
+                 TimestampFrequency=1000000000, Error=None),
+            dict(Epoch=3, Enabling=False, Completed=True, Before=110, After=111,
+                 TimestampFrequency=1000000000, Error=None)])
+        final["LastReading"].update(Epoch=3, Before=112, After=113)
+        record["finalDebt"]["Timestamp"] = 120
+        return record
+
+    def test_resumed_pause_requires_new_complete_interval(self):
+        self.assertTrue(verify_record(self.two_pause_cadence_record())["casePassed"])
+        for prefix in (2, 3):
+            record = self.two_pause_cadence_record()
+            record["pauses"][1]["FirstUnprocessed"] = prefix
+            record["pauses"][1]["Admission"]["SampleCount"] = prefix
+            self.reject(record, "qualification differs from original sample epochs")
+
+    def test_cadence_requires_original_epoch_and_qualified_prefix(self):
+        for field, value, error in (("Epoch", 2, "admission changed"),
+                                    ("SampleCount", 1, "admission changed"),
+                                    ("Qualified", False, "lacks a complete"),
+                                    ("Qualified", 1, "Invalid cadence qualification")):
+            record = self.cadence_record()
+            record["pauses"][0]["Admission"][field] = value
+            self.reject(record, error)
+
+    def test_cadence_completion_requires_fixed_work(self):
+        for field, value, error in (("selectedBatches", 4, "changed fixed selected work"),
+                                    ("requestedBatches", 0, "Invalid fixed selected work"),
+                                    ("requestedBatches", True, "unsigned"),
+                                    ("selectedChecks", 0, "Pauses exceed"),
+                                    ("checksum", 1, "Cadence checksum"),
+                                    ("selectedWorkFinished", 0, "selected work interval"),
+                                    ("selectedCadence", "other", "Unknown bound")):
+            record = self.cadence_record()
+            record[field] = value
+            self.reject(record, error)
+
+    def test_continuous_control_can_pause_without_qualification(self):
+        record = self.cadence_record()
+        record["selectedCadence"] = "Continuous"
+        record["pauses"][0]["Admission"]["Qualified"] = False
+        self.assertTrue(verify_record(record)["casePassed"])
+
     def reject(self, record, expected):
         with self.assertRaisesRegex(ValueError, expected):
             verify_record(record)

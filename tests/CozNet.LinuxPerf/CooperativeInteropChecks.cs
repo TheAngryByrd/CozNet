@@ -16,12 +16,18 @@ static class CooperativeInteropChecks
             thread = new Thread(() => { foreach (var action in tasks.GetConsumingEnumerable()) action(); }) { IsBackground = true };
             thread.Start();
         }
-        public T Run<T>(Func<T> action)
+        public Task<T> Start<T>(Func<T> action)
         {
             var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             tasks.Add(() => { try { completion.SetResult(action()); } catch (Exception error) { completion.SetException(error); } });
-            if (!completion.Task.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("The cooperative owner did not finish its command.");
-            return completion.Task.GetAwaiter().GetResult();
+            return completion.Task;
+        }
+        public Task Start(Action action) => Start(() => { action(); return true; });
+        public T Run<T>(Func<T> action)
+        {
+            var completion = Start(action);
+            if (!completion.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("The cooperative owner did not finish its command.");
+            return completion.GetAwaiter().GetResult();
         }
         public void Run(Action action) => Run(() => { action(); return true; });
         public bool Join()

@@ -17,11 +17,12 @@ After callback return and a CLR lifetime check, it opens the next admission epoc
 `EpochDiagnostics` preserves the labels after cleanup, including failure cleanup.
 Callback failure or observed invalidation prevents resume and permanently rejects collection.
 The default `Start` path retains `BoundCpuEpoch` and `LiveSampleCollector`.
-The sampled payment workload still uses that default path.
+The legacy sampled payment command uses that default path.
+The selected-payment commands use the pausable path and preserve original sample epochs through payment.
 `LinuxCpuEventSession.DisableAndStopProducer` requires its creating OS thread and disables its dedicated task-clock source.
 Producer-stop acknowledgement is separate from counter validation. Failed-enable recovery still issues disable and marks unrecorded cleanup.
 `DisableSucceeded` records the stop acknowledgement. Counter failure belongs to the `counters` cleanup stage.
-The code above describes the new collection API. The selected payment callback remains unimplemented.
+The [selected payment callback](selected-owner-payment.md) stops the producer and processes the acknowledged final drain before reserving a lease.
 
 `BoundCpuSession` separately parses repeated enable and disable evidence into immutable session values.
 It preserves source identity, the previous journal prefix, and cumulative CPU across source epochs.

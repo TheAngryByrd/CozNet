@@ -147,7 +147,8 @@ Each payment retains a parsed `ReceiptInterval` with its start, receipt observat
 The interval cannot exceed 100 ms. The workload checks it before it applies the returned ledger settlement.
 `Payment.Finished` follows native release and can include later cleanup work. It is not the receipt deadline endpoint.
 A pause without `Resumed` does not prove successful source restart.
-`AnalyzeBoundSelectedPayment.py` validates version 3. The legacy analyzer accepts only version 1.
+`AnalyzeBoundSelectedPayment.py` validates versions 3 and 4. The legacy analyzer accepts only version 1.
+Version 4 describes the separate [fixed-work cadence comparison](bound-selected-cadence.md).
 Retained version 2 runs use their saved analyzer because they lack explicit managed receipt intervals and clock frequency.
 Version 3 checks sample epochs, retained rounding remainder, both payment journals, local ledger arithmetic, and pause ordering.
 It binds selected payment to a completed producer-stop transition and source restart to callback return.

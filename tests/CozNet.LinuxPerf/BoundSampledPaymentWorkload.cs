@@ -13,7 +13,7 @@ static class BoundSampledPaymentWorkload
     private sealed record Debt(long Timestamp, long Global, long SelectedCredit, long PeerWait, long Selected, long Peer,
         long SelectedLocal, long PeerLocal, long SelectedWait);
     private sealed record PauseBoundary(long Started, int FirstUnprocessed, int? FinalDrainCount = null,
-        long? CallbackFinished = null, long? Resumed = null);
+        long? CallbackFinished = null, long? Resumed = null, BoundSelectedAdmission? Admission = null);
     private sealed record FailureBoundary(Debt? LastObservedDebt, ulong Command, ulong Generation, long Budget,
         long RequestStarted, CooperativeFailureCapture Capture);
 
@@ -21,8 +21,10 @@ static class BoundSampledPaymentWorkload
         Func<CpuSampleOwner> readOwner, Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource,
         bool invalidateAfterPayment = false,
         Func<IInstructionMap, ICpuSampleSink, IOwnerStoppedCpuEventSession>? selectedPaymentSource = null,
-        bool invalidateAfterSelectedPayment = false)
+        bool invalidateAfterSelectedPayment = false, BoundSelectedCadencePlan? cadencePlan = null)
     {
+        Require(cadencePlan is null || selectedPaymentSource is not null && ReferenceEquals(settings, cadencePlan.Sampling),
+            "A cadence comparison requires its parsed settings and a pausable source.");
         NativeLibrary.SetDllImportResolver(typeof(CooperativeNativeMethods).Assembly,
             (name, _, _) => name == "CozNet.Cooperative" ? NativeLibrary.Load(Path.GetFullPath(library)) : IntPtr.Zero);
         var plan = ProbePlan.Parse("injected", Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL"));
@@ -35,6 +37,7 @@ static class BoundSampledPaymentWorkload
         var selectedPayments = new List<Payment>();
         var pauses = new List<PauseBoundary>();
         bool selectedPaymentEnabled = selectedPaymentSource is not null;
+        var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
         var cleanupErrors = new List<string>();
@@ -51,6 +54,7 @@ static class BoundSampledPaymentWorkload
         CooperativeAccountingAdapter? selectedPending = null;
         SignalServiceLease? selectedLease = null;
         long selectedPaid = 0, selectedStarted = 0, selectedBudget = 0;
+        long? selectedWorkStarted = null, selectedWorkFinished = null;
         ulong selectedCommand = 0, selectedGeneration = 0;
         FailureBoundary? selectedFailureBoundary = null;
         CooperativeCleanupCapture? selectedCleanup = null;
@@ -100,6 +104,7 @@ static class BoundSampledPaymentWorkload
             long amount = DelayTicksModule.value(observed.Item1);
             credit = checked(credit + amount);
             samples.Add(new(samples.Count, sample, amount, eligibilityEpoch));
+            cadence?.Observe(eligibilityEpoch);
             var debt = CooperativeDebtSnapshot.Capture(selected.Item1, peer.Item1, state);
             if (debt.SelectedLocal >= debt.Global)
             {
@@ -126,10 +131,20 @@ static class BoundSampledPaymentWorkload
         {
             Require(client!.PollFromProbe(1, version, point) == CooperativePollOutcome.Idle,
                 "The selected owner entered a probe with an unexpected native request.");
-            if (point != 2 || CooperativeDebtSnapshot.Capture(selected.Item1, peer.Item1, state).Selected == 0)
-                return;
+            if (point != 2) return;
+            BoundSelectedAdmission? admission = null;
+            if (cadence is not null)
+            {
+                if (collection!.LiveSamples > samples.Count)
+                    PublishEpochs(collection.ReadEpochProvisional(samples.Count));
+                Service();
+                bool admitted = cadence.TryCheck(out var candidate);
+                if (!admitted || ObserveDebt().Selected == 0) return;
+                admission = candidate;
+            }
+            else if (CooperativeDebtSnapshot.Capture(selected.Item1, peer.Item1, state).Selected == 0) return;
             int pauseIndex = pauses.Count;
-            pauses.Add(new(Stopwatch.GetTimestamp(), samples.Count));
+            pauses.Add(new(Stopwatch.GetTimestamp(), samples.Count, Admission: admission));
             collection!.ExecuteExcluded(drained =>
             {
                 PublishEpochs(drained, samples.Count);
@@ -186,6 +201,7 @@ static class BoundSampledPaymentWorkload
                 pauses[pauseIndex] = pauses[pauseIndex] with { CallbackFinished = Stopwatch.GetTimestamp() };
             });
             pauses[pauseIndex] = pauses[pauseIndex] with { Resumed = Stopwatch.GetTimestamp() };
+            cadence?.Resume();
         }
 
         void Service()
@@ -248,7 +264,7 @@ static class BoundSampledPaymentWorkload
             registered = true;
             site = worker.Run(() => client.RegisterCurrentThread(0, 2));
             worker.Run(() => Require(CpuWorkload.Run() == 49995000L, "Peer warmup changed its checksum."));
-            peerLoop = Task.Run(() => worker.Run(() =>
+            Action peerWork = () =>
             {
                 long initialCalls = InjectedProbes.Calls;
                 try
@@ -264,7 +280,8 @@ static class BoundSampledPaymentWorkload
                     }
                 }
                 finally { peerCalls = InjectedProbes.Calls - initialCalls; peerStopped.Set(); }
-            }));
+            };
+            peerLoop = cadencePlan is null ? Task.Run(() => worker.Run(peerWork)) : worker.Start(peerWork);
             Require(peerStarted.Wait(TimeSpan.FromSeconds(5)), "The paying peer did not start.");
             collection = new(new ClrProbeLifetime(binding), readOwner());
             if (selectedPaymentEnabled)
@@ -275,7 +292,8 @@ static class BoundSampledPaymentWorkload
             else collection.Start(createSource);
             long initialCalls = InjectedProbes.Calls;
             var elapsed = Stopwatch.StartNew();
-            while (elapsed.Elapsed < TimeSpan.FromSeconds(2))
+            if (cadencePlan is not null) selectedWorkStarted = Stopwatch.GetTimestamp();
+            while (cadencePlan is null ? elapsed.Elapsed < TimeSpan.FromSeconds(2) : batches < cadencePlan.Batches)
             {
                 Require(!peerLoop.IsCompleted, "The paying peer stopped during sample collection.");
                 checksum += CpuWorkload.Run();
@@ -294,6 +312,7 @@ static class BoundSampledPaymentWorkload
                     throw new InvalidOperationException("The invalidated collection accepted a live read after payment.");
                 }
             }
+            if (cadencePlan is not null) selectedWorkFinished = Stopwatch.GetTimestamp();
             Require(InjectedProbes.Calls - initialCalls == checked(batches * plan.CallsPerBatch),
                 "The selected workload changed its injected probe count.");
             result = collection.Complete();
@@ -442,7 +461,10 @@ static class BoundSampledPaymentWorkload
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
-            schemaVersion = selectedPaymentEnabled ? 3 : 1,
+            schemaVersion = cadencePlan is not null ? 4 : selectedPaymentEnabled ? 3 : 1,
+            selectedCadence = cadencePlan?.Sampling.Cadence.ToString(), requestedBatches = cadencePlan?.Batches,
+            selectedChecks = cadence?.Checks,
+            selectedWorkStarted, selectedWorkFinished,
             timestampFrequency = Stopwatch.Frequency,
             percent = settings.Percent, passed = completed || rejectionVerified, completed, invalidateAfterPayment,
             invalidateAfterSelectedPayment,

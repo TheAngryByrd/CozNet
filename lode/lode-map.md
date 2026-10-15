@@ -1,5 +1,7 @@
 # Lode index
 
+For the fixed-work cadence comparison, read [selected cadence](plans/selected-cadence.md).
+
 For the opt-in two-slot payment draft and its verification gaps, read [selected-owner payment](profiling/selected-owner-payment.md).
 
 For authoritative selected and peer debt, read [cooperative ledger observations](profiling/cooperative-debt.md).

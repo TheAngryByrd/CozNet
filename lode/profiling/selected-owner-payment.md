@@ -44,7 +44,8 @@ Native close requires peer join and selected retirement. The controller joins af
 Version 3 evidence retains selected payments, local ledger values, source eligibility epochs, pause boundaries, and both failure captures.
 It adds an explicit managed clock frequency and parsed receipt intervals. The workload checks the 100 ms interval before applying settlement.
 Release completion is a later boundary and is not the receipt deadline endpoint.
-The legacy analyzer accepts version 1. `AnalyzeBoundSelectedPayment.py` checks version 3 records.
+The legacy analyzer accepts version 1. `AnalyzeBoundSelectedPayment.py` checks version 3 and version 4 records.
+Version 4 adds the [fixed-work cadence comparison](../plans/selected-cadence.md).
 Earlier version 2 runs retain their own analyzers. Their missing clock and interval fields cannot satisfy the new checks.
 Version 3 target run `20261015T163547073-6612a57a` passes all three live cases, three managed groups, native checks, and both Python suites.
 The peer-only comparison `20261015T163853102-5a1873fe` passes zero speedup and invalidation but retains a 2,499,909 ns peer-debt failure.

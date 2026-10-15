@@ -23,6 +23,7 @@ if (args is ["--verify-cooperative-managed"])
 }
 if (args is ["--verify-bound-cooperative-managed"])
 {
+    BoundSelectedCadenceChecks.Run();
     CooperativeCleanupCancellationChecks.Run();
     CooperativeReceiptIntervalChecks.Run();
     CooperativeDebtChecks.Run();
@@ -45,6 +46,23 @@ if (args is ["--verify-bound-samples-managed"])
 }
 if (args is ["--verify-bound-samples", var boundSamplesPath, var boundSamplesMode])
     return BoundSamplesWorkload.Run(boundSamplesPath, boundSamplesMode);
+if (args is ["--sampled-bound-selected-cadence", var cadencePath, var cadencePercent, var cadenceLibrary, var cadenceMode, var cadenceBatches])
+{
+    var cadencePlan = BoundSelectedCadencePlan.Parse(cadencePercent, cadenceMode, cadenceBatches);
+    return BoundSampledPaymentWorkload.Run(cadencePath, cadencePlan.Sampling, cadenceLibrary,
+        () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
+        (map, sink) => new LinuxCpuEventSession(sink, map),
+        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map), cadencePlan: cadencePlan);
+}
+if (args is ["--invalidate-sampled-bound-selected-cadence", var cadenceInvalidPath, var cadenceInvalidLibrary, var cadenceInvalidMode, var cadenceInvalidBatches])
+{
+    var cadencePlan = BoundSelectedCadencePlan.Parse("50", cadenceInvalidMode, cadenceInvalidBatches);
+    return BoundSampledPaymentWorkload.Run(cadenceInvalidPath, cadencePlan.Sampling, cadenceInvalidLibrary,
+        () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
+        (map, sink) => new LinuxCpuEventSession(sink, map),
+        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map),
+        invalidateAfterSelectedPayment: true, cadencePlan: cadencePlan);
+}
 if (args is ["--sampled-bound-selected-cooperative", var selectedBoundPath, var selectedBoundPercent, var selectedBoundLibrary])
     return BoundSampledPaymentWorkload.Run(selectedBoundPath, SampledSignalPlan.Parse(selectedBoundPercent), selectedBoundLibrary,
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),

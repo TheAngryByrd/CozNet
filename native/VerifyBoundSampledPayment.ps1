@@ -1,5 +1,8 @@
-param([string]$EvidenceDirectory, [switch]$SelectedPayment)
+param([string]$EvidenceDirectory, [switch]$SelectedPayment,
+    [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
+    [ValidateRange(1, 2147483647)][int]$SelectedBatches = 5000)
 $ErrorActionPreference = 'Stop'
+if ($SelectedCadence -and -not $SelectedPayment) { throw 'Selected cadence requires selected payment.' }
 if (-not $EvidenceDirectory) {
     $EvidenceDirectory = Join-Path $PSScriptRoot $(if ($SelectedPayment) { '../artifacts/bound-selected-payment' } else { '../artifacts/bound-sampled-payment' })
 }
@@ -13,6 +16,8 @@ $native = Join-Path $run 'native'
 New-Item -ItemType Directory -Force $native | Out-Null
 $sources = @('build/build.fs', 'native/VerifyBoundSampledPayment.ps1', 'native/AnalyzeBoundSampledPayment.py', 'native/BoundSampledPaymentAnalysisChecks.py', 'native/VerifyServiceOwner.ps1', 'native/Profiler.cpp', 'native/ProbeLifetime.h', 'native/Sampler.h', 'native/BuildLinux.ps1', 'native/GenerateCallbacks.ps1', 'tests/Shared/IL.cs', 'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/service/CMakeLists.txt')
 $sources += @('native/AnalyzeBoundSelectedPayment.py', 'native/BoundSelectedPaymentAnalysisChecks.py')
+$sources += 'native/VerifyBoundSelectedCadence.ps1'
+$sources += @('native/ReadBoundSampledOutcome.ps1', 'native/BoundSampledOutcomeChecks.ps1')
 $sources += @(Get-ChildItem (Join-Path $root 'tests/CozNet.LinuxPerf') -Filter '*.cs' | ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName).Replace('\', '/') })
 $sources += @(Get-ChildItem (Join-Path $root 'native/service') -File | Where-Object Extension -in '.cpp', '.h' | ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName).Replace('\', '/') })
 $sources += @(Get-ChildItem (Join-Path $root 'src/CozNet') -File | Where-Object Extension -in '.fs', '.fsi', '.fsproj' | ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName).Replace('\', '/') })
@@ -23,6 +28,9 @@ foreach ($name in $sources) {
     New-Item -ItemType Directory -Force ([IO.Path]::GetDirectoryName($copy)) | Out-Null
     Copy-Item -LiteralPath (Join-Path $root $name) -Destination $copy
 }
+. (Join-Path $run 'source/native/ReadBoundSampledOutcome.ps1')
+& pwsh -NoProfile -File (Join-Path $run 'source/native/BoundSampledOutcomeChecks.ps1') *> (Join-Path $run 'outcome-checks.log')
+$outcomeChecksExit = $LASTEXITCODE
 $analysisChecksExit = 0
 $analysisChecks = @('BoundSampledPaymentAnalysisChecks.py')
 if ($SelectedPayment) { $analysisChecks += 'BoundSelectedPaymentAnalysisChecks.py' }
@@ -52,25 +60,23 @@ $activation = @('--security-opt', 'seccomp=unconfined', '--env', 'DOTNET_PerfMap
     '--env', 'LD_LIBRARY_PATH=/profiler:/native', '--env', 'COZNET_PROBE_TARGET=linux-perf', '--env', 'COZNET_PROBE_IDENTITY=bound', '--env', 'COZNET_IL_MAP_MODE=registered', '--env', 'COZNET_PROBE_INTERVAL=1024')
 $outcomes = @()
 foreach ($case in $caseNames) {
-    $arguments = if ($case -eq 'invalidate-after-selected-payment') { @('--invalidate-sampled-bound-selected-cooperative', "/evidence/$case.json", '/native/libCozNet.Cooperative.so') }
+    $arguments = if ($SelectedCadence -and $case -eq 'invalidate-after-selected-payment') { @('--invalidate-sampled-bound-selected-cadence', "/evidence/$case.json", '/native/libCozNet.Cooperative.so', $SelectedCadence, [string]$SelectedBatches) }
+        elseif ($SelectedCadence) { @('--sampled-bound-selected-cadence', "/evidence/$case.json", $case, '/native/libCozNet.Cooperative.so', $SelectedCadence, [string]$SelectedBatches) }
+        elseif ($case -eq 'invalidate-after-selected-payment') { @('--invalidate-sampled-bound-selected-cooperative', "/evidence/$case.json", '/native/libCozNet.Cooperative.so') }
         elseif ($case -eq 'invalidate-after-payment') { @('--invalidate-sampled-bound-cooperative', "/evidence/$case.json", '/native/libCozNet.Cooperative.so') }
         elseif ($SelectedPayment) { @('--sampled-bound-selected-cooperative', "/evidence/$case.json", $case, '/native/libCozNet.Cooperative.so') }
         else { @('--sampled-bound-cooperative', "/evidence/$case.json", $case, '/native/libCozNet.Cooperative.so') }
     & docker @container @activation $image timeout -k 2s 30s dotnet /workload/CozNet.LinuxPerf.dll @arguments *> (Join-Path $run "$case.log")
     $caseExit = $LASTEXITCODE
-    $passed = $false
-    $recordError = $null
-    try { $result = Get-Content (Join-Path $run "$case.json") -Raw | ConvertFrom-Json; $passed = $result.passed -is [bool] -and $result.passed }
-    catch { $recordError = $_.Exception.Message }
-    $outcomes += @{ case = $case; exitCode = $caseExit; passed = $passed; recordError = $recordError }
+    $outcomes += Read-BoundSampledOutcome -Path (Join-Path $run "$case.json") -Case $case -ExitCode $caseExit -SelectedCadence $SelectedCadence -SelectedBatches $SelectedBatches
 }
 & python (Join-Path $run "source/native/$analysisScript") $run *> (Join-Path $run 'analysis.log')
 $analysisExit = $LASTEXITCODE
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash (Join-Path $root $name)).Hash -eq $hashes[$name] }
 foreach ($file in $binaries.Keys) { $unchanged = $unchanged -and (Get-FileHash $file).Hash -eq $binaries[$file] }
-@{ sources = $hashes; binaries = $binaries; image = $image; source = 'selected Linux task-clock'; interval = 1024; runtimePerfMap = $false; order = $caseNames; selectedPaymentEnabled = [bool]$SelectedPayment; measurementSeconds = 2; debtLimitNanoseconds = 2000000 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
-$passed = $unchanged -and $analysisChecksExit -eq 0 -and $analysisExit -eq 0 -and @($managed | Where-Object { $_.exitCode -ne 0 }).Count -eq 0 -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.passed }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; analysisChecksExit = $analysisChecksExit; analysisExit = $analysisExit; managed = $managed; outcomes = $outcomes; selectedPaymentEnabled = [bool]$SelectedPayment; selectedPaymentSupported = $false; predictionAccuracyEstablished = $false } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
+@{ sources = $hashes; binaries = $binaries; image = $image; source = 'selected Linux task-clock'; interval = 1024; runtimePerfMap = $false; order = $caseNames; selectedPaymentEnabled = [bool]$SelectedPayment; selectedCadence = $SelectedCadence; requestedBatches = $(if ($SelectedCadence) { $SelectedBatches } else { $null }); measurementSeconds = $(if ($SelectedCadence) { $null } else { 2 }); debtLimitNanoseconds = 2000000 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
+$passed = $unchanged -and $outcomeChecksExit -eq 0 -and $analysisChecksExit -eq 0 -and $analysisExit -eq 0 -and @($managed | Where-Object { $_.exitCode -ne 0 }).Count -eq 0 -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.passed -or $_.recordError }).Count -eq 0
+@{ passed = $passed; inputsUnchanged = $unchanged; outcomeChecksExit = $outcomeChecksExit; analysisChecksExit = $analysisChecksExit; analysisExit = $analysisExit; managed = $managed; outcomes = $outcomes; selectedPaymentEnabled = [bool]$SelectedPayment; selectedPaymentSupported = $false; predictionAccuracyEstablished = $false } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run
 if (-not $passed) { throw 'Bound sampled payment failed. Retain this run.' }

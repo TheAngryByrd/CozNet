@@ -14,6 +14,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Verify CLR-bound CPU samples](How_Tos/verify-bound-samples.md).
 - [Run sample-driven bound peer payment](How_Tos/run-bound-sampled-payment.md).
 - [Run bound selected-owner payment](How_Tos/run-bound-selected-payment.md).
+- [Compare bound selected cadence](How_Tos/run-bound-selected-cadence.md).
 
 - [Run the sampled timer experiment](How_Tos/run-sampled-timer.md).
 - [Run physical CPU calibration](How_Tos/run-physical-calibration.md).
@@ -40,6 +41,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [CLR-bound cooperative payment](Reference/bound-cooperative.md): lifetime admission, receipt acceptance, and cleanup.
 - [CLR-bound CPU samples](Reference/bound-samples.md): source epochs, provisional records, and guarded completion.
 - [Sample-driven bound peer payment](Reference/bound-sampled-payment.md): live credit, peer requests, debt gates, and invalidation.
+- [Bound selected cadence](Reference/bound-selected-cadence.md): fixed work and sample-qualified check admission.
 
 - [Cooperative C ABI](Reference/cooperative-interop.md): portable records, native receipt bounds, and production timing.
 
