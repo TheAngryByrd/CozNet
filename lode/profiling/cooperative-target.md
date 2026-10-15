@@ -2,7 +2,8 @@
 
 `CooperativeTarget` binds one site descriptor to the registering native thread and a distinct controller thread.
 It composes the existing mailbox and target lease. A poll services at most one child.
-The [cooperative C ABI](cooperative-interop.md) provides production timing and receipt records. No .NET probe binding exists yet.
+The [cooperative C ABI](cooperative-interop.md) provides production timing and receipt records.
+The [managed client](cooperative-managed.md) supports manual polls. Injected probe binding remains incomplete.
 
 Controller-only submit, cancel, snapshot, and release preserve one outstanding generation.
 The owner alone polls and retires. Recursive polling is rejected before taking the code guard.

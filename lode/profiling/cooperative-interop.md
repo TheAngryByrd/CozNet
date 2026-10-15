@@ -38,6 +38,7 @@ sequenceDiagram
     Controller->>ABI: Release copied retired generation
 ```
 
-The managed receipt parser, ledger binding, CLR code-lifetime integration, and probe binding remain next steps.
+The [managed client](cooperative-managed.md) supplies receipt tracking and ledger binding for manual owner polls.
+CLR code-lifetime integration and injected probe binding remain next steps.
 The 100 ms receipt gate, 2 ms debt gate, and physical prediction checks must remain unchanged.
 See [the reference](../../docsSrc/Reference/cooperative-interop.md), [the transport](cooperative-target.md), and [timer receipt semantics](timer-interop.md).

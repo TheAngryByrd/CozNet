@@ -90,9 +90,9 @@ The transport measures the complete wait separately and retains its existing dur
 
 The snapshot capture time precedes return to the caller.
 A managed client must read the native clock after return to obtain an upper bound for first managed receipt.
-The future client must preserve the first bounds and reject receipts beyond 100 ms.
+The [managed client](cooperative-managed.md) preserves the first bounds and rejects receipts beyond 100 ms.
 Native capture alone does not establish managed receipt, sampled capacity, or physical prediction.
 
-No managed client or CLR probe binding uses this ABI yet.
+The internal managed client uses this ABI. No injected CLR probe binding uses it yet.
 Code revocation excludes guarded transport work only. Actual CLR code lifetime and probe provenance remain host responsibilities.
 See the [transport contract](cooperative-target.md) for shutdown and lifetime limits.

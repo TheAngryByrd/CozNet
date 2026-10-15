@@ -636,6 +636,26 @@ let timerLayoutVerify _ =
         then
             failwith "Timer layout and receipt checks failed."
 
+let cooperativeManagedVerify _ =
+    CreateProcess.fromRawCommand "dotnet" [
+        rootDirectory
+        </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
+        "--verify-cooperative-managed"
+    ]
+    |> Proc.run
+    |> fun result ->
+        if
+            result.ExitCode
+            <> 0
+        then
+            failwith "Cooperative receipt and accounting checks failed."
+
+let cooperativeInteropVerify platform _ =
+    nativeScriptWithArgs "VerifyCooperativeInterop.ps1" [
+        "-Platform"
+        platform
+    ]
+
 let linuxTargetLeaseDrainFailure _ =
     nativeScriptWithArgs "VerifyTargetLeaseReuse.ps1" [
         "-Mode"
@@ -1200,6 +1220,9 @@ let initTargets () =
     Target.create "LinuxTimerTransitions" linuxTimerTransitions
     Target.create "LinuxFastTimerTransitions" linuxFastTimerTransitions
     Target.create "TimerLayoutVerify" timerLayoutVerify
+    Target.create "CooperativeManagedVerify" cooperativeManagedVerify
+    Target.create "CooperativeInteropVerify" (cooperativeInteropVerify "Host")
+    Target.create "LinuxCooperativeInteropVerify" (cooperativeInteropVerify "LinuxContainer")
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
@@ -1348,6 +1371,15 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "TimerLayoutVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "CooperativeManagedVerify"
+    ==> "CooperativeInteropVerify"
+    |> ignore
+
+    "CooperativeManagedVerify"
+    ==> "LinuxCooperativeInteropVerify"
     |> ignore
 
     "LinuxPerfWorkload"

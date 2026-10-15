@@ -4,6 +4,14 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--verify-cooperative-managed"])
+{
+    CooperativeManagedChecks.Run();
+    return 0;
+}
+if (args is ["--verify-cooperative-interop", var cooperativePath, var cooperativeMode, var cooperativeLibrary])
+    return CooperativeInteropChecks.Run(cooperativePath, cooperativeMode, cooperativeLibrary);
+
 if (args is ["--verify-cpu-counters"])
 {
     PerfAttributeChecks.TaskClockUsesMonotonicAbi();

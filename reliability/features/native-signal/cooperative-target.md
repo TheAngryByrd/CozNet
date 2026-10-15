@@ -24,7 +24,8 @@ Both commands pass all nine CTest entries on the current Windows and Linux x64 e
 No live timing comparison ran. No capacity, receipt-latency, or prediction gate changed.
 
 The [cooperative ABI checks](cooperative-interop.md) cover the production clock/wait adapter and native receipt records.
-The next integration needs managed receipt tracking, ledger binding, and .NET probe binding.
+The [managed checks](cooperative-managed.md) cover receipt tracking and ledger binding for manual polls.
+The next integration needs injected .NET probe binding.
 The host must tie successful code revocation to actual CLR code lifetime before claiming that lifetime is protected.
 The numeric site identity alone cannot prove probe origin.
 

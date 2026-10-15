@@ -8,6 +8,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Verify cooperative interop](How_Tos/verify-cooperative-interop.md).
+
 - [Run the sampled timer experiment](How_Tos/run-sampled-timer.md).
 - [Run physical CPU calibration](How_Tos/run-physical-calibration.md).
 - [Run interleaved CPU calibration](How_Tos/run-interleaved-calibration.md).
@@ -24,6 +26,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Managed cooperative receipts and accounting](Reference/cooperative-managed.md): first receipt bounds, exact site binding, and cleanup ownership.
 
 - [Cooperative C ABI](Reference/cooperative-interop.md): portable records, native receipt bounds, and production timing.
 
