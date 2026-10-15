@@ -37,6 +37,7 @@ The Linux runners retain unique directories under `artifacts/timer-api/` and `ar
 See [timer interop](../profiling/timer-interop.md) for scope and ownership.
 
 `ServiceOwnerVerify` builds and checks the portable native coordinator on the host with CMake and a C++20 compiler.
+Its `cooperative-target` CTest entry checks owner-thread polling, code-revocation guards, and finite lease receipts with controlled clocks.
 `LinuxSampledServiceVerify` builds the managed workload and native service libraries, then runs bounded zero and 50-percent sampled cases.
 It retains every outcome under `artifacts/linux-sampled-service/`. The first treatment fails during warmup.
 `LinuxSampledServicePhases` uses the same runner with bounded controller phase capture enabled.

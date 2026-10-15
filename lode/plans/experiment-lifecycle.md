@@ -66,7 +66,9 @@ Address intervention capacity before using the model for prediction eligibility.
 The next capacity candidate is opt-in cooperative delivery through existing entry/countdown probes.
 Reuse `LeaseMailbox` generation ownership instead of adding a second request protocol.
 The portable core now separates cooperative site identity from timer interrupted-IP admission.
-Next, bind registered poll sites to real target ownership and code lifetime in an opt-in cooperative transport.
+The portable `CooperativeTarget` now binds the owner thread and supplies explicit code-revocation guards.
+Next, add production timing and cooperative receipts, then bind .NET probes and actual CLR code lifetime.
+The [transport reference](../../docsSrc/Reference/cooperative-target.md) distinguishes implemented hooks from missing runtime integration.
 Keep cooperative receipts distinct from the timer C ABI, which carries only interrupted addresses.
 Each poll services at most one bounded child and returns to application work. Do not apply the existing 10 ms CPU cadence to pending service.
 Keep all lease, child, receipt, debt, and prediction gates. Record instrumentation cost and retain failed runs.

@@ -9,7 +9,8 @@ Cooperative child records retain the full site value and zero `ip`.
 Timer children retain `ip` and no site.
 The shared prepare/publish path keeps all existing duration, payment, cancellation, and snapshot rules.
 Site parsing proves identity shape only. A transport must bind real thread ownership, code lifetime, and probe provenance.
-No cooperative transport or managed receipt parser consumes this path yet. The existing timer C ABI is unchanged.
+The [portable cooperative transport](cooperative-target.md) consumes this path with owner-thread and code-lifetime guards.
+No .NET cooperative receipt parser or probe binding exists yet. The existing timer C ABI is unchanged.
 The [admission evidence](../../reliability/features/native-signal/cooperative-admission.md) records portable checks and timer interop regression checks.
 `TargetLease` has one target owner and caller-owned journal storage. It has no OS calls or allocation.
 It is noncopyable, nonmovable, and single-use. Its address stays stable through retirement.

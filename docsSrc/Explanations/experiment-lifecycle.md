@@ -68,6 +68,8 @@ The request must retain worker, command, and generation identity until valid ter
 Existing native mailbox ownership can supply publication, claim, cancellation, and retirement rules.
 A cooperative poll site needs explicit admission evidence. It is not an interrupted instruction pointer.
 The portable lease core now checks a separate worker, code-version, and site identity through `arriveAtPoll`.
+The [cooperative transport](../Reference/cooperative-target.md) binds the owner thread and provides explicit code-revocation guards.
+It still needs .NET probe binding and integration with actual CLR code lifetime.
 This identity check does not prove runtime registration or execution at that site.
 The [lease reference](../Reference/target-local-lease.md) describes the implemented contract.
 The timer receipt contract cannot accept a fabricated address as proof of cooperative eligibility.
@@ -77,7 +79,7 @@ It must also retain the 2 ms debt gate and record zero-speedup instrumentation c
 The [existing countdown comparison](../../reliability/features/linux-perf/component-overhead.md) found substantial probe overhead.
 Removing timer delivery therefore does not establish prediction accuracy.
 The [probe design comparison](../Research/probe-overhead-options.md) describes the armed-poll alternative and native Coz's different settlement cadence.
-This adapter is not implemented yet.
+The .NET probe adapter is not implemented yet.
 
 ## Next prototype
 
