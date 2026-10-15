@@ -80,3 +80,7 @@ Linux records owner-thread CPU readings around admitted wait attempts. Other pla
 The separate diagnostic snapshot preserves failed children and requires mailbox quiescence.
 Managed capture and selected-payment replay retain these records, including failed service evidence.
 CPU observations do not replace wall-time payment.
+
+The [single-CPU cooperative diagnostic](../reliability/features/native-signal/cooperative-single-cpu.md) retains a peer debt failure after 8538 selected batches.
+Its late credits come from buffered samples, and the pending peer request has no child in its first failure snapshot.
+No handler exceeds 5 ms. Owner-driven draining is a proposed comparison, not an implemented fix.

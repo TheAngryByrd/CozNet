@@ -122,3 +122,17 @@ This establishes neither calibrated clocks nor the cause of the earlier managed 
 The next integration needs bounded per-child observations through the existing timing seam, with explicit unsupported and failure states.
 Payment semantics and all bounds remain unchanged.
 See [native wait evidence](../../reliability/features/native-signal/cooperative-wait-cpu.md).
+
+
+The [single-CPU cooperative capture](../../reliability/features/native-signal/cooperative-single-cpu.md) fails the 2 ms peer debt gate.
+Replay verifies the failure. No retained child exceeds the handler bound.
+One peer wait records 939001 ns wall time and 35700 ns CPU advance.
+A later request has no recorded child at a native snapshot 11365728 ns after arming.
+Its first child starts after 13098192 ns. Cleanup payment does not repair the failed experiment.
+The CPU-set restriction also changes runtime processor availability.
+Target scheduling and buffered credit publication remain separate unresolved causes of the capacity gap.
+
+The final four credits add exactly 2000000 ns to the pending 71535 ns request budget.
+Their source timestamps precede native arming under the shared configured CLOCK_MONOTONIC contract.
+Per-drain and publication times are not retained, so backlog attribution remains incomplete.
+A proposed owner-driven draining comparison would remove one collector scheduling dependency without relaxing the debt gate.

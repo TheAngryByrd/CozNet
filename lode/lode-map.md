@@ -1,5 +1,7 @@
 # Lode index
 
+For the managed one-CPU capacity failure and wall/CPU divergence, read [the scheduling evidence](../reliability/features/native-signal/cooperative-single-cpu.md).
+
 For optional owner-thread CPU observations around cooperative child waits, read [the native contract](profiling/cooperative-interop.md#optional-cpu-records) and [its checks](../reliability/features/native-signal/cooperative-child-cpu.md).
 
 For reuse of validated idle accounting results and debt snapshots, read [accounting reuse](profiling/accounting-reuse.md).

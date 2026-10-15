@@ -174,3 +174,38 @@ A second capture used the original 50,000-batch workload length with CPU diagnos
 Treatment completed with 1,469 peer waits and 108 selected waits.
 The longest handler interval was 234,747 ns, below the unchanged 5 ms limit.
 All three cases passed replay. The earlier failure remains unexplained.
+
+
+## Constrained managed scheduling
+
+A separate capture restricts the unchanged 50,000-batch workload to guest CPU 0.
+The baseline can use guest CPUs 0 through 3.
+This restriction also changes processor availability for runtime policy.
+
+Treatment fails after 8,538 selected batches with 2,071,535 ns of unpaid peer debt.
+Replay verifies the records and preserves the failure.
+The zero-speedup and expected-invalidation cases pass.
+No retained handler exceeds 5 ms.
+
+One 50,000 ns peer request measures 939,001 ns of wall wait and 35,700 ns of CPU advance.
+A later request has no child at a native snapshot 11,365,728 ns after arming.
+Its first child starts 13,098,192 ns after arming and completes during failed-run cleanup.
+These observations separate wall/CPU divergence from delayed child service.
+They do not identify the scheduler decision or explain the earlier selected-handler overrun.
+
+The [single-CPU evidence](../../reliability/features/native-signal/cooperative-single-cpu.md) retains the limits and exact records.
+The next question is how buffered credit publication and target service availability combine at the debt boundary.
+The current absolute debt gate still differs from the inspected upstream Coz paths.
+
+
+The final four credited samples add 2,000,000 ns to the pending 71,535 ns budget.
+Their source timestamps precede native request arming by approximately 0.98 to 3.98 ms.
+Both source and native timing code select `CLOCK_MONOTONIC`.
+This ordering uses the configured clock contract, not an independent calibration.
+The capture lacks individual drain and publication timestamps, so it cannot assign the backlog to one component.
+
+A useful next experiment is owner-driven sample draining before debt checks.
+The inspected native Coz path processes target samples before checking delay debt. [2]
+An owner-driven mode could remove one collector scheduling dependency.
+It must preserve sample integrity and payment exclusion, measure probe cost, and retain the existing failure gates.
+No implementation or capacity improvement is claimed for that proposed mode.
