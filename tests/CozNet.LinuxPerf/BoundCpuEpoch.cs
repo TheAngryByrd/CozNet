@@ -14,7 +14,7 @@ sealed class BoundCpuEpoch
     }
     public static BoundCpuEpoch ParseFresh(CpuCounterSourceSnapshot initial)
     {
-        initial = initial with { Transitions = Array.AsReadOnly(initial.Transitions.ToArray()) };
+        initial = initial with { Transitions = CpuCounterHistory.Freeze(initial.Transitions) };
         var reading = ReadValid(initial);
         if (initial.Enabled || initial.Epoch != 0 || initial.Transitions.Count != 0 || reading.CpuNanoseconds != 0)
             throw new InvalidDataException("A bound CPU epoch requires a new disabled source with a zero counter.");
@@ -22,7 +22,7 @@ sealed class BoundCpuEpoch
     }
     public CpuCounterSourceSnapshot Close(CpuCounterSourceSnapshot final, ulong cpuNanoseconds)
     {
-        final = final with { Transitions = Array.AsReadOnly(final.Transitions.ToArray()) };
+        final = final with { Transitions = CpuCounterHistory.Freeze(final.Transitions) };
         var reading = ReadValid(final);
         if (final.SourceIdentity != Initial.SourceIdentity || final.Enabled || final.Epoch != 1
             || final.Transitions.Count != 2 || reading.CpuNanoseconds != cpuNanoseconds)

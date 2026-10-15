@@ -1,5 +1,7 @@
 # Lode index
 
+For shared immutable counter snapshots and prefix validation, read [counter history](profiling/counter-history.md).
+
 For the fixed-work cadence comparison, read [selected cadence](plans/selected-cadence.md).
 
 For the opt-in two-slot payment draft and its verification gaps, read [selected-owner payment](profiling/selected-owner-payment.md).

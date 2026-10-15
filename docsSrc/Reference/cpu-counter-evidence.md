@@ -39,6 +39,12 @@ The journal holds at most 65,536 transitions. Capacity exhaustion prevents the n
 Control operations and counter reads must be serialized.
 
 `DescribeCounters()` returns an immutable snapshot, including transitions, the last reading, and failure flags.
+The built-in journal shares an immutable transition history with each snapshot.
+Appending a transition does not change an earlier snapshot or copy its entries.
+The journal allocates a history node after each source operation.
+Allocation failure can leave that operation unrecorded or replace its original exception.
+The journal provides no recovery guarantee for allocation failure.
+JSON output retains the same chronological array format.
 `FailedReads` and `FirstReadFailure` preserve failures even after later reads succeed.
 `Overflowed` marks capacity exhaustion.
 `UnrecordedCleanup` marks best-effort disposal outside the transition journal.

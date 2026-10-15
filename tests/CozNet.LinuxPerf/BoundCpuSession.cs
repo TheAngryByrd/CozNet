@@ -17,13 +17,12 @@ sealed class BoundCpuSession
 
     private BoundCpuSession Advance(CpuCounterSourceSnapshot snapshot, bool enabling, ulong? expectedCpu)
     {
-        snapshot = snapshot with { Transitions = Array.AsReadOnly(snapshot.Transitions.ToArray()) };
+        snapshot = snapshot with { Transitions = CpuCounterHistory.Freeze(snapshot.Transitions) };
         var reading = BoundCpuEpoch.ReadValid(snapshot);
         var previous = Current.LastReading!.Value;
         ulong nextEpoch = enabling ? checked(Current.Epoch + 1) : Current.Epoch;
         if (Current.Enabled == enabling || snapshot.SourceIdentity != Initial.SourceIdentity || snapshot.Enabled != enabling
-            || snapshot.Epoch != nextEpoch || snapshot.Transitions.Count != Current.Transitions.Count + 1
-            || !snapshot.Transitions.Take(Current.Transitions.Count).SequenceEqual(Current.Transitions)
+            || snapshot.Epoch != nextEpoch || !CpuCounterHistory.ExtendsByOne(snapshot.Transitions, Current.Transitions)
             || reading.TimestampFrequency != previous.TimestampFrequency || reading.CpuNanoseconds < previous.CpuNanoseconds
             || (expectedCpu is { } expected && reading.CpuNanoseconds != expected))
             throw new InvalidDataException("The bound CPU session changed source, counter, or transition ownership.");
@@ -37,11 +36,11 @@ sealed class BoundCpuSession
 
     public CpuCounterSourceSnapshot Close(CpuCounterSourceSnapshot snapshot, ulong cpuNanoseconds)
     {
-        snapshot = snapshot with { Transitions = Array.AsReadOnly(snapshot.Transitions.ToArray()) };
+        snapshot = snapshot with { Transitions = CpuCounterHistory.Freeze(snapshot.Transitions) };
         var reading = BoundCpuEpoch.ReadValid(snapshot);
         var previous = Current.LastReading!.Value;
         if (Current.Enabled || Current.Epoch == 0 || snapshot.Enabled || snapshot.Epoch != Current.Epoch
-            || snapshot.SourceIdentity != Initial.SourceIdentity || !snapshot.Transitions.SequenceEqual(Current.Transitions)
+            || snapshot.SourceIdentity != Initial.SourceIdentity || !CpuCounterHistory.Same(snapshot.Transitions, Current.Transitions)
             || reading.TimestampFrequency != previous.TimestampFrequency || reading.CpuNanoseconds != previous.CpuNanoseconds
             || reading.CpuNanoseconds != cpuNanoseconds || (reading != previous && reading.Before < previous.After))
             throw new InvalidDataException("The bound CPU session did not close its final disabled epoch.");

@@ -16,8 +16,8 @@ sealed class CpuCounterJournal
 {
     private readonly TimeProvider clock;
     private readonly Func<ulong> read;
-    private readonly CpuCounterTransition[] transitions;
-    private int count;
+    private CpuCounterHistory transitions = CpuCounterHistory.Empty;
+    private readonly int capacity;
     private ulong? highestCpu;
     private int failedReads;
     private string? firstReadFailure;
@@ -36,13 +36,13 @@ sealed class CpuCounterJournal
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(capacity);
         this.clock = clock;
         this.read = read;
-        transitions = new CpuCounterTransition[capacity];
+        this.capacity = capacity;
     }
 
     public void Transition(bool enabling, Action operation)
     {
         if (Enabled == enabling) throw new InvalidOperationException("The CPU event transition does not change state.");
-        if (count == transitions.Length)
+        if (transitions.Count == capacity)
         {
             Overflowed = true;
             throw new InvalidOperationException("The CPU event transition journal is full.");
@@ -62,7 +62,7 @@ sealed class CpuCounterJournal
         catch (Exception failure) { error = failure.ToString(); throw; }
         finally
         {
-            transitions[count++] = new(Epoch, enabling, completed, before, after, clock.TimestampFrequency, error);
+            transitions = transitions.Append(new(Epoch, enabling, completed, before, after, clock.TimestampFrequency, error));
         }
     }
 
@@ -99,7 +99,7 @@ sealed class CpuCounterJournal
 
     public CpuCounterSourceSnapshot Snapshot() => new(identity, "task-clock-nanoseconds", Enabled, Epoch,
         Overflowed, UnrecordedCleanup, failedReads, firstReadFailure,
-        Array.AsReadOnly(transitions[..count]), LastReading);
+        transitions, LastReading);
 }
 
 sealed class EnabledCpuCountRange
