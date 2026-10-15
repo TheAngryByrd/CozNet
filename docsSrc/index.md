@@ -10,6 +10,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 - [Verify cooperative interop](How_Tos/verify-cooperative-interop.md).
 - [Verify injected probe identity](How_Tos/verify-probe-identity.md).
+- [Verify CLR-bound cooperative payment](How_Tos/verify-bound-cooperative.md).
 
 - [Run the sampled timer experiment](How_Tos/run-sampled-timer.md).
 - [Run physical CPU calibration](How_Tos/run-physical-calibration.md).
@@ -30,6 +31,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 - [Managed cooperative receipts and accounting](Reference/cooperative-managed.md): first receipt bounds, exact site binding, and cleanup ownership.
 - [Injected probe identity](Reference/probe-identity.md): literal sites and permanent CLR invalidation.
+- [CLR-bound cooperative payment](Reference/bound-cooperative.md): lifetime admission, receipt acceptance, and cleanup.
 
 - [Cooperative C ABI](Reference/cooperative-interop.md): portable records, native receipt bounds, and production timing.
 

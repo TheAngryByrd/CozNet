@@ -16,7 +16,8 @@ Only a completed rewrite followed by successful JIT completion can publish Ready
 Duplicate selected compilation, module unload, and shutdown permanently invalidate the record.
 An invalidated record cannot publish Ready again. The first reason wins.
 Callbacks use lock-free atomics and never drain cooperative ownership.
-Queries establish only a point-in-time observation. Payment and receipt gates still need integration.
+Queries establish only a point-in-time observation.
+The [bound cooperative client](bound-cooperative.md) checks the record before and after payment and receipt operations, and again at completion.
 
 ```mermaid
 flowchart LR
@@ -35,7 +36,7 @@ Both pass all twelve lifetime cases with unchanged inputs. The later build-file 
 Both also pass twelve native checks and the managed receipt checks.
 The earlier host run `20261015T095911895-2cc7f637` is rejected because source changed during execution, despite all case outcomes passing.
 The repeat-rewrite guard preserves the original admitted site count.
-Live repeated compilation of the same FunctionID and payment/receipt invalidation races remain unverified.
+Live repeated compilation of the same FunctionID and invalidation during a native wait remain unverified.
 Legacy injected-payment regressions pass on Windows (`20261015T100551483-147b59d8`) and Linux (`20261015T100657145-65b9f4d2`).
 The Windows legacy profiler verification at interval 1024 passes baseline, rewrite, sampling, and intervention cases in `artifacts/probe-identity-legacy-sampling`.
 

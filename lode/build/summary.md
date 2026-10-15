@@ -177,6 +177,8 @@ flowchart LR
 See [practices](../practices.md), [the index](../lode-map.md), and [the README](../../README.md).
 
 `ProbeIdentityVerify` depends on `NativeBuild` and `LinuxPerfWorkload`.
+`BoundCooperativeVerify` uses the same dependencies and runs twenty CLR-bound payment cases.
+`LinuxBoundCooperativeVerify` uses `NativeLinuxBuild` and `LinuxPerfWorkload` for the Linux cases.
 `LinuxProbeIdentityVerify` depends on `NativeLinuxBuild` and `LinuxPerfWorkload`.
 Both invoke `VerifyCooperativeInterop.ps1 -ProbeIdentity` for their platform and retain twelve lifetime cases.
 See [the identity procedure](../../docsSrc/How_Tos/verify-probe-identity.md).

@@ -45,9 +45,9 @@ It repeats payment on a second independent generation at intervals 1, 64, 256, a
 Run `./native/VerifyCooperativeInterop.ps1 -Injected` after building the workload and profiler.
 Use `-Platform LinuxContainer` for the Linux profiler.
 The fixture retains synthetic site identities and disables tiered compilation and ReadyToRun.
-Actual CLR identity and code lifetime, sampled capacity, and physical prediction remain incomplete.
+The legacy injected fixture retains synthetic identities. Sampled capacity and physical prediction remain incomplete.
 The separate [bound probe path](probe-identity.md) implements literal identity and CLR invalidation observations.
-Its lifetime record is not yet connected to payment admission or receipt acceptance.
+The [bound cooperative client](bound-cooperative.md) connects that record to payment admission, receipt acceptance, and completion.
 The [CLR lifetime research](../../docsSrc/Research/cooperative-clr-lifetime.md) requires immutable injected generation/site literals and permanent invalidation.
 Do not use the controller-only transport revocation call from a CLR callback.
 Retained injected runs: Windows `artifacts/cooperative-interop/20261015T094338818-84caeb46` and Linux `artifacts/cooperative-interop/20261015T094433278-cabb08b1`.

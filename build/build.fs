@@ -663,6 +663,13 @@ let probeIdentityVerify platform _ =
         "-ProbeIdentity"
     ]
 
+let boundCooperativeVerify platform _ =
+    nativeScriptWithArgs "VerifyCooperativeInterop.ps1" [
+        "-Platform"
+        platform
+        "-BoundCooperative"
+    ]
+
 let linuxTargetLeaseDrainFailure _ =
     nativeScriptWithArgs "VerifyTargetLeaseReuse.ps1" [
         "-Mode"
@@ -1232,6 +1239,8 @@ let initTargets () =
     Target.create "LinuxCooperativeInteropVerify" (cooperativeInteropVerify "LinuxContainer")
     Target.create "ProbeIdentityVerify" (probeIdentityVerify "Host")
     Target.create "LinuxProbeIdentityVerify" (probeIdentityVerify "LinuxContainer")
+    Target.create "BoundCooperativeVerify" (boundCooperativeVerify "Host")
+    Target.create "LinuxBoundCooperativeVerify" (boundCooperativeVerify "LinuxContainer")
     Target.create "LinuxSelectedServiceInteropVerify" linuxSelectedServiceInteropVerify
     Target.create "LinuxServiceSnapshotCost" linuxServiceSnapshotCost
     Target.create "ServiceAccountingVerify" serviceAccountingVerify
@@ -1405,6 +1414,22 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxProbeIdentityVerify"
+    |> ignore
+
+    "NativeBuild"
+    ==> "BoundCooperativeVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "BoundCooperativeVerify"
+    |> ignore
+
+    "NativeLinuxBuild"
+    ==> "LinuxBoundCooperativeVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxBoundCooperativeVerify"
     |> ignore
 
     "LinuxPerfWorkload"

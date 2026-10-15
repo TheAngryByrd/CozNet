@@ -36,6 +36,7 @@ sealed class ProbePlan
 static class InjectedProbes
 {
     [ThreadStatic] private static Action? callback;
+    [ThreadStatic] private static Action<ulong, uint>? boundCallback;
     [ThreadStatic] private static long calls;
     [ThreadStatic] private static ulong boundGeneration;
     [ThreadStatic] private static ulong boundEntries;
@@ -46,6 +47,7 @@ static class InjectedProbes
 
     public static void Hit()
     {
+        if (boundCallback is not null) throw new InvalidOperationException("A CLR-bound callback requires injected identity arguments.");
         calls++;
         callback?.Invoke();
     }
@@ -56,11 +58,14 @@ static class InjectedProbes
         if (site == 1) boundEntries++;
         else if (site == 2) boundLoops++;
         else invalidBoundLiteral = true;
-        Hit();
+        if (callback is not null) throw new InvalidOperationException("A legacy callback cannot consume CLR-bound probes.");
+        calls++;
+        boundCallback?.Invoke(generation, site);
     }
     public static ulong[] ReadBoundObservation() => [boundGeneration, boundEntries, boundLoops, invalidBoundLiteral ? 1UL : 0UL];
 
     public static IDisposable Bind(Action action) => new Binding(action);
+    public static IDisposable BindBound(Action<ulong, uint> action) => new Binding(action);
 
     private sealed class Binding : IDisposable
     {
@@ -69,14 +74,21 @@ static class InjectedProbes
         public Binding(Action action)
         {
             ArgumentNullException.ThrowIfNull(action);
-            if (callback is not null) throw new InvalidOperationException("This thread already has a probe callback.");
+            if (callback is not null || boundCallback is not null) throw new InvalidOperationException("This thread already has a probe callback.");
             callback = action;
+        }
+        public Binding(Action<ulong, uint> action)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+            if (callback is not null || boundCallback is not null) throw new InvalidOperationException("This thread already has a probe callback.");
+            boundCallback = action;
         }
         public void Dispose()
         {
             if (Environment.CurrentManagedThreadId != owner) throw new InvalidOperationException("The probe callback belongs to another thread.");
             if (disposed) return;
             callback = null;
+            boundCallback = null;
             disposed = true;
         }
     }

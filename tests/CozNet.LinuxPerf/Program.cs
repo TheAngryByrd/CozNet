@@ -9,6 +9,14 @@ if (args is ["--verify-cooperative-managed"])
     CooperativeManagedChecks.Run();
     return 0;
 }
+if (args is ["--verify-bound-cooperative-managed"])
+{
+    CooperativeManagedChecks.Run();
+    ClrProbeLifetimeChecks.Run();
+    return 0;
+}
+if (args is ["--verify-bound-cooperative", var boundPath, var boundMode, var boundLibrary])
+    return BoundCooperativeChecks.Run(boundPath, boundMode, boundLibrary);
 if (args is ["--verify-cooperative-interop", var cooperativePath, var cooperativeMode, var cooperativeLibrary])
     return CooperativeInteropChecks.Run(cooperativePath, cooperativeMode, cooperativeLibrary);
 if (args is ["--verify-probe-identity", var identityPath, var identityMode])

@@ -45,7 +45,8 @@ It clears output fields when no binding is available.
 `CozIsProbeBindingCurrent(generation, site)` rejects foreign generations, zero sites, out-of-range sites, and invalidated records.
 
 A successful query is an observation. It does not pin code or prevent invalidation after the query returns.
-Payment admission and receipt acceptance do not yet consume this lifetime record.
+The optional [bound cooperative client](bound-cooperative.md) consumes this record around payment admission and receipt acceptance.
+It checks lifetime again at completion and preserves failed evidence for cleanup.
 
 ## Compilation policy
 

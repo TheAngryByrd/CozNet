@@ -55,6 +55,8 @@ static class ProbeIdentityChecks
         finally { context.Unload(); }
     }
 
+    internal static void InvalidateWithDuplicateModule(ProbePlan plan) => _ = LoadCollectible(plan, true);
+
     public static int Run(string path, string mode)
     {
         if (mode is not ("identity" or "unload" or "duplicate-module")) throw new ArgumentException("Select identity, unload, or duplicate-module.");

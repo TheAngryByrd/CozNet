@@ -2,7 +2,8 @@
 
 This explanation describes the identity and lifetime requirements for controlled injected probes.
 The [opt-in binding](../Reference/probe-identity.md) implements literal identities and permanent invalidation.
-Payment and receipt integration remain incomplete.
+The [bound cooperative client](../Reference/bound-cooperative.md) checks this lifetime around payment admission and receipt acceptance.
+Sampled capacity and physical prediction remain incomplete.
 It does not claim that CozNet pins CLR code or supports arbitrary application methods.
 The sources below use the runtime revision already pinned by the native build: `60629d14374c56f1cb51819049ad1fa529307f8d`.
 
@@ -105,14 +106,15 @@ Tiered compilation, OSR, collectible modules, and concurrent selected compilatio
 ## Next implementation boundary
 
 The opt-in binding combines an injected literal with a profiler-owned lifetime record.
-The managed thread-local callback can connect the probe to the cooperative client.
+The managed thread-local callback connects the probe to the cooperative client.
 That callback alone supplies neither CLR provenance nor code lifetime protection.
 
 The live binding checks cover literal observations, pre-compilation queries, module unload, and rejection of a second selected module.
 The native state checks cover invalid identities, failed compilation, duplicate compilation, and competing publication and invalidation.
 Same-function repeated JIT callbacks still need a controlled runtime case.
 An unload case must prove invalidation without waiting for owner progress inside the callback.
-Windows and Linux runs must prove probe service and complete shutdown.
+The bound cooperative checks exercise probe service and complete shutdown on Windows and Linux.
+Sample-driven operation still needs native code maps tied to the admitted binding.
 These checks establish the restricted transport contract.
 They do not establish prediction accuracy or exact attribution of countdown CPU.
 

@@ -7,7 +7,7 @@ using static CooperativeManagedChecks;
 
 static class CooperativeInteropChecks
 {
-    private sealed class Worker
+    internal sealed class Worker
     {
         private readonly BlockingCollection<Action> tasks = new();
         private readonly Thread thread;
