@@ -1,6 +1,8 @@
 # Why cooperative probes need a CLR lifetime contract
 
-This explanation describes a proposed binding for controlled injected probes.
+This explanation describes the identity and lifetime requirements for controlled injected probes.
+The [opt-in binding](../Reference/probe-identity.md) implements literal identities and permanent invalidation.
+Payment and receipt integration remain incomplete.
 It does not claim that CozNet pins CLR code or supports arbitrary application methods.
 The sources below use the runtime revision already pinned by the native build: `60629d14374c56f1cb51819049ad1fa529307f8d`.
 
@@ -10,7 +12,7 @@ A probe needs an identity that belongs to the instrumented body that called it.
 A query for the current global version cannot provide this property.
 An old body could call the helper after the profiler replaces that global value.
 
-The proposed rewrite embeds an immutable instrumentation generation and a site identifier in each probe call.
+The bound rewrite embeds an immutable instrumentation generation and a site identifier in each probe call.
 The entry site and each backward-branch site can have separate identifiers.
 The worker identity remains a property of the registered owner thread.
 The profiler associates the generation with a module-load instance, method token, and selected `FunctionID`.
@@ -52,7 +54,7 @@ The implementation must therefore observe module unload for this ordinary manage
 Cached metadata and native ranges cannot remain usable after the selected module starts unloading.
 An unload callback provides notification, not a profiler-controlled lease on CLR memory.
 
-The proposed lifetime record remains allocated for the process lifetime in the initial single-method prototype.
+The lifetime record remains allocated for the process lifetime in the initial single-method prototype.
 Unload changes an atomic, permanent invalidation flag.
 No later module with a reused runtime ID can reactivate the record.
 The record retains copied scalar identities and failure information, rather than dereferenceable CLR objects.
@@ -63,7 +65,7 @@ The record retains copied scalar identities and failure information, rather than
 The interface warns that blocking can make the runtime wait and distort results. [3]
 The pinned implementation also states that JIT and `MethodDesc` code can hold locks during JIT callbacks. [7]
 
-The proposed callback operation only publishes permanent invalidation.
+The unload callback only publishes permanent invalidation.
 It does not acquire an application lock, invoke managed code, drain an owner, or join a thread.
 The controller performs cancellation, journal capture, release, and owner shutdown outside the callback.
 
@@ -102,11 +104,13 @@ Tiered compilation, OSR, collectible modules, and concurrent selected compilatio
 
 ## Next implementation boundary
 
-The next binding should combine an injected literal with a profiler-owned lifetime record.
+The opt-in binding combines an injected literal with a profiler-owned lifetime record.
 The managed thread-local callback can connect the probe to the cooperative client.
 That callback alone supplies neither CLR provenance nor code lifetime protection.
 
-The binding needs controlled cases for wrong literals, calls before admission, duplicate compilation, and permanent invalidation.
+The live binding checks cover literal observations, pre-compilation queries, module unload, and rejection of a second selected module.
+The native state checks cover invalid identities, failed compilation, duplicate compilation, and competing publication and invalidation.
+Same-function repeated JIT callbacks still need a controlled runtime case.
 An unload case must prove invalidation without waiting for owner progress inside the callback.
 Windows and Linux runs must prove probe service and complete shutdown.
 These checks establish the restricted transport contract.

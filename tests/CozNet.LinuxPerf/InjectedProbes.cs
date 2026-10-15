@@ -37,6 +37,10 @@ static class InjectedProbes
 {
     [ThreadStatic] private static Action? callback;
     [ThreadStatic] private static long calls;
+    [ThreadStatic] private static ulong boundGeneration;
+    [ThreadStatic] private static ulong boundEntries;
+    [ThreadStatic] private static ulong boundLoops;
+    [ThreadStatic] private static bool invalidBoundLiteral;
     public static long Calls => calls;
     public static ProfilerState ReadProfilerState() => new(CozGetStatus(), CozGetInstrumentedMethods());
 
@@ -45,6 +49,16 @@ static class InjectedProbes
         calls++;
         callback?.Invoke();
     }
+    public static void HitBound(ulong generation, uint site)
+    {
+        if (generation == 0 || (boundGeneration != 0 && boundGeneration != generation)) invalidBoundLiteral = true;
+        boundGeneration = generation;
+        if (site == 1) boundEntries++;
+        else if (site == 2) boundLoops++;
+        else invalidBoundLiteral = true;
+        Hit();
+    }
+    public static ulong[] ReadBoundObservation() => [boundGeneration, boundEntries, boundLoops, invalidBoundLiteral ? 1UL : 0UL];
 
     public static IDisposable Bind(Action action) => new Binding(action);
 

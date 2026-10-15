@@ -176,6 +176,11 @@ flowchart LR
 
 See [practices](../practices.md), [the index](../lode-map.md), and [the README](../../README.md).
 
+`ProbeIdentityVerify` depends on `NativeBuild` and `LinuxPerfWorkload`.
+`LinuxProbeIdentityVerify` depends on `NativeLinuxBuild` and `LinuxPerfWorkload`.
+Both invoke `VerifyCooperativeInterop.ps1 -ProbeIdentity` for their platform and retain twelve lifetime cases.
+See [the identity procedure](../../docsSrc/How_Tos/verify-probe-identity.md).
+
 `LinuxServiceOwnerPolling` uses `LinuxPerfWorkload` and the sampled service runner with `-CompareOwnerPolling`.
 It compares yield and poll-64 at zero and 50 percent, retains every case, and fails after analysis if any case fails.
 See [owner polling](../profiling/owner-polling.md).

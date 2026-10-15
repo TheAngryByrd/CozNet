@@ -9,6 +9,7 @@
 #include <string_view>
 #include <thread>
 #include <vector>
+#include "ProbeLifetime.h"
 
 // PAL annotation macros conflict with libstdc++ declarations.
 #ifdef _WIN32
@@ -35,7 +36,9 @@ enum class ProbePlacement : LONG { Branch = 0, EmptyStackDiagnostic = 1 };
 static ProbePlacement probePlacement = ProbePlacement::Branch;
 static Sampler sampler;
 static ICorProfilerInfo2* samplingInfo = nullptr;
-static FunctionID selectedFunction = 0;
+static std::atomic<FunctionID> selectedFunction{0};
+static bool boundProbes = false;
+static coz::ProbeLifetime probeLifetime;
 
 template <typename T> class ComOwner {
     T* value = nullptr;
@@ -130,11 +133,20 @@ class Profiler final : public CallbackBase {
             rewriter.InsertBefore(before, instruction);
             return instruction;
         };
+        uint32_t probeSites = 0;
+        auto emitProbe = [&](ILInstr* before) {
+            if (!boundProbes) return insert(before, CEE_CALL, probe);
+            auto* first = insert(before, CEE_LDC_I8);
+            first->m_Arg64 = coz::ProbeLifetime::generation;
+            insert(before, CEE_LDC_I4, static_cast<INT32>(++probeSites));
+            insert(before, CEE_CALL, probe);
+            return first;
+        };
         auto* entry = sentinel->m_pNext;
         if (probeInterval != ProbeInterval::Dense) {
             insert(entry, CEE_LDC_I4, static_cast<INT32>(probeInterval));
             insert(entry, CEE_STLOC, countdown);
-            insert(entry, CEE_CALL, probe);
+            emitProbe(entry);
         }
         std::map<ILInstr*, ILInstr*> probes;
         for (auto* instruction = entry; instruction != sentinel; instruction = instruction->m_pNext) {
@@ -142,7 +154,7 @@ class Profiler final : public CallbackBase {
             bool backward = (s_OpCodeFlags[instruction->m_opcode] & OPCODEFLAGS_BranchTarget) != 0
                 && originalOffsets.at(instruction->m_pTarget) <= originalOffsets.at(instruction);
             if (probeInterval == ProbeInterval::Dense && (instruction == entry || backward)) {
-                probes.emplace(instruction, insert(instruction, CEE_CALL, probe));
+                probes.emplace(instruction, emitProbe(instruction));
             } else if (backward) {
                 auto* anchor = instruction;
                 if (probePlacement == ProbePlacement::EmptyStackDiagnostic) {
@@ -164,7 +176,7 @@ class Profiler final : public CallbackBase {
                 insert(anchor, CEE_STLOC, countdown);
                 auto* skip = insert(anchor, CEE_BRTRUE);
                 skip->m_pTarget = anchor;
-                insert(anchor, CEE_CALL, probe);
+                emitProbe(anchor);
                 insert(anchor, CEE_LDC_I4, static_cast<INT32>(probeInterval));
                 insert(anchor, CEE_STLOC, countdown);
                 probes.emplace(anchor, gate);
@@ -192,6 +204,7 @@ class Profiler final : public CallbackBase {
             hr = info->SetILInstrumentedCodeMap(function, TRUE, static_cast<ULONG>(codeMap.size()), codeMap.data());
             if (FAILED(hr)) return hr;
         }
+        if (boundProbes && !probeLifetime.rewritten(probeSites)) return E_FAIL;
         ++instrumented;
         return S_OK;
     }
@@ -214,6 +227,10 @@ public:
         return remaining;
     }
     HRESULT STDMETHODCALLTYPE Initialize(IUnknown* runtime) override {
+        const char* identity = std::getenv("COZNET_PROBE_IDENTITY");
+        if (!identity || std::string_view(identity) == "legacy") boundProbes = false;
+        else if (std::string_view(identity) == "bound") boundProbes = true;
+        else { status.store(E_INVALIDARG); return E_INVALIDARG; }
         const char* mapMode = std::getenv("COZNET_IL_MAP_MODE");
         if (!mapMode || std::string_view(mapMode) == "registered") ilMapMode = IlMapMode::Registered;
         else if (std::string_view(mapMode) == "raw-diagnostic") ilMapMode = IlMapMode::RawDiagnostic;
@@ -241,9 +258,18 @@ public:
             status.store(E_INVALIDARG);
             return E_INVALIDARG;
         }
+        if (boundProbes && (!target || std::string_view(target) != "linux-perf" || ilMapMode != IlMapMode::Registered)) {
+            status.store(E_INVALIDARG); return E_INVALIDARG;
+        }
         HRESULT hr = runtime->QueryInterface(__uuidof(ICorProfilerInfo), reinterpret_cast<void**>(info.address()));
         if (SUCCEEDED(hr)) hr = runtime->QueryInterface(__uuidof(ICorProfilerInfo2), reinterpret_cast<void**>(&samplingInfo));
-        if (SUCCEEDED(hr)) hr = info->SetEventMask(COR_PRF_MONITOR_JIT_COMPILATION | COR_PRF_ENABLE_STACK_SNAPSHOT | COR_PRF_MONITOR_THREADS);
+        const DWORD events = COR_PRF_MONITOR_JIT_COMPILATION | COR_PRF_ENABLE_STACK_SNAPSHOT | COR_PRF_MONITOR_THREADS;
+        if (SUCCEEDED(hr) && boundProbes) {
+            ComOwner<ICorProfilerInfo5> policy;
+            hr = runtime->QueryInterface(__uuidof(ICorProfilerInfo5), reinterpret_cast<void**>(policy.address()));
+            if (SUCCEEDED(hr)) hr = policy->SetEventMask2(events | COR_PRF_MONITOR_MODULE_LOADS |
+                COR_PRF_DISABLE_ALL_NGEN_IMAGES | COR_PRF_DISABLE_INLINING, COR_PRF_HIGH_DISABLE_TIERED_COMPILATION);
+        } else if (SUCCEEDED(hr)) hr = info->SetEventMask(events);
         status.store(FAILED(hr) ? hr : 1);
         return hr;
     }
@@ -252,6 +278,10 @@ public:
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE JITCompilationFinished(FunctionID function, HRESULT result, BOOL) override {
+        if (boundProbes) {
+            probeLifetime.finish(function, SUCCEEDED(result));
+            return S_OK;
+        }
         if (function != selectedFunction) return S_OK;
         try {
             if (SUCCEEDED(result)) result = sampler.Prepare(samplingInfo, function);
@@ -260,16 +290,21 @@ public:
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE Shutdown() override {
+        if (boundProbes) probeLifetime.invalidate(coz::ProbeLifetimeState::shutdown);
         sampler.Stop();
         if (samplingInfo) { samplingInfo->Release(); samplingInfo = nullptr; }
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE JITInlining(FunctionID, FunctionID, BOOL* shouldInline) override {
-        *shouldInline = TRUE;
+        *shouldInline = boundProbes ? FALSE : TRUE;
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE JITCachedFunctionSearchStarted(FunctionID, BOOL* useCached) override {
-        *useCached = TRUE;
+        *useCached = boundProbes ? FALSE : TRUE;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE ModuleUnloadStarted(ModuleID module) override {
+        if (boundProbes) probeLifetime.moduleUnloading(module);
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE JITCompilationStarted(FunctionID function, BOOL safeToBlock) override {
@@ -294,16 +329,26 @@ public:
             if (FAILED(hr) || std::basic_string_view<WCHAR>(name) != targetMethod) return S_OK;
             hr = metadata->GetTypeDefProps(type, name, 256, nullptr, nullptr, nullptr);
             if (FAILED(hr) || std::basic_string_view<WCHAR>(name) != targetType) return S_OK;
+            if (boundProbes && !probeLifetime.begin(module, function, token)) { status.store(E_FAIL); return S_OK; }
             LONG expected = 1;
             if (!status.compare_exchange_strong(expected, 3)) return S_OK;
-            if (!safeToBlock) { status.store(E_FAIL); return S_OK; }
+            if (!safeToBlock) {
+                if (boundProbes) probeLifetime.invalidate(coz::ProbeLifetimeState::compilationFailed);
+                status.store(E_FAIL); return S_OK;
+            }
             BYTE signature[] = {IMAGE_CEE_CS_CALLCONV_DEFAULT, 0, ELEMENT_TYPE_VOID};
+            BYTE boundSignature[] = {IMAGE_CEE_CS_CALLCONV_DEFAULT, 2, ELEMENT_TYPE_VOID, ELEMENT_TYPE_U8, ELEMENT_TYPE_U4};
             mdMethodDef probe;
-            hr = metadata->FindMethod(type, COZ_TEXT("Probe"), signature, sizeof(signature), &probe);
+            hr = boundProbes ? metadata->FindMethod(type, COZ_TEXT("ProbeBound"), boundSignature, sizeof(boundSignature), &probe)
+                : metadata->FindMethod(type, COZ_TEXT("Probe"), signature, sizeof(signature), &probe);
             if (SUCCEEDED(hr)) hr = Rewrite(function, module, token, probe);
+            if (FAILED(hr) && boundProbes) probeLifetime.invalidate(coz::ProbeLifetimeState::compilationFailed);
             if (SUCCEEDED(hr)) selectedFunction = function;
             status.store(FAILED(hr) ? hr : 2);
-        } catch (...) { status.store(E_FAIL); }
+        } catch (...) {
+            if (boundProbes) probeLifetime.invalidate(coz::ProbeLifetimeState::compilationFailed);
+            status.store(E_FAIL);
+        }
         return S_OK;
     }
 };
@@ -352,7 +397,23 @@ COZ_CLASS_EXPORT HRESULT __stdcall DllGetClassObject(REFCLSID clsid, REFIID id, 
 }
 
 COZ_EXPORT LONG __stdcall CozGetStatus() { return status.load(); }
+COZ_EXPORT LONG __stdcall CozGetProbeLifetimeState() {
+    return boundProbes ? static_cast<LONG>(probeLifetime.state()) : -1;
+}
+COZ_EXPORT BOOL __stdcall CozGetProbeBinding(uint64_t* generation, UINT_PTR* module, UINT_PTR* function, ULONG* method, ULONG* sites) {
+    if (!generation || !module || !function || !method || !sites) return FALSE;
+    *generation = 0; *module = 0; *function = 0; *method = 0; *sites = 0;
+    coz::ProbeBinding binding{};
+    if (!boundProbes || !probeLifetime.read(binding)) return FALSE;
+    *generation = binding.generation; *module = binding.module; *function = binding.function;
+    *method = binding.method; *sites = binding.sites;
+    return TRUE;
+}
+COZ_EXPORT BOOL __stdcall CozIsProbeBindingCurrent(uint64_t generation, ULONG site) {
+    return boundProbes && probeLifetime.current(generation, site);
+}
 COZ_EXPORT HRESULT __stdcall CozStartSampling() {
+    if (boundProbes) return E_NOTIMPL;
     if (status.load() != 2 || !samplingInfo) return E_UNEXPECTED;
     if (ilMapMode == IlMapMode::RawDiagnostic) return E_NOTIMPL;
     return sampler.Start(samplingInfo, selectedFunction);

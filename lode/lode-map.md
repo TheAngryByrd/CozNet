@@ -1,5 +1,7 @@
 # Lode index
 
+For opt-in literal probe arguments and CLR invalidation, read [probe identity](profiling/probe-identity.md).
+
 For injected identity and nonblocking CLR invalidation, read [the lifetime contract research](../docsSrc/Research/cooperative-clr-lifetime.md).
 
 For the next finite experiment lifecycle and explicit residual states, read [the lifecycle plan](plans/experiment-lifecycle.md).

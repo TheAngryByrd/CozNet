@@ -11,6 +11,8 @@ if (args is ["--verify-cooperative-managed"])
 }
 if (args is ["--verify-cooperative-interop", var cooperativePath, var cooperativeMode, var cooperativeLibrary])
     return CooperativeInteropChecks.Run(cooperativePath, cooperativeMode, cooperativeLibrary);
+if (args is ["--verify-probe-identity", var identityPath, var identityMode])
+    return ProbeIdentityChecks.Run(identityPath, identityMode);
 
 if (args is ["--verify-cpu-counters"])
 {
@@ -539,6 +541,9 @@ static class CpuWorkload
     public const int Iterations = 10000;
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Probe() => InjectedProbes.Hit();
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void ProbeBound(ulong generation, uint site) => InjectedProbes.HitBound(generation, site);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static long Run()

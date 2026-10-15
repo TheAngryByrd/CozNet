@@ -1,10 +1,12 @@
 param(
     [ValidateSet('Host', 'LinuxContainer')][string]$Platform = 'Host',
     [switch]$Injected,
+    [switch]$ProbeIdentity,
     [string]$ProfilerDirectory,
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/cooperative-interop')
 )
 $ErrorActionPreference = 'Stop'
+if ($ProbeIdentity) { $Injected = $true }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 $native = Join-Path $run 'native'
@@ -30,7 +32,7 @@ $sources = @('native/service/CooperativeApi.cpp', 'native/service/CooperativeApi
     'src/CozNet/SignalAccounting.fs', 'src/CozNet/SignalService.fs', 'src/CozNet/DelayLedger.fs', 'src/CozNet/SampleCredits.fs',
     'native/VerifyCooperativeInterop.ps1', 'native/VerifyServiceOwner.ps1', 'build/build.fs')
 $hashes = @{}
-if ($Injected) { $sources += @('native/Profiler.cpp', 'native/Sampler.h', 'native/GenerateCallbacks.ps1', 'tests/CozNet.LinuxPerf/InjectedProbes.cs') }
+if ($Injected) { $sources += @('native/Profiler.cpp', 'native/ProbeLifetime.h', 'native/service/ProbeLifetimeChecks.cpp', 'native/Sampler.h', 'native/GenerateCallbacks.ps1', 'tests/CozNet.LinuxPerf/InjectedProbes.cs', 'tests/CozNet.LinuxPerf/ProbeIdentityChecks.cs') }
 foreach ($name in $sources) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash }
 & (Join-Path $PSScriptRoot 'VerifyServiceOwner.ps1') -Platform $Platform -OutputDirectory $native *> (Join-Path $run 'native.log')
 $binary = if ($Platform -eq 'LinuxContainer' -or $IsLinux) { 'libCozNet.Cooperative.so' } elseif ($IsMacOS) { 'libCozNet.Cooperative.dylib' } else { 'Release/CozNet.Cooperative.dll' }
@@ -61,6 +63,7 @@ function Invoke-HostCase([string[]]$Arguments, [string]$Name, [int]$Interval = 0
         $start.Environment['COZNET_PROBE_INTERVAL'] = "$Interval"
         $start.Environment['COZNET_IL_MAP_MODE'] = 'registered'
         $start.Environment['COZNET_PROBE_PLACEMENT'] = 'branch'
+        $start.Environment['COZNET_PROBE_IDENTITY'] = $(if ($ProbeIdentity) { 'bound' } else { 'legacy' })
         $start.Environment['PATH'] = "$ProfilerDirectory$([IO.Path]::PathSeparator)$($start.Environment['PATH'])"
         if ($IsLinux) { $start.Environment['LD_LIBRARY_PATH'] = $ProfilerDirectory }
         if ($IsMacOS) { $start.Environment['DYLD_LIBRARY_PATH'] = $ProfilerDirectory }
@@ -91,7 +94,12 @@ if ($Platform -eq 'LinuxContainer') {
     $contractExit = Invoke-HostCase @((Join-Path $workload 'CozNet.LinuxPerf.dll'), '--verify-cooperative-managed') 'managed-checks'
 }
 $outcomes = @()
-$cases = if ($Injected) { @(1, 64, 256, 1024 | ForEach-Object { @{ mode = 'injected-paid'; interval = $_; name = "injected-$_" } }) }
+$cases = if ($ProbeIdentity) {
+    @(foreach ($interval in @(1, 64, 256, 1024)) {
+        foreach ($mode in @('identity', 'unload', 'duplicate-module')) { @{ mode = $mode; interval = $interval; name = "$mode-$interval" } }
+    })
+}
+elseif ($Injected) { @(1, 64, 256, 1024 | ForEach-Object { @{ mode = 'injected-paid'; interval = $_; name = "injected-$_" } }) }
 else { @('paid', 'deferred', 'cancelled', 'late', 'clock-failure', 'active-cleanup' | ForEach-Object { @{ mode = $_; interval = 0; name = $_ } }) }
 foreach ($case in $cases) {
     $mode = $case.mode
@@ -106,11 +114,16 @@ foreach ($case in $cases) {
                 '--env', "CORECLR_PROFILER_PATH=/profiler/$profilerName", '--env', 'LD_LIBRARY_PATH=/profiler',
                 '--env', 'COZNET_PROBE_TARGET=linux-perf', '--env', "COZNET_PROBE_INTERVAL=$($case.interval)",
                 '--env', 'COZNET_IL_MAP_MODE=registered', '--env', 'COZNET_PROBE_PLACEMENT=branch')
+            $activation += @('--env', "COZNET_PROBE_IDENTITY=$(if ($ProbeIdentity) { 'bound' } else { 'legacy' })")
         }
-        & docker @container @activation $runtimeImage timeout -k 2s 25s dotnet /workload/CozNet.LinuxPerf.dll --verify-cooperative-interop "/evidence/$name.json" $mode "/evidence/native/$binary" *> (Join-Path $run "$name.log")
+        $caseArguments = if ($ProbeIdentity) { @('--verify-probe-identity', "/evidence/$name.json", $mode) }
+        else { @('--verify-cooperative-interop', "/evidence/$name.json", $mode, "/evidence/native/$binary") }
+        & docker @container @activation $runtimeImage timeout -k 2s 25s dotnet /workload/CozNet.LinuxPerf.dll @caseArguments *> (Join-Path $run "$name.log")
         $exitCode = $LASTEXITCODE
     } else {
-        $exitCode = Invoke-HostCase @((Join-Path $workload 'CozNet.LinuxPerf.dll'), '--verify-cooperative-interop', $record, $mode, $library) $name $case.interval
+        $caseArguments = if ($ProbeIdentity) { @('--verify-probe-identity', $record, $mode) }
+        else { @('--verify-cooperative-interop', $record, $mode, $library) }
+        $exitCode = Invoke-HostCase (@((Join-Path $workload 'CozNet.LinuxPerf.dll')) + $caseArguments) $name $case.interval
     }
     $exists = Test-Path -LiteralPath $record
     $passed = $false

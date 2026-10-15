@@ -67,8 +67,9 @@ Each child process has a 30-second limit.
 The runner disables tiered compilation and ReadyToRun in these child processes.
 It does not change the parent process environment.
 
-The prototype has one selected method and one shared code map.
+The legacy prototype has one selected method and one shared code map.
 It does not handle multiple modules, ReJIT, concurrent probe counters, or module unload.
+The opt-in [bound identity path](probe-identity.md) uses literals and permanent module-unload invalidation without preparing a native code map.
 The sampler uses standard C++ threading and a platform-specific `SnapshotBackend` interface.
 The Windows backend uses `DoStackSnapshot` from a native worker thread.
 The controlled workload verifies selected-method frames during a 500-millisecond run.
