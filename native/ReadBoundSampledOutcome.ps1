@@ -2,12 +2,15 @@ function Read-BoundSampledOutcome {
     param([string]$Path, [string]$Case, [int]$ExitCode,
         [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
         [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null, [Nullable[bool]]$ExpectedChildCpu = $null, [Nullable[bool]]$ExpectedOwnerDrain = $null,
-        [Nullable[int]]$ExpectedReceiptCaptureVersion = $null, [Nullable[bool]]$ExpectedBatchService = $null, [Nullable[bool]]$ExpectedDispatchTiming = $null)
+        [Nullable[int]]$ExpectedReceiptCaptureVersion = $null, [Nullable[bool]]$ExpectedBatchService = $null, [Nullable[bool]]$ExpectedDispatchTiming = $null, [Nullable[bool]]$ExpectedDirectReceiptReady = $null)
     $passed = $false
     $recordError = $null
     try {
         $record = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
         if ($record.passed -isnot [bool]) { throw 'The case record lacks a Boolean outcome.' }
+        if ($null -ne $ExpectedDirectReceiptReady -and ($record.directReceiptReadyEnabled -isnot [bool] -or $record.directReceiptReadyEnabled -ne $ExpectedDirectReceiptReady)) {
+            throw 'Receipt readiness evidence differs from the requested setting.'
+        }
         if ($null -ne $ExpectedDispatchTiming -and ($record.dispatchTimingEnabled -isnot [bool] -or $record.dispatchTimingEnabled -ne $ExpectedDispatchTiming)) { throw 'Dispatch timing evidence differs from the requested setting.' }
         if ($null -ne $ExpectedBatchService -and ($record.batchServiceEnabled -isnot [bool] -or $record.batchServiceEnabled -ne $ExpectedBatchService)) { throw 'Batch service evidence differs from the requested setting.' }
         if ($null -ne $ExpectedReceiptCaptureVersion -and (($record.receiptIntervalCaptureVersion -isnot [int] -and $record.receiptIntervalCaptureVersion -isnot [long]) -or $record.receiptIntervalCaptureVersion -ne $ExpectedReceiptCaptureVersion)) { throw 'Receipt capture version differs from the requested version.' }

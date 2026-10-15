@@ -29,7 +29,27 @@ def verify_receipt_interval(payment, frequency=None):
 
 
 
+def verify_receipt_readiness(record):
+    if "directReceiptReadyEnabled" not in record:
+        require("receiptReadyCalls" not in record, "Receipt readiness has no activation flag")
+        return
+    enabled = record["directReceiptReadyEnabled"]
+    require(type(enabled) is bool, "Receipt readiness activation is not Boolean")
+    calls = count(record["receiptReadyCalls"])
+    require(calls <= 9223372036854775807, "Receipt readiness count exceeds Int64")
+    if not enabled:
+        require(calls == 0, "Disabled receipt readiness contains calls")
+    else:
+        require(record.get("selectedPaymentEnabled") is True, "Receipt readiness requires selected payment")
+    if enabled and record.get("dispatchTimingEnabled") is True:
+        timing = record["dispatchTiming"]
+        observations = timing["Recent"] + [timing.get(key) for key in ("Longest", "LongestQueue", "LongestAction", "LongestReturn")]
+        require(all(item is None or item["Operation"] not in (2, 6) for item in observations),
+                "Direct receipt readiness retained normal header dispatches")
+
+
 def verify_dispatch_timing(record):
+    verify_receipt_readiness(record)
     if "dispatchTimingEnabled" not in record:
         require("dispatchTiming" not in record, "Dispatch timing has no activation flag")
         return

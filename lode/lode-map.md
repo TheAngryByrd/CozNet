@@ -1,5 +1,7 @@
 # Lode index
 
+For opt-in direct observation without controller header dispatches, read [receipt readiness](profiling/receipt-readiness.md).
+
 For opt-in controller queue, action, and return brackets, read [dispatch timing](profiling/controller-dispatch.md).
 
 For opt-in peer service after a published sample batch, read [sample publication](profiling/sample-publication.md).

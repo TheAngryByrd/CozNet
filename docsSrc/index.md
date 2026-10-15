@@ -1,5 +1,7 @@
 # CozNet documentation
 
+See [why direct receipt readiness remains experimental](Explanations/receipt-readiness.md) for the latest polling comparison.
+
 The public engine supports serial, synchronous CPU regions. Native service and sampled profiling remain experimental.
 
 ## Tutorials

@@ -317,7 +317,53 @@ static void cpuJournalRetainsBoundedChildren() {
     require(worker.target->release(*next) && worker.run([&] { return worker.target->retire(); }), 99);
 }
 
+static void receiptReadinessPreservesOwnership() {
+    for (int mode = 0; mode < 3; ++mode) {
+        Worker worker;
+        require(!worker.target->receiptReady(0) && !worker.target->receiptReady(1), 130);
+        const auto generation = worker.target->submit(61, 1);
+        require(generation && worker.target->receiptReady(*generation) == false, 131);
+        require(worker.run([&] { return worker.target->receiptReady(*generation); }) == false, 132);
+        if (mode == 1) worker.timing.outcome.store(TargetWaitStatus::failed);
+        if (mode == 2) require(worker.target->cancel(*generation), 133);
+        const auto result = worker.run([&] { return worker.target->poll(site()); });
+        require(result == (mode == 1 ? CooperativePollResult::failed : CooperativePollResult::serviced), 134);
+        require(worker.target->receiptReady(*generation) == true
+            && worker.run([&] { return worker.target->receiptReady(*generation); }) == true, 135);
+        require(!worker.target->release(*generation), 136);
+        std::array<TargetLeaseChild, 4> children{};
+        read(worker, *generation, children);
+        require(worker.target->release(*generation) && !worker.target->receiptReady(*generation), 137);
+        const auto next = worker.target->submit(62, 1);
+        require(next && *next != *generation && !worker.target->receiptReady(*generation)
+            && worker.target->receiptReady(*next) == false && worker.target->cancel(*next), 138);
+        require(worker.run([&] { return worker.target->poll(site()); }) == CooperativePollResult::serviced, 139);
+        read(worker, *next, children);
+        require(worker.target->release(*next) && worker.run([&] { return worker.target->retire(); }), 140);
+    }
+}
+
+static void executingChildIsNotReceiptReady() {
+    Worker worker;
+    worker.timing.hold.store(true);
+    const auto generation = worker.target->submit(63, 1);
+    require(generation.has_value(), 141);
+    auto polling = worker.enqueue([&] { return worker.target->poll(site()); });
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!worker.timing.entered.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::yield();
+    require(worker.timing.entered.load() && worker.target->receiptReady(*generation) == false, 142);
+    worker.timing.resume.store(true, std::memory_order_release);
+    require(polling.wait_for(std::chrono::seconds(5)) == std::future_status::ready
+        && polling.get() == CooperativePollResult::serviced && worker.target->receiptReady(*generation) == true, 143);
+    std::array<TargetLeaseChild, 4> children{};
+    read(worker, *generation, children);
+    require(worker.target->release(*generation) && worker.run([&] { return worker.target->retire(); }), 144);
+}
+
 int main() {
+    receiptReadinessPreservesOwnership();
+    executingChildIsNotReceiptReady();
     cpuJournalRetainsBoundedChildren();
     cpuObservationsPreserveServiceAndOwnership();
     registrationAndRoleChecks();

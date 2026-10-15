@@ -108,6 +108,10 @@ bool CooperativeTarget::cancel(uint32_t generation) noexcept {
     return controller() && generation != 0 && outstanding_.load(std::memory_order_acquire) == generation
         && mailbox_.cancel(generation);
 }
+std::optional<bool> CooperativeTarget::receiptReady(uint32_t generation) const noexcept {
+    if (generation == 0 || outstanding_.load(std::memory_order_acquire) != generation) return std::nullopt;
+    return mailbox_.quiescent(generation);
+}
 std::optional<TargetLeaseSnapshot> CooperativeTarget::snapshot(uint32_t generation,
     std::span<TargetLeaseChild> destination, std::size_t& required) noexcept {
     if (!controller() || generation == 0 || outstanding_.load(std::memory_order_acquire) != generation) return std::nullopt;

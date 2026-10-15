@@ -52,6 +52,9 @@ static unsafe partial class CooperativeNativeMethods
     [LibraryImport(Library, EntryPoint = "coz_cooperative_cancel")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int Cancel(CooperativeSessionHandle session, uint slot, ulong generation);
+    [LibraryImport(Library, EntryPoint = "coz_cooperative_receipt_ready")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial int ReceiptReady(CooperativeSessionHandle session, uint slot, ulong generation, out uint ready);
     [LibraryImport(Library, EntryPoint = "coz_cooperative_snapshot")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int Snapshot(CooperativeSessionHandle session, uint slot, ulong generation,
@@ -143,6 +146,12 @@ sealed class NativeCooperativeClient
         int status = CooperativeNativeMethods.Snapshot(session, slot, Generation(slot), out var header, null, 0);
         if (status != 4) Check(status, "probe");
         return header;
+    }
+
+    public bool ReceiptReady(uint slot)
+    {
+        Check(CooperativeNativeMethods.ReceiptReady(session, slot, Generation(slot), out uint ready), "receipt readiness");
+        return ready switch { 0 => false, 1 => true, _ => throw new InvalidDataException("Invalid cooperative readiness value.") };
     }
     public unsafe CooperativeRawCapture CaptureDiagnostic(uint slot)
     {

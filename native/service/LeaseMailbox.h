@@ -121,6 +121,11 @@ public:
             if (state_.compare_exchange_weak(current, current + reader_unit, std::memory_order_acq_rel)) return Reader(this, generation);
         }
     }
+    bool quiescent(uint32_t generation) const noexcept {
+        const auto current = state_.load(std::memory_order_acquire);
+        return generation != 0 && generationOf(current) == generation
+            && phaseOf(current) == LeaseMailboxPhase::quiescent;
+    }
     bool close() noexcept {
         auto current = state_.load(std::memory_order_acquire);
         for (;;) {

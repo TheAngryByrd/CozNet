@@ -5,6 +5,32 @@ It uses source-generated `LibraryImport` declarations, explicit C calling conven
 Both native records remain 88 bytes. Layout checks verify the final field offsets.
 The public serial API does not use this client.
 
+## Optional direct receipt readiness
+
+`NativeCooperativeClient.ReceiptReady(slot)` queries the outstanding generation through the native readiness API.
+The import uses the existing `SafeHandle`, an explicit C calling convention, and an unsigned integer output.
+The client accepts only `0` and `1`. Native errors and invalid output values throw.
+Managed callers must serialize submit, query, and release operations. The native any-thread query does not make this client thread-safe.
+
+`COZNET_DIRECT_RECEIPT_READY=1` enables direct queries in normal selected and peer polling.
+The runner exposes this option as `VerifyBoundSampledPayment.ps1 -SelectedPayment -DirectReceiptReady`.
+The option requires selected payment. An absent value or `0` preserves controller header polling. Other values reject configuration.
+Cleanup, full receipt copies, validation, accounting, and release still use their existing controller paths.
+All debt and timing limits remain unchanged.
+Mailbox quiescence can require another poll after a controller snapshot could report retirement.
+Direct query failures throw on the polling thread. Controller query failures retain the worker's aggregate exception wrapper.
+
+Results record `directReceiptReadyEnabled` and `receiptReadyCalls`.
+The count includes attempted direct queries, including queries that throw. Disabled mode records zero calls.
+Replay checks activation and counts. With dispatch timing enabled, retained normal header dispatches invalidate direct-mode evidence.
+Replay cannot reconstruct evicted dispatches or prove that every query used the intended slot.
+The runner requires recorded activation to match its option.
+
+The query uses portable atomic state and the existing native lifetime guard.
+The sampled workload remains Linux-only. Capacity, overhead, and prediction benefits remain unverified.
+See [the native readiness contract](cooperative-interop.md#receipt-readiness).
+The [polling comparison](../Explanations/receipt-readiness.md) explains why controller polling remains the default.
+
 ## Identity and receipt tracking
 
 `CooperativeSite.Parse` requires nonzero worker, code-version, and site identities.

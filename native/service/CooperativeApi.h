@@ -71,6 +71,7 @@ COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_register(Coz
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_poll(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t code_version, uint64_t site, uint32_t* result);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_submit(CozCooperativeSession* session, uint32_t slot, uint64_t command, uint64_t budget, uint64_t* generation);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_cancel(CozCooperativeSession* session, uint32_t slot, uint64_t generation);
+COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_receipt_ready(CozCooperativeSession* session, uint32_t slot, uint64_t generation, uint32_t* ready);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_snapshot(CozCooperativeSession* session, uint32_t slot, uint64_t generation, CozCooperativeSnapshot* snapshot, CozCooperativeChild* children, uint32_t capacity);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_release(CozCooperativeSession* session, uint32_t slot, uint64_t generation);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_retire(CozCooperativeSession* session, uint32_t slot);

@@ -53,6 +53,7 @@ public:
     std::optional<uint32_t> submit(uint64_t command, uint64_t budget);
     CooperativePollResult poll(CooperativePollSite observed);
     bool cancel(uint32_t generation) noexcept;
+    std::optional<bool> receiptReady(uint32_t generation) const noexcept;
     std::optional<TargetLeaseSnapshot> snapshot(uint32_t generation, std::span<TargetLeaseChild> destination,
         std::size_t& required) noexcept;
     bool release(uint32_t generation) noexcept;

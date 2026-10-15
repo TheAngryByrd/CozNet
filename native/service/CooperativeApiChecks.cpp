@@ -281,6 +281,38 @@ static void cpuSnapshotContract() {
     require(coz_cooperative_close(session) == COZ_COOPERATIVE_OK, 85);
 }
 
+static void receiptReadinessIsObservationOnly(CozCooperativeSession* session, Worker& worker, Worker& other) {
+    uint32_t ready = 99;
+    require(coz_cooperative_receipt_ready(session, 0, 1, nullptr) == COZ_COOPERATIVE_INVALID, 100);
+    require(coz_cooperative_receipt_ready(nullptr, 0, 1, &ready) == COZ_COOPERATIVE_INVALID && ready == 0, 101);
+    for (uint64_t invalid : {uint64_t{0}, uint64_t{1} << 32}) {
+        ready = 99;
+        require(coz_cooperative_receipt_ready(session, 0, invalid, &ready) == COZ_COOPERATIVE_INVALID && ready == 0, 102);
+    }
+    require(coz_cooperative_receipt_ready(session, 0, 1, &ready) == COZ_COOPERATIVE_INVALID
+        && coz_cooperative_receipt_ready(session, 2, 1, &ready) == COZ_COOPERATIVE_INVALID
+        && coz_cooperative_receipt_ready(session, 99, 1, &ready) == COZ_COOPERATIVE_INVALID, 103);
+    uint64_t generation{};
+    require(coz_cooperative_submit(session, 0, 60, 1, &generation) == COZ_COOPERATIVE_OK, 104);
+    require(other.run([&] { return coz_cooperative_receipt_ready(session, 0, generation, &ready); }) == COZ_COOPERATIVE_OK
+        && ready == 0, 105);
+    require(worker.run([&] {
+        uint32_t outcome{};
+        return coz_cooperative_poll(session, 0, 1, 2, 3, &outcome) == COZ_COOPERATIVE_OK
+            && outcome == COZ_COOPERATIVE_SERVICED;
+    }), 106);
+    require(worker.run([&] { return coz_cooperative_receipt_ready(session, 0, generation, &ready); }) == COZ_COOPERATIVE_OK
+        && ready == 1, 107);
+    require(coz_cooperative_receipt_ready(session, 0, generation, &ready) == COZ_COOPERATIVE_OK && ready == 1
+        && coz_cooperative_release(session, 0, generation) == COZ_COOPERATIVE_BUSY, 108);
+    CozCooperativeSnapshot snapshot{};
+    CozCooperativeChild child{};
+    require(coz_cooperative_snapshot(session, 0, generation, &snapshot, &child, 1) == COZ_COOPERATIVE_OK
+        && coz_cooperative_release(session, 0, generation) == COZ_COOPERATIVE_OK, 109);
+    ready = 99;
+    require(coz_cooperative_receipt_ready(session, 0, generation, &ready) == COZ_COOPERATIVE_INVALID && ready == 0, 110);
+}
+
 int main(int argc, char** argv) {
     if (argc == 2 && std::string_view(argv[1]) == "cpu") { cpuSnapshotContract(); return 0; }
     if (argc == 2 && std::string_view(argv[1]) == "timing") { nativeClockAndBoundedWait(); return 0; }
@@ -300,9 +332,12 @@ int main(int argc, char** argv) {
         copiedJournalAndGenerationOwnership(session, worker);
         mismatchedSitesAndCancellation(session, worker);
         independentTargetOwnership(session, worker, other);
+        receiptReadinessIsObservationOnly(session, worker, other);
         revocationAndClose(session, worker, other);
     }
     require(coz_cooperative_close(session) == COZ_COOPERATIVE_OK, 51);
+    uint32_t ready = 99;
+    require(coz_cooperative_receipt_ready(session, 0, 1, &ready) == COZ_COOPERATIVE_INVALID && ready == 0, 111);
     uint64_t time = 99;
     require(coz_cooperative_clock(session, &time) == COZ_COOPERATIVE_INVALID && time == 0
         && coz_cooperative_close(session) == COZ_COOPERATIVE_INVALID, 52);

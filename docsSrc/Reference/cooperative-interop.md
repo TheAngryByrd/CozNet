@@ -41,6 +41,21 @@ The target checks the measured child-duration limit of 5,000,000 ns.
 A generation must fit in 32 bits. The ABI rejects larger values without truncation.
 Cancellation and revocation still require owner polling to terminate pending work.
 
+## Receipt readiness
+
+`coz_cooperative_receipt_ready(session, slot, generation, ready)` observes an outstanding request without copying its journal.
+Any thread can call it. The shared API lifetime guard excludes registration and close during the call.
+The query reads atomic ownership and mailbox state. It does not access snapshot scratch storage.
+
+`ready` must point to a `uint32_t`. The function clears it before checking the other arguments.
+Zero, oversized, stale, and released generations return `INVALID`.
+An invalid session, slot, or unregistered target also returns `INVALID`.
+A valid outstanding generation returns `OK` with `0` while pending or executing, or `1` when its mailbox is quiescent.
+
+Readiness is a hint. A failed or cancelled journal can also be ready.
+The query does not authorize release, establish a receipt timestamp, or accept payment.
+The controller must still copy the full journal and validate the receipt before accounting.
+
 ## Records and status codes
 
 `CozCooperativeChild` is 88 bytes. Its eleven fields are unsigned 64-bit values.

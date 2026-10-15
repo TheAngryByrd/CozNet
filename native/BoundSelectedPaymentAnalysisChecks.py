@@ -176,6 +176,14 @@ class ChildCpuAnalysisChecks(unittest.TestCase):
 
 
 class SelectedPaymentAnalysisChecks(unittest.TestCase):
+    def test_full_replay_checks_readiness_activation(self):
+        record = valid_record()
+        record.update(directReceiptReadyEnabled=False, receiptReadyCalls=0)
+        verify_record(record)
+        record["receiptReadyCalls"] = 1
+        with self.assertRaisesRegex(ValueError, "Disabled receipt readiness contains calls"):
+            verify_record(record)
+
     def cadence_record(self):
         record = valid_record()
         record.update(schemaVersion=4, selectedCadence="QualifiedSample", requestedBatches=5,

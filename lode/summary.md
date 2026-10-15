@@ -1,5 +1,9 @@
 # Project scope
 
+An opt-in [receipt-readiness query](profiling/receipt-readiness.md) replaces normal controller header polling with atomic observation.
+Full receipt validation and cleanup retain controller ownership. Capacity and overhead benefits remain unverified.
+Its two one-CPU treatments fail peer debt earlier than the interleaved controller trials. Controller polling remains the default.
+
 An opt-in [dispatch diagnostic](profiling/controller-dispatch.md) retains controller queue, action, and return brackets without changing payment rules.
 Its one-CPU failure separates a short failed receipt-read action from a 115.427269 ms caller-observation interval. The cause of that interval remains unresolved.
 

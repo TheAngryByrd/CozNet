@@ -160,6 +160,19 @@ int32_t COZ_COOPERATIVE_CALL coz_cooperative_cancel(CozCooperativeSession* sessi
         return target->target->cancel(target->generation) ? COZ_COOPERATIVE_OK : COZ_COOPERATIVE_BUSY;
     });
 }
+int32_t COZ_COOPERATIVE_CALL coz_cooperative_receipt_ready(CozCooperativeSession* session, uint32_t slot, uint64_t generation, uint32_t* ready) {
+    if (!ready) return COZ_COOPERATIVE_INVALID;
+    *ready = 0;
+    if (generation == 0 || generation > std::numeric_limits<uint32_t>::max()) return COZ_COOPERATIVE_INVALID;
+    return access(session, false, [&](CozCooperativeSession& value) -> int32_t {
+        auto* target = get(value, slot);
+        if (!target || !target->target) return COZ_COOPERATIVE_INVALID;
+        const auto result = target->target->receiptReady(static_cast<uint32_t>(generation));
+        if (!result) return COZ_COOPERATIVE_INVALID;
+        *ready = *result ? 1 : 0;
+        return COZ_COOPERATIVE_OK;
+    });
+}
 int32_t COZ_COOPERATIVE_CALL coz_cooperative_snapshot(CozCooperativeSession* session, uint32_t slot, uint64_t generation, CozCooperativeSnapshot* result, CozCooperativeChild* children, uint32_t capacity) {
     if (!result || (capacity != 0 && !children) || capacity > 100000) return COZ_COOPERATIVE_INVALID;
     *result = {};

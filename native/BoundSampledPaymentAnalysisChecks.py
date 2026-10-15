@@ -4,7 +4,7 @@ import pathlib
 import tempfile
 import unittest
 
-from AnalyzeBoundSampledPayment import main, verify_record
+from AnalyzeBoundSampledPayment import main, verify_record, verify_receipt_readiness
 
 
 def valid_record():
@@ -44,6 +44,48 @@ def failure_record():
 
 
 class BoundPaymentAnalysisChecks(unittest.TestCase):
+    def test_full_replay_checks_readiness_activation(self):
+        record = valid_record()
+        record.update(directReceiptReadyEnabled=False, receiptReadyCalls=0)
+        verify_record(record)
+        record["receiptReadyCalls"] = 1
+        with self.assertRaisesRegex(ValueError, "Disabled receipt readiness contains calls"):
+            verify_record(record)
+
+    def test_readiness_activation_and_attempt_count(self):
+        verify_receipt_readiness({})
+        verify_receipt_readiness(dict(directReceiptReadyEnabled=False, receiptReadyCalls=0))
+        for calls in (0, 1, 9223372036854775807):
+            verify_receipt_readiness(dict(directReceiptReadyEnabled=True, receiptReadyCalls=calls, selectedPaymentEnabled=True))
+        for record in (
+            dict(receiptReadyCalls=0),
+            dict(directReceiptReadyEnabled=1, receiptReadyCalls=0),
+            dict(directReceiptReadyEnabled=False, receiptReadyCalls=1),
+            *(dict(directReceiptReadyEnabled=True, selectedPaymentEnabled=True, receiptReadyCalls=value)
+              for value in (-1, True, 1.5, 9223372036854775808)),
+        ):
+            with self.subTest(record=record), self.assertRaises(ValueError):
+                verify_receipt_readiness(record)
+
+    def test_direct_readiness_requires_selected_payment(self):
+        for selected in (None, False, 1):
+            record = dict(directReceiptReadyEnabled=True, receiptReadyCalls=0)
+            if selected is not None:
+                record["selectedPaymentEnabled"] = selected
+            with self.subTest(selected=selected), self.assertRaisesRegex(ValueError, "Receipt readiness requires selected payment"):
+                verify_receipt_readiness(record)
+
+    def test_direct_readiness_excludes_retained_header_dispatches(self):
+        record = dict(directReceiptReadyEnabled=True, receiptReadyCalls=1, selectedPaymentEnabled=True,
+                      dispatchTimingEnabled=True, dispatchTiming=dict(Recent=[dict(Operation=3)]))
+        verify_receipt_readiness(record)
+        for operation in (2, 6):
+            for key in ("Recent", "Longest", "LongestQueue", "LongestAction", "LongestReturn"):
+                changed = copy.deepcopy(record)
+                changed["dispatchTiming"][key] = [dict(Operation=operation)] if key == "Recent" else dict(Operation=operation)
+                with self.subTest(operation=operation, key=key), self.assertRaisesRegex(ValueError, "normal header"):
+                    verify_receipt_readiness(changed)
+
     def test_publication_mode_and_service_count_are_checked(self):
         for batch in (False, True):
             record = valid_record()
