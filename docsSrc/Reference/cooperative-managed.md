@@ -163,6 +163,16 @@ The shared observer uses managed synchronization and `Stopwatch`. The live sampl
 `dispatchTimingEnabled` records the activation Boolean. `dispatchTiming` is null when disabled.
 Enabled evidence contains `Calls`, `Failed`, `Incomplete`, `Recent`, `Longest`, `LongestQueue`, `LongestAction`, and `LongestReturn`.
 `Recent` retains at most 128 immutable records in sequence order.
+New captures also contain `PrefixEvidenceVersion=1` and `Prefix`.
+`Prefix` retains the first 32 immutable dispatch records, including failures, in sequence order.
+It can overlap `Recent` and the maxima. Matching sequences must contain identical observations.
+Replay requires exactly `min(Calls, 32)` prefix records when the version is present.
+It rejects unknown versions, unversioned prefixes, and conflicting copies.
+Older captures without both prefix fields remain readable.
+Removing both fields therefore permits legacy replay. The runner does not independently require prefix evidence.
+Replay success alone does not prove that a capture contains first-request records.
+The prefix can retain first-request phases after recent-history eviction.
+It does not guarantee that every first-request phase occurs within 32 calls.
 The four maxima retain records independently of recent-history eviction. Ties retain the first record.
 
 Each observation contains `Sequence`, `Operation`, `Command`, `Generation`, `Submitted`, `Started`, `Finished`, `Returned`, and `Failed`.

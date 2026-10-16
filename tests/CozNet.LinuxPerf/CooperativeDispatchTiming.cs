@@ -21,6 +21,9 @@ sealed class CooperativeDispatchTiming
     private readonly Func<long> readClock;
     private readonly int owner = Environment.CurrentManagedThreadId;
     private readonly Queue<CooperativeDispatchObservation> recent = new(128);
+    private readonly List<CooperativeDispatchObservation> prefix = new(32);
+    public int PrefixEvidenceVersion => 1;
+    public IReadOnlyList<CooperativeDispatchObservation> Prefix => prefix.ToArray();
     public long Calls { get; private set; }
     public long Failed { get; private set; }
     public long Incomplete { get; private set; }
@@ -65,6 +68,7 @@ sealed class CooperativeDispatchTiming
                     active.Started, active.Finished, readClock(), failed);
             if (failed) Failed++;
             if (observation.Finished is null) Incomplete++;
+            if (prefix.Count < 32) prefix.Add(observation);
             if (recent.Count == 128) recent.Dequeue();
             recent.Enqueue(observation);
             if (Longest is null || Duration(observation) > Duration(Longest)) Longest = observation;

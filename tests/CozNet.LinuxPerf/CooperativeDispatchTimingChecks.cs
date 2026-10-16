@@ -10,6 +10,7 @@ static class CooperativeDispatchTimingChecks
         CompletedDispatchRetainsThreePhasesAndIdentity();
         FailuresPreserveExceptionAndIncompleteSnapshot();
         RecentHistoryIsBoundedAndMaximaSurviveEviction();
+        PrefixSurvivesEvictionWithoutExposingMutableStorage();
         DistinctPhaseMaximaUseTheirOwnIntervals();
         ActiveTimeoutRetainsStartedWithoutLateCompletion();
         WorkerFaultKeepsItsExistingExceptionShape();
@@ -64,6 +65,35 @@ static class CooperativeDispatchTimingChecks
         Require(timing.Calls == 131 && timing.Recent.Count == 128 && timing.Recent[0].Sequence == 4
             && timing.Recent[^1].Sequence == 131 && timing.Longest == longest && timing.LongestAction == longest,
             "Recent history exceeded its bound, lost order, or evicted a maximum.");
+    }
+
+    private static void PrefixSurvivesEvictionWithoutExposingMutableStorage()
+    {
+        long tick = 0;
+        var timing = new CooperativeDispatchTiming(() => ++tick);
+        Require(timing.PrefixEvidenceVersion == 1 && timing.Prefix.Count == 0,
+            "New dispatch capture did not expose an empty versioned prefix.");
+        var original = new TimeoutException("prefix dispatch failed");
+        try
+        {
+            timing.Run<int>(CooperativeDispatchOperation.PeerSubmit, 7, 0, () => 1, _ => throw original);
+        }
+        catch (TimeoutException error) when (ReferenceEquals(error, original)) { }
+        var first = timing.Prefix.Single();
+        Require(first.Failed && first.Started is null && first.Finished is null && first.Command == 7,
+            "The prefix lost its first failed submit.");
+        for (int index = 1; index < 32; ++index)
+            timing.Run(CooperativeDispatchOperation.PeerRead, 7, 9, () => 0, action => action());
+        var snapshot = timing.Prefix.ToArray();
+        for (int index = 32; index < 200; ++index)
+            timing.Run(CooperativeDispatchOperation.PeerRelease, 8, 10, () => { tick += 100; return 0; }, action => action());
+        Require(timing.Prefix.SequenceEqual(snapshot) && timing.Prefix.Count == 32
+            && timing.Prefix.Select(item => item.Sequence).SequenceEqual(Enumerable.Range(1, 32).Select(value => (long)value))
+            && timing.Recent[0].Sequence == 73 && timing.Longest?.Sequence == 33,
+            "Later calls or maxima displaced the bounded dispatch prefix.");
+        var exposed = (CooperativeDispatchObservation[])timing.Prefix;
+        exposed[0] = exposed[1];
+        Require(timing.Prefix[0] == first, "A caller mutated the retained dispatch prefix.");
     }
 
     private static void WorkerFaultKeepsItsExistingExceptionShape()

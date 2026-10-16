@@ -19,7 +19,7 @@ def child_window(submit_started, submit_finished, armed, event, debt_timestamp, 
 
 
 def retained_submits(timing, command):
-    retained = timing["Recent"] + [timing[key] for key in ("Longest", "LongestQueue", "LongestAction", "LongestReturn")]
+    retained = timing["Recent"] + timing.get("Prefix", []) + [timing[key] for key in ("Longest", "LongestQueue", "LongestAction", "LongestReturn")]
     unique = {}
     for item in retained:
         if item is not None and item["Operation"] == 1 and item["Command"] == command:

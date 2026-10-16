@@ -597,6 +597,52 @@ class DispatchTimingAnalysisChecks(unittest.TestCase):
             Longest=copy.deepcopy(first), LongestQueue=copy.deepcopy(first), LongestAction=copy.deepcopy(first), LongestReturn=copy.deepcopy(first)))
         return record
 
+    def test_versioned_prefix_preserves_overlap_and_rejects_corruption(self):
+        record = self.record()
+        timing = record["dispatchTiming"]
+        timing.update(PrefixEvidenceVersion=1, Prefix=copy.deepcopy(timing["Recent"]))
+        self.assertTrue(verify_record(record)["casePassed"])
+        for mutate, message in (
+            (lambda t: t.update(PrefixEvidenceVersion=True), "Unsupported dispatch prefix version"),
+            (lambda t: t.update(PrefixEvidenceVersion=2), "Unsupported dispatch prefix version"),
+            (lambda t: t.pop("PrefixEvidenceVersion"), "prefix has no version"),
+            (lambda t: t.update(Prefix=[]), "prefix length"),
+            (lambda t: t["Prefix"][0].update(Command=2), "changed its observation"),
+        ):
+            with self.subTest(message=message):
+                changed = copy.deepcopy(record)
+                mutate(changed["dispatchTiming"])
+                with self.assertRaisesRegex(ValueError, message):
+                    verify_record(changed)
+
+    def test_prefix_failure_survives_eviction_and_contributes_to_totals(self):
+        from AnalyzeBoundSampledPayment import verify_dispatch_timing
+        record = self.record()
+        record.update(completed=False, passed=False)
+        items = [dict(Sequence=i, Operation=3, Command=i, Generation=i, Submitted=i * 100,
+                      Started=i * 100 + 1, Finished=i * 100 + 2, Returned=i * 100 + 3, Failed=False)
+                 for i in range(1, 201)]
+        items[0].update(Started=None, Finished=None, Failed=True)
+        items[32].update(Started=3310, Finished=3320, Returned=3330)
+        timing = record["dispatchTiming"]
+        timing.update(Calls=200, Failed=1, Incomplete=1, PrefixEvidenceVersion=1,
+                      Prefix=copy.deepcopy(items[:32]), Recent=copy.deepcopy(items[-128:]))
+        for key in ("Longest", "LongestQueue", "LongestAction", "LongestReturn"):
+            timing[key] = copy.deepcopy(items[32])
+        verify_dispatch_timing(record)
+        changed = copy.deepcopy(record)
+        changed["dispatchTiming"].update(Failed=0, Incomplete=0)
+        with self.assertRaisesRegex(ValueError, "totals differ from retained observations"):
+            verify_dispatch_timing(changed)
+        changed = copy.deepcopy(record)
+        changed["dispatchTiming"]["Prefix"][1]["Sequence"] = 40
+        with self.assertRaisesRegex(ValueError, "prefix is not contiguous"):
+            verify_dispatch_timing(changed)
+        changed = copy.deepcopy(record)
+        changed["dispatchTiming"]["Prefix"][1]["Returned"] = 250
+        with self.assertRaisesRegex(ValueError, "maximum is smaller than retained observations"):
+            verify_dispatch_timing(changed)
+
     def test_dispatch_phases_and_maxima_are_consistent(self):
         self.assertTrue(verify_record(self.record())["casePassed"])
         for mutate, message in (

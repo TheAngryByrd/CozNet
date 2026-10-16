@@ -49,7 +49,7 @@ def verify_receipt_readiness(record):
         require(record.get("selectedPaymentEnabled") is True, "Receipt readiness requires selected payment")
     if enabled and record.get("dispatchTimingEnabled") is True:
         timing = record["dispatchTiming"]
-        observations = timing["Recent"] + [timing.get(key) for key in ("Longest", "LongestQueue", "LongestAction", "LongestReturn")]
+        observations = timing["Recent"] + timing.get("Prefix", []) + [timing.get(key) for key in ("Longest", "LongestQueue", "LongestAction", "LongestReturn")]
         require(all(item is None or item["Operation"] not in (2, 6) for item in observations),
                 "Direct receipt readiness retained normal header dispatches")
 
@@ -73,6 +73,14 @@ def verify_dispatch_timing(record):
     require(not record["completed"] or failed == 0, "Completed workload has failed controller dispatch")
     recent = timing["Recent"]
     require(len(recent) == min(calls, 128), "Dispatch history length differs")
+    prefix = []
+    if "PrefixEvidenceVersion" in timing:
+        require(type(timing["PrefixEvidenceVersion"]) is int and timing["PrefixEvidenceVersion"] == 1,
+                "Unsupported dispatch prefix version")
+        prefix = timing["Prefix"]
+        require(type(prefix) is list and len(prefix) == min(calls, 32), "Dispatch prefix length differs")
+    else:
+        require("Prefix" not in timing, "Dispatch prefix has no version")
     known = {}
 
     def observation(item):
@@ -96,6 +104,9 @@ def verify_dispatch_timing(record):
     for sequence, item in enumerate(recent, calls - len(recent) + 1):
         observation(item)
         require(item["Sequence"] == sequence, "Recent dispatch history is not contiguous")
+    for sequence, item in enumerate(prefix, 1):
+        observation(item)
+        require(item["Sequence"] == sequence, "Dispatch prefix is not contiguous")
     unseen = calls - len(recent)
     for total, observed in ((failed, sum(item["Failed"] for item in recent)),
                             (incomplete, sum(item["Finished"] is None for item in recent))):

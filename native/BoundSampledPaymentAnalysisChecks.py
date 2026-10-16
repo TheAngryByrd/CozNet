@@ -80,9 +80,9 @@ class BoundPaymentAnalysisChecks(unittest.TestCase):
                       dispatchTimingEnabled=True, dispatchTiming=dict(Recent=[dict(Operation=3)]))
         verify_receipt_readiness(record)
         for operation in (2, 6):
-            for key in ("Recent", "Longest", "LongestQueue", "LongestAction", "LongestReturn"):
+            for key in ("Recent", "Prefix", "Longest", "LongestQueue", "LongestAction", "LongestReturn"):
                 changed = copy.deepcopy(record)
-                changed["dispatchTiming"][key] = [dict(Operation=operation)] if key == "Recent" else dict(Operation=operation)
+                changed["dispatchTiming"][key] = [dict(Operation=operation)] if key in ("Recent", "Prefix") else dict(Operation=operation)
                 with self.subTest(operation=operation, key=key), self.assertRaisesRegex(ValueError, "normal header"):
                     verify_receipt_readiness(changed)
 

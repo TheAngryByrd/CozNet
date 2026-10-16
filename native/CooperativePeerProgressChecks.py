@@ -73,6 +73,18 @@ class CooperativePeerProgressChecks(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Settled payment totals"):
             analyze_record(record)
 
+    def test_submit_can_be_found_only_in_prefix(self):
+        from AnalyzeCooperativePeerProgress import retained_submits
+        record = progress_record()
+        timing = record["dispatchTiming"]
+        submit = copy.deepcopy(timing["Recent"][0])
+        timing["Prefix"] = [submit]
+        timing["Recent"] = []
+        for key in ("Longest", "LongestQueue", "LongestAction", "LongestReturn"):
+            timing[key] = None
+        self.assertEqual(retained_submits(timing, submit["Command"]), submit)
+        self.assertIsNone(retained_submits(timing, submit["Command"] + 1))
+
     def test_missing_dispatch_or_command_is_unavailable(self):
         record = progress_record()
         record.update(dispatchTimingEnabled=False, dispatchTiming=None)

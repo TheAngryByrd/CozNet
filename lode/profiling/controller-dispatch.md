@@ -31,7 +31,13 @@ sequenceDiagram
     Owner->>Owner: Returned and immutable snapshot
 ```
 
-The observer retains the latest 128 snapshots and independent longest total, queue, action, and return records.
+The observer retains the first 32 and latest 128 snapshots and independent longest total, queue, action, and return records.
+`PrefixEvidenceVersion=1` binds the required `Prefix` array to the first `min(Calls, 32)` sequences.
+Legacy evidence without both fields remains readable. Overlapping retained sequences must have identical observations.
+Legacy compatibility permits omission of both prefix fields. There is no independent runner requirement for prefix evidence.
+Attribution must inspect the actual prefix and request identity, not infer their presence from replay success.
+Replay includes prefix records in count, ordering, maximum, and direct-readiness checks.
+Peer-progress analysis can find an evicted submit in the prefix.
 It counts all calls, dispatch failures, and incomplete actions.
 A failed dispatch can have no start or finish. A later callback cannot change its immutable snapshot.
 `Run` requires its owning thread. Controller callbacks update only their private timestamp bracket under a lock.
@@ -50,6 +56,17 @@ Evicted observations cannot be independently reconstructed.
 Replay does not bind diagnostic request identities to payment or failure-boundary records.
 Operation labels and the selected/peer identity mapping have source review, not isolated workload-wiring checks.
 Header polling can evict submit records. Global maxima can belong to setup or cleanup.
+
+The [8192 first-request capture](../../reliability/features/native-signal/sparse-first-receipt-timing.md) demonstrates this retention gap.
+Its 810 treatment calls retain only sequences 683–810 and session creation as all four maxima.
+The first peer request lasts 21.742797 ms, but its submit/read/release dispatches are absent.
+Current prefix retention addresses this gap for calls within the first 32 sequences.
+Later first-request phases still require a controlled component diagnostic or another retention policy.
+The follow-up capture retains command 1 in prefix sequences 2–4, with 759 total calls.
+Its first request lasts 22.820403 ms. The peer read action bracket lasts 10.731190 ms.
+Receipt observation and accounting acceptance need separate measurement. Descheduling remains inside the action bracket.
+`FirstManagedReceiptUpper` uses the native clock. Request and dispatch brackets use `Stopwatch`.
+Do not subtract their absolute timestamps without a verified clock mapping.
 
 The [finite cost capture](../../docsSrc/Explanations/cooperative-pause-cost.md) records 1,344 treatment dispatches and 146 complete pauses.
 Pause totals are 39,796,340 ns. Publication through callback return totals 26,240,063 ns.
