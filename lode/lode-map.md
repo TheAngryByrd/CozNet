@@ -1,5 +1,7 @@
 # Lode index
 
+For disabled counter baselines and the limits of first-sample credit recovery, read [epoch prefix evidence](profiling/epoch-prefix-evidence.md).
+
 For immutable batch snapshots on repeated pausable drains, read [sample batch snapshots](profiling/sample-batch-snapshots.md).
 
 For selected pause costs, the matched ownership comparison, and retained dispatch limits, read [the phase explanation](../docsSrc/Explanations/cooperative-pause-cost.md).
