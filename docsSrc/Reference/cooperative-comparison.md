@@ -17,6 +17,7 @@ It preserves pending treatment ownership and source tails. No prediction-accurac
 | `OwnerController` | Disabled | Run both sampled controllers on the selected owner thread. |
 | `NominalSampleCredit` | Disabled | Credit every admitted selected nominal event in both sampled arms. |
 | `SelectedCpu` | Disabled | Capture selected-thread CPU around fixed work in all four arms. |
+| `BoundSampleClock` | Disabled | Capture source-clock brackets in both sampled arms. |
 
 The [credit policy reference](nominal-event-credit.md) defines the versioned plan and result contract.
 The [CPU capture reference](selected-cpu.md) defines its separate observations and platform hook.
@@ -100,6 +101,22 @@ They can omit `prepareReceipts` or set it to false.
 Legacy sampled records can omit the activation field. A present value must be Boolean false.
 Unknown or noninteger versions and non-Boolean plan settings reject the plan.
 Prepared records cannot be used under a legacy unprepared plan.
+
+## Bound sample clock contract
+
+New plans declare Boolean `boundSampleClock` and `boundSampleClockEvidenceVersion=1`.
+Both sampled arms receive the requested `COZNET_BOUND_SAMPLE_CLOCK` value.
+Each sampled result must report matching Boolean `boundSampleClockEnabled` metadata and pass clock evidence replay.
+Missing or mismatched activation invalidates that arm and suppresses the aggregate comparison.
+The manifest must retain `source/native/BoundSampleClockEvidence.py` for a versioned plan.
+
+Physical arms receive no sample-clock activation and require no clock metadata.
+Legacy plans without the version marker permit only disabled capture.
+The new switch follows all existing positional parameters.
+Versioned analysis adds `boundSampleClock` to each case. Physical cases contain null.
+Valid diagnostic rejection remains separate from workload failure and does not invalidate an otherwise complete comparison.
+Clock consistency does not establish prediction accuracy.
+Use the [membership procedure](../How_Tos/analyze-bound-sample-membership.md) to classify each sampled arm separately.
 
 ## Output
 

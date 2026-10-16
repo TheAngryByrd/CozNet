@@ -104,3 +104,28 @@ All recorded selected credit is inside. This short diagnostic does not explain t
 The [upstream comparison](../../docsSrc/Research/sample-boundary-semantics.md) gates credit by processing-time state, not strict source-time membership.
 Do not add retrospective credit or weaken qualification from these observations.
 See [the reference](../../docsSrc/Reference/bound-sample-membership.md).
+
+## Matched comparison activation
+
+`VerifyCooperativeComparison.ps1 -BoundSampleClock` declares version 1 and enables capture only in sampled arms.
+Full comparison replay binds both sampled activation fields to the plan and requires the helper snapshot.
+Physical arms keep their uninstrumented path. Legacy plans permit only disabled capture.
+Valid diagnostic rejection does not invalidate otherwise completed work.
+
+```powershell
+pwsh -NoProfile -File native/VerifyCooperativeComparison.ps1 -ProbeInterval 8192 -PrepareReceipts -OwnerController -NominalSampleCredit -SelectedCpu -BoundSampleClock
+```
+
+```mermaid
+flowchart LR
+    Plan[Versioned clock activation] --> Sampled[Both sampled arms]
+    Sampled --> Replay[Activation and evidence replay]
+    Replay --> Diagnostic[Independent clock result]
+    Replay --> Comparison[Unqualified comparison]
+```
+
+See [the comparison reference](../../docsSrc/Reference/cooperative-comparison.md#bound-sample-clock-contract).
+
+The [matched block](../../reliability/features/native-signal/matched-sample-membership.md) places all 2,068 selected treatment observations inside the source window and frozen prefix.
+All 1.034 seconds of recorded treatment credit is source-inside. Observed boundary differences are unmapped and carry no credit.
+This does not bound missing observations or exact CPU attribution. Extra treatment CPU and the prediction gap remain unresolved.

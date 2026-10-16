@@ -6,7 +6,8 @@ param(
     [switch]$PrepareReceipts,
     [switch]$OwnerController,
     [switch]$NominalSampleCredit,
-    [switch]$SelectedCpu
+    [switch]$SelectedCpu,
+    [switch]$BoundSampleClock
 )
 $ErrorActionPreference = 'Stop'
 $creditPolicy = if ($NominalSampleCredit) { 'nominal-event-v1' } else { 'same-epoch-interval-v1' }
@@ -30,6 +31,7 @@ Save-Json 'plan.json' @{
     ownerController = [bool]$OwnerController; controllerOwnershipEvidenceVersion = 1
     sampleCreditPolicy = $creditPolicy; sampleCreditEvidenceVersion = 1
     selectedCpu = [bool]$SelectedCpu; selectedCpuEvidenceVersion = 1
+    boundSampleClock = [bool]$BoundSampleClock; boundSampleClockEvidenceVersion = 1
     debtBoundNanoseconds = 2000000; leaseBoundNanoseconds = 2000000; requestedChildBoundNanoseconds = 50000
     handlerBoundNanoseconds = 5000000; receiptBoundNanoseconds = 100000000
 }
@@ -91,7 +93,7 @@ try {
         files = $files; originalInputs = $originals; runtimeImage = $runtimeImage; compilerImage = $compilerImage
         capturedBeforeExecution = [DateTime]::UtcNow.ToString('O'); sourceSnapshotIsStandaloneCheckout = $false
     }
-    foreach ($check in @('CooperativeComparisonChecks.py', 'BoundSelectedPaymentAnalysisChecks.py')) {
+    foreach ($check in @('CooperativeComparisonChecks.py', 'BoundSelectedPaymentAnalysisChecks.py', 'BoundSampleClockEvidenceChecks.py')) {
         & $PythonCommand (Join-Path $source "native/$check") *> (Join-Path $run "$check.log")
         if ($LASTEXITCODE -ne 0) { throw "Retained analyzer check failed: $check" }
     }
@@ -130,6 +132,7 @@ try {
                 '--env', 'COZNET_DISPATCH_TIMING=0', '--env', 'COZNET_BOUND_SCHEDULER=0', '--env', 'COZNET_PEER_PROGRESS=0',
                 '--env', ('COZNET_PREPARE_RECEIPTS=' + [int][bool]$PrepareReceipts),
                 '--env', ('COZNET_OWNER_CONTROLLER=' + [int][bool]$OwnerController),
+                '--env', ('COZNET_BOUND_SAMPLE_CLOCK=' + [int][bool]$BoundSampleClock),
                 '--env', ('COZNET_SAMPLE_CREDIT=' + $(if ($NominalSampleCredit) { 'nominal-event' } else { 'interval' })))
             $percent = if ($mode -eq 'sampled-zero') { '0' } else { '50' }
             $arguments = @('--sampled-bound-selected-cadence', '/evidence/result.json', $percent,

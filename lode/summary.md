@@ -1,5 +1,10 @@
 # Project scope
 
+Optional clock capture now binds both sampled arms to the [matched comparison plan](profiling/sample-membership.md#matched-comparison-activation).
+The retained 500,000-batch block places all recorded treatment credit inside the observed source window and frozen prefix.
+Its sampled reduction is 33.28–33.32%, versus 46.04% physically. Treatment consumes 324.9 ms more selected-thread CPU.
+Recurring execution cost and inline instrumentation attribution remain unresolved. Pending ownership and ledger residuals still prevent qualification.
+
 Optional [selected-thread CPU capture](plans/selected-cpu.md) binds readings in all four comparison arms through a portable clock hook.
 The Linux block completes with sampled zero at 221.9 ms CPU and sampled half at 277.0 ms CPU.
 Each sampled CPU bracket differs from elapsed time by less than 0.025 ms.

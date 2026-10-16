@@ -3,6 +3,11 @@
 The implemented scope is a serial experiment prototype. The goal is a .NET implementation of sampled Coz semantics.
 Keep the serial model separate from the proposed sampled engine.
 
+The [clock-backed matched block](../../reliability/features/native-signal/matched-sample-membership.md) checks retained source membership without changing recorded credit.
+All treatment credit is source-inside, but sampled reduction remains 12.73–12.76 percentage points below physical reduction.
+Next, investigate recurring execution cost and inline instrumentation attribution at fixed probe density.
+The 324.9 ms treatment CPU increase does not identify a component cost. Preserve pending ownership and frozen ledger residuals.
+
 The [selected CPU comparison](../../reliability/features/native-signal/selected-cpu.md) completes with valid CPU evidence in all four arms.
 The sampled treatment consumes about 55.1 ms more selected CPU than its zero arm, with little CPU/elapsed separation inside the observed brackets.
 Its prediction remains about 30 percentage points below physical reduction.

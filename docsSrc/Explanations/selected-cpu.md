@@ -83,6 +83,20 @@ The candidate has not resolved prediction, despite the component speedup.
 Entry-only probes cannot cover a long-running invocation. The normal countdown profiler remains in use.
 See [the retained diagnostics and failure](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/prediction-gap-diagnostics.md).
 
+## Clock-backed matched observations
+
+A matched 500,000-batch block retains consistent clock brackets with the normal interval-8192 countdown probes.
+Its sampled reduction is 33.28–33.32%, versus 46.04% physically.
+All recorded treatment credit belongs to source-inside samples. No retained selected observation is ambiguous or outside the frozen prefix.
+The observed sample-boundary differences carry no credit and do not explain this block's shortfall.
+
+Treatment uses 324.9 ms more selected-thread CPU than zero speedup.
+Selected nominal sample weight rises by 230 ms, while unmapped inside weight rises by 75 ms.
+These weights do not isolate exact instrumentation or application CPU.
+Recurring execution cost and attribution remain separate investigation targets.
+The endpoint also retains a pending peer request, so consistent clock evidence does not qualify the comparison.
+See [the retained block](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/matched-sample-membership.md).
+
 ## Upstream accounting
 
 Linux Coz [subtracts the increase in global delay from elapsed time](https://github.com/plasma-umass/coz/blob/256e3c389424d6a1691ee5d18b5ecb5a6c1001ec/libcoz/profiler.cpp#L359-L391).

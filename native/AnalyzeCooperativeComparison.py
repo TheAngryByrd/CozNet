@@ -9,6 +9,7 @@ from fractions import Fraction
 from AnalyzeBoundSampledPayment import count, require
 from AnalyzeBoundSelectedPayment import verify_record
 from SelectedCpuEvidence import verify_selected_cpu
+from BoundSampleClockEvidence import verify_bound_sample_clock
 
 
 MODES = ("physical-baseline", "physical-optimized", "sampled-zero", "sampled-half")
@@ -158,18 +159,34 @@ def selected_cpu_plan(plan):
     return plan['selectedCpu'], True
 
 
+def bound_sample_clock_plan(plan):
+    if 'boundSampleClockEvidenceVersion' not in plan:
+        require(plan.get('boundSampleClock', False) is False, 'Legacy plan cannot enable bound sample clock capture')
+        return False, False
+    require(type(plan['boundSampleClockEvidenceVersion']) is int and plan['boundSampleClockEvidenceVersion'] == 1
+            and type(plan.get('boundSampleClock')) is bool, 'Invalid bound sample clock plan')
+    return plan['boundSampleClock'], True
+
+
 def analyze_case(record, mode, batches, exit_code, probe_interval=1024, require_probe_interval=False,
                  prepare_receipts=False, require_preparation=False, owner_controller=False, require_ownership=False,
                  sample_credit_policy="same-epoch-interval-v1", require_credit_policy=False,
-                 selected_cpu=False, require_selected_cpu=False):
+                 selected_cpu=False, require_selected_cpu=False,
+                 bound_sample_clock=False, require_bound_sample_clock=False):
     require(not require_selected_cpu or 'selectedCpuEnabled' in record, 'Arm lacks declared selected CPU evidence')
     require(record.get('selectedCpuEnabled', False) is selected_cpu, 'Selected CPU activation differs from plan')
     verify_selected_cpu(record)
     require(mode in MODES and type(exit_code) is int, "Unknown arm or invalid process exit code")
     require(record["workloadProtocol"] == WORKLOAD, "The case does not use the shared cooperative work")
     if mode.startswith("physical-"):
+        require(record.get('boundSampleClockEnabled', False) is False and record.get('boundSampleClock') is None,
+                'Physical arm contains bound sample clock capture')
         require(type(exit_code) is int and exit_code == 0, "Physical process failed")
         return "complete", [], physical(record, mode, batches)
+    require(not require_bound_sample_clock or 'boundSampleClockEnabled' in record,
+            'Sampled arm lacks declared bound sample clock evidence')
+    require(record.get('boundSampleClockEnabled', False) is bound_sample_clock,
+            'Bound sample clock activation differs from plan')
     require(not require_probe_interval or "probeInterval" in record, "Sampled arm lacks declared probe interval evidence")
     actual_interval = record.get("probeInterval", 1024)
     require(type(actual_interval) is int and actual_interval == probe_interval,
@@ -256,6 +273,7 @@ def analyze(root):
     owner_controller, require_ownership = controller_ownership_plan(plan)
     sample_credit_policy, require_credit_policy = sample_credit_plan(plan)
     selected_cpu, require_selected_cpu = selected_cpu_plan(plan)
+    bound_sample_clock, require_bound_sample_clock = bound_sample_clock_plan(plan)
     batches = count(plan["selectedBatches"])
     require(0 < batches <= 2147483647 and plan["predictionErrorBound"] == 0.02
             and plan["localOptimizationCalibrated"] is False, "Comparison work or accuracy contract changed")
@@ -267,6 +285,8 @@ def analyze(root):
             "Required comparison snapshots are missing")
     require(not require_selected_cpu or 'source/native/SelectedCpuEvidence.py' in files,
             'Versioned selected CPU plan lacks its replay snapshot')
+    require(not require_bound_sample_clock or 'source/native/BoundSampleClockEvidence.py' in files,
+            'Versioned bound sample clock plan lacks its replay snapshot')
     integrity_errors = []
     for name, digest in files.items():
         require(isinstance(name, str) and isinstance(digest, str) and len(digest) == 64
@@ -288,13 +308,17 @@ def analyze(root):
     for mode, outcome in zip(MODES, outcomes):
         state, reasons, value = "invalid", [], None
         cpu = None
+        sample_clock = None
         try:
             require(outcome.executed and outcome.record_exists, "Case was not executed or has no retained result")
             record = read(root / (mode + ".json"))
             state, reasons, value = analyze_case(record, mode, batches, outcome.exit_code,
                                                  probe_interval, require_probe_interval, prepare_receipts, require_preparation,
                                                  owner_controller, require_ownership, sample_credit_policy, require_credit_policy,
-                                                 selected_cpu, require_selected_cpu)
+                                                 selected_cpu, require_selected_cpu,
+                                                 bound_sample_clock, require_bound_sample_clock)
+            if mode.startswith('sampled-'):
+                sample_clock = verify_bound_sample_clock(record)
             if selected_cpu and state != 'invalid':
                 cpu = verify_selected_cpu(record)
         except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError, ArithmeticError) as error:
@@ -306,6 +330,8 @@ def analyze(root):
                           descriptiveCostNanoseconds=None if value is None else outward(value.lower, value.upper)))
         if require_selected_cpu:
             cases[-1]['selectedCpu'] = cpu
+        if require_bound_sample_clock:
+            cases[-1]['boundSampleClock'] = sample_clock
     complete = not runner_errors and not integrity_errors and len(costs) == 4
     descriptive = compare(costs) if complete else None
     return dict(protocol=PROTOCOL, status="unqualified" if complete else "invalid", collectionComplete=complete,
@@ -314,6 +340,7 @@ def analyze(root):
                 ownerController=owner_controller, controllerOwnershipEvidenceVersion=1 if require_ownership else None,
                 sampleCreditPolicy=sample_credit_policy, sampleCreditEvidenceVersion=1 if require_credit_policy else None,
                 **(dict(selectedCpu=selected_cpu, selectedCpuEvidenceVersion=1) if require_selected_cpu else {}),
+                **(dict(boundSampleClock=bound_sample_clock, boundSampleClockEvidenceVersion=1) if require_bound_sample_clock else {}),
                 attempted=sum(item.attempted for item in outcomes), completed=len(costs), qualified=0,
                 invalid=sum(item["status"] == "invalid" for item in cases), cases=cases,
                 integrityErrors=integrity_errors, runnerErrors=runner_errors, descriptiveComparison=descriptive,

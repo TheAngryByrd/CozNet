@@ -39,5 +39,19 @@ Check `plan.json` for `ownerController=true` and `controllerOwnershipEvidenceVer
 Confirm that both sampled results report `ownerControllerEnabled=true`.
 Combine `-OwnerController`, `-PrepareReceipts`, and `-ProbeInterval 8192` for the prepared owner/controller comparison.
 
+To capture sample-clock brackets, add `-BoundSampleClock` to the runner command.
+Check `plan.json` for `boundSampleClock=true` and `boundSampleClockEvidenceVersion=1`.
+Check both sampled results for `boundSampleClockEnabled=true` and inspect their clock evidence.
+Physical arms do not capture the sample clock.
+After collection, analyze each sampled arm with separate output paths:
+
+```powershell
+python native/AnalyzeBoundSampleMembership.py <capture>/sampled-zero.json <new-zero-membership.json>
+python native/AnalyzeBoundSampleMembership.py <capture>/sampled-half.json <new-half-membership.json>
+```
+
+Keep clock rejection separate from workload failure.
+Do not use source-time membership to add retrospective credit or claim prediction accuracy.
+
 See [the reference](../Reference/cooperative-comparison.md) for field contracts
 and [the explanation](../Explanations/cooperative-physical-comparison.md) for comparison limits.

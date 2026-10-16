@@ -69,7 +69,52 @@ def ownership_record(percent=50, enabled=True):
     return record
 
 
+def clock_record(percent=50, enabled=True):
+    record = sampled_record(percent)
+    def reading(value):
+        return dict(Before=value, NativeNanoseconds=value, After=value, TimestampFrequency=1000000000,
+                    ContextIdentity='context', MonotonicOffsetNanoseconds=0, Error=None)
+    record.update(boundSampleClockEnabled=enabled, boundSampleClockEvidenceVersion=1,
+        boundSampleClock=dict(Status='complete', Source=dict(Domain=1, UnitsPerSecond=1000000000),
+            Metadata={}, Start=reading(0), End=reading(100), Failure=None,
+            ObservedMappingConsistent=True, Rejection=None, ErrorBoundEstablished=False) if enabled else None)
+    return record
+
+
 class CooperativeComparisonChecks(unittest.TestCase):
+    def test_bound_clock_plan_is_versioned_and_boolean(self):
+        self.assertEqual((False, False), subject.bound_sample_clock_plan({}))
+        self.assertEqual((False, False), subject.bound_sample_clock_plan(dict(boundSampleClock=False)))
+        for enabled in (True, False):
+            self.assertEqual((enabled, True), subject.bound_sample_clock_plan(
+                dict(boundSampleClock=enabled, boundSampleClockEvidenceVersion=1)))
+        for plan in (dict(boundSampleClock=True), dict(boundSampleClock=0),
+                     dict(boundSampleClockEvidenceVersion=1),
+                     dict(boundSampleClock=True, boundSampleClockEvidenceVersion=True),
+                     dict(boundSampleClock=False, boundSampleClockEvidenceVersion=2),
+                     dict(boundSampleClock='true', boundSampleClockEvidenceVersion=1)):
+            with self.subTest(plan=plan), self.assertRaises(ValueError):
+                subject.bound_sample_clock_plan(plan)
+
+    def test_bound_clock_binding_applies_only_to_sampled_arms(self):
+        subject.analyze_case(physical_record(), 'physical-baseline', 5, 0,
+                             bound_sample_clock=True, require_bound_sample_clock=True)
+        for percent, mode in ((0, 'sampled-zero'), (50, 'sampled-half')):
+            subject.analyze_case(clock_record(percent), mode, 5, 0,
+                                 bound_sample_clock=True, require_bound_sample_clock=True)
+            for value in (False, None, 1, 'true'):
+                record = clock_record(percent)
+                record['boundSampleClockEnabled'] = value
+                with self.subTest(mode=mode, value=value), self.assertRaisesRegex(ValueError, 'activation differs'):
+                    subject.analyze_case(record, mode, 5, 0, bound_sample_clock=True, require_bound_sample_clock=True)
+            with self.assertRaisesRegex(ValueError, 'lacks declared'):
+                subject.analyze_case(sampled_record(percent), mode, 5, 0, require_bound_sample_clock=True)
+            subject.analyze_case(clock_record(percent, False), mode, 5, 0, require_bound_sample_clock=True)
+        physical = physical_record()
+        physical['boundSampleClockEnabled'] = True
+        with self.assertRaisesRegex(ValueError, 'Physical arm contains'):
+            subject.analyze_case(physical, 'physical-baseline', 5, 0)
+
     def test_selected_cpu_plan_and_arm_binding(self):
         self.assertEqual((False, False), subject.selected_cpu_plan({}))
         for enabled in (False, True):
@@ -365,6 +410,50 @@ class CooperativeComparisonChecks(unittest.TestCase):
 
 
 class ComparisonCollectionChecks(unittest.TestCase):
+    def prepare_clock_collection(self):
+        self.save("physical-baseline.json", physical_record())
+        self.save("physical-optimized.json", physical_record("optimized"))
+        plan = subject.read(self.root / 'plan.json')
+        plan.update(boundSampleClock=True, boundSampleClockEvidenceVersion=1)
+        self.save('plan.json', plan)
+        self.manifest['files']['plan.json'] = hashlib.sha256((self.root / 'plan.json').read_bytes()).hexdigest()
+        name = 'source/native/BoundSampleClockEvidence.py'
+        self.save(name, {'fixture': True})
+        self.manifest['files'][name] = hashlib.sha256((self.root / name).read_bytes()).hexdigest()
+        self.save('manifest.json', self.manifest)
+        self.save('sampled-zero.json', clock_record(0))
+        self.save('sampled-half.json', clock_record())
+
+    def test_bound_clock_collection_requires_snapshot_and_matching_activation(self):
+        self.prepare_clock_collection()
+        result = subject.analyze(self.root)
+        self.assertTrue(result['collectionComplete'])
+        self.assertTrue(result['boundSampleClock'])
+        self.assertEqual([None, None, 'consistent', 'consistent'],
+                         [case['boundSampleClock']['status'] if case['boundSampleClock'] else None for case in result['cases']])
+        for mode, percent in (('sampled-zero', 0), ('sampled-half', 50)):
+            self.save(mode + '.json', clock_record(percent, False))
+            result = subject.analyze(self.root)
+            self.assertEqual((3, 1), (result['completed'], result['invalid']))
+            self.assertIsNone(result['descriptiveComparison'])
+            self.save(mode + '.json', clock_record(percent))
+        del self.manifest['files']['source/native/BoundSampleClockEvidence.py']
+        self.save('manifest.json', self.manifest)
+        with self.assertRaisesRegex(ValueError, 'lacks its replay snapshot'):
+            subject.analyze(self.root)
+
+    def test_rejected_clock_diagnostic_does_not_fail_completed_work(self):
+        self.prepare_clock_collection()
+        record = clock_record()
+        record['boundSampleClock'].update(Status='unavailable', Source=None, Metadata=None, Start=None, End=None,
+                                          ObservedMappingConsistent=False, Rejection='no provider')
+        self.save('sampled-half.json', record)
+        result = subject.analyze(self.root)
+        self.assertTrue(result['collectionComplete'])
+        self.assertEqual('rejected', result['cases'][3]['boundSampleClock']['status'])
+        self.assertEqual('unqualified', result['cases'][3]['status'])
+        self.assertFalse(result['predictionAccuracyEstablished'])
+
     def test_versioned_cpu_collection_requires_snapshot_and_preserves_other_arms(self):
         plan = subject.read(self.root / 'plan.json')
         plan.update(selectedCpu=True, selectedCpuEvidenceVersion=1)
@@ -424,7 +513,7 @@ class ComparisonCollectionChecks(unittest.TestCase):
     def analyze_with_parsed_arms(self):
         def parsed(record, mode, batches, code, probe_interval, require_probe_interval, prepare_receipts, require_preparation,
                    owner_controller, require_ownership, sample_credit_policy, require_credit_policy,
-                   selected_cpu, require_selected_cpu):
+                   selected_cpu, require_selected_cpu, bound_sample_clock, require_bound_sample_clock):
             if code:
                 return "invalid", ["process failed"], None
             return "unqualified", ["fixture"], subject.Cost(Fraction(10), Fraction(12), 5)

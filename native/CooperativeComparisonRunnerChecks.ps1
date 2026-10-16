@@ -3,9 +3,10 @@ $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('coz-comparison-runner-' + [Gu
 New-Item -ItemType Directory -Path $testRoot | Out-Null
 $runnerSource = Join-Path $PSScriptRoot 'VerifyCooperativeComparison.ps1'
 
-function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$PrepareReceipts = $false, [bool]$OwnerController = $false, [bool]$NominalSampleCredit = $false, [bool]$SelectedCpu = $false) {
+function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$PrepareReceipts = $false, [bool]$OwnerController = $false, [bool]$NominalSampleCredit = $false, [bool]$SelectedCpu = $false, [bool]$BoundSampleClock = $false) {
     $requestedPreparation = $PrepareReceipts
     $requestedCpu = $SelectedCpu
+    $requestedClock = $BoundSampleClock
     $requestedOwnership = $OwnerController
     $requestedCreditPolicy = if ($NominalSampleCredit) { 'nominal-event-v1' } else { 'same-epoch-interval-v1' }
     $requestedCreditActivation = if ($NominalSampleCredit) { 'nominal-event' } else { 'interval' }
@@ -16,7 +17,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
     }
     Copy-Item -LiteralPath $runnerSource -Destination (Join-Path $fixtureRoot 'native/VerifyCooperativeComparison.ps1')
     foreach ($relative in @('native/AnalyzeCooperativeComparison.py', 'native/CooperativeComparisonChecks.py',
-        'native/BoundSelectedPaymentAnalysisChecks.py', 'native/service/CMakeLists.txt', 'src/CozNet/fixture.fs',
+        'native/BoundSelectedPaymentAnalysisChecks.py', 'native/BoundSampleClockEvidence.py', 'native/BoundSampleClockEvidenceChecks.py', 'native/service/CMakeLists.txt', 'src/CozNet/fixture.fs',
         'build/build.fs', 'global.json', 'tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll',
         'artifacts/native-linux/integrated/libCozNet.Profiler.so')) {
         Set-Content -LiteralPath (Join-Path $fixtureRoot $relative) -Value 'fixture' -Encoding utf8
@@ -47,6 +48,8 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
         if ($plan.ownerController -isnot [bool] -or $plan.ownerController -ne $requestedOwnership -or $plan.controllerOwnershipEvidenceVersion -ne 1) { throw 'Controller ownership plan differs from request.' }
         if ($plan.sampleCreditPolicy -cne $requestedCreditPolicy -or $plan.sampleCreditEvidenceVersion -ne 1) { throw 'Sample credit plan differs from request.' }
         if ($plan.selectedCpu -isnot [bool] -or $plan.selectedCpu -ne $requestedCpu -or $plan.selectedCpuEvidenceVersion -ne 1) { throw 'CPU capture plan differs from request.' }
+        if ($plan.boundSampleClock -isnot [bool] -or $plan.boundSampleClock -ne $requestedClock -or $plan.boundSampleClockEvidenceVersion -ne 1) { throw 'Sample clock plan differs from request.' }
+        if ($manifest.files.PSObject.Properties.Name -notcontains 'source/native/BoundSampleClockEvidence.py') { throw 'Clock replay source was not captured.' }
         $current = @($before | Where-Object mode -eq $mode)[0]
         if ($args -notcontains ('COZNET_SELECTED_CPU=' + [int]$requestedCpu) -or $current.containerArguments -notcontains ('COZNET_SELECTED_CPU=' + [int]$requestedCpu)) { throw 'CPU capture activation differs from request.' }
         if (-not $current.attempted -or $current.executed) { throw 'The pending attempt was not saved before launch.' }
@@ -60,6 +63,8 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
                 throw "The actual or retained common runtime setting is missing: $setting"
             }
         }
+        if ($mode.StartsWith('sampled-') -and ($args -notcontains ('COZNET_BOUND_SAMPLE_CLOCK=' + [int]$requestedClock) -or $current.activation -notcontains ('COZNET_BOUND_SAMPLE_CLOCK=' + [int]$requestedClock))) { throw 'Sample clock activation differs from request.' }
+        if ($mode.StartsWith('physical-') -and @($args | Where-Object { $_ -like 'COZNET_BOUND_SAMPLE_CLOCK=*' }).Count) { throw 'Physical arm received sample clock activation.' }
         if ($Scenario -eq 'failed-arms' -and $mode -eq 'physical-optimized') { throw 'controlled launch failure' }
         if ($mode.StartsWith('sampled-') -and ($args -notcontains "COZNET_PROBE_INTERVAL=$ProbeInterval" -or $current.activation -notcontains "COZNET_PROBE_INTERVAL=$ProbeInterval")) {
             throw 'The sampled process or retained activation changed its probe interval.'
@@ -95,6 +100,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
     if ($OwnerController) { $options.OwnerController = $true }
     if ($NominalSampleCredit) { $options.NominalSampleCredit = $true }
     if ($SelectedCpu) { $options.SelectedCpu = $true }
+    if ($BoundSampleClock) { $options.BoundSampleClock = $true }
     if ($ProbeInterval -ne 1024) { $options.ProbeInterval = $ProbeInterval }
     try {
         if ($Scenario -eq 'positional') {
@@ -151,6 +157,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
 }
 
 try {
+    Invoke-Fixture 'bound-sample-clock' 8192 $true $true $true $true $true
     Invoke-Fixture 'selected-cpu' 8192 $true $true $true $true
     Invoke-Fixture 'nominal-default' 1024 $false $false $true
     Invoke-Fixture 'nominal-prepared-owner' 8192 $true $true $true
