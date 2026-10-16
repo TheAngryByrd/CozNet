@@ -125,6 +125,18 @@ def receipt_preparation_plan(plan):
     return enabled, True
 
 
+def sample_credit_plan(plan):
+    policy = plan.get("sampleCreditPolicy", "same-epoch-interval-v1")
+    if "sampleCreditEvidenceVersion" not in plan:
+        require(type(policy) is str and policy == "same-epoch-interval-v1", "Legacy plan requires interval sample credit")
+        return policy, False
+    require(type(plan["sampleCreditEvidenceVersion"]) is int and plan["sampleCreditEvidenceVersion"] == 1,
+            "Unsupported sample credit evidence version")
+    require("sampleCreditPolicy" in plan and type(policy) is str and policy in ("same-epoch-interval-v1", "nominal-event-v1"),
+            "Unsupported declared sample credit policy")
+    return policy, True
+
+
 def controller_ownership_plan(plan):
     enabled = plan.get("ownerController", False)
     if "controllerOwnershipEvidenceVersion" not in plan:
@@ -137,7 +149,8 @@ def controller_ownership_plan(plan):
 
 
 def analyze_case(record, mode, batches, exit_code, probe_interval=1024, require_probe_interval=False,
-                 prepare_receipts=False, require_preparation=False, owner_controller=False, require_ownership=False):
+                 prepare_receipts=False, require_preparation=False, owner_controller=False, require_ownership=False,
+                 sample_credit_policy="same-epoch-interval-v1", require_credit_policy=False):
     require(mode in MODES and type(exit_code) is int, "Unknown arm or invalid process exit code")
     require(record["workloadProtocol"] == WORKLOAD, "The case does not use the shared cooperative work")
     if mode.startswith("physical-"):
@@ -157,6 +170,9 @@ def analyze_case(record, mode, batches, exit_code, probe_interval=1024, require_
     actual_ownership = record.get("ownerControllerEnabled", False)
     require(type(actual_ownership) is bool and actual_ownership == owner_controller,
             "Sampled controller ownership differs from the declared plan")
+    require(not require_credit_policy or "sampleCreditPolicy" in record, "Sampled arm lacks declared sample credit policy")
+    actual_policy = record.get("sampleCreditPolicy", "same-epoch-interval-v1")
+    require(type(actual_policy) is str and actual_policy == sample_credit_policy, "Sampled credit policy differs from the declared plan")
     require(count(record["timestampFrequency"]) > 0, "The sampled clock frequency is zero")
     replay = verify_record(record)
     require(record["finiteMeasurementEnabled"] is True and count(record["percent"]) == (0 if mode == "sampled-zero" else 50)
@@ -224,6 +240,7 @@ def analyze(root):
     probe_interval, require_probe_interval = probe_interval_plan(plan)
     prepare_receipts, require_preparation = receipt_preparation_plan(plan)
     owner_controller, require_ownership = controller_ownership_plan(plan)
+    sample_credit_policy, require_credit_policy = sample_credit_plan(plan)
     batches = count(plan["selectedBatches"])
     require(0 < batches <= 2147483647 and plan["predictionErrorBound"] == 0.02
             and plan["localOptimizationCalibrated"] is False, "Comparison work or accuracy contract changed")
@@ -257,7 +274,7 @@ def analyze(root):
             require(outcome.executed and outcome.record_exists, "Case was not executed or has no retained result")
             state, reasons, value = analyze_case(read(root / (mode + ".json")), mode, batches, outcome.exit_code,
                                                  probe_interval, require_probe_interval, prepare_receipts, require_preparation,
-                                                 owner_controller, require_ownership)
+                                                 owner_controller, require_ownership, sample_credit_policy, require_credit_policy)
         except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError, ArithmeticError) as error:
             reasons = [str(error)]
         if value is not None:
@@ -271,6 +288,7 @@ def analyze(root):
         probeInterval=probe_interval, probeIntervalEvidenceVersion=1 if require_probe_interval else None,
                 prepareReceipts=prepare_receipts, receiptPreparationEvidenceVersion=1 if require_preparation else None,
                 ownerController=owner_controller, controllerOwnershipEvidenceVersion=1 if require_ownership else None,
+                sampleCreditPolicy=sample_credit_policy, sampleCreditEvidenceVersion=1 if require_credit_policy else None,
                 attempted=sum(item.attempted for item in outcomes), completed=len(costs), qualified=0,
                 invalid=sum(item["status"] == "invalid" for item in cases), cases=cases,
                 integrityErrors=integrity_errors, runnerErrors=runner_errors, descriptiveComparison=descriptive,

@@ -25,6 +25,18 @@ def verify_probe_interval(record):
                 "Unsupported probe interval")
 
 
+def verify_sample_credit_policy(record):
+    policy = record.get("sampleCreditPolicy", "same-epoch-interval-v1")
+    require(type(policy) is str and policy in ("same-epoch-interval-v1", "nominal-event-v1"), "Unknown sample credit policy")
+    if policy == "nominal-event-v1":
+        require(record.get("selectedPaymentEnabled") is True and
+                type(record.get("nominalSamplePeriodNanoseconds")) is int and record["nominalSamplePeriodNanoseconds"] == 1000000,
+                "Nominal event credit requires selected payment and the configured period")
+        return True
+    require(record.get("nominalSamplePeriodNanoseconds") is None, "Interval credit contains nominal period metadata")
+    return False
+
+
 def verify_receipt_interval(payment, frequency=None):
     interval = payment["ReceiptInterval"]
     started, observed, recorded_frequency = (count(interval[key]) for key in ("Started", "Observed", "TimestampFrequency"))
@@ -375,6 +387,7 @@ def verify_payments(payments, binding, worker):
 
 
 def verify_record(record):
+    require(not verify_sample_credit_policy(record), "Peer-only replay does not support nominal event credit")
     verify_service_timing(record)
     verify_receipt_preparation(record)
     verify_probe_interval(record)

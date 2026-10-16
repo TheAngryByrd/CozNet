@@ -3,9 +3,11 @@ $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('coz-comparison-runner-' + [Gu
 New-Item -ItemType Directory -Path $testRoot | Out-Null
 $runnerSource = Join-Path $PSScriptRoot 'VerifyCooperativeComparison.ps1'
 
-function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$PrepareReceipts = $false, [bool]$OwnerController = $false) {
+function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$PrepareReceipts = $false, [bool]$OwnerController = $false, [bool]$NominalSampleCredit = $false) {
     $requestedPreparation = $PrepareReceipts
     $requestedOwnership = $OwnerController
+    $requestedCreditPolicy = if ($NominalSampleCredit) { 'nominal-event-v1' } else { 'same-epoch-interval-v1' }
+    $requestedCreditActivation = if ($NominalSampleCredit) { 'nominal-event' } else { 'interval' }
     $fixtureRoot = Join-Path $testRoot $Scenario
     foreach ($directory in @('native/service', 'native/signal', 'tests/CozNet.LinuxPerf/bin/Release/net10.0',
         'tests/Shared', 'src/CozNet', 'build', 'artifacts/native-linux/integrated')) {
@@ -42,6 +44,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
         if ($plan.probeInterval -ne $ProbeInterval -or $plan.probeIntervalEvidenceVersion -ne 1) { throw 'The declared interval contract differs from the request.' }
         if ($plan.prepareReceipts -isnot [bool] -or $plan.prepareReceipts -ne $requestedPreparation -or $plan.receiptPreparationEvidenceVersion -ne 1) { throw 'Preparation plan differs from request.' }
         if ($plan.ownerController -isnot [bool] -or $plan.ownerController -ne $requestedOwnership -or $plan.controllerOwnershipEvidenceVersion -ne 1) { throw 'Controller ownership plan differs from request.' }
+        if ($plan.sampleCreditPolicy -cne $requestedCreditPolicy -or $plan.sampleCreditEvidenceVersion -ne 1) { throw 'Sample credit plan differs from request.' }
         $current = @($before | Where-Object mode -eq $mode)[0]
         if (-not $current.attempted -or $current.executed) { throw 'The pending attempt was not saved before launch.' }
         foreach ($target in @('/workload', '/profiler', '/native')) {
@@ -61,6 +64,8 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
         if ($mode.StartsWith('sampled-') -and ($args -notcontains ("COZNET_PREPARE_RECEIPTS=" + [int]$requestedPreparation) -or $current.activation -notcontains ("COZNET_PREPARE_RECEIPTS=" + [int]$requestedPreparation))) { throw 'Preparation activation differs from request.' }
         if ($mode.StartsWith('sampled-') -and ($args -notcontains ("COZNET_OWNER_CONTROLLER=" + [int]$requestedOwnership) -or $current.activation -notcontains ("COZNET_OWNER_CONTROLLER=" + [int]$requestedOwnership))) { throw 'Controller ownership activation differs from request.' }
         if ($mode.StartsWith('physical-') -and @($args | Where-Object { $_ -like 'COZNET_OWNER_CONTROLLER=*' }).Count) { throw 'Physical arm received controller activation.' }
+        if ($mode.StartsWith('sampled-') -and ($args -notcontains ('COZNET_SAMPLE_CREDIT=' + $requestedCreditActivation) -or $current.activation -notcontains ('COZNET_SAMPLE_CREDIT=' + $requestedCreditActivation))) { throw 'Sample credit activation differs from request.' }
+        if ($mode.StartsWith('physical-') -and @($args | Where-Object { $_ -like 'COZNET_SAMPLE_CREDIT=*' }).Count) { throw 'Physical arm received sample credit activation.' }
         if ($Scenario -eq 'failed-arms' -and $mode -eq 'sampled-zero') { $global:LASTEXITCODE = 137; return }
         @{ mode = $mode } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $armPath 'result.json') -Encoding utf8
         if ($mode -eq 'sampled-half') {
@@ -85,6 +90,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
     $options = @{}
     if ($PrepareReceipts) { $options.PrepareReceipts = $true }
     if ($OwnerController) { $options.OwnerController = $true }
+    if ($NominalSampleCredit) { $options.NominalSampleCredit = $true }
     if ($ProbeInterval -ne 1024) { $options.ProbeInterval = $ProbeInterval }
     try {
         if ($Scenario -eq 'positional') {
@@ -141,6 +147,8 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
 }
 
 try {
+    Invoke-Fixture 'nominal-default' 1024 $false $false $true
+    Invoke-Fixture 'nominal-prepared-owner' 8192 $true $true $true
     Invoke-Fixture 'owner-default' 1024 $false $true
     Invoke-Fixture 'owner-prepared-sparse' 8192 $true $true
     Invoke-Fixture 'prepared-default' 1024 $true

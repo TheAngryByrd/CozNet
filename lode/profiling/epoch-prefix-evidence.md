@@ -1,7 +1,8 @@
 # Eligibility epoch prefix evidence
 
-The sample producer uses nominal periods and discards the first accepted sample in each eligibility epoch.
-This rule remains unchanged. Native Coz has no matching exclusion rule, but does not prove an alternative counter-weighted estimator.
+The default interval producer uses nominal periods and discards the first accepted sample in each eligibility epoch.
+The explicit [nominal-event estimator](nominal-event-credit.md) credits every admitted selected event, matching native Coz's statistical event rule.
+Neither policy proves exact selected CPU or an alternative counter-weighted estimator.
 The Linux task-clock timer preserves its remaining period across disable and enable.
 A nominal first period can therefore span enabled CPU on both sides of a payment pause.
 

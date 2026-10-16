@@ -155,6 +155,17 @@ try {
         $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedServiceTiming $expected
         if ($outcome.passed) { throw 'Missing service timing setting cannot pass.' }
     }
+    foreach ($expected in @('same-epoch-interval-v1', 'nominal-event-v1')) {
+        foreach ($policy in @($null, 0, $true, 'nominal', 'NOMINAL-EVENT-V1', 'same-epoch-interval-v1', 'nominal-event-v1')) {
+            @{ passed = $true; sampleCreditPolicy = $policy } | ConvertTo-Json | Set-Content -LiteralPath $path
+            $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedSampleCreditPolicy $expected
+            $matches = $policy -is [string] -and $policy -ceq $expected
+            if ($outcome.passed -ne $matches) { throw 'Sample credit policy did not control outcome acceptance.' }
+        }
+        @{ passed = $true } | ConvertTo-Json | Set-Content -LiteralPath $path
+        $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedSampleCreditPolicy $expected
+        if ($outcome.passed) { throw 'Missing sample credit policy cannot pass.' }
+    }
     Set-Content -LiteralPath $path -Value '{'
     $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0
     if ($outcome.passed -or -not $outcome.recordError) { throw 'Malformed JSON cannot pass.' }

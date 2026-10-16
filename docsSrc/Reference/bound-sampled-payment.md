@@ -176,8 +176,9 @@ Receipt acceptance retains the existing 50 µs child and 5 ms handler bounds.
 Settlement updates selected local delay. A subsequent catch-up publishes overshoot without reserving a second lease.
 Sampling resumes after the callback returns and the CLR lifetime check succeeds.
 
-Each sample retains its eligibility epoch. The first observation in each epoch earns no credit.
-The credit stream retains its fractional remainder across these baselines.
+Each sample retains its eligibility epoch. Under the default interval policy, the first observation in each epoch earns no credit.
+The optional [nominal-event policy](nominal-event-credit.md) credits each admitted selected event, including the first in an epoch.
+Both credit streams retain their fractional remainder across epoch changes.
 Final peer settlement can leave bounded selected debt. It does not start an unbounded cycle of overshoot payments.
 
 The draft writes `schemaVersion: 3`, selected receipts and waits, local ledger values, pause boundaries, and both slots' failure evidence.

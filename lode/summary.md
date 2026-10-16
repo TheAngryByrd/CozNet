@@ -1,5 +1,10 @@
 # Project scope
 
+The optional [nominal-event estimator](profiling/nominal-event-credit.md) credits initial and resumed selected events under native Coz's inspected event rule.
+Its Linux diagnostic passes zero, treatment, and expected invalidation cases with full replay.
+Its four-arm comparison completes but estimates a 0.9–1.3% slowdown against about 53.9% physical elapsed reduction.
+It remains opt-in and unqualified. Observer cost, attribution, and finite boundary membership remain accuracy issues.
+
 Cooperative physical and finite sampled work now [prepare measurement capture](profiling/measurement-boundaries.md) before the real start.
 Preparation has separate boundaries and permanent failure state. It does not supply estimator inputs.
 The [final prepared comparison](../reliability/features/native-signal/measurement-preparation.md) completes four arms but remains unqualified.

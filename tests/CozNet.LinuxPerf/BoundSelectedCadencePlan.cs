@@ -15,7 +15,7 @@ sealed class BoundSelectedCadencePlan
 
 readonly record struct BoundSelectedAdmission(int SampleCount, ulong Epoch, bool Qualified);
 
-sealed class BoundSelectedCheckCadence(BoundSelectedCadencePlan plan)
+sealed class BoundSelectedCheckCadence(BoundSelectedCadencePlan plan, bool nominalEvents = false)
 {
     private ulong epoch = 1;
     private int samples, epochSamples;
@@ -27,7 +27,7 @@ sealed class BoundSelectedCheckCadence(BoundSelectedCadencePlan plan)
         if (sampleEpoch != epoch) throw new InvalidDataException("A cadence sample belongs to another eligibility epoch.");
         samples = checked(samples + 1);
         epochSamples = checked(epochSamples + 1);
-        ready = epochSamples > 1;
+        ready = nominalEvents || epochSamples > 1;
     }
 
     public bool TryCheck(out BoundSelectedAdmission admission)

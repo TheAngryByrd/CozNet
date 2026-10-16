@@ -19,8 +19,12 @@ type internal SignalSettlement =
     | Deferred
     | Measured of DelayTicks
 
+type private SignalSampleStream =
+    | Interval of SampleCreditStream
+    | Nominal of NominalSampleCreditStream
+
 type private SignalThreadAccounting = {
-    Samples: SampleCreditStream option
+    Samples: SignalSampleStream option
     RequiredEpoch: uint64
     LastNativeSequence: uint64
 }
@@ -199,14 +203,7 @@ module internal SignalAccounting =
         find thread state
         |> Result.map (fun entry -> entry.RequiredEpoch)
 
-    let register samplePercent state =
-        let samples =
-            match samplePercent with
-            | None -> Ok None
-            | Some percent ->
-                SampleCreditStream.tryCreate 1000000000L percent 0UL 0UL SampleThreadState.Runnable
-                |> Result.map Some
-
+    let private registerStream samples state =
         samples
         |> Result.bind (fun stream ->
             DelayLedger.register None state.Ledger
@@ -226,34 +223,60 @@ module internal SignalAccounting =
             )
         )
 
+    let register samplePercent state =
+        let samples =
+            match samplePercent with
+            | None -> Ok None
+            | Some percent ->
+                SampleCreditStream.tryCreate 1000000000L percent 0UL 0UL SampleThreadState.Runnable
+                |> Result.map (
+                    Interval
+                    >> Some
+                )
+
+        registerStream samples state
+
+    let registerNominal percent periodNanoseconds state =
+        let samples =
+            NominalSampleCreditStream.tryCreate 1000000000L percent periodNanoseconds
+            |> Result.map (
+                Nominal
+                >> Some
+            )
+
+        registerStream samples state
+
     let sampleIdentity thread state =
         find thread state
         |> Result.bind (fun entry ->
             entry.Samples
-            |> Option.map SampleCreditStream.identity
+            |> Option.map (
+                function
+                | Interval stream -> SampleCreditStream.identity stream
+                | Nominal stream -> NominalSampleCreditStream.identity stream
+            )
             |> require "The signal thread has no sample stream."
         )
 
-    let observe thread observation state =
+    let private observeCore thread epoch apply state =
         find thread state
         |> Result.bind (fun entry ->
             if Map.containsKey thread state.Pending then
                 Error "A pending signal excludes sample credit."
-            elif CpuSampleObservation.eligibilityEpoch observation < entry.RequiredEpoch then
+            elif epoch < entry.RequiredEpoch then
                 Error "The sample predates the required signal eligibility epoch."
             else
                 entry.Samples
                 |> require "The signal thread has no sample stream."
                 |> Result.bind (fun stream ->
-                    SampleCreditStream.observe observation stream
+                    apply stream
                     |> Result.bind (fun (credit, samples) ->
                         DelayLedger.creditSample thread credit state.Ledger
                         |> Result.map (fun ledger ->
                             let next = {
                                 entry with
                                     Samples = Some samples
-                                    RequiredEpoch =
-                                        CpuSampleObservation.eligibilityEpoch observation
+                                    RequiredEpoch = epoch
                             }
 
                             credit,
@@ -266,6 +289,28 @@ module internal SignalAccounting =
                     )
                 )
         )
+
+    let observe thread observation state =
+        observeCore
+            thread
+            (CpuSampleObservation.eligibilityEpoch observation)
+            (function
+            | Interval stream ->
+                SampleCreditStream.observe observation stream
+                |> Result.map (fun (credit, next) -> credit, Interval next)
+            | Nominal _ -> Error "An interval observation cannot enter a nominal sample stream.")
+            state
+
+    let observeNominal thread observation state =
+        observeCore
+            thread
+            (NominalSampleObservation.eligibilityEpoch observation)
+            (function
+            | Nominal stream ->
+                NominalSampleCreditStream.observe observation stream
+                |> Result.map (fun (credit, next) -> credit, Nominal next)
+            | Interval _ -> Error "A nominal observation cannot enter an interval sample stream.")
+            state
 
     let prepare thread state =
         find thread state

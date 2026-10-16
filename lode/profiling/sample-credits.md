@@ -1,5 +1,7 @@
 # Sample credit conversion
 
+This page describes interval observations. The separate [nominal-event estimator](nominal-event-credit.md) does not require a same-epoch baseline.
+
 `SampleCreditStream` converts qualified selected CPU observations to ledger ticks.
 Its integer percentage uses native Coz semantics: `credit = selected CPU duration × speedup`.
 This differs from the public serial engine's proportional slowdown formula.

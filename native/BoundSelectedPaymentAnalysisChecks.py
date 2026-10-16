@@ -7,6 +7,61 @@ import unittest
 from AnalyzeBoundSelectedPayment import main, verify_case, verify_record, verify_pause_timing, PAUSE_TIMING_FIELDS, verify_peer_progress
 from AnalyzeBoundSelectedPayment import verify_selected_handoff
 from CooperativeMeasurementEvidence import verify_measurement
+from AnalyzeBoundSelectedPayment import verify_source, verify_cadence
+from AnalyzeBoundSampledPayment import verify_sample_credit_policy
+
+
+class NominalEventCreditChecks(unittest.TestCase):
+    def nominal_record(self):
+        record = valid_record()
+        record.update(sampleCreditPolicy="nominal-event-v1", nominalSamplePeriodNanoseconds=1000000, credit=2000000)
+        for index, sample in enumerate(record["sourceSamples"]):
+            sample.update(PeriodNanoseconds=1000000, CumulativeCpuNanoseconds=(index + 1) * 1000000)
+            record["samples"][index]["Credit"] = 500000
+        return record
+
+    def test_initial_and_resumed_event_credit(self):
+        record = self.nominal_record()
+        self.assertEqual((2000000, 4000000), verify_source(record))
+        for index in (0, 2):
+            changed = copy.deepcopy(record)
+            changed["samples"][index]["Credit"] = 0
+            with self.assertRaisesRegex(ValueError, "Declared sample policy"):
+                verify_source(changed)
+        record.update(percent=0, credit=0)
+        for sample in record["samples"]:
+            sample["Credit"] = 0
+        self.assertEqual((0, 4000000), verify_source(record))
+
+    def test_policy_period_and_legacy_contracts(self):
+        self.assertFalse(verify_sample_credit_policy({}))
+        self.assertFalse(verify_sample_credit_policy(dict(sampleCreditPolicy="same-epoch-interval-v1", nominalSamplePeriodNanoseconds=None)))
+        record = self.nominal_record()
+        for changes in (dict(sampleCreditPolicy=None), dict(sampleCreditPolicy=1), dict(sampleCreditPolicy="nominal"),
+                        dict(selectedPaymentEnabled=False), dict(nominalSamplePeriodNanoseconds=True),
+                        dict(nominalSamplePeriodNanoseconds=None), dict(nominalSamplePeriodNanoseconds=999999),
+                        dict(sampleCreditPolicy="same-epoch-interval-v1")):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                verify_sample_credit_policy(dict(record, **changes))
+        record["sourceSamples"][0]["PeriodNanoseconds"] = 999999
+        with self.assertRaisesRegex(ValueError, "Nominal source period changed"):
+            verify_source(record)
+        verify_source(valid_record())
+
+    def test_nominal_cadence_accepts_one_current_epoch_event(self):
+        record = SelectedPaymentAnalysisChecks().cadence_record()
+        record.update(sampleCreditPolicy="nominal-event-v1", nominalSamplePeriodNanoseconds=1000000)
+        record["pauses"][0]["FirstUnprocessed"] = 1
+        record["pauses"][0]["Admission"]["SampleCount"] = 1
+        verify_cadence(record)
+        record.update(sampleCreditPolicy="same-epoch-interval-v1", nominalSamplePeriodNanoseconds=None)
+        with self.assertRaisesRegex(ValueError, "Cadence qualification"):
+            verify_cadence(record)
+        record.update(sampleCreditPolicy="nominal-event-v1", nominalSamplePeriodNanoseconds=1000000)
+        record["pauses"][0]["FirstUnprocessed"] = 0
+        record["pauses"][0]["Admission"]["SampleCount"] = 0
+        with self.assertRaisesRegex(ValueError, "Cadence qualification"):
+            verify_cadence(record)
 
 
 def payment(worker, ordinal, budget, waited, managed, native):

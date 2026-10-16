@@ -20,8 +20,9 @@ Peer shutdown and owner join retain their five-second bounds.
 
 Both modes publish available original-epoch samples before a selected loop-probe check.
 They service the peer before deciding whether to pay selected debt.
-Continuous mode permits every check. Qualified mode requires a complete interval in the current eligibility epoch.
-The first sample establishes a baseline. A later sample permits one check, including at zero speedup.
+Continuous mode permits every check.
+With interval credit, qualified mode requires two observations in the current eligibility epoch.
+With [nominal-event credit](nominal-event-credit.md), one current-epoch event permits one check, including at zero speedup.
 Qualification does not require selected-method attribution or nonzero credit.
 A check consumes its permission even when selected debt is zero.
 Sampling resume advances the epoch and discards permission from the final drain.
@@ -43,12 +44,12 @@ It adds these fields:
 | `selectedWorkStarted`, `selectedWorkFinished` | Managed timestamps around selected work, before source completion and final peer drain |
 | `pauses[].Admission.SampleCount` | Processed sample prefix at pause admission |
 | `pauses[].Admission.Epoch` | Source eligibility epoch at pause admission |
-| `pauses[].Admission.Qualified` | Whether an unconsumed complete interval authorized that check |
+| `pauses[].Admission.Qualified` | Whether unconsumed permission under the declared credit policy authorized that check |
 
 The existing `timestampFrequency` defines the managed timestamp units.
 A failed run can lack the work endpoint.
 Replay requires the requested batch count and matching checksum for completed runs.
-Every qualified pause needs two samples from its original epoch after the preceding final drain.
+Every qualified pause needs two original-epoch samples for interval credit, or one for nominal-event credit, after the preceding final drain.
 Replay does not reconstruct checks that caused no pause.
 Schema 3 remains valid for retained duration-based runs.
 The runner also checks the requested cadence and batch count against each result.

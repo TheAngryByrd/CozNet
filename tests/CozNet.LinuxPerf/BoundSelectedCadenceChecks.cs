@@ -8,10 +8,37 @@ static class BoundSelectedCadenceChecks
     public static void Run()
     {
         BaselineAndOneUsePermission();
+        NominalEventPermission();
         ResumeDiscardsFinalDrainPermission();
         ForeignEpochDoesNotChangePermission();
         ContinuousControlAndPlanBoundaries();
         WorkerStartPreservesOwnerAndFault();
+    }
+
+    private static void NominalEventPermission()
+    {
+        var policy = BoundSampleCreditPlan.Parse("nominal-event", true);
+        Require(policy.NominalEvents && policy.Name == "nominal-event-v1", "Nominal settings lost their estimator identity.");
+        Require(!BoundSampleCreditPlan.Parse(null, false).NominalEvents && !BoundSampleCreditPlan.Parse("interval", true).NominalEvents,
+            "Legacy settings changed estimator.");
+        foreach (var value in new[] { "", "1", "nominal", " nominal-event" })
+        {
+            bool rejected = false;
+            try { BoundSampleCreditPlan.Parse(value, true); } catch (ArgumentException) { rejected = true; }
+            Require(rejected, "An invalid sample credit policy was accepted.");
+        }
+        bool unsupported = false;
+        try { BoundSampleCreditPlan.Parse("nominal-event", false); } catch (ArgumentException) { unsupported = true; }
+        Require(unsupported, "Nominal credit accepted a source without selected-payment ownership.");
+        var cadence = new BoundSelectedCheckCadence(BoundSelectedCadencePlan.Parse("0", "qualified-sample", "5"), policy.NominalEvents);
+        Require(!cadence.TryCheck(out _), "An empty nominal stream authorized a check.");
+        cadence.Observe(1);
+        Require(cadence.TryCheck(out var first) && first == new BoundSelectedAdmission(1, 1, true), "The initial zero-speedup event did not authorize a check.");
+        Require(!cadence.TryCheck(out _), "One event authorized repeated checks.");
+        cadence.Resume();
+        Require(!cadence.TryCheck(out _), "Resume retained old permission.");
+        cadence.Observe(2);
+        Require(cadence.TryCheck(out var resumed) && resumed == new BoundSelectedAdmission(2, 2, true), "The first resumed nominal event did not authorize a check.");
     }
 
     private static void BaselineAndOneUsePermission()

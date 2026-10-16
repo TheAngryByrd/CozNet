@@ -36,10 +36,13 @@ static class BoundSampledPaymentWorkload
         var dispatchTiming = CooperativeDispatchTiming.Parse(Environment.GetEnvironmentVariable("COZNET_DISPATCH_TIMING"));
         var controllerPlan = BoundControllerPlan.Parse(Environment.GetEnvironmentVariable("COZNET_OWNER_CONTROLLER"),
             selectedPaymentSource is not null, schedulerBackend is not null, dispatchTiming is not null);
+        var creditPlan = BoundSampleCreditPlan.Parse(Environment.GetEnvironmentVariable("COZNET_SAMPLE_CREDIT"), selectedPaymentSource is not null);
         NativeLibrary.SetDllImportResolver(typeof(CooperativeNativeMethods).Assembly,
             (name, _, _) => name == "CozNet.Cooperative" ? NativeLibrary.Load(Path.GetFullPath(library)) : IntPtr.Zero);
         var plan = ProbePlan.Parse("injected", Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL"));
-        var selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(settings.Percent), SignalAccountingModule.create()));
+        var selected = creditPlan.NominalEvents
+            ? Parsed(SignalAccountingModule.registerNominal(settings.Percent, BoundSampleCreditPlan.NominalPeriodNanoseconds, SignalAccountingModule.create()))
+            : Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(settings.Percent), SignalAccountingModule.create()));
         var peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
         var state = peer.Item2;
         var accounting = new CooperativeAccountingCache(selected.Item1, peer.Item1);
@@ -95,7 +98,7 @@ static class BoundSampledPaymentWorkload
         var receiptPreparationPlan = CooperativeReceiptPreparation.Parse(Environment.GetEnvironmentVariable("COZNET_PREPARE_RECEIPTS"),
             selectedPaymentEnabled, measurement is not null);
         var serviceTiming = CooperativeServiceTiming.Parse(Environment.GetEnvironmentVariable("COZNET_SERVICE_TIMING"), measurement is not null);
-        var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan);
+        var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan, creditPlan.NominalEvents);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
         var cleanupErrors = new List<string>();
@@ -210,10 +213,14 @@ static class BoundSampledPaymentWorkload
         {
             Require(measurement?.AcceptanceClosed != true, "Samples cannot enter the frozen experiment.");
             represented = checked(represented + sample.PeriodNanoseconds);
-            var observation = Parsed(CpuSampleObservationModule.tryCreate(stream, checked((ulong)samples.Count + 1),
-                represented, eligibilityEpoch, SampleThreadState.Runnable,
-                sample.Method == OverheadWorkload.SelectedSymbol ? SampleLocation.Selected : SampleLocation.Unmapped));
-            var observed = Parsed(SignalAccountingModule.observe(selected.Item1, observation, state));
+            var location = sample.Method == OverheadWorkload.SelectedSymbol ? SampleLocation.Selected : SampleLocation.Unmapped;
+            var observed = creditPlan.NominalEvents
+                ? Parsed(SignalAccountingModule.observeNominal(selected.Item1,
+                    Parsed(NominalSampleObservationModule.tryCreate(stream, checked((ulong)samples.Count + 1), eligibilityEpoch,
+                        sample.PeriodNanoseconds, SampleThreadState.Runnable, location)), state))
+                : Parsed(SignalAccountingModule.observe(selected.Item1,
+                    Parsed(CpuSampleObservationModule.tryCreate(stream, checked((ulong)samples.Count + 1), represented,
+                        eligibilityEpoch, SampleThreadState.Runnable, location)), state));
             state = observed.Item2;
             long amount = DelayTicksModule.value(observed.Item1);
             credit = checked(credit + amount);
@@ -498,12 +505,12 @@ static class BoundSampledPaymentWorkload
                 && work.SelectedChecksum == checked(work.SelectedProgress * CooperativeCpuWork.ExpectedChecksum),
                 "The sampled cooperative workload did not preserve selected work and sample reach.");
             UInt128 selectedPeriods = 0;
-            for (int index = 1; index < samples.Count; ++index)
-                if (samples[index].EligibilityEpoch == samples[index - 1].EligibilityEpoch
+            for (int index = 0; index < samples.Count; ++index)
+                if ((creditPlan.NominalEvents || index > 0 && samples[index].EligibilityEpoch == samples[index - 1].EligibilityEpoch)
                     && samples[index].Sample.Method == OverheadWorkload.SelectedSymbol)
                     selectedPeriods += samples[index].Sample.PeriodNanoseconds;
             Require((UInt128)credit == selectedPeriods * (uint)settings.Percent / 100,
-                "Sample credits differ from selected periods after the epoch baseline.");
+                "Sample credits differ from the declared selected-period policy.");
             Require(settings.Percent == 0 ? credit == 0 && paid == 0 && payments.Count == 0
                 : credit > 0 && (measurement is null ? paid >= credit : paid > 0) && payments.Count > 0,
                 "The sampled intervention did not reach its zero or positive payment condition.");
@@ -675,6 +682,8 @@ static class BoundSampledPaymentWorkload
             sourceEpochSamples = !selectedPaymentEnabled || collection?.Cleanup is null ? null : collection.EpochDiagnostics,
             sourceEpochPrefixes = result?.EpochPrefixes,
             sourceEpochPrefixEvidenceVersion = selectedPaymentEnabled ? 1 : (int?)null,
+            sampleCreditPolicy = creditPlan.Name,
+            nominalSamplePeriodNanoseconds = creditPlan.NominalEvents ? BoundSampleCreditPlan.NominalPeriodNanoseconds : (ulong?)null,
             serviceCadence,
             probeInterval = plan.BackedgeInterval,
             selectedPaymentEnabled, pauseTimingEnabled, childCpuEnabled, ownerDrainEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false

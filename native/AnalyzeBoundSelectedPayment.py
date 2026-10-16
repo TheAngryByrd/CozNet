@@ -6,7 +6,7 @@ from AnalyzeBoundSampledPayment import verify_probe_interval
 from CooperativeMeasurementEvidence import verify_measurement
 
 from AnalyzeBoundSampledPayment import count, require, signed_count, verify_payments, verify_receipt_interval, verify_rejected_receipt_interval, verify_sample_publication, verify_dispatch_timing, verify_receipt_preparation
-from AnalyzeBoundSampledPayment import verify_service_timing
+from AnalyzeBoundSampledPayment import verify_service_timing, verify_sample_credit_policy
 
 
 def counts(mapping, signed=()):
@@ -69,6 +69,7 @@ def verify_capture(boundary, record, worker):
 
 
 def verify_source(record):
+    nominal = verify_sample_credit_policy(record)
     source, epochs = record["sourceSamples"], record["sourceEpochSamples"]
     require(len(source) == len(epochs), "Source epoch labels are missing")
     begin, size = count(record["nativeRange"]["Start"]), count(record["nativeRange"]["Size"])
@@ -86,15 +87,16 @@ def verify_source(record):
         require((sample["Method"] is not None) == (begin <= count(sample["InstructionPointer"]) < begin + size),
                 "Source label differs from the bound native range")
         require(count(sample["PeriodNanoseconds"]) > 0, "Empty CPU period")
+        require(not nominal or sample["PeriodNanoseconds"] == record["nominalSamplePeriodNanoseconds"], "Nominal source period changed")
         last_time, last_cpu, last_epoch = time, cpu, epoch["EligibilityEpoch"]
     credit = remainder = last_epoch = 0
     for index, item in enumerate(record["samples"]):
         require(count(item["Index"]) == index and index < len(source) and item["Sample"] == source[index]
                 and count(item["EligibilityEpoch"]) == epochs[index]["EligibilityEpoch"], "Credited sample prefix changed")
         expected = 0
-        if item["EligibilityEpoch"] == last_epoch and item["Sample"]["Method"] is not None:
+        if (nominal or item["EligibilityEpoch"] == last_epoch) and item["Sample"]["Method"] is not None:
             expected, remainder = divmod(item["Sample"]["PeriodNanoseconds"] * record["percent"] + remainder, 100)
-        require(count(item["Credit"]) == expected, "Epoch baseline or fractional sample credit differs")
+        require(count(item["Credit"]) == expected, "Declared sample policy or fractional credit differs" if nominal else "Epoch baseline or fractional sample credit differs")
         credit += expected
         last_epoch = item["EligibilityEpoch"]
     require(credit == count(record["credit"]), "Aggregate sample credit differs")
@@ -143,6 +145,7 @@ def verify_pause_timing(record):
 
 
 def verify_cadence(record):
+    nominal = verify_sample_credit_policy(record)
     if record["schemaVersion"] == 3:
         return
     mode = record["selectedCadence"]
@@ -162,8 +165,9 @@ def verify_cadence(record):
         require(count(admission["Epoch"]) == epoch and prefix == pause["FirstUnprocessed"],
                 "Cadence admission changed its epoch or sample prefix")
         require(type(admission["Qualified"]) is bool, "Invalid cadence qualification")
-        qualified = prefix >= 2 and all(
-            item["EligibilityEpoch"] == epoch for item in record["samples"][prefix - 2:prefix])
+        required = 1 if nominal else 2
+        qualified = prefix >= required and all(
+            item["EligibilityEpoch"] == epoch for item in record["samples"][prefix - required:prefix])
         require(not admission["Qualified"] or qualified, "Cadence qualification differs from original sample epochs")
         require(mode != "QualifiedSample" or admission["Qualified"] and qualified,
                 "Selected pause lacks a complete current-epoch interval")

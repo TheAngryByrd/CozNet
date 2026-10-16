@@ -15,6 +15,9 @@ It preserves pending treatment ownership and source tails. No prediction-accurac
 | `PythonCommand` | `python` | Python command for retained checks and analysis. |
 | `PrepareReceipts` | Disabled | Prepare isolated managed receipt paths before both sampled measurements. |
 | `OwnerController` | Disabled | Run both sampled controllers on the selected owner thread. |
+| `NominalSampleCredit` | Disabled | Credit every admitted selected nominal event in both sampled arms. |
+
+The [credit policy reference](nominal-event-credit.md) defines the versioned plan and result contract.
 
 The runner saves the plan and four unexecuted outcomes before preparation.
 It snapshots source files, managed workload files, and the existing Linux profiler.

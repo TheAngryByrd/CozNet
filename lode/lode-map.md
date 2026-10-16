@@ -1,5 +1,7 @@
 # Lode index
 
+For the separate statistical event estimator, read [nominal event credit](profiling/nominal-event-credit.md).
+
 For opt-in recurring peer service timing, read [accounting reuse](profiling/accounting-reuse.md#recurring-service-timing).
 
 For mostly-empty owner-drain component costs and the lower-density candidate, read [observer overhead](profiling/observer-overhead.md#owner-drain-diagnostic).

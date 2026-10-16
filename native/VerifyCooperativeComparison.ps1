@@ -4,9 +4,11 @@ param(
     [string]$PythonCommand = 'python',
     [ValidateSet(1024, 8192)][int]$ProbeInterval = 1024,
     [switch]$PrepareReceipts,
-    [switch]$OwnerController
+    [switch]$OwnerController,
+    [switch]$NominalSampleCredit
 )
 $ErrorActionPreference = 'Stop'
+$creditPolicy = if ($NominalSampleCredit) { 'nominal-event-v1' } else { 'same-epoch-interval-v1' }
 $PSNativeCommandUseErrorActionPreference = $false
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if (-not $EvidenceDirectory) { $EvidenceDirectory = Join-Path $root 'artifacts/cooperative-comparison' }
@@ -25,6 +27,7 @@ Save-Json 'plan.json' @{
     selectedHandoff = $false; finiteMeasurement = $true
     prepareReceipts = [bool]$PrepareReceipts; receiptPreparationEvidenceVersion = 1
     ownerController = [bool]$OwnerController; controllerOwnershipEvidenceVersion = 1
+    sampleCreditPolicy = $creditPolicy; sampleCreditEvidenceVersion = 1
     debtBoundNanoseconds = 2000000; leaseBoundNanoseconds = 2000000; requestedChildBoundNanoseconds = 50000
     handlerBoundNanoseconds = 5000000; receiptBoundNanoseconds = 100000000
 }
@@ -123,7 +126,8 @@ try {
                 '--env', 'COZNET_PAUSE_TIMING=0', '--env', 'COZNET_CHILD_CPU=0', '--env', 'COZNET_BATCH_SERVICE=0',
                 '--env', 'COZNET_DISPATCH_TIMING=0', '--env', 'COZNET_BOUND_SCHEDULER=0', '--env', 'COZNET_PEER_PROGRESS=0',
                 '--env', ('COZNET_PREPARE_RECEIPTS=' + [int][bool]$PrepareReceipts),
-                '--env', ('COZNET_OWNER_CONTROLLER=' + [int][bool]$OwnerController))
+                '--env', ('COZNET_OWNER_CONTROLLER=' + [int][bool]$OwnerController),
+                '--env', ('COZNET_SAMPLE_CREDIT=' + $(if ($NominalSampleCredit) { 'nominal-event' } else { 'interval' })))
             $percent = if ($mode -eq 'sampled-zero') { '0' } else { '50' }
             $arguments = @('--sampled-bound-selected-cadence', '/evidence/result.json', $percent,
                 '/native/libCozNet.Cooperative.so', 'qualified-sample', [string]$SelectedBatches)

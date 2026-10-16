@@ -50,7 +50,9 @@ It would require an explicit profiler-frame exclusion policy, not merely a valid
 Disabling and enabling a perf event does not create a new complete sample period.
 The reviewed WSL kernel retains a remaining task-clock period across stop and start. [6]
 A nominal sample can combine enabled CPU intervals on both sides of a pause.
-This is why CozNet's epoch baseline rule is a conservative additional contract, not an upstream feature.
+The interval API therefore requires an epoch baseline as an additional contract.
+The separate [nominal-event estimator](../Explanations/nominal-event-credit.md) credits the first admitted selected event, as native Coz does.
+Neither policy establishes exact CPU attribution from the sampled instruction pointer.
 
 ## JCoz samples before it sleeps
 
@@ -129,8 +131,10 @@ They cannot acquire the current epoch merely because the collector drains them a
 
 Sampling can reopen only after the payment path has exited its excluded region and ownership is known.
 A receipt that precedes callback return is insufficient evidence of that boundary.
-The first observation of the new eligibility epoch establishes a baseline and earns no interval credit.
+Under the interval policy, the first observation of the new eligibility epoch establishes a baseline and earns no interval credit.
 Consecutive observations within that epoch can then qualify under the existing `SampleCreditStream` contract.
+The nominal-event policy credits each admitted runnable selected event, including the first after resume.
+Both policies retain source ownership, loss checks, and pending-payment exclusion.
 
 The epoch records a declared eligibility transition. It does not repair unknown CPU attribution.
 A hidden delay between two runnable observations cannot be discovered from those observations alone.

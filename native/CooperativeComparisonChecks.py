@@ -70,6 +70,32 @@ def ownership_record(percent=50, enabled=True):
 
 
 class CooperativeComparisonChecks(unittest.TestCase):
+    def test_credit_policy_plan_rejects_unknown_or_unversioned_nominal_mode(self):
+        self.assertEqual(('same-epoch-interval-v1', False), subject.sample_credit_plan({}))
+        for policy in ('same-epoch-interval-v1', 'nominal-event-v1'):
+            self.assertEqual((policy, True), subject.sample_credit_plan(dict(sampleCreditPolicy=policy, sampleCreditEvidenceVersion=1)))
+        for plan in (dict(sampleCreditPolicy='nominal-event-v1'), dict(sampleCreditEvidenceVersion=1),
+                     *[dict(sampleCreditPolicy='nominal-event-v1', sampleCreditEvidenceVersion=v) for v in (None, True, '1', 1.0, 0, 2)],
+                     *[dict(sampleCreditPolicy=v, sampleCreditEvidenceVersion=1) for v in (None, True, 1, 'nominal', 'NOMINAL-EVENT-V1')]):
+            with self.subTest(plan=plan), self.assertRaises(ValueError):
+                subject.sample_credit_plan(plan)
+
+    def test_declared_credit_policy_gates_both_sampled_arms_before_replay(self):
+        for mode, percent in (('sampled-zero', 0), ('sampled-half', 50)):
+            record = sampled_record(percent)
+            for policy in ('same-epoch-interval-v1', 'nominal-event-v1'):
+                with self.assertRaisesRegex(ValueError, 'lacks declared sample credit'):
+                    subject.analyze_case(record, mode, 5, 0, sample_credit_policy=policy, require_credit_policy=True)
+                for actual in (None, True, 1, 'unknown', 'nominal-event-v1' if policy == 'same-epoch-interval-v1' else 'same-epoch-interval-v1'):
+                    with self.subTest(mode=mode, policy=policy, actual=actual), self.assertRaisesRegex(ValueError, 'credit policy differs'):
+                        subject.analyze_case(dict(record, sampleCreditPolicy=actual), mode, 5, 0, sample_credit_policy=policy, require_credit_policy=True)
+            self.assertEqual('unqualified', subject.analyze_case(dict(record, sampleCreditPolicy='same-epoch-interval-v1'), mode, 5, 0,
+                require_credit_policy=True)[0])
+            with self.assertRaisesRegex(ValueError, 'credit policy differs'):
+                subject.analyze_case(dict(record, sampleCreditPolicy='nominal-event-v1'), mode, 5, 0)
+        self.assertEqual('complete', subject.analyze_case(physical_record(), 'physical-baseline', 5, 0,
+            sample_credit_policy='nominal-event-v1', require_credit_policy=True)[0])
+
     def test_ownership_plan_requires_explicit_versioned_boolean(self):
         self.assertEqual((False, False), subject.controller_ownership_plan({}))
         self.assertEqual((False, False), subject.controller_ownership_plan(dict(ownerController=False)))
@@ -310,7 +336,7 @@ class ComparisonCollectionChecks(unittest.TestCase):
 
     def analyze_with_parsed_arms(self):
         def parsed(record, mode, batches, code, probe_interval, require_probe_interval, prepare_receipts, require_preparation,
-                   owner_controller, require_ownership):
+                   owner_controller, require_ownership, sample_credit_policy, require_credit_policy):
             if code:
                 return "invalid", ["process failed"], None
             return "unqualified", ["fixture"], subject.Cost(Fraction(10), Fraction(12), 5)
@@ -407,6 +433,29 @@ class ComparisonCollectionChecks(unittest.TestCase):
                 result = subject.analyze(self.root)
                 self.assertEqual((3, 1), (result['completed'], result['invalid']))
                 self.assertEqual('invalid', next(case for case in result['cases'] if case['mode'] == target)['status'])
+                self.assertIsNone(result['descriptiveComparison'])
+
+    def test_credit_policy_mismatch_preserves_other_arms(self):
+        plan = subject.read(self.root / 'plan.json')
+        plan.update(sampleCreditPolicy='same-epoch-interval-v1', sampleCreditEvidenceVersion=1)
+        self.save('plan.json', plan)
+        self.manifest['files']['plan.json'] = hashlib.sha256((self.root / 'plan.json').read_bytes()).hexdigest()
+        self.save('manifest.json', self.manifest)
+        self.save('physical-baseline.json', physical_record())
+        self.save('physical-optimized.json', physical_record('optimized'))
+        for target in ('sampled-zero', 'sampled-half'):
+            for actual in (None, 'nominal-event-v1'):
+                self.save('sampled-zero.json', dict(sampled_record(0), sampleCreditPolicy='same-epoch-interval-v1'))
+                self.save('sampled-half.json', dict(sampled_record(), sampleCreditPolicy='same-epoch-interval-v1'))
+                complete = subject.analyze(self.root)
+                self.assertTrue(complete['collectionComplete'])
+                self.assertEqual(('same-epoch-interval-v1', 1), (complete['sampleCreditPolicy'], complete['sampleCreditEvidenceVersion']))
+                changed = sampled_record(0 if target == 'sampled-zero' else 50)
+                if actual is not None:
+                    changed['sampleCreditPolicy'] = actual
+                self.save(target + '.json', changed)
+                result = subject.analyze(self.root)
+                self.assertEqual((3, 1), (result['completed'], result['invalid']))
                 self.assertIsNone(result['descriptiveComparison'])
 
     def test_failed_and_unexecuted_arms_remain_in_report(self):

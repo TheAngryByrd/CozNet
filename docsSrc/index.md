@@ -10,6 +10,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Capture nominal-event credit](How_Tos/run-nominal-event-credit.md).
+
 - [Measure recurring cooperative service](How_Tos/measure-cooperative-service.md).
 
 - [Compare managed receipt preparation](How_Tos/compare-receipt-preparation.md).
@@ -50,6 +52,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Nominal-event credit](Reference/nominal-event-credit.md): explicit statistical event weights and policy evidence.
 
 - [Cooperative service timing](Reference/cooperative-service-timing.md): activity buckets, measurement subsets, and timing limits.
 
