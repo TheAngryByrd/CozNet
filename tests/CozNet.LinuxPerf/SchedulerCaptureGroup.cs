@@ -1,4 +1,4 @@
-sealed class TimerSchedulerCaptureGroup(Func<ISchedulerEventSession>? factory)
+sealed class SchedulerCaptureGroup(Func<ISchedulerEventSession>? factory)
 {
     internal sealed record Completion(bool Stopped, SchedulerCapture?[] Captures, Exception[] Errors);
 
@@ -13,9 +13,9 @@ sealed class TimerSchedulerCaptureGroup(Func<ISchedulerEventSession>? factory)
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, sessions.Length);
         lock (gate)
         {
-            if (completion is not null) throw new InvalidOperationException("Timer scheduler registration has stopped.");
-            if (sessions[index] is not null) throw new InvalidOperationException("Timer scheduler slot is already registered.");
-            if (factory is not null) sessions[index] = factory() ?? throw new InvalidOperationException("Timer scheduler factory returned no session.");
+            if (completion is not null) throw new InvalidOperationException("Scheduler registration has stopped.");
+            if (sessions[index] is not null) throw new InvalidOperationException("Scheduler slot is already registered.");
+            if (factory is not null) sessions[index] = factory() ?? throw new InvalidOperationException("Scheduler factory returned no session.");
         }
     }
 
@@ -36,7 +36,7 @@ sealed class TimerSchedulerCaptureGroup(Func<ISchedulerEventSession>? factory)
                     captures[index] = capture;
                     foreach (var failure in capture.Failures) errors.Add(new InvalidDataException(failure));
                     if (capture.FinalLost != 0 || capture.Records.Any(record => record.Kind == SchedulerRecordKind.Loss))
-                        errors.Add(new InvalidDataException("Timer scheduler capture has missing or lost records."));
+                        errors.Add(new InvalidDataException("Scheduler capture has missing or lost records."));
                 }
                 catch (Exception error) { errors.Add(error); }
                 try { session.Dispose(); }
@@ -51,7 +51,7 @@ sealed class TimerSchedulerCaptureGroup(Func<ISchedulerEventSession>? factory)
     public void Retire(Action retire, TimeSpan timeout)
     {
         if (!stopped.Wait(timeout))
-            throw new InvalidOperationException("Timer scheduler collection remains active; target ownership was retained.");
+            throw new InvalidOperationException("Scheduler collection remains active; target ownership was retained.");
         retire();
     }
 }

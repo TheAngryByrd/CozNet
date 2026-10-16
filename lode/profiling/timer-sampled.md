@@ -78,7 +78,7 @@ An unresolved scheduler disposal keeps targets alive and prevents native close. 
 This optional mode adds collector threads and allocations. It does not establish ordinary-mode capacity or observer cost.
 The first loss-free capture retains a startup debt failure with 2,349,871 ns of peer preemption overlap in a 2,353,895 ns arm-to-handler interval.
 Controller and selected switch-out overlap are zero for that interval. This establishes descheduling in that run, not its underlying cause.
-`TimerSchedulerCaptureGroup` owns registration, completion evidence, and the retirement gate.
+`SchedulerCaptureGroup` owns registration, completion evidence, and the retirement gate.
 Its portable checks cover disabled capture, normal ordering, failed disposal, failed capture, loss, duplicate registration, and partial startup.
 The failed-disposal check uses `TimerWorkerLifetime` to verify retained ownership and blocked retirement.
 Repeated completion returns retained evidence without retrying an ambiguous disposal. Observer-cost measurements remain outstanding.

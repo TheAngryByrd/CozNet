@@ -1,4 +1,4 @@
-static class TimerSchedulerCaptureGroupChecks
+static class SchedulerCaptureGroupChecks
 {
     private sealed class Session : ISchedulerEventSession
     {
@@ -46,7 +46,7 @@ static class TimerSchedulerCaptureGroupChecks
 
     private static void DisabledCaptureAllowsRetirement()
     {
-        var group = new TimerSchedulerCaptureGroup(null);
+        var group = new SchedulerCaptureGroup(null);
         int retired = 0;
         group.Retire(() => retired++, TimeSpan.Zero);
         var result = group.Finish();
@@ -58,7 +58,7 @@ static class TimerSchedulerCaptureGroupChecks
     {
         var sessions = new[] { new Session(), new Session(), new Session() };
         int next = 0, retired = 0;
-        var group = new TimerSchedulerCaptureGroup(() => sessions[next++]);
+        var group = new SchedulerCaptureGroup(() => sessions[next++]);
         int blockedDuringDisposal = 0;
         foreach (var session in sessions)
             session.DuringDispose = () =>
@@ -85,7 +85,7 @@ static class TimerSchedulerCaptureGroupChecks
         var failed = new Session { DisposeError = failure };
         var other = new Session();
         int next = 0;
-        var group = new TimerSchedulerCaptureGroup(() => next++ == 0 ? failed : other);
+        var group = new SchedulerCaptureGroup(() => next++ == 0 ? failed : other);
         group.Register(0);
         group.Register(2);
         var result = group.Finish();
@@ -105,7 +105,7 @@ static class TimerSchedulerCaptureGroupChecks
     {
         var failure = new IOException("Injected capture failure.");
         var session = new Session { FinishError = failure };
-        var group = new TimerSchedulerCaptureGroup(() => session);
+        var group = new SchedulerCaptureGroup(() => session);
         group.Register(1);
         var result = group.Finish();
         bool retired = false;
@@ -126,7 +126,7 @@ static class TimerSchedulerCaptureGroupChecks
         })
         {
             var session = new Session { Capture = capture };
-            var group = new TimerSchedulerCaptureGroup(() => session);
+            var group = new SchedulerCaptureGroup(() => session);
             group.Register(2);
             var result = group.Finish();
             Require(result.Stopped && result.Errors.Length > 0 && ReferenceEquals(result.Captures[2], capture)
@@ -139,7 +139,7 @@ static class TimerSchedulerCaptureGroupChecks
     {
         var session = new Session();
         int calls = 0;
-        var group = new TimerSchedulerCaptureGroup(() => { calls++; return session; });
+        var group = new SchedulerCaptureGroup(() => { calls++; return session; });
         group.Register(0);
         Reject(() => group.Register(0));
         group.Finish();
@@ -151,7 +151,7 @@ static class TimerSchedulerCaptureGroupChecks
     {
         var session = new Session();
         int calls = 0;
-        var group = new TimerSchedulerCaptureGroup(() => ++calls == 1 ? session : throw new InvalidOperationException("Injected startup failure."));
+        var group = new SchedulerCaptureGroup(() => ++calls == 1 ? session : throw new InvalidOperationException("Injected startup failure."));
         group.Register(0);
         Reject(() => group.Register(1));
         var result = group.Finish();

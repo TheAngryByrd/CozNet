@@ -329,7 +329,7 @@ The next implementation decision must account for peer descheduling without forg
 
 ### Portable scheduler shutdown checks
 
-`TimerSchedulerCaptureGroup` supplies the registration and retirement gate used by `SampledTimerWorkload`.
+`SchedulerCaptureGroup` supplies the registration and retirement gate used by `SampledTimerWorkload`.
 Seven portable checks exercise that helper through the existing `--verify-timer-layout` entry point.
 
 | Check | Required behavior |

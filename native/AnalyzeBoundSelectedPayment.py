@@ -1,6 +1,7 @@
 import json
 import pathlib
 import sys
+from BoundSchedulerEvidence import verify_bound_scheduler
 
 from AnalyzeBoundSampledPayment import count, require, signed_count, verify_payments, verify_receipt_interval, verify_rejected_receipt_interval, verify_sample_publication, verify_dispatch_timing
 
@@ -411,6 +412,7 @@ def verify_peer_progress(record):
 
 
 def verify_record(record):
+    scheduler = verify_bound_scheduler(record)
     verify_peer_progress(record)
     verify_dispatch_timing(record)
     verify_sample_publication(record)
@@ -530,7 +532,7 @@ def verify_record(record):
                 and record["pauses"][-1]["Resumed"] is None, "Expected selected invalidation was not verified")
     return dict(samples=len(record["sourceSamples"]), credit=credit, paid=paid, selectedPaid=selected_paid,
                 selectedPayments=len(record["selectedPayments"]), pauses=len(record["pauses"]),
-                completed=record["completed"], casePassed=record["passed"], childCpu=child_cpu)
+                completed=record["completed"], casePassed=record["passed"], childCpu=child_cpu, scheduler=scheduler)
 
 
 def verify_case(record, name):

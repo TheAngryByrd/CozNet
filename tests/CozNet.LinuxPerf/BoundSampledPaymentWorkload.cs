@@ -23,7 +23,7 @@ static class BoundSampledPaymentWorkload
         Func<CpuSampleOwner> readOwner, Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource,
         bool invalidateAfterPayment = false,
         Func<IInstructionMap, ICpuSampleSink, IOwnerStoppedCpuEventSession>? selectedPaymentSource = null,
-        bool invalidateAfterSelectedPayment = false, BoundSelectedCadencePlan? cadencePlan = null)
+        bool invalidateAfterSelectedPayment = false, BoundSelectedCadencePlan? cadencePlan = null, IBoundSchedulerBackend? schedulerBackend = null)
     {
         Require(cadencePlan is null || selectedPaymentSource is not null && ReferenceEquals(settings, cadencePlan.Sampling),
             "A cadence comparison requires its parsed settings and a pausable source.");
@@ -40,6 +40,10 @@ static class BoundSampledPaymentWorkload
         var selectedPayments = new List<Payment>();
         var pauses = new List<PauseBoundary>();
         bool selectedPaymentEnabled = selectedPaymentSource is not null;
+        Require(schedulerBackend is null || selectedPaymentEnabled, "Scheduler capture requires selected payment.");
+        BoundSchedulerCapture? scheduling = null;
+        BoundSchedulerCapture.Result? schedulerCapture = null;
+        CpuSampleOwner? schedulerControllerOwner = null, selectedOwner = null;
         bool pauseTimingEnabled = Environment.GetEnvironmentVariable("COZNET_PAUSE_TIMING") switch
         {
             null or "0" => false,
@@ -60,6 +64,8 @@ static class BoundSampledPaymentWorkload
             _ => throw new ArgumentException("COZNET_PEER_PROGRESS must be 0 or 1.")
         };
         Require(!peerProgressEnabled || selectedPaymentEnabled, "Peer progress capture requires selected payment.");
+        Require(schedulerBackend is null || peerProgressEnabled, "Bound scheduler capture requires peer progress capture.");
+        scheduling = schedulerBackend is null ? null : new BoundSchedulerCapture(schedulerBackend);
         CpuSampleOwner? peerOwner = null;
         string? peerOwnerFailure = null;
         PeerProgressObservation? peerSubmitProgress = null, peerDebtProgress = null;
@@ -145,6 +151,11 @@ static class BoundSampledPaymentWorkload
                     "No submitted peer request is pending.");
             return new(0, command, generation, pendingBudget, pendingStarted, peerOwner, debtTimestamp,
                 client.CaptureProgress(0, generation), null);
+        }
+        void RetireTarget(uint slot)
+        {
+            if (scheduling is null) client!.RetireCurrentThread(slot);
+            else scheduling.Retire(() => client!.RetireCurrentThread(slot));
         }
         Debt ObserveDebt()
         {
@@ -329,17 +340,24 @@ static class BoundSampledPaymentWorkload
             Require(CpuWorkload.Run() == 49995000L, "Selected warmup changed its checksum.");
             var binding = ClrProbeBinding.ReadCurrent();
             if (selectedPaymentEnabled) controller = new();
-            client = OnController(() => new BoundCooperativeClient(binding, selectedPaymentEnabled ? 2U : 1U, observeCpu: childCpuEnabled), CooperativeDispatchOperation.Create);
+            client = OnController(() =>
+            {
+                scheduling?.Register(0);
+                if (scheduling is not null) schedulerControllerOwner = readOwner();
+                return new BoundCooperativeClient(binding, selectedPaymentEnabled ? 2U : 1U, observeCpu: childCpuEnabled);
+            }, CooperativeDispatchOperation.Create);
             if (selectedPaymentEnabled)
             {
                 selectedRegistered = true;
                 selectedSite = client.RegisterCurrentThread(1, 1);
+                scheduling?.Register(1);
             }
             worker = new();
             registered = true;
             site = worker.Run(() =>
             {
                 var registeredSite = client.RegisterCurrentThread(0, 2, peerProgressEnabled);
+                scheduling?.Register(2);
                 if (peerProgressEnabled)
                 {
                     try { peerOwner = readOwner(); }
@@ -347,6 +365,7 @@ static class BoundSampledPaymentWorkload
                 }
                 return registeredSite;
             });
+            scheduling?.Begin();
             worker.Run(() => Require(CpuWorkload.Run() == 49995000L, "Peer warmup changed its checksum."));
             Action peerWork = () =>
             {
@@ -367,7 +386,8 @@ static class BoundSampledPaymentWorkload
             };
             peerLoop = cadencePlan is null ? Task.Run(() => worker.Run(peerWork)) : worker.Start(peerWork);
             Require(peerStarted.Wait(TimeSpan.FromSeconds(5)), "The paying peer did not start.");
-            collection = new(new ClrProbeLifetime(binding), readOwner());
+            selectedOwner = readOwner();
+            collection = new(new ClrProbeLifetime(binding), selectedOwner);
             if (selectedPaymentEnabled)
             {
                 if (ownerDrainEnabled) collection.StartOwnerPausable(selectedPaymentSource!);
@@ -467,6 +487,11 @@ static class BoundSampledPaymentWorkload
                             cleanupErrors.Add(error.ToString());
                     }
             }
+            if (scheduling is not null)
+            {
+                schedulerCapture = scheduling.Finish();
+                cleanupErrors.AddRange(schedulerCapture.Failures);
+            }
             if (client is not null)
                 try { Control(client.BeginCleanup, CooperativeDispatchOperation.BeginCleanup); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             if (client is not null && selectedRegistered)
@@ -484,7 +509,7 @@ static class BoundSampledPaymentWorkload
                         Control(() => client.ReleaseAfterRetiredCopy(1), CooperativeDispatchOperation.SelectedCleanupRelease);
                         selectedCleanup = client.LastCleanup;
                     }
-                    client.RetireCurrentThread(1);
+                    RetireTarget(1);
                     selectedRegistered = false;
                 }
                 catch (Exception error) { cleanupErrors.Add(error.ToString()); }
@@ -503,18 +528,18 @@ static class BoundSampledPaymentWorkload
                         }
                         Control(() => client.ReleaseAfterRetiredCopy(0), CooperativeDispatchOperation.PeerCleanupRelease);
                     }
-                    worker.Run(() => client.RetireCurrentThread(0));
+                    worker.Run(() => RetireTarget(0));
                     registered = false;
                 }
                 catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             }
             if (worker is not null && !registered)
-                try { joined = worker.Join(); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
+                try { if (scheduling is null) joined = worker.Join(); else scheduling.Retire(() => joined = worker.Join()); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             if (client is not null && joined && !selectedRegistered)
                 try { Control(client.CloseAfterThreadJoin, CooperativeDispatchOperation.Close); closed = true; } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             if (controller is null) controllerJoined = true;
             else if (closed || client is null)
-                try { controllerJoined = controller.Join(); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
+                try { if (scheduling is null) controllerJoined = controller.Join(); else scheduling.Retire(() => controllerJoined = controller.Join()); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
         }
         try
         {
@@ -560,6 +585,8 @@ static class BoundSampledPaymentWorkload
             dispatchTimingEnabled = dispatchTiming is not null, dispatchTiming,
             directReceiptReadyEnabled = receiptReadiness.DirectEnabled, receiptReadyCalls = receiptReadiness.Calls,
             peerProgressEnabled, peerOwner, peerOwnerFailure, peerSubmitProgress, peerDebtProgress,
+            schedulerTiming = scheduling is not null, schedulerCapture,
+            schedulerOwners = scheduling is null ? null : new[] { schedulerControllerOwner, selectedOwner, peerOwner },
             binding = bindingEvidence is null ? null : new { bindingEvidence.Generation, Module = (ulong)bindingEvidence.Module,
                 Function = (ulong)bindingEvidence.Function, bindingEvidence.Method, bindingEvidence.Sites }, nativeRange = collection?.Map.Range,
             selectedBatches = batches, checksum, peerBatches, peerChecksum, peerCalls,

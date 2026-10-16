@@ -218,7 +218,7 @@ The mode retains existing debt and timing limits. Collector threads and allocati
 Scheduler overlap does not identify the cause of descheduling or prove prediction accuracy.
 The [first retained scheduler capture](../../reliability/features/native-signal/timer-sampled.md#first-scheduler-capture) fails treatment debt while all streams report zero loss.
 Peer preemption overlaps almost the entire first arm-to-handler interval in that run.
-`TimerSchedulerCaptureGroup` controls registration, capture completion, and the target retirement gate.
+`SchedulerCaptureGroup` controls registration, capture completion, and the target retirement gate.
 Its portable fault checks verify that unresolved disposal blocks retirement and that capture errors survive successful cleanup.
 Duplicate or late registration fails before it can replace a collector.
 Repeated shutdown returns the retained result without retrying collector disposal.

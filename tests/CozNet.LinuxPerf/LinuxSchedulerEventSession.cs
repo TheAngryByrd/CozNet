@@ -91,7 +91,7 @@ sealed class LinuxSchedulerEventSession : ISchedulerEventSession
 
     private static Exception Error(string operation) => new InvalidOperationException($"{operation} failed: {Marshal.GetLastPInvokeError()}.");
 
-    private static ulong Now()
+    internal static ulong Now()
     {
         if (Clock(1, out var time) != 0) throw Error("Scheduler clock_gettime");
         if (time.Seconds < 0 || time.Nanoseconds < 0 || time.Nanoseconds >= 1000000000)

@@ -1,5 +1,9 @@
 # Project scope
 
+Opt-in [bound scheduler capture](profiling/bound-scheduler.md) now correlates peer progress with three owner-bound scheduler streams.
+One constrained treatment fails peer debt while its request-to-debt window lies inside an observed peer switch-out interval.
+Clock assumptions remain explicit. Accounting limits remain unchanged, and stable capacity is unverified.
+
 An opt-in [native progress marker](profiling/cooperative-progress-marker.md) now captures peer submission and failed-debt observations.
 Its unrestricted treatment fails the receipt limit. A one-CPU run captures pending markers after two failed debt gates.
 The markers do not establish why the peer did not reach a native poll.

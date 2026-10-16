@@ -42,7 +42,7 @@ $sources = @('native/service/TimerApi.h', 'native/service/TimerApi.Linux.cpp', '
     'tests/CozNet.LinuxPerf/ServiceReceiptTiming.cs', 'tests/CozNet.LinuxPerf/Program.cs',
     'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/VerifyTimerInterop.ps1', 'build/build.fs')
 $sources += @('tests/CozNet.LinuxPerf/SchedulerEventSession.cs', 'tests/CozNet.LinuxPerf/LinuxSchedulerEventSession.cs', 'tests/CozNet.LinuxPerf/SchedulerRecordParser.cs')
-$sources += @('tests/CozNet.LinuxPerf/TimerSchedulerCaptureGroup.cs', 'tests/CozNet.LinuxPerf/TimerSchedulerCaptureGroupChecks.cs')
+$sources += @('tests/CozNet.LinuxPerf/SchedulerCaptureGroup.cs', 'tests/CozNet.LinuxPerf/SchedulerCaptureGroupChecks.cs')
 $sources += 'tests/CozNet.LinuxPerf/TimerDebtLimit.cs'
 $sources += @('tests/CozNet.LinuxPerf/CpuCounterEvidence.cs', 'tests/CozNet.LinuxPerf/CpuCounterEvidenceChecks.cs',
     'tests/CozNet.LinuxPerf/RingReaderChecks.cs')

@@ -24,6 +24,8 @@ if (args is ["--verify-cooperative-managed"])
 }
 if (args is ["--verify-bound-cooperative-managed"])
 {
+    SchedulerCaptureGroupChecks.Run();
+    BoundSchedulerCaptureChecks.Run();
     BoundSamplePublicationChecks.Run();
     BoundReceiptReadinessChecks.Run();
     CooperativeDispatchTimingChecks.Run();
@@ -57,7 +59,7 @@ if (args is ["--sampled-bound-selected-cadence", var cadencePath, var cadencePer
     return BoundSampledPaymentWorkload.Run(cadencePath, cadencePlan.Sampling, cadenceLibrary,
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
         (map, sink) => new LinuxCpuEventSession(sink, map),
-        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map), cadencePlan: cadencePlan);
+        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map), cadencePlan: cadencePlan, schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment());
 }
 if (args is ["--invalidate-sampled-bound-selected-cadence", var cadenceInvalidPath, var cadenceInvalidLibrary, var cadenceInvalidMode, var cadenceInvalidBatches])
 {
@@ -66,26 +68,26 @@ if (args is ["--invalidate-sampled-bound-selected-cadence", var cadenceInvalidPa
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
         (map, sink) => new LinuxCpuEventSession(sink, map),
         selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map),
-        invalidateAfterSelectedPayment: true, cadencePlan: cadencePlan);
+        invalidateAfterSelectedPayment: true, cadencePlan: cadencePlan, schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment());
 }
 if (args is ["--sampled-bound-selected-cooperative", var selectedBoundPath, var selectedBoundPercent, var selectedBoundLibrary])
     return BoundSampledPaymentWorkload.Run(selectedBoundPath, SampledSignalPlan.Parse(selectedBoundPercent), selectedBoundLibrary,
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
         (map, sink) => new LinuxCpuEventSession(sink, map),
-        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map));
+        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map), schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment());
 if (args is ["--invalidate-sampled-bound-selected-cooperative", var selectedInvalidatedPath, var selectedInvalidatedLibrary])
     return BoundSampledPaymentWorkload.Run(selectedInvalidatedPath, SampledSignalPlan.Parse("50"), selectedInvalidatedLibrary,
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
         (map, sink) => new LinuxCpuEventSession(sink, map),
-        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map), invalidateAfterSelectedPayment: true);
+        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map), invalidateAfterSelectedPayment: true, schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment());
 if (args is ["--sampled-bound-cooperative", var sampledBoundPath, var sampledBoundPercent, var sampledBoundLibrary])
     return BoundSampledPaymentWorkload.Run(sampledBoundPath, SampledSignalPlan.Parse(sampledBoundPercent), sampledBoundLibrary,
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
-        (map, sink) => new LinuxCpuEventSession(sink, map));
+        (map, sink) => new LinuxCpuEventSession(sink, map), schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment());
 if (args is ["--invalidate-sampled-bound-cooperative", var invalidatedBoundPath, var invalidatedBoundLibrary])
     return BoundSampledPaymentWorkload.Run(invalidatedBoundPath, SampledSignalPlan.Parse("50"), invalidatedBoundLibrary,
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
-        (map, sink) => new LinuxCpuEventSession(sink, map), invalidateAfterPayment: true);
+        (map, sink) => new LinuxCpuEventSession(sink, map), invalidateAfterPayment: true, schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment());
 if (args is ["--verify-bound-cooperative", var boundPath, var boundMode, var boundLibrary])
     return BoundCooperativeChecks.Run(boundPath, boundMode, boundLibrary);
 if (args is ["--verify-cooperative-interop", var cooperativePath, var cooperativeMode, var cooperativeLibrary])
@@ -188,7 +190,7 @@ if (args is ["--verify-timer-layout"])
     InterleavedCalibrationChecks.Run();
     PhysicalCalibrationChecks.Run();
     MatchedCpuWorkersChecks.Run();
-    TimerSchedulerCaptureGroupChecks.Run();
+    SchedulerCaptureGroupChecks.Run();
     TimerSessionCleanupChecks.Run();
     MeasurementWindowCaptureChecks.Run();
     NativeTimerClient.VerifyLayout();

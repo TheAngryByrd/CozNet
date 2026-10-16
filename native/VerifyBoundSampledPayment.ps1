@@ -1,4 +1,4 @@
-param([string]$EvidenceDirectory, [switch]$SelectedPayment, [switch]$PauseTiming, [switch]$ChildCpu, [switch]$OwnerDrain, [switch]$BatchService, [switch]$DispatchTiming, [switch]$DirectReceiptReady, [switch]$PeerProgress,
+param([string]$EvidenceDirectory, [switch]$SelectedPayment, [switch]$PauseTiming, [switch]$ChildCpu, [switch]$OwnerDrain, [switch]$BatchService, [switch]$DispatchTiming, [switch]$DirectReceiptReady, [switch]$PeerProgress, [switch]$Scheduler,
     [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
     [ValidateRange(1, 2147483647)][int]$SelectedBatches = 5000)
 $ErrorActionPreference = 'Stop'
@@ -7,6 +7,7 @@ if (-not $EvidenceDirectory) {
     $EvidenceDirectory = Join-Path $PSScriptRoot $(if ($SelectedPayment) { '../artifacts/bound-selected-payment' } else { '../artifacts/bound-sampled-payment' })
 }
 if ($PauseTiming -and -not $SelectedPayment) { throw 'Pause timing requires selected payment.' }
+if ($Scheduler -and (-not $SelectedPayment -or -not $PeerProgress)) { throw 'Bound scheduler capture requires selected payment and peer progress.' }
 if ($PeerProgress -and -not $SelectedPayment) { throw 'Peer progress capture requires selected payment.' }
 if ($DirectReceiptReady -and -not $SelectedPayment) { throw 'Direct receipt readiness requires selected payment.' }
 if ($DispatchTiming -and -not $SelectedPayment) { throw 'Dispatch timing requires selected payment.' }
@@ -23,6 +24,7 @@ New-Item -ItemType Directory -Force $native | Out-Null
 $sources = @('build/build.fs', 'native/VerifyBoundSampledPayment.ps1', 'native/AnalyzeBoundSampledPayment.py', 'native/BoundSampledPaymentAnalysisChecks.py', 'native/VerifyServiceOwner.ps1', 'native/Profiler.cpp', 'native/ProbeLifetime.h', 'native/Sampler.h', 'native/BuildLinux.ps1', 'native/GenerateCallbacks.ps1', 'tests/Shared/IL.cs', 'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/service/CMakeLists.txt')
 $sources += @('native/AnalyzeBoundSelectedPayment.py', 'native/BoundSelectedPaymentAnalysisChecks.py')
 $sources += @('native/AnalyzeCooperativePeerProgress.py', 'native/CooperativePeerProgressChecks.py')
+$sources += @('native/AnalyzeScheduler.py', 'native/BoundSchedulerEvidence.py', 'native/AnalyzeBoundScheduler.py', 'native/BoundSchedulerAnalysisChecks.py')
 $sources += 'native/VerifyBoundSelectedCadence.ps1'
 $sources += @('native/ReadBoundSampledOutcome.ps1', 'native/BoundSampledOutcomeChecks.ps1')
 $sources += @(Get-ChildItem (Join-Path $root 'tests/CozNet.LinuxPerf') -Filter '*.cs' | ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName).Replace('\', '/') })
@@ -40,7 +42,7 @@ foreach ($name in $sources) {
 $outcomeChecksExit = $LASTEXITCODE
 $analysisChecksExit = 0
 $analysisChecks = @('BoundSampledPaymentAnalysisChecks.py')
-if ($SelectedPayment) { $analysisChecks += @('BoundSelectedPaymentAnalysisChecks.py', 'CooperativePeerProgressChecks.py') }
+if ($SelectedPayment) { $analysisChecks += @('BoundSelectedPaymentAnalysisChecks.py', 'CooperativePeerProgressChecks.py', 'BoundSchedulerAnalysisChecks.py') }
 foreach ($check in $analysisChecks) {
     & python (Join-Path $run "source/native/$check") *> (Join-Path $run "$check.log")
     if ($LASTEXITCODE -ne 0) { $analysisChecksExit = $LASTEXITCODE }
@@ -70,6 +72,7 @@ $activation += @('--env', ('COZNET_CHILD_CPU=' + [int][bool]$ChildCpu))
 $activation += @('--env', ('COZNET_OWNER_DRAIN=' + [int][bool]$OwnerDrain))
 $activation += @('--env', ('COZNET_BATCH_SERVICE=' + [int][bool]$BatchService))
 $activation += @('--env', ('COZNET_DISPATCH_TIMING=' + [int][bool]$DispatchTiming))
+$activation += @('--env', ('COZNET_BOUND_SCHEDULER=' + [int][bool]$Scheduler))
 $activation += @('--env', ('COZNET_PEER_PROGRESS=' + [int][bool]$PeerProgress))
 $activation += @('--env', ('COZNET_DIRECT_RECEIPT_READY=' + [int][bool]$DirectReceiptReady))
 $outcomes = @()
@@ -82,15 +85,24 @@ foreach ($case in $caseNames) {
         else { @('--sampled-bound-cooperative', "/evidence/$case.json", $case, '/native/libCozNet.Cooperative.so') }
     & docker @container @activation $image timeout -k 2s 30s dotnet /workload/CozNet.LinuxPerf.dll @arguments *> (Join-Path $run "$case.log")
     $caseExit = $LASTEXITCODE
-    $outcomes += Read-BoundSampledOutcome -Path (Join-Path $run "$case.json") -Case $case -ExitCode $caseExit -SelectedCadence $SelectedCadence -SelectedBatches $SelectedBatches -ExpectedPauseTiming ([bool]$PauseTiming) -ExpectedChildCpu ([bool]$ChildCpu) -ExpectedOwnerDrain ([bool]$OwnerDrain) -ExpectedReceiptCaptureVersion 1 -ExpectedBatchService ([bool]$BatchService) -ExpectedDispatchTiming ([bool]$DispatchTiming) -ExpectedDirectReceiptReady ([bool]$DirectReceiptReady) -ExpectedPeerProgress ([bool]$PeerProgress)
+    $outcomes += Read-BoundSampledOutcome -Path (Join-Path $run "$case.json") -Case $case -ExitCode $caseExit -SelectedCadence $SelectedCadence -SelectedBatches $SelectedBatches -ExpectedPauseTiming ([bool]$PauseTiming) -ExpectedChildCpu ([bool]$ChildCpu) -ExpectedOwnerDrain ([bool]$OwnerDrain) -ExpectedReceiptCaptureVersion 1 -ExpectedBatchService ([bool]$BatchService) -ExpectedDispatchTiming ([bool]$DispatchTiming) -ExpectedDirectReceiptReady ([bool]$DirectReceiptReady) -ExpectedPeerProgress ([bool]$PeerProgress) -ExpectedScheduler ([bool]$Scheduler)
 }
 & python (Join-Path $run "source/native/$analysisScript") $run *> (Join-Path $run 'analysis.log')
 $analysisExit = $LASTEXITCODE
+$schedulerAnalysis = @()
+if ($Scheduler) {
+    foreach ($case in $caseNames) {
+        & python (Join-Path $run 'source/native/AnalyzeBoundScheduler.py') (Join-Path $run "$case.json") (Join-Path $run "$case-scheduler.json") *> (Join-Path $run "$case-scheduler.log")
+        $schedulerAnalysis += @{ case = $case; exitCode = $LASTEXITCODE }
+    }
+    ConvertTo-Json -InputObject $schedulerAnalysis -Depth 3 | Set-Content (Join-Path $run 'scheduler-analysis-summary.json')
+    if (@($schedulerAnalysis | Where-Object { $_.exitCode -ne 0 }).Count -ne 0) { $analysisExit = 1 }
+}
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash (Join-Path $root $name)).Hash -eq $hashes[$name] }
 foreach ($file in $binaries.Keys) { $unchanged = $unchanged -and (Get-FileHash $file).Hash -eq $binaries[$file] }
-@{ sources = $hashes; binaries = $binaries; image = $image; source = 'selected Linux task-clock'; interval = 1024; runtimePerfMap = $false; order = $caseNames; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; dispatchTimingEnabled = [bool]$DispatchTiming; directReceiptReadyEnabled = [bool]$DirectReceiptReady; peerProgressEnabled = [bool]$PeerProgress; selectedCadence = $SelectedCadence; requestedBatches = $(if ($SelectedCadence) { $SelectedBatches } else { $null }); measurementSeconds = $(if ($SelectedCadence) { $null } else { 2 }); debtLimitNanoseconds = 2000000 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
+@{ sources = $hashes; binaries = $binaries; image = $image; source = 'selected Linux task-clock'; interval = 1024; runtimePerfMap = $false; order = $caseNames; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; dispatchTimingEnabled = [bool]$DispatchTiming; directReceiptReadyEnabled = [bool]$DirectReceiptReady; peerProgressEnabled = [bool]$PeerProgress; schedulerTiming = [bool]$Scheduler; selectedCadence = $SelectedCadence; requestedBatches = $(if ($SelectedCadence) { $SelectedBatches } else { $null }); measurementSeconds = $(if ($SelectedCadence) { $null } else { 2 }); debtLimitNanoseconds = 2000000 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
 $passed = $unchanged -and $outcomeChecksExit -eq 0 -and $analysisChecksExit -eq 0 -and $analysisExit -eq 0 -and @($managed | Where-Object { $_.exitCode -ne 0 }).Count -eq 0 -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.passed -or $_.recordError }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; outcomeChecksExit = $outcomeChecksExit; analysisChecksExit = $analysisChecksExit; analysisExit = $analysisExit; managed = $managed; outcomes = $outcomes; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; dispatchTimingEnabled = [bool]$DispatchTiming; directReceiptReadyEnabled = [bool]$DirectReceiptReady; peerProgressEnabled = [bool]$PeerProgress; selectedPaymentSupported = $false; predictionAccuracyEstablished = $false } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
+@{ passed = $passed; inputsUnchanged = $unchanged; outcomeChecksExit = $outcomeChecksExit; analysisChecksExit = $analysisChecksExit; analysisExit = $analysisExit; managed = $managed; outcomes = $outcomes; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; dispatchTimingEnabled = [bool]$DispatchTiming; directReceiptReadyEnabled = [bool]$DirectReceiptReady; peerProgressEnabled = [bool]$PeerProgress; schedulerTiming = [bool]$Scheduler; selectedPaymentSupported = $false; predictionAccuracyEstablished = $false } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run
 if (-not $passed) { throw 'Bound sampled payment failed. Retain this run.' }

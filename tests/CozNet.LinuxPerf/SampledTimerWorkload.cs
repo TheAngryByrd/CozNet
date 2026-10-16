@@ -25,8 +25,8 @@ static class SampledTimerWorkload
         var boundaries = new List<Boundary>();
         var lifetimes = new[] { new TimerWorkerLifetime(), new TimerWorkerLifetime() };
         var work = new MatchedCpuWorkers(PhysicalWorkMode.Baseline);
-        var scheduling = new TimerSchedulerCaptureGroup(schedulerFactory);
-        TimerSchedulerCaptureGroup.Completion? schedulerCompletion = null;
+        var scheduling = new SchedulerCaptureGroup(schedulerFactory);
+        SchedulerCaptureGroup.Completion? schedulerCompletion = null;
         Thread?[] workers = new Thread?[2];
         long[] peaks = new long[2];
         NativeTimerClient? client = null;
