@@ -9,11 +9,12 @@ if (args is ["--measure-cooperative-receipt-cost", var receiptCostPath])
 
 if (args is ["--cooperative-physical", var cooperativePhysicalPath, var cooperativePhysicalMode, var cooperativePhysicalBatches])
     return CooperativePhysicalWorkload.Run(cooperativePhysicalPath,
-        CooperativeWorkPlan.Parse(PhysicalWorkMode.Parse(cooperativePhysicalMode), cooperativePhysicalBatches));
+        CooperativeWorkPlan.Parse(PhysicalWorkMode.Parse(cooperativePhysicalMode), cooperativePhysicalBatches), () => new LinuxThreadCpuClock());
 
 if (args is ["--verify-cooperative-work"])
 {
     CooperativeCpuWorkChecks.Run();
+    SelectedCpuCaptureChecks.Run();
     return 0;
 }
 
@@ -76,7 +77,7 @@ if (args is ["--sampled-bound-selected-cadence", var cadencePath, var cadencePer
     return BoundSampledPaymentWorkload.Run(cadencePath, cadencePlan.Sampling, cadenceLibrary,
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
         (map, sink) => new LinuxCpuEventSession(sink, map),
-        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map), cadencePlan: cadencePlan, schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment());
+        selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map), cadencePlan: cadencePlan, schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment(), cpuFactory: () => new LinuxThreadCpuClock());
 }
 if (args is ["--invalidate-sampled-bound-selected-cadence", var cadenceInvalidPath, var cadenceInvalidLibrary, var cadenceInvalidMode, var cadenceInvalidBatches])
 {
@@ -85,7 +86,7 @@ if (args is ["--invalidate-sampled-bound-selected-cadence", var cadenceInvalidPa
         () => CpuSampleOwner.Parse((uint)Environment.ProcessId, checked((uint)Native.GetTid(186))),
         (map, sink) => new LinuxCpuEventSession(sink, map),
         selectedPaymentSource: (map, sink) => new LinuxCpuEventSession(sink, map),
-        invalidateAfterSelectedPayment: true, cadencePlan: cadencePlan, schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment());
+        invalidateAfterSelectedPayment: true, cadencePlan: cadencePlan, schedulerBackend: LinuxBoundSchedulerBackend.FromEnvironment(), cpuFactory: () => new LinuxThreadCpuClock());
 }
 if (args is ["--sampled-bound-selected-cooperative", var selectedBoundPath, var selectedBoundPercent, var selectedBoundLibrary])
     return BoundSampledPaymentWorkload.Run(selectedBoundPath, SampledSignalPlan.Parse(selectedBoundPercent), selectedBoundLibrary,

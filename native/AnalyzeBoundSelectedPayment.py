@@ -4,6 +4,7 @@ import sys
 from BoundSchedulerEvidence import verify_bound_scheduler
 from AnalyzeBoundSampledPayment import verify_probe_interval
 from CooperativeMeasurementEvidence import verify_measurement
+from SelectedCpuEvidence import verify_selected_cpu
 
 from AnalyzeBoundSampledPayment import count, require, signed_count, verify_payments, verify_receipt_interval, verify_rejected_receipt_interval, verify_sample_publication, verify_dispatch_timing, verify_receipt_preparation
 from AnalyzeBoundSampledPayment import verify_service_timing, verify_sample_credit_policy
@@ -538,6 +539,7 @@ def verify_epoch_prefixes(record, last_cpu, payment_pauses):
 
 
 def verify_record(record):
+    verify_selected_cpu(record)
     verify_service_timing(record)
     verify_receipt_preparation(record)
     verify_probe_interval(record)

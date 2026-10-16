@@ -3,8 +3,9 @@ $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('coz-comparison-runner-' + [Gu
 New-Item -ItemType Directory -Path $testRoot | Out-Null
 $runnerSource = Join-Path $PSScriptRoot 'VerifyCooperativeComparison.ps1'
 
-function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$PrepareReceipts = $false, [bool]$OwnerController = $false, [bool]$NominalSampleCredit = $false) {
+function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$PrepareReceipts = $false, [bool]$OwnerController = $false, [bool]$NominalSampleCredit = $false, [bool]$SelectedCpu = $false) {
     $requestedPreparation = $PrepareReceipts
+    $requestedCpu = $SelectedCpu
     $requestedOwnership = $OwnerController
     $requestedCreditPolicy = if ($NominalSampleCredit) { 'nominal-event-v1' } else { 'same-epoch-interval-v1' }
     $requestedCreditActivation = if ($NominalSampleCredit) { 'nominal-event' } else { 'interval' }
@@ -45,7 +46,9 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
         if ($plan.prepareReceipts -isnot [bool] -or $plan.prepareReceipts -ne $requestedPreparation -or $plan.receiptPreparationEvidenceVersion -ne 1) { throw 'Preparation plan differs from request.' }
         if ($plan.ownerController -isnot [bool] -or $plan.ownerController -ne $requestedOwnership -or $plan.controllerOwnershipEvidenceVersion -ne 1) { throw 'Controller ownership plan differs from request.' }
         if ($plan.sampleCreditPolicy -cne $requestedCreditPolicy -or $plan.sampleCreditEvidenceVersion -ne 1) { throw 'Sample credit plan differs from request.' }
+        if ($plan.selectedCpu -isnot [bool] -or $plan.selectedCpu -ne $requestedCpu -or $plan.selectedCpuEvidenceVersion -ne 1) { throw 'CPU capture plan differs from request.' }
         $current = @($before | Where-Object mode -eq $mode)[0]
+        if ($args -notcontains ('COZNET_SELECTED_CPU=' + [int]$requestedCpu) -or $current.containerArguments -notcontains ('COZNET_SELECTED_CPU=' + [int]$requestedCpu)) { throw 'CPU capture activation differs from request.' }
         if (-not $current.attempted -or $current.executed) { throw 'The pending attempt was not saved before launch.' }
         foreach ($target in @('/workload', '/profiler', '/native')) {
             if (@($args | Where-Object { $_ -like "type=bind,source=*,target=$target,readonly" }).Count -ne 1) {
@@ -91,6 +94,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
     if ($PrepareReceipts) { $options.PrepareReceipts = $true }
     if ($OwnerController) { $options.OwnerController = $true }
     if ($NominalSampleCredit) { $options.NominalSampleCredit = $true }
+    if ($SelectedCpu) { $options.SelectedCpu = $true }
     if ($ProbeInterval -ne 1024) { $options.ProbeInterval = $ProbeInterval }
     try {
         if ($Scenario -eq 'positional') {
@@ -147,6 +151,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$Pr
 }
 
 try {
+    Invoke-Fixture 'selected-cpu' 8192 $true $true $true $true
     Invoke-Fixture 'nominal-default' 1024 $false $false $true
     Invoke-Fixture 'nominal-prepared-owner' 8192 $true $true $true
     Invoke-Fixture 'owner-default' 1024 $false $true

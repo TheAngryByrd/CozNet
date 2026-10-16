@@ -70,6 +70,63 @@ def ownership_record(percent=50, enabled=True):
 
 
 class CooperativeComparisonChecks(unittest.TestCase):
+    def test_selected_cpu_plan_and_arm_binding(self):
+        self.assertEqual((False, False), subject.selected_cpu_plan({}))
+        for enabled in (False, True):
+            self.assertEqual((enabled, True), subject.selected_cpu_plan(dict(selectedCpu=enabled, selectedCpuEvidenceVersion=1)))
+        for plan in (dict(selectedCpu=True), dict(selectedCpu=0), dict(selectedCpuEvidenceVersion=1),
+                     dict(selectedCpu=True, selectedCpuEvidenceVersion=True), dict(selectedCpu=True, selectedCpuEvidenceVersion=2)):
+            with self.subTest(plan=plan), self.assertRaises(ValueError):
+                subject.selected_cpu_plan(plan)
+        for mode in subject.MODES:
+            r = physical_record('optimized' if mode == 'physical-optimized' else 'baseline') if mode.startswith('physical-') else sampled_record(0 if mode == 'sampled-zero' else 50)
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, 'lacks declared'):
+                subject.analyze_case(r, mode, 5, 0, selected_cpu=True, require_selected_cpu=True)
+            r.update(selectedCpuEnabled=False, selectedCpuEvidenceVersion=1, selectedCpu=None)
+            subject.analyze_case(r, mode, 5, 0, require_selected_cpu=True)
+            with self.assertRaisesRegex(ValueError, 'differs from plan'):
+                subject.analyze_case(r, mode, 5, 0, selected_cpu=True, require_selected_cpu=True)
+            r.update(selectedCpuEnabled=True, selectedCpu=dict(Status='complete', Failure=None,
+                StartReading=dict(BeforeTimestamp=r['selectedWorkStarted'], AfterTimestamp=r['selectedWorkStarted'], CpuNanoseconds=10),
+                EndReading=dict(BeforeTimestamp=r['selectedWorkFinished'], AfterTimestamp=r['selectedWorkFinished'], CpuNanoseconds=20)))
+            subject.analyze_case(r, mode, 5, 0, selected_cpu=True, require_selected_cpu=True)
+            with self.assertRaisesRegex(ValueError, 'differs from plan'):
+                subject.analyze_case(r, mode, 5, 0)
+
+    def test_selected_cpu_evidence_and_failure_states(self):
+        from SelectedCpuEvidence import verify_selected_cpu
+        record = physical_record()
+        self.assertIsNone(verify_selected_cpu(record))
+        record.update(selectedCpuEnabled=True, selectedCpuEvidenceVersion=1,
+            selectedCpu=dict(Status='complete', Failure=None,
+                StartReading=dict(BeforeTimestamp=110, AfterTimestamp=112, CpuNanoseconds=10),
+                EndReading=dict(BeforeTimestamp=195, AfterTimestamp=200, CpuNanoseconds=90)))
+        self.assertEqual(dict(cpuNanoseconds=80, elapsedLowerNanoseconds=83, elapsedUpperNanoseconds=90), verify_selected_cpu(record))
+        mutations = [lambda r: r.pop('selectedCpuEnabled'), lambda r: r.update(selectedCpuEvidenceVersion=True),
+            lambda r: r.update(selectedCpuEnabled=1), lambda r: r.update(selectedCpuEnabled=False),
+            lambda r: r['selectedCpu'].update(Status='running'), lambda r: r['selectedCpu'].update(Failure='failed'),
+            lambda r: r['selectedCpu']['EndReading'].update(CpuNanoseconds=9),
+            lambda r: r['selectedCpu']['StartReading'].update(CpuNanoseconds=True),
+            lambda r: r['selectedCpu']['StartReading'].update(BeforeTimestamp=109),
+            lambda r: r['selectedCpu']['StartReading'].update(AfterTimestamp=196),
+            lambda r: r['selectedCpu']['EndReading'].update(AfterTimestamp=201)]
+        for mutate in mutations:
+            changed = copy.deepcopy(record)
+            mutate(changed)
+            with self.subTest(mutate=mutate), self.assertRaises((ValueError, KeyError)):
+                verify_selected_cpu(changed)
+        record.update(completed=False, selectedWorkFinished=None)
+        record['selectedCpu'].update(Status='running', EndReading=None)
+        self.assertIsNone(verify_selected_cpu(record))
+        record.update(completed=True)
+        with self.assertRaisesRegex(ValueError, 'Completed work'):
+            verify_selected_cpu(record)
+        record.update(completed=False)
+        record['selectedCpu'].update(Status='failed', Failure='clock failed')
+        self.assertIsNone(verify_selected_cpu(record))
+        record['selectedCpu'].update(Status='prepared', Failure=None, StartReading=None)
+        self.assertIsNone(verify_selected_cpu(record))
+
     def test_credit_policy_plan_rejects_unknown_or_unversioned_nominal_mode(self):
         self.assertEqual(('same-epoch-interval-v1', False), subject.sample_credit_plan({}))
         for policy in ('same-epoch-interval-v1', 'nominal-event-v1'):
@@ -308,6 +365,36 @@ class CooperativeComparisonChecks(unittest.TestCase):
 
 
 class ComparisonCollectionChecks(unittest.TestCase):
+    def test_versioned_cpu_collection_requires_snapshot_and_preserves_other_arms(self):
+        plan = subject.read(self.root / 'plan.json')
+        plan.update(selectedCpu=True, selectedCpuEvidenceVersion=1)
+        self.save('plan.json', plan)
+        self.manifest['files']['plan.json'] = hashlib.sha256((self.root / 'plan.json').read_bytes()).hexdigest()
+        name = 'source/native/SelectedCpuEvidence.py'
+        self.save(name, {'fixture': True})
+        self.manifest['files'][name] = hashlib.sha256((self.root / name).read_bytes()).hexdigest()
+        self.save('manifest.json', self.manifest)
+        for mode in subject.MODES:
+            record = physical_record('optimized' if mode == 'physical-optimized' else 'baseline') if mode.startswith('physical-') else sampled_record(0 if mode == 'sampled-zero' else 50)
+            record.update(selectedCpuEnabled=True, selectedCpuEvidenceVersion=1, selectedCpu=dict(Status='complete', Failure=None,
+                StartReading=dict(BeforeTimestamp=record['selectedWorkStarted'], AfterTimestamp=record['selectedWorkStarted'], CpuNanoseconds=10),
+                EndReading=dict(BeforeTimestamp=record['selectedWorkFinished'], AfterTimestamp=record['selectedWorkFinished'], CpuNanoseconds=20)))
+            self.save(mode + '.json', record)
+        result = subject.analyze(self.root)
+        self.assertEqual((True, 4, 0), (result['collectionComplete'], result['completed'], result['invalid']))
+        self.assertEqual([10] * 4, [item['selectedCpu']['cpuNanoseconds'] for item in result['cases']])
+        broken = subject.read(self.root / 'sampled-half.json')
+        del broken['selectedCpuEnabled']
+        self.save('sampled-half.json', broken)
+        result = subject.analyze(self.root)
+        self.assertEqual((3, 1), (result['completed'], result['invalid']))
+        self.assertIsNone(result['descriptiveComparison'])
+        self.assertIsNone(result['cases'][3]['selectedCpu'])
+        del self.manifest['files'][name]
+        self.save('manifest.json', self.manifest)
+        with self.assertRaisesRegex(ValueError, 'lacks its replay snapshot'):
+            subject.analyze(self.root)
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
@@ -336,7 +423,8 @@ class ComparisonCollectionChecks(unittest.TestCase):
 
     def analyze_with_parsed_arms(self):
         def parsed(record, mode, batches, code, probe_interval, require_probe_interval, prepare_receipts, require_preparation,
-                   owner_controller, require_ownership, sample_credit_policy, require_credit_policy):
+                   owner_controller, require_ownership, sample_credit_policy, require_credit_policy,
+                   selected_cpu, require_selected_cpu):
             if code:
                 return "invalid", ["process failed"], None
             return "unqualified", ["fixture"], subject.Cost(Fraction(10), Fraction(12), 5)

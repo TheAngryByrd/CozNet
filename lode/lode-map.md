@@ -1,5 +1,7 @@
 # Lode index
 
+For optional selected-thread CPU observations in all four comparison arms, read [selected CPU measurement](plans/selected-cpu.md).
+
 For the separate statistical event estimator, read [nominal event credit](profiling/nominal-event-credit.md).
 
 For opt-in recurring peer service timing, read [accounting reuse](profiling/accounting-reuse.md#recurring-service-timing).

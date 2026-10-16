@@ -4,9 +4,10 @@ using System.Text.Json;
 
 static class CooperativePhysicalWorkload
 {
-    public static int Run(string path, CooperativeWorkPlan plan)
+    public static int Run(string path, CooperativeWorkPlan plan, Func<IThreadCpuClock>? cpuFactory = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        var selectedCpu = SelectedCpuCapture.Parse(Environment.GetEnvironmentVariable("COZNET_SELECTED_CPU"), true, cpuFactory);
         var work = new CooperativeCpuWork(plan.Mode);
         var measurement = new MeasurementWindowCapture(TimeProvider.System);
         var failures = new List<string>();
@@ -37,11 +38,13 @@ static class CooperativePhysicalWorkload
             measurement.Prepare(Read);
             measurement.Begin(Read, () => { });
             selectedWorkStarted = Stopwatch.GetTimestamp();
+            selectedCpu?.Start();
             while (work.SelectedProgress < plan.Batches)
             {
                 if (peer.IsCompleted) throw new InvalidDataException("The physical peer stopped during selected work.");
                 work.RunSelected();
             }
+            selectedCpu?.Finish();
             selectedWorkFinished = Stopwatch.GetTimestamp();
             measurement.Finish(Read);
             if (measurement.End!.Accounting.Peer.Progress <= measurement.Start!.Accounting.Peer.Progress)
@@ -78,6 +81,7 @@ static class CooperativePhysicalWorkload
         {
             workloadProtocol = CooperativeCpuWork.Protocol, mode = plan.Mode.Name, requestedBatches = plan.Batches,
             completed, failures, joined, measurementWindow = measurement, selectedWorkStarted, selectedWorkFinished,
+            selectedCpuEnabled = selectedCpu is not null, selectedCpuEvidenceVersion = 1, selectedCpu,
             selectedBatches = work.SelectedProgress, checksum = work.SelectedChecksum,
             peerBatches = work.PeerProgress, peerChecksum = work.PeerChecksum,
             expectedChecksum = CooperativeCpuWork.ExpectedChecksum, timestampFrequency = Stopwatch.Frequency,

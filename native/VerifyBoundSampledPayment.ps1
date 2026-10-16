@@ -31,6 +31,7 @@ $native = Join-Path $run 'native'
 New-Item -ItemType Directory -Force $native | Out-Null
 $sources = @('build/build.fs', 'native/VerifyBoundSampledPayment.ps1', 'native/AnalyzeBoundSampledPayment.py', 'native/BoundSampledPaymentAnalysisChecks.py', 'native/VerifyServiceOwner.ps1', 'native/Profiler.cpp', 'native/ProbeLifetime.h', 'native/Sampler.h', 'native/BuildLinux.ps1', 'native/GenerateCallbacks.ps1', 'tests/Shared/IL.cs', 'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/service/CMakeLists.txt')
 $sources += 'native/CooperativeMeasurementEvidence.py'
+$sources += 'native/SelectedCpuEvidence.py'
 $sources += @('native/AnalyzeBoundSelectedPayment.py', 'native/BoundSelectedPaymentAnalysisChecks.py')
 $sources += @('native/AnalyzeCooperativePeerProgress.py', 'native/CooperativePeerProgressChecks.py')
 $sources += @('native/AnalyzeScheduler.py', 'native/BoundSchedulerEvidence.py', 'native/AnalyzeBoundScheduler.py', 'native/BoundSchedulerAnalysisChecks.py')

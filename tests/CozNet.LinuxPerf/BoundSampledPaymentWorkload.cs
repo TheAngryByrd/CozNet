@@ -29,7 +29,8 @@ static class BoundSampledPaymentWorkload
         Func<CpuSampleOwner> readOwner, Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource,
         bool invalidateAfterPayment = false,
         Func<IInstructionMap, ICpuSampleSink, IOwnerStoppedCpuEventSession>? selectedPaymentSource = null,
-        bool invalidateAfterSelectedPayment = false, BoundSelectedCadencePlan? cadencePlan = null, IBoundSchedulerBackend? schedulerBackend = null)
+        bool invalidateAfterSelectedPayment = false, BoundSelectedCadencePlan? cadencePlan = null, IBoundSchedulerBackend? schedulerBackend = null,
+        Func<IThreadCpuClock>? cpuFactory = null)
     {
         Require(cadencePlan is null || selectedPaymentSource is not null && ReferenceEquals(settings, cadencePlan.Sampling),
             "A cadence comparison requires its parsed settings and a pausable source.");
@@ -99,6 +100,7 @@ static class BoundSampledPaymentWorkload
             selectedPaymentEnabled, measurement is not null);
         var serviceTiming = CooperativeServiceTiming.Parse(Environment.GetEnvironmentVariable("COZNET_SERVICE_TIMING"), measurement is not null);
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan, creditPlan.NominalEvents);
+        var selectedCpu = SelectedCpuCapture.Parse(Environment.GetEnvironmentVariable("COZNET_SELECTED_CPU"), cadencePlan is not null && measurement is not null, cpuFactory);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
         var cleanupErrors = new List<string>();
@@ -462,6 +464,7 @@ static class BoundSampledPaymentWorkload
             var elapsed = Stopwatch.StartNew();
             measurement?.Begin(ReadMeasurement);
             if (cadencePlan is not null) selectedWorkStarted = Stopwatch.GetTimestamp();
+            selectedCpu?.Start();
             while (cadencePlan is null ? elapsed.Elapsed < TimeSpan.FromSeconds(2) : work.SelectedProgress < cadencePlan.Batches)
             {
                 Require(!peerLoop.IsCompleted, "The paying peer stopped during sample collection.");
@@ -481,6 +484,7 @@ static class BoundSampledPaymentWorkload
                     throw new InvalidOperationException("The invalidated collection accepted a live read after payment.");
                 }
             }
+            selectedCpu?.Finish();
             if (cadencePlan is not null) selectedWorkFinished = Stopwatch.GetTimestamp();
             measurement?.Freeze(ReadMeasurement);
             Require(InjectedProbes.Calls - initialCalls == checked(work.SelectedProgress * plan.CallsPerBatch),
@@ -683,6 +687,7 @@ static class BoundSampledPaymentWorkload
             sourceEpochPrefixes = result?.EpochPrefixes,
             sourceEpochPrefixEvidenceVersion = selectedPaymentEnabled ? 1 : (int?)null,
             sampleCreditPolicy = creditPlan.Name,
+            selectedCpuEnabled = selectedCpu is not null, selectedCpuEvidenceVersion = 1, selectedCpu,
             nominalSamplePeriodNanoseconds = creditPlan.NominalEvents ? BoundSampleCreditPlan.NominalPeriodNanoseconds : (ulong?)null,
             serviceCadence,
             probeInterval = plan.BackedgeInterval,

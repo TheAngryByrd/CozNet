@@ -10,6 +10,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Capture selected-thread CPU](How_Tos/capture-selected-cpu.md).
+
 - [Capture nominal-event credit](How_Tos/run-nominal-event-credit.md).
 
 - [Measure recurring cooperative service](How_Tos/measure-cooperative-service.md).
@@ -52,6 +54,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Selected-thread CPU capture](Reference/selected-cpu.md).
 
 - [Nominal-event credit](Reference/nominal-event-credit.md): explicit statistical event weights and policy evidence.
 
@@ -110,6 +114,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Timer worker lifecycle](Reference/timer-worker-lifetime.md): retirement, join, release, and fault-check scope.
 
 ## Explanation
+
+- [CPU time and the prediction gap](Explanations/selected-cpu.md).
 
 - [Cooperative pause and controller costs](Explanations/cooperative-pause-cost.md).
 

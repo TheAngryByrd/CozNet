@@ -8,6 +8,7 @@ from fractions import Fraction
 
 from AnalyzeBoundSampledPayment import count, require
 from AnalyzeBoundSelectedPayment import verify_record
+from SelectedCpuEvidence import verify_selected_cpu
 
 
 MODES = ("physical-baseline", "physical-optimized", "sampled-zero", "sampled-half")
@@ -148,9 +149,22 @@ def controller_ownership_plan(plan):
     return enabled, True
 
 
+def selected_cpu_plan(plan):
+    if 'selectedCpuEvidenceVersion' not in plan:
+        require(plan.get('selectedCpu', False) is False, 'Legacy plan cannot enable selected CPU capture')
+        return False, False
+    require(type(plan['selectedCpuEvidenceVersion']) is int and plan['selectedCpuEvidenceVersion'] == 1 and
+            type(plan.get('selectedCpu')) is bool, 'Invalid selected CPU plan')
+    return plan['selectedCpu'], True
+
+
 def analyze_case(record, mode, batches, exit_code, probe_interval=1024, require_probe_interval=False,
                  prepare_receipts=False, require_preparation=False, owner_controller=False, require_ownership=False,
-                 sample_credit_policy="same-epoch-interval-v1", require_credit_policy=False):
+                 sample_credit_policy="same-epoch-interval-v1", require_credit_policy=False,
+                 selected_cpu=False, require_selected_cpu=False):
+    require(not require_selected_cpu or 'selectedCpuEnabled' in record, 'Arm lacks declared selected CPU evidence')
+    require(record.get('selectedCpuEnabled', False) is selected_cpu, 'Selected CPU activation differs from plan')
+    verify_selected_cpu(record)
     require(mode in MODES and type(exit_code) is int, "Unknown arm or invalid process exit code")
     require(record["workloadProtocol"] == WORKLOAD, "The case does not use the shared cooperative work")
     if mode.startswith("physical-"):
@@ -241,6 +255,7 @@ def analyze(root):
     prepare_receipts, require_preparation = receipt_preparation_plan(plan)
     owner_controller, require_ownership = controller_ownership_plan(plan)
     sample_credit_policy, require_credit_policy = sample_credit_plan(plan)
+    selected_cpu, require_selected_cpu = selected_cpu_plan(plan)
     batches = count(plan["selectedBatches"])
     require(0 < batches <= 2147483647 and plan["predictionErrorBound"] == 0.02
             and plan["localOptimizationCalibrated"] is False, "Comparison work or accuracy contract changed")
@@ -250,6 +265,8 @@ def analyze(root):
     files = manifest["files"]
     require(isinstance(files, dict) and all(name in files for name in REQUIRED_FILES),
             "Required comparison snapshots are missing")
+    require(not require_selected_cpu or 'source/native/SelectedCpuEvidence.py' in files,
+            'Versioned selected CPU plan lacks its replay snapshot')
     integrity_errors = []
     for name, digest in files.items():
         require(isinstance(name, str) and isinstance(digest, str) and len(digest) == 64
@@ -270,11 +287,16 @@ def analyze(root):
     cases, costs = [], {}
     for mode, outcome in zip(MODES, outcomes):
         state, reasons, value = "invalid", [], None
+        cpu = None
         try:
             require(outcome.executed and outcome.record_exists, "Case was not executed or has no retained result")
-            state, reasons, value = analyze_case(read(root / (mode + ".json")), mode, batches, outcome.exit_code,
+            record = read(root / (mode + ".json"))
+            state, reasons, value = analyze_case(record, mode, batches, outcome.exit_code,
                                                  probe_interval, require_probe_interval, prepare_receipts, require_preparation,
-                                                 owner_controller, require_ownership, sample_credit_policy, require_credit_policy)
+                                                 owner_controller, require_ownership, sample_credit_policy, require_credit_policy,
+                                                 selected_cpu, require_selected_cpu)
+            if selected_cpu and state != 'invalid':
+                cpu = verify_selected_cpu(record)
         except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError, ArithmeticError) as error:
             reasons = [str(error)]
         if value is not None:
@@ -282,6 +304,8 @@ def analyze(root):
         cases.append(dict(mode=mode, status=state, reasons=reasons, attempted=outcome.attempted,
                           executed=outcome.executed, exitCode=outcome.exit_code,
                           descriptiveCostNanoseconds=None if value is None else outward(value.lower, value.upper)))
+        if require_selected_cpu:
+            cases[-1]['selectedCpu'] = cpu
     complete = not runner_errors and not integrity_errors and len(costs) == 4
     descriptive = compare(costs) if complete else None
     return dict(protocol=PROTOCOL, status="unqualified" if complete else "invalid", collectionComplete=complete,
@@ -289,6 +313,7 @@ def analyze(root):
                 prepareReceipts=prepare_receipts, receiptPreparationEvidenceVersion=1 if require_preparation else None,
                 ownerController=owner_controller, controllerOwnershipEvidenceVersion=1 if require_ownership else None,
                 sampleCreditPolicy=sample_credit_policy, sampleCreditEvidenceVersion=1 if require_credit_policy else None,
+                **(dict(selectedCpu=selected_cpu, selectedCpuEvidenceVersion=1) if require_selected_cpu else {}),
                 attempted=sum(item.attempted for item in outcomes), completed=len(costs), qualified=0,
                 invalid=sum(item["status"] == "invalid" for item in cases), cases=cases,
                 integrityErrors=integrity_errors, runnerErrors=runner_errors, descriptiveComparison=descriptive,

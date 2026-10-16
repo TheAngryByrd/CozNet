@@ -3,6 +3,11 @@
 The implemented scope is a serial experiment prototype. The goal is a .NET implementation of sampled Coz semantics.
 Keep the serial model separate from the proposed sampled engine.
 
+The [selected CPU comparison](../../reliability/features/native-signal/selected-cpu.md) completes with valid CPU evidence in all four arms.
+The sampled treatment consumes about 55.1 ms more selected CPU than its zero arm, with little CPU/elapsed separation inside the observed brackets.
+Its prediction remains about 30 percentage points below physical reduction.
+Next, isolate recurring probe, drain, and service CPU. Do not infer component savings from this single block alone.
+
 The [prepared ownership service comparison](../../reliability/features/native-signal/prepared-service-ownership.md) passes twelve expected outcomes with matching inputs.
 Owner/controller receipt and submission paths take less recorded time, both in total and per call.
 The [prepared owner physical block](../../reliability/features/native-signal/prepared-owner-physical-comparison.md) still underpredicts by about 28.8 percentage points.

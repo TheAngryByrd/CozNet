@@ -1,5 +1,10 @@
 # Project scope
 
+Optional [selected-thread CPU capture](plans/selected-cpu.md) binds readings in all four comparison arms through a portable clock hook.
+The Linux block completes with sampled zero at 221.9 ms CPU and sampled half at 277.0 ms CPU.
+Each sampled CPU bracket differs from elapsed time by less than 0.025 ms.
+The prediction remains about 30 percentage points below physical reduction. Recurring observer CPU is the next component investigation.
+
 The optional [nominal-event estimator](profiling/nominal-event-credit.md) credits initial and resumed selected events under native Coz's inspected event rule.
 Its Linux diagnostic passes zero, treatment, and expected invalidation cases with full replay.
 Its four-arm comparison completes but estimates a 0.9–1.3% slowdown against about 53.9% physical elapsed reduction.

@@ -16,8 +16,10 @@ It preserves pending treatment ownership and source tails. No prediction-accurac
 | `PrepareReceipts` | Disabled | Prepare isolated managed receipt paths before both sampled measurements. |
 | `OwnerController` | Disabled | Run both sampled controllers on the selected owner thread. |
 | `NominalSampleCredit` | Disabled | Credit every admitted selected nominal event in both sampled arms. |
+| `SelectedCpu` | Disabled | Capture selected-thread CPU around fixed work in all four arms. |
 
 The [credit policy reference](nominal-event-credit.md) defines the versioned plan and result contract.
+The [CPU capture reference](selected-cpu.md) defines its separate observations and platform hook.
 
 The runner saves the plan and four unexecuted outcomes before preparation.
 It snapshots source files, managed workload files, and the existing Linux profiler.

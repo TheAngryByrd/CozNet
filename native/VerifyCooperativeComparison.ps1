@@ -5,7 +5,8 @@ param(
     [ValidateSet(1024, 8192)][int]$ProbeInterval = 1024,
     [switch]$PrepareReceipts,
     [switch]$OwnerController,
-    [switch]$NominalSampleCredit
+    [switch]$NominalSampleCredit,
+    [switch]$SelectedCpu
 )
 $ErrorActionPreference = 'Stop'
 $creditPolicy = if ($NominalSampleCredit) { 'nominal-event-v1' } else { 'same-epoch-interval-v1' }
@@ -28,6 +29,7 @@ Save-Json 'plan.json' @{
     prepareReceipts = [bool]$PrepareReceipts; receiptPreparationEvidenceVersion = 1
     ownerController = [bool]$OwnerController; controllerOwnershipEvidenceVersion = 1
     sampleCreditPolicy = $creditPolicy; sampleCreditEvidenceVersion = 1
+    selectedCpu = [bool]$SelectedCpu; selectedCpuEvidenceVersion = 1
     debtBoundNanoseconds = 2000000; leaseBoundNanoseconds = 2000000; requestedChildBoundNanoseconds = 50000
     handlerBoundNanoseconds = 5000000; receiptBoundNanoseconds = 100000000
 }
@@ -99,6 +101,7 @@ try {
         '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m', '--security-opt', 'seccomp=unconfined',
         '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0', '--env', 'DOTNET_PerfMapEnabled=0',
         '--env', 'LD_LIBRARY_PATH=/profiler:/native',
+        '--env', ('COZNET_SELECTED_CPU=' + [int][bool]$SelectedCpu),
         '--mount', "type=bind,source=$workload,target=/workload,readonly",
         '--mount', "type=bind,source=$profiler,target=/profiler,readonly",
         '--mount', "type=bind,source=$native,target=/native,readonly")
