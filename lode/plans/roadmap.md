@@ -3,6 +3,14 @@
 The implemented scope is a serial experiment prototype. The goal is a .NET implementation of sampled Coz semantics.
 Keep the serial model separate from the proposed sampled engine.
 
+
+The [matched ownership comparison](../../reliability/features/native-signal/owner-controller-comparison.md) supports retaining owner/controller mode as an opt-in candidate.
+Its shorter selected intervals do not qualify an overall speedup. Zero-speedup elapsed times vary substantially.
+The next accuracy work must bound measurement endpoint cost and calibrate the physical selected-region reduction.
+Cold endpoint intervals are observed. Their cause remains unproven.
+Source membership and instrumentation attribution require separate contracts before prediction qualification.
+Do not repeat the unchanged controller comparison as a substitute for those contracts.
+
 1. Specify global and per-thread delay accounting, blocked intervals, wake outcomes, and thread lifecycle.
 2. Build a narrow CLR startup profiler spike with selective IL rewriting and original source maps.
 3. Test long-loop probe coverage, disabled-probe overhead, zero-speedup overhead, and JIT effects.

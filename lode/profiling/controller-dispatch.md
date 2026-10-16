@@ -64,7 +64,10 @@ Native entry guards reject reentrancy before locking.
 The sampled mode creates no separate controller worker and reserves slot 1 for the selected caller.
 Acceptance, receipt interval validation, and release retain their existing sequence.
 The controlled CLR runner can use caller-owned slot 0 for payment and invalidation checks.
-Twenty owner/controller CLR cases pass on Windows and Linux. Sampled two-thread execution remains pending.
+Twenty owner/controller CLR cases pass on Windows and Linux. Sampled two-thread execution passes its bounded diagnostic.
+The [matched comparison](../../reliability/features/native-signal/owner-controller-comparison.md) passes twelve expected checks with identical input identities.
+Owner groups have shorter selected receipt and callback intervals. Zero-speedup elapsed variation prevents an overall savings claim.
+The mode stays opt-in. Unqualified source membership, attribution, and residual accounting still prevent prediction qualification.
 Shared scheduler identity and direct-operation timing records remain unsupported.
 Default role separation and all accounting bounds remain required. Direct execution does not imply zero controller cost.
 

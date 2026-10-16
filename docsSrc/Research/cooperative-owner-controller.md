@@ -5,7 +5,7 @@ It describes the design and its remaining integration requirements, not a measur
 The native mode passes controlled checks on Windows and Linux.
 The [managed integration](../Reference/owner-controller.md) passes controlled CLR-bound cases on Windows and Linux.
 A first Linux sampled diagnostic passes all three expected checks with a separate peer.
-Its measurement remains unqualified. A matched cost comparison remains pending.
+Its measurement remains unqualified. A [matched cost comparison](../Explanations/cooperative-pause-cost.md) now covers both modes.
 See [the retained evidence](../../reliability/features/native-signal/managed-owner-controller.md#sampled-diagnostic).
 The [ABI reference](../Reference/cooperative-interop.md#session-and-roles) describes the current native surface.
 The local source baseline is `b8bd3fcf8bd5616ae4182f2ee4615adcd2c53559`.
@@ -125,7 +125,8 @@ Duplicate roles must not appear as independent scheduler evidence.
 
 These are integration requirements. The [native evidence](../../reliability/features/native-signal/cooperative-owner-controller.md) identifies completed native checks.
 Controlled managed receipt and CLR invalidation checks now pass in both modes on Windows and Linux.
-Scheduler capture remains unsupported in owner/controller mode. Matched timing and injected release-failure checks remain pending.
+Scheduler capture remains unsupported in owner/controller mode. Injected release-failure checks remain pending.
+Matched timing observations remain unqualified for general performance or prediction claims.
 
 | Boundary | Required observable result |
 | --- | --- |

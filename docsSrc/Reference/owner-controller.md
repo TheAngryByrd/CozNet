@@ -39,7 +39,9 @@ The existing bound verification targets retain separate ownership.
 Twenty controlled CLR-bound cases pass on Windows x64 and Linux x64 with owner/controller mode enabled.
 These cases use one target. A separate Linux sampled diagnostic passes zero-speedup, 50-percent, and expected-invalidation checks.
 The sampled diagnostic exercises the selected owner and separate peer. Its measurement remains unqualified.
-Sampled capacity, attribution, and performance benefit remain unverified.
+A matched Linux comparison passes all twelve expected checks across both modes.
+Sampled capacity, attribution, and general performance benefit remain unverified.
+See [the cost explanation](../Explanations/cooperative-pause-cost.md).
 Owner waits occupy the controller thread, so a comparison must inspect peer service as well as selected pause cost.
 Native entry guards add cost in both modes.
 

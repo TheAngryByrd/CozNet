@@ -4,7 +4,9 @@ An explicit [native owner/controller mode](profiling/cooperative-interop.md) res
 Default role separation remains. Native checks pass on Windows and Linux.
 The [managed integration](../docsSrc/Reference/owner-controller.md) passes twenty controlled CLR cases on Windows and Linux.
 The first Linux sampled diagnostic passes zero-speedup, 50-percent, and expected-invalidation checks with a separate peer.
-The measurement remains unqualified. A matched cost comparison remains pending.
+The [matched comparison](../reliability/features/native-signal/owner-controller-comparison.md) passes all twelve expected checks across four groups.
+Owner groups have shorter observed selected receipt and callback intervals, but elapsed variation prevents a general savings claim.
+Measurements remain unqualified. The mode remains opt-in.
 
 An opt-in [finite cooperative capture](profiling/cooperative-measurement.md) freezes global delay and progress before cleanup.
 It preserves invalid outcomes and unqualified native ownership.

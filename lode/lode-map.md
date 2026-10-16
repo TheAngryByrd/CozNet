@@ -1,6 +1,6 @@
 # Lode index
 
-For selected pause costs and retained dispatch limits, read [the phase explanation](../docsSrc/Explanations/cooperative-pause-cost.md).
+For selected pause costs, the matched ownership comparison, and retained dispatch limits, read [the phase explanation](../docsSrc/Explanations/cooperative-pause-cost.md).
 For the synchronous mode and controlled managed integration, read [the owner/controller design](../docsSrc/Research/cooperative-owner-controller.md).
 
 For shared cooperative checksum work and the unqualified comparison, read [cooperative physical work](profiling/cooperative-physical.md).

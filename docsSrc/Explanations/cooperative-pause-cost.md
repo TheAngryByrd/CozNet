@@ -1,6 +1,6 @@
 # Cooperative pause and controller costs
 
-This page explains what the retained phase capture establishes about selected payment cost.
+This page explains what the retained captures establish about selected payment and controller cost.
 The sampled experiment remains unqualified.
 
 The treatment completed 50,000 selected batches with 146 complete pause records.
@@ -28,6 +28,34 @@ The [owner/controller proposal](../Research/cooperative-owner-controller.md) des
 It does not establish that spinning, combined operations, or owner-thread execution will improve prediction.
 Receipt acceptance and release have separate accounting and ownership effects.
 An optimization must preserve the receipt endpoint and retain accepted ledger state if release fails.
+
+## Matched owner/controller comparison
+
+A later comparison uses the same source, binaries, image, work, and observer settings for both controller modes.
+It runs four groups in separate/owner/owner/separate order.
+All twelve expected checks pass, including invalidation and cleanup.
+The normal cases each complete 50,000 selected batches.
+
+| Group | Total selected pause, ms | Median selected receipt, ms | Maximum peer receipt, ms |
+| --- | ---: | ---: | ---: |
+| Separate 1 | 33.258080 | 0.113573 | 20.504020 |
+| Owner 1 | 21.053453 | 0.012260 | 14.683500 |
+| Owner 2 | 23.573216 | 0.012534 | 14.949722 |
+| Separate 2 | 40.158204 | 0.123344 | 16.860826 |
+
+Both owner groups have shorter observed selected receipt and callback intervals than both separate groups.
+This supports further controlled use of the opt-in mode.
+It does not isolate dispatch savings. Payment counts, selected credit, and accepted wait differ across groups.
+The mode also changes where controller CPU executes and can change sampled attribution.
+
+The zero-speedup elapsed intervals range from approximately 401–407 ms to 558–567 ms across groups.
+Descriptive effective reductions vary from negative to positive, even between the two separate-controller groups.
+Thus, lower selected pause cost does not establish an overall speedup or a more accurate causal prediction.
+All normal measurements remain unqualified.
+
+The [retained comparison](../../reliability/features/native-signal/owner-controller-comparison.md) gives the exact settings, arithmetic, and failure limits.
+Owner/controller mode remains opt-in. Accounting bounds and the default remain unchanged.
+Further accuracy work needs measurement-boundary evidence and a calibrated physical optimization.
 
 ## Measurement limits
 
