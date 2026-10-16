@@ -57,3 +57,21 @@ Its clock and overhead assumptions do not automatically qualify this comparison.
 Further work must address profiler overhead and sampled attribution before making an accuracy claim.
 See [the retained preparation evidence](../../reliability/features/native-signal/measurement-preparation.md)
 and [the capture contract](../Reference/measurement-boundaries.md).
+
+## Comparison after idle service reuse
+
+The idle service path now skips repeated checks for the same successfully checked accounting state when no peer request is pending.
+A subsequent four-arm block completes with unchanged inputs and no invalid arms.
+The sampled elapsed reduction is −5.1888% to −5.1302%, while the physical reduction is 49.7434% to 49.7670%.
+The sampled treatment is slower in this block, despite the physical improvement.
+
+Zero speedup skips 500,000 of 500,357 service checks. Treatment skips 406,599 of 500,400 checks.
+These lifetime counters include final draining outside the frozen window.
+They establish reuse but cannot measure its elapsed-time benefit.
+Earlier blocks ran separately, so their timing differences do not isolate the implementation change.
+
+The mismatch remains after idle reuse. Source membership, instrumentation attribution, and treatment ledger residuals remain unqualified.
+The ranges describe clock boundaries, not confidence intervals or accuracy bounds.
+Owner draining and sample publication still precede the service guard and require separate cost measurements.
+See [the retained comparison](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/idle-service-cadence.md#four-arm-comparison-with-idle-reuse)
+and [the observer explanation](bound-observer-overhead.md).

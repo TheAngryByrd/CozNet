@@ -82,6 +82,10 @@ Capture `artifacts/idle-service-payment/20261016T054616424-5a308ffc` passes zero
 Zero speedup skips 500,000 of 500,350 checks. Treatment skips 423,869 of 500,392 checks.
 The invalidation case skips 1,342 of 1,392 checks and retains its expected CLR lifetime failure.
 These counts do not establish timing benefit or prediction accuracy.
+The four-arm capture `artifacts/idle-service-comparison/20261016T055259832-46175858b67647b092ab034e16bc742d` completes all arms without invalid records or changed inputs.
+Its sampled reduction is −5.1888% to −5.1302%, versus 49.7434% to 49.7670% physically.
+It remains unqualified. Separate earlier blocks do not isolate the performance effect of reuse.
+Owner draining and sample publication still precede the guard and need separate component measurement.
 See [the retained checks and preceding comparison](../../reliability/features/native-signal/idle-service-cadence.md).
 
 The baseline component run `artifacts/accounting-cost/20261015T182853729` retains 672 bytes per debt capture,

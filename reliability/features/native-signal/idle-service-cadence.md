@@ -64,6 +64,45 @@ The ranges describe clock boundaries, not confidence or accuracy bounds.
 Sample membership, attribution, and ledger residuals remain unqualified.
 One declared block cannot isolate the value-record change from earlier unpaired captures.
 
+## Four-arm comparison with idle reuse
+
+Capture: `artifacts/idle-service-comparison/20261016T055259832-46175858b67647b092ab034e16bc742d`.
+The tested source is commit `f8bf73f`.
+
+```powershell
+pwsh -NoProfile -File native/VerifyCooperativeComparison.ps1 `
+  -EvidenceDirectory artifacts/idle-service-comparison -SelectedBatches 50000
+```
+
+All four arms complete with process exit zero. No arm is invalid.
+The analyzer records no integrity or runner errors. Original input hashes remain unchanged.
+The runner exits one because the comparison remains unqualified.
+
+| Arm | Lower cost, ns per progress | Upper cost, ns per progress |
+| --- | ---: | ---: |
+| Physical baseline | 3157.01030 | 3157.27826 |
+| Physical optimized | 1585.99646 | 1586.60538 |
+| Sampled zero | 7382.95122 | 7383.88632 |
+| Sampled half | 7762.69460 | 7766.03504 |
+
+Descriptive sampled elapsed reduction is −5.1888% to −5.1302%.
+Physical elapsed reduction is 49.7434% to 49.7670%.
+The nominal prediction minus physical reduction spans −54.9557 to −54.8736 percentage points.
+These are descriptive boundary ranges, not confidence or accuracy bounds.
+
+Zero speedup skips 500,000 of 500,357 service checks.
+Treatment skips 406,599 of 500,400 checks and retains 107 selected pauses.
+Treatment records 77,500,000 ns selected sample credit, 77,722,812 ns peer payment, and 222,689 ns selected payment.
+Payment totals include the full workload lifetime and do not replace frozen estimator inputs.
+The sampled arms remain unqualified for source-tail membership and instrumentation attribution.
+Treatment also retains an unqualified ledger residual.
+
+The earlier and current blocks are not an interleaved comparison of implementations.
+Their timing differences cannot isolate a speedup from idle reuse.
+The current block demonstrates that idle reuse alone does not resolve its observed prediction mismatch.
+The next component investigation should measure owner draining and sample publication in the probe path.
+Those operations still execute before the idle service guard. Their cost is not established by these records.
+
 ## Accepted limits
 
 The skip contract depends on immutable accounting and exclusive selected-owner updates.
