@@ -94,6 +94,7 @@ static class BoundSampledPaymentWorkload
             ownerDrainEnabled, cadencePlan is not null, TimeProvider.System);
         var receiptPreparationPlan = CooperativeReceiptPreparation.Parse(Environment.GetEnvironmentVariable("COZNET_PREPARE_RECEIPTS"),
             selectedPaymentEnabled, measurement is not null);
+        var serviceTiming = CooperativeServiceTiming.Parse(Environment.GetEnvironmentVariable("COZNET_SERVICE_TIMING"), measurement is not null);
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
@@ -329,52 +330,66 @@ static class BoundSampledPaymentWorkload
 
         void Service()
         {
-            if (!serviceCadence.ShouldRun(state, pending is not null)) return;
-            if (pending is not null)
+            long started = serviceTiming is null ? 0 : Stopwatch.GetTimestamp();
+            bool measured = serviceTiming is not null && measurement?.Window.Status == MeasurementCaptureStatus.Active;
+            bool failed = true;
+            var activity = CooperativeServiceActivity.Skipped;
+            try
             {
-                Require(Stopwatch.GetElapsedTime(pendingStarted) <= TimeSpan.FromMilliseconds(100),
-                    "A sampled cooperative request exceeded 100 ms.");
-                if (receiptReadiness.Ready(0, slot => client!.ReceiptReady(slot),
-                    slot => OnController(() => client!.CleanupHeader(slot), CooperativeDispatchOperation.PeerHeader).Visibility == 3))
+                if (!serviceCadence.ShouldRun(state, pending is not null)) { failed = false; return; }
+                activity = CooperativeServiceActivity.Idle;
+                if (pending is not null)
                 {
-                    var accepted = OnController(() => client!.ReadAndAccept(0, pending, state), CooperativeDispatchOperation.PeerRead);
-                    var interval = receiptIntervals.Parse(new(2, command, generation, pendingBudget),
-                        pendingStarted, Stopwatch.GetTimestamp(), Stopwatch.Frequency);
-                    Require(accepted.Adapter.IsTerminal, "A retired cooperative request did not settle its ledger lease.");
-                    pending = accepted.Adapter;
-                    state = accepted.State;
-                    var observation = client!.LastAccountingObservation
-                        ?? throw new InvalidDataException("The accepted request has no retained receipt observation.");
-                    Require(observation.Raw.Header.Command == command
-                        && observation.Raw.Header.Generation == generation && observation.Raw.Header.Budget == (ulong)pendingBudget,
-                        "The retained receipt observation does not match the accepted request.");
-                    long nextPaid = checked(paid + pending.ConfirmedNanoseconds);
-                    Control(() => client.ReleaseAfterRetiredCopy(0), CooperativeDispatchOperation.PeerRelease);
-                    payments.Add(new(command, generation, pendingBudget, pendingStarted, Stopwatch.GetTimestamp(), observation, client.LastCleanup!, interval));
-                    paid = nextPaid;
-                    pending = null;
-                    lease = null;
+                    activity = CooperativeServiceActivity.Pending;
+                    Require(Stopwatch.GetElapsedTime(pendingStarted) <= TimeSpan.FromMilliseconds(100),
+                        "A sampled cooperative request exceeded 100 ms.");
+                    if (receiptReadiness.Ready(0, slot => client!.ReceiptReady(slot),
+                        slot => OnController(() => client!.CleanupHeader(slot), CooperativeDispatchOperation.PeerHeader).Visibility == 3))
+                    {
+                        activity = CooperativeServiceActivity.Receipt;
+                        var accepted = OnController(() => client!.ReadAndAccept(0, pending, state), CooperativeDispatchOperation.PeerRead);
+                        var interval = receiptIntervals.Parse(new(2, command, generation, pendingBudget),
+                            pendingStarted, Stopwatch.GetTimestamp(), Stopwatch.Frequency);
+                        Require(accepted.Adapter.IsTerminal, "A retired cooperative request did not settle its ledger lease.");
+                        pending = accepted.Adapter;
+                        state = accepted.State;
+                        var observation = client!.LastAccountingObservation
+                            ?? throw new InvalidDataException("The accepted request has no retained receipt observation.");
+                        Require(observation.Raw.Header.Command == command
+                            && observation.Raw.Header.Generation == generation && observation.Raw.Header.Budget == (ulong)pendingBudget,
+                            "The retained receipt observation does not match the accepted request.");
+                        long nextPaid = checked(paid + pending.ConfirmedNanoseconds);
+                        Control(() => client.ReleaseAfterRetiredCopy(0), CooperativeDispatchOperation.PeerRelease);
+                        payments.Add(new(command, generation, pendingBudget, pendingStarted, Stopwatch.GetTimestamp(), observation, client.LastCleanup!, interval));
+                        paid = nextPaid;
+                        pending = null;
+                        lease = null;
+                    }
                 }
-            }
-            if (pending is null && measurement?.AcceptanceClosed != true)
-            {
-                var prepared = accounting.PreparePeer(state);
-                state = prepared.State;
-                if (prepared.Lease is not null)
+                if (pending is null && measurement?.AcceptanceClosed != true)
                 {
-                    lease = prepared.Lease;
-                    pendingBudget = SignalServiceLeaseModule.nanoseconds(lease);
-                    command = checked(command + 1);
-                    pendingStarted = Stopwatch.GetTimestamp();
-                    state = Parsed(SignalAccountingModule.sentService(lease, state));
-                    generation = 0;
-                    generation = OnController(() => client!.Submit(0, command, checked((ulong)pendingBudget)), CooperativeDispatchOperation.PeerSubmit);
-                    if (peerProgressEnabled) peerSubmitProgress = CapturePeerProgress(null);
-                    pending = new(CooperativeAccountingBinding.Parse(lease, generation, command, site!));
+                    var prepared = accounting.PreparePeer(state);
+                    state = prepared.State;
+                    if (prepared.Lease is not null)
+                    {
+                        activity = activity == CooperativeServiceActivity.Receipt
+                            ? CooperativeServiceActivity.ReceiptAndSubmit : CooperativeServiceActivity.Submit;
+                        lease = prepared.Lease;
+                        pendingBudget = SignalServiceLeaseModule.nanoseconds(lease);
+                        command = checked(command + 1);
+                        pendingStarted = Stopwatch.GetTimestamp();
+                        state = Parsed(SignalAccountingModule.sentService(lease, state));
+                        generation = 0;
+                        generation = OnController(() => client!.Submit(0, command, checked((ulong)pendingBudget)), CooperativeDispatchOperation.PeerSubmit);
+                        if (peerProgressEnabled) peerSubmitProgress = CapturePeerProgress(null);
+                        pending = new(CooperativeAccountingBinding.Parse(lease, generation, command, site!));
+                    }
                 }
+                ObserveDebt();
+                serviceCadence.Completed(state, pending is not null);
+                failed = false;
             }
-            ObserveDebt();
-            serviceCadence.Completed(state, pending is not null);
+            finally { serviceTiming?.Record(activity, started, Stopwatch.GetTimestamp(), failed, measured); }
         }
 
         try
@@ -637,6 +652,7 @@ static class BoundSampledPaymentWorkload
             batchServiceEnabled = publication.BatchServiceEnabled, sampleServiceCalls = publication.ServiceCalls,
             ownerControllerEnabled = controllerPlan.OwnerEnabled,
             receiptPreparationEnabled = receiptPreparationPlan.Enabled, receiptPreparation = receiptPreparationPlan.LastResult,
+            serviceTimingEnabled = serviceTiming is not null, serviceTiming,
             dispatchTimingEnabled = dispatchTiming is not null, dispatchTiming,
             directReceiptReadyEnabled = receiptReadiness.DirectEnabled, receiptReadyCalls = receiptReadiness.Calls,
             peerProgressEnabled, peerOwner, peerOwnerFailure, peerSubmitProgress, peerDebtProgress,

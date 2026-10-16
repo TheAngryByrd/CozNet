@@ -39,6 +39,7 @@ if (args is ["--verify-bound-cooperative-managed"])
 {
     BoundControllerPlanChecks.Run();
     CooperativeReceiptPreparationChecks.Run();
+    CooperativeServiceTimingChecks.Run();
     SchedulerCaptureGroupChecks.Run();
     BoundSchedulerCaptureChecks.Run();
     BoundSelectedHandoffChecks.Run();

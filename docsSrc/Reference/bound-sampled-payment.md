@@ -1,5 +1,7 @@
 # Sample-driven bound peer payment
 
+Optional [service timing](cooperative-service-timing.md) separates pending checks, receipt processing, submission, and idle paths.
+
 `BoundSampledPaymentWorkload` connects live CLR-bound CPU samples to the existing ledger and cooperative receipt adapter.
 It is an internal capacity diagnostic. The public serial API does not use this path.
 

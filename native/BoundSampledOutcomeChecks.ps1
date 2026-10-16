@@ -144,6 +144,17 @@ try {
             if ($outcome.passed -ne $matches) { throw 'Receipt preparation setting did not control outcome acceptance.' }
         }
     }
+    foreach ($expected in @($false, $true)) {
+        foreach ($mode in @($null, 0, 1, 'true', $false, $true)) {
+            @{ passed = $true; serviceTimingEnabled = $mode } | ConvertTo-Json | Set-Content -LiteralPath $path
+            $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedServiceTiming $expected
+            $matches = $mode -is [bool] -and $mode -eq $expected
+            if ($outcome.passed -ne $matches) { throw 'Service timing setting did not control outcome acceptance.' }
+        }
+        @{ passed = $true } | ConvertTo-Json | Set-Content -LiteralPath $path
+        $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedServiceTiming $expected
+        if ($outcome.passed) { throw 'Missing service timing setting cannot pass.' }
+    }
     Set-Content -LiteralPath $path -Value '{'
     $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0
     if ($outcome.passed -or -not $outcome.recordError) { throw 'Malformed JSON cannot pass.' }

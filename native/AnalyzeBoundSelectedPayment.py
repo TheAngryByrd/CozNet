@@ -6,6 +6,7 @@ from AnalyzeBoundSampledPayment import verify_probe_interval
 from CooperativeMeasurementEvidence import verify_measurement
 
 from AnalyzeBoundSampledPayment import count, require, signed_count, verify_payments, verify_receipt_interval, verify_rejected_receipt_interval, verify_sample_publication, verify_dispatch_timing, verify_receipt_preparation
+from AnalyzeBoundSampledPayment import verify_service_timing
 
 
 def counts(mapping, signed=()):
@@ -533,6 +534,7 @@ def verify_epoch_prefixes(record, last_cpu, payment_pauses):
 
 
 def verify_record(record):
+    verify_service_timing(record)
     verify_receipt_preparation(record)
     verify_probe_interval(record)
     owner_controller = record.get("ownerControllerEnabled", False)

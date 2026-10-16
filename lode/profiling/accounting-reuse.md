@@ -1,5 +1,42 @@
 # Immutable accounting reuse
 
+## Recurring service timing
+
+`COZNET_SERVICE_TIMING=1` enables the portable `CooperativeServiceTiming` observer in the bound sampled workload.
+The runner exposes `-ServiceTiming` and requires finite measurement.
+The observer records one attempted-path bucket per service call, including failures.
+`All` includes final draining. `Measurement` includes calls entered in the active measurement window.
+Readonly value buckets avoid per-call record allocation. Snapshot properties copy arrays for serialization.
+The ending timestamp precedes bookkeeping. Timing still adds observer cost.
+Elapsed intervals include waits and can overlap selected pauses. They cannot be added to pause totals.
+Pending-call counts alone do not establish readiness-lock cost or prediction error.
+The selected owner records calls synchronously. Concurrent calls are rejected by the observer's owner-thread check.
+An observer invariant failure in `finally` can replace a service exception. This remains an accepted diagnostic risk.
+The controlled caller supplies a defined activity and monotonic timestamps on the owner thread.
+Checked counter overflow requires more calls or elapsed ticks than the bounded diagnostic can produce.
+Failing the diagnostic preserves rejection instead of silently accepting incomplete timing evidence.
+Helper checks cover failure counts, but no controlled integration check injects failures through `Service()`.
+This coverage gap remains accepted for the opt-in diagnostic. Live cases validate successful-path counts only.
+Activity labels and failure paths still require source review before further service changes.
+
+```csharp
+serviceTiming?.Record(activity, started, Stopwatch.GetTimestamp(), failed, measured);
+```
+
+```mermaid
+flowchart LR
+    Entry --> Cadence --> AttemptedPath --> DebtGate --> EndTimestamp --> RecordBucket
+    AttemptedPath --> Failure --> EndTimestamp
+```
+
+Replay checks bucket order, counts, maxima, lifetime subsets, cadence reconciliation, and closed measurement-window bounds.
+Remaining calls must be sufficient for the elapsed-time difference and any maximum absent from the measurement subset.
+Runner acceptance binds activation to the requested mode.
+The [retained live capture](../../reliability/features/native-signal/recurring-service-timing.md) passes all three expected outcomes.
+Its treatment measurement records 10.429893 ms pending, 35.374432 ms receipt, and 21.194016 ms submission time.
+These elapsed brackets do not isolate CPU cost or establish prediction accuracy.
+See [the timing reference](../../docsSrc/Reference/cooperative-service-timing.md) and [capture procedure](../../docsSrc/How_Tos/measure-cooperative-service.md).
+
 `CooperativeAccountingCache` binds selected and peer handles in the controlled bound sampled workload.
 The selected owner alone mutates the accounting variable and uses the cache.
 No native state, receipt acceptance, source ownership, or CLR admission is cached.

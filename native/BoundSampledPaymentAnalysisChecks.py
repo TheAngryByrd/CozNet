@@ -4,7 +4,85 @@ import pathlib
 import tempfile
 import unittest
 
-from AnalyzeBoundSampledPayment import main, verify_record, verify_receipt_readiness, verify_receipt_preparation
+from AnalyzeBoundSampledPayment import main, verify_record, verify_receipt_readiness, verify_receipt_preparation, verify_service_timing
+
+
+class ServiceTimingChecks(unittest.TestCase):
+    def record(self):
+        buckets = [dict(Activity=i, Calls=2, Failures=0, ElapsedTicks=4, MaximumTicks=3) for i in range(6)]
+        measured = [dict(Activity=i, Calls=1, Failures=0, ElapsedTicks=1, MaximumTicks=1) for i in range(6)]
+        return dict(serviceTimingEnabled=True, finiteMeasurementEnabled=True, timestampFrequency=1000,
+                    completed=True, serviceTiming=dict(All=buckets, Measurement=measured),
+                    serviceCadence=dict(Checks=12, Skipped=2, Executions=10),
+                    measurement=dict(Window=dict(Start=dict(BeforeTimestamp=10, TimestampFrequency=1000),
+                                                 End=dict(AfterTimestamp=16, TimestampFrequency=1000))))
+
+    def test_valid_window_boundary_and_legacy(self):
+        verify_service_timing(self.record())
+        verify_service_timing({})
+        verify_service_timing(dict(serviceTimingEnabled=False, serviceTiming=None))
+
+    def test_rejects_malformed_buckets_and_inconsistent_evidence(self):
+        for mutate, message in (
+            (lambda r: r.update(serviceTimingEnabled=1), "not Boolean"),
+            (lambda r: r.update(serviceTimingEnabled=False), "Disabled"),
+            (lambda r: r.pop("serviceTimingEnabled"), "no activation"),
+            (lambda r: r.update(finiteMeasurementEnabled=False), "requires finite"),
+            (lambda r: r["serviceTiming"]["All"].pop(), "bucket count"),
+            (lambda r: r["serviceTiming"]["All"][0].update(Activity=1), "activity order"),
+            (lambda r: r["serviceTiming"]["All"][0].update(Calls=True), "unsigned"),
+            (lambda r: r["serviceTiming"]["All"][0].update(MaximumTicks=5), "totals"),
+            (lambda r: r["serviceTiming"]["All"][0].update(ElapsedTicks=7), "totals"),
+            (lambda r: r["serviceTiming"]["Measurement"][0].update(Calls=3), "exceeds lifetime"),
+            (lambda r: r["serviceTiming"]["All"][0].update(Failures=1), "Completed"),
+            (lambda r: r["serviceCadence"].update(Checks=13), "cadence"),
+            (lambda r: r["serviceCadence"].update(Skipped=3), "cadence"),
+            (lambda r: r["serviceCadence"].update(Executions=9), "cadence"),
+            (lambda r: r["measurement"]["Window"].update(Start=None), "no measurement start"),
+            (lambda r: r["measurement"]["Window"]["End"].update(TimestampFrequency=999), "clock differs"),
+            (lambda r: r["measurement"]["Window"]["End"].update(AfterTimestamp=15), "exceeds its measurement"),
+        ):
+            with self.subTest(message=message):
+                record = self.record()
+                mutate(record)
+                with self.assertRaisesRegex(ValueError, message):
+                    verify_service_timing(record)
+
+    def test_failed_call_subset_and_open_window(self):
+        record = self.record()
+        record["completed"] = False
+        record["serviceTiming"]["All"][0]["Failures"] = 2
+        record["serviceTiming"]["Measurement"][0]["Failures"] = 1
+        record["measurement"]["Window"]["End"] = None
+        verify_service_timing(record)
+        record["serviceTiming"]["Measurement"][0]["Failures"] = 0
+        with self.assertRaisesRegex(ValueError, "Unmeasured service failures"):
+            verify_service_timing(record)
+
+    def test_full_replay_checks_service_activation(self):
+        record = valid_record()
+        record.update(serviceTimingEnabled=False, serviceTiming=None)
+        verify_record(record)
+        record["serviceTiming"] = {}
+        with self.assertRaisesRegex(ValueError, "Disabled service timing"):
+            verify_record(record)
+
+    def test_measurement_subset_leaves_possible_remaining_calls(self):
+        for calls, elapsed, maximum, message in (
+            (2, 2, 1, "elapsed exceeds remaining calls"),
+            (2, 4, 2, "cannot supply lifetime maximum"),
+            (1, 0, 0, "elapsed exceeds remaining calls"),
+            (1, 2, 2, "cannot supply lifetime maximum"),
+        ):
+            with self.subTest(calls=calls, elapsed=elapsed, maximum=maximum):
+                record = self.record()
+                record["serviceTiming"]["Measurement"][0].update(Calls=calls, ElapsedTicks=elapsed, MaximumTicks=maximum)
+                with self.assertRaisesRegex(ValueError, message):
+                    verify_service_timing(record)
+        record = self.record()
+        record["serviceTiming"]["Measurement"] = copy.deepcopy(record["serviceTiming"]["All"])
+        record["measurement"]["Window"]["End"]["AfterTimestamp"] = 34
+        verify_service_timing(record)
 
 
 class ReceiptPreparationChecks(unittest.TestCase):

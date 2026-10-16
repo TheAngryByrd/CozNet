@@ -54,6 +54,57 @@ def verify_receipt_readiness(record):
                 "Direct receipt readiness retained normal header dispatches")
 
 
+def verify_service_timing(record):
+    if "serviceTimingEnabled" not in record:
+        require("serviceTiming" not in record, "Service timing has no activation flag")
+        return
+    enabled = record["serviceTimingEnabled"]
+    require(type(enabled) is bool, "Service timing activation is not Boolean")
+    timing = record["serviceTiming"]
+    if not enabled:
+        require(timing is None, "Disabled service timing contains evidence")
+        return
+    require(record.get("finiteMeasurementEnabled") is True and count(record["timestampFrequency"]) > 0,
+            "Service timing requires finite measurement and a managed clock")
+    for name in ("All", "Measurement"):
+        buckets = timing[name]
+        require(type(buckets) is list and len(buckets) == 6, "Service timing bucket count differs")
+        for activity, bucket in enumerate(buckets):
+            require(count(bucket["Activity"]) == activity, "Service timing activity order differs")
+            calls, failures, elapsed, maximum = (count(bucket[key]) for key in ("Calls", "Failures", "ElapsedTicks", "MaximumTicks"))
+            require(failures <= calls and maximum <= elapsed and (calls > 0 or elapsed == 0)
+                    and elapsed <= calls * maximum, "Service timing totals are inconsistent")
+    for total, measured in zip(timing["All"], timing["Measurement"]):
+        require(all(measured[key] <= total[key] for key in ("Calls", "Failures", "ElapsedTicks", "MaximumTicks")),
+                "Measured service timing exceeds lifetime timing")
+        require(total["Failures"] - measured["Failures"] <= total["Calls"] - measured["Calls"],
+                "Unmeasured service failures exceed calls")
+        remaining_calls = total["Calls"] - measured["Calls"]
+        remaining_elapsed = total["ElapsedTicks"] - measured["ElapsedTicks"]
+        require(remaining_elapsed <= remaining_calls * total["MaximumTicks"],
+                "Unmeasured service elapsed exceeds remaining calls")
+        require(measured["MaximumTicks"] == total["MaximumTicks"] or
+                (remaining_calls > 0 and remaining_elapsed >= total["MaximumTicks"]),
+                "Unmeasured service calls cannot supply lifetime maximum")
+    calls = sum(item["Calls"] for item in timing["All"])
+    require(calls == count(record["serviceCadence"]["Checks"])
+            and timing["All"][0]["Calls"] == count(record["serviceCadence"]["Skipped"])
+            and calls - timing["All"][0]["Calls"] == count(record["serviceCadence"]["Executions"]),
+            "Service timing differs from cadence counts")
+    require(not record["completed"] or sum(item["Failures"] for item in timing["All"]) == 0,
+            "Completed workload has failed service calls")
+    window = record["measurement"]["Window"]
+    measured_calls = sum(item["Calls"] for item in timing["Measurement"])
+    if window["Start"] is None:
+        require(measured_calls == 0, "Service timing has no measurement start")
+    elif window["End"] is not None:
+        require(window["Start"]["TimestampFrequency"] == record["timestampFrequency"] == window["End"]["TimestampFrequency"],
+                "Service timing measurement clock differs")
+        require(sum(item["ElapsedTicks"] for item in timing["Measurement"])
+                <= count(window["End"]["AfterTimestamp"]) - count(window["Start"]["BeforeTimestamp"]),
+                "Service timing exceeds its measurement window")
+
+
 def verify_receipt_preparation(record):
     if "receiptPreparationEnabled" not in record:
         require("receiptPreparation" not in record, "Receipt preparation has no activation flag")
@@ -324,6 +375,7 @@ def verify_payments(payments, binding, worker):
 
 
 def verify_record(record):
+    verify_service_timing(record)
     verify_receipt_preparation(record)
     verify_probe_interval(record)
     verify_dispatch_timing(record)
