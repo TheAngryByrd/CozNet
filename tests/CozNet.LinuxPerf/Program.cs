@@ -179,6 +179,7 @@ if (args is ["--sampled-timer-scheduler", var timerSchedulerPath, var timerSched
 if (args is ["--verify-measurement-boundaries"])
 {
     MeasurementWindowCaptureChecks.Run();
+    CooperativeMeasurementChecks.Run();
     return 0;
 }
 

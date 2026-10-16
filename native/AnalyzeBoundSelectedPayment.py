@@ -2,6 +2,7 @@ import json
 import pathlib
 import sys
 from BoundSchedulerEvidence import verify_bound_scheduler
+from CooperativeMeasurementEvidence import verify_measurement
 
 from AnalyzeBoundSampledPayment import count, require, signed_count, verify_payments, verify_receipt_interval, verify_rejected_receipt_interval, verify_sample_publication, verify_dispatch_timing
 
@@ -431,6 +432,7 @@ def verify_selected_handoff(record):
 
 
 def verify_record(record):
+    measurement = verify_measurement(record)
     handoff = verify_selected_handoff(record)
     scheduler = verify_bound_scheduler(record)
     verify_peer_progress(record)
@@ -534,17 +536,20 @@ def verify_record(record):
                 and not record["rejectionVerified"] and not record["rejectedAfterPayment"]
                 and not record["invalidateAfterPayment"] and not record["invalidateAfterSelectedPayment"]
                 and record["peerFailure"] is None, "Completed case has rejected evidence")
-        require(len(record["samples"]) == len(record["sourceSamples"]) == record["batch"]["Samples"]
+        require((len(record["samples"]) <= len(record["sourceSamples"]) if measurement is not None
+                 else len(record["samples"]) == len(record["sourceSamples"]))
+                and len(record["sourceSamples"]) == record["batch"]["Samples"]
                 and record["batch"]["LostRecords"] == record["batch"]["LostSamples"] == record["batch"]["Throttles"] == 0,
                 "Completed source lost or left unprocessed samples")
         final = record["finalDebt"]
         require(final["SelectedCredit"] == credit and final["PeerWait"] == paid and final["SelectedWait"] == selected_paid
-                and final["Global"] == max(credit + selected_paid, paid) and final["Peer"] == 0,
+                and (measurement is not None or final["Global"] == max(credit + selected_paid, paid) and final["Peer"] == 0),
                 "Final ledger does not reconcile with credit and settled waits")
         if record["percent"] == 0:
             require(credit == paid == selected_paid == 0 and not record["pauses"], "Zero speedup performed payment")
         else:
-            require(paid >= credit > 0 and selected_paid > 0, "Treatment did not reach selected and peer payment")
+            require(credit > 0 and (paid > 0 if measurement is not None else paid >= credit)
+                    and selected_paid > 0, "Treatment did not reach selected and peer payment")
     elif record["passed"]:
         require(record["invalidateAfterSelectedPayment"] and record["invalidated"] and record["rejectionVerified"]
                 and record["rejectedAfterPayment"] and selected_paid > 0 and paid > 0
@@ -553,7 +558,7 @@ def verify_record(record):
     return dict(samples=len(record["sourceSamples"]), credit=credit, paid=paid, selectedPaid=selected_paid,
                 selectedPayments=len(record["selectedPayments"]), pauses=len(record["pauses"]),
                 completed=record["completed"], casePassed=record["passed"], childCpu=child_cpu, scheduler=scheduler,
-                selectedHandoff=handoff)
+                selectedHandoff=handoff, measurement=measurement)
 
 
 def verify_case(record, name):

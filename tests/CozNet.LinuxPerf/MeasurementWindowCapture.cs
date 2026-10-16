@@ -6,7 +6,7 @@ sealed class MeasurementWindowCapture
     internal sealed record Worker(long Progress, long ReleasedWait, long ActiveWait, PendingService? Pending,
         MeasurementLedgerReading? Ledger = null);
     internal sealed record Readings(long Global, long Credit, ulong AcceptedSampleSequence, ulong Epoch, Worker Selected, Worker Peer,
-        TimerServiceController.AccountingSnapshot? Timer = null);
+        TimerServiceController.AccountingSnapshot? Timer = null, CooperativeMeasurementSnapshot? Cooperative = null);
 
     internal sealed class Boundary
     {
@@ -44,6 +44,7 @@ sealed class MeasurementWindowCapture
 
     private static bool ValidTimer(Readings readings)
     {
+        if (readings.Cooperative is { } cooperative) return cooperative.Matches(readings);
         if (readings.Timer is not { } timer) return readings.Selected.Ledger is null && readings.Peer.Ledger is null;
         if ((readings.Selected.Ledger is null) != (readings.Peer.Ledger is null)) return false;
         if (readings.Selected.Ledger is { } selected && readings.Peer.Ledger is { } peer
@@ -101,6 +102,9 @@ sealed class MeasurementWindowCapture
         if ((before.Timer is null) != (after.Timer is null)
             || (before.Timer is { } timer && after.Timer!.ReleasedJournalCount < timer.ReleasedJournalCount))
             throw new InvalidDataException("The frozen timer journal inventory changed capability or regressed.");
+        if ((before.Cooperative is null) != (after.Cooperative is null)
+            || (before.Cooperative is { } cooperative && after.Cooperative!.ReleasedJournalCount < cooperative.ReleasedJournalCount))
+            throw new InvalidDataException("The frozen cooperative inventory changed capability or regressed.");
         if (!SameLedger(before.Selected, after.Selected) || !SameLedger(before.Peer, after.Peer))
             throw new InvalidDataException("The frozen ledger observation changed capability or thread identity.");
         End = end;

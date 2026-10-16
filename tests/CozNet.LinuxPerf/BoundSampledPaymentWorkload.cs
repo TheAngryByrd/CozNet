@@ -80,6 +80,8 @@ static class BoundSampledPaymentWorkload
         var handoff = BoundSelectedHandoff.Parse(Environment.GetEnvironmentVariable("COZNET_SELECTED_HANDOFF"),
             new ThreadYieldHandoffBackend());
         Require(!handoff.Enabled || ownerDrainEnabled, "Selected handoff requires owner draining and an explicit cadence.");
+        var measurement = FiniteCooperativeMeasurement.Parse(Environment.GetEnvironmentVariable("COZNET_FINITE_MEASUREMENT"),
+            ownerDrainEnabled, cadencePlan is not null, TimeProvider.System);
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
@@ -176,8 +178,26 @@ static class BoundSampledPaymentWorkload
             return debt;
         }
 
+        MeasurementWindowCapture.Readings ReadMeasurement()
+        {
+            CooperativeMeasurementSnapshot.Ownership? Ownership(SignalServiceLease? owned,
+                CooperativeAccountingAdapter? adapter, ulong id, ulong nativeGeneration, uint slot)
+            {
+                Require(client is not null && client.HasPending(slot) == (nativeGeneration != 0 && owned is not null),
+                    "Frozen cooperative ownership differs from native generation tracking.");
+                return owned is null ? null : CooperativeMeasurementSnapshot.Ownership.Parse(owned, id, nativeGeneration,
+                    adapter?.AcceptedCount ?? 0, adapter?.ConfirmedNanoseconds ?? 0, adapter?.IsTerminal ?? false);
+            }
+            return CooperativeMeasurementSnapshot.Capture(accounting.Observe(state), batches, Interlocked.Read(ref peerBatches),
+                selectedPaid, paid, selectedPayments.Count + (long)payments.Count,
+                Ownership(selectedLease, selectedPending, selectedCommand, selectedGeneration, 1),
+                Ownership(lease, pending, command, generation, 0), credit, (ulong)samples.Count,
+                checked(1UL + (ulong)pauses.Count(pause => pause.Resumed is not null)));
+        }
+
         void Process(CpuSample sample, ulong eligibilityEpoch)
         {
+            Require(measurement?.AcceptanceClosed != true, "Samples cannot enter the frozen experiment.");
             represented = checked(represented + sample.PeriodNanoseconds);
             var observation = Parsed(CpuSampleObservationModule.tryCreate(stream, checked((ulong)samples.Count + 1),
                 represented, eligibilityEpoch, SampleThreadState.Runnable,
@@ -325,7 +345,7 @@ static class BoundSampledPaymentWorkload
                     lease = null;
                 }
             }
-            if (pending is null)
+            if (pending is null && measurement?.AcceptanceClosed != true)
             {
                 var prepared = accounting.PreparePeer(state);
                 state = prepared.State;
@@ -389,7 +409,8 @@ static class BoundSampledPaymentWorkload
                     while (Volatile.Read(ref stop) == 0)
                     {
                         peerChecksum += CpuWorkload.Run();
-                        peerBatches++;
+                        if (measurement is null) peerBatches++;
+                        else Interlocked.Increment(ref peerBatches);
                     }
                 }
                 finally { peerCalls = InjectedProbes.Calls - initialCalls; peerStopped.Set(); }
@@ -407,6 +428,7 @@ static class BoundSampledPaymentWorkload
             else collection.Start(createSource);
             long initialCalls = InjectedProbes.Calls;
             var elapsed = Stopwatch.StartNew();
+            measurement?.Begin(ReadMeasurement);
             if (cadencePlan is not null) selectedWorkStarted = Stopwatch.GetTimestamp();
             while (cadencePlan is null ? elapsed.Elapsed < TimeSpan.FromSeconds(2) : batches < cadencePlan.Batches)
             {
@@ -429,15 +451,19 @@ static class BoundSampledPaymentWorkload
                 }
             }
             if (cadencePlan is not null) selectedWorkFinished = Stopwatch.GetTimestamp();
+            measurement?.Freeze(ReadMeasurement);
             Require(InjectedProbes.Calls - initialCalls == checked(batches * plan.CallsPerBatch),
                 "The selected workload changed its injected probe count.");
             result = collection.Complete();
             Require(result.Samples.Take(samples.Count).SequenceEqual(samples.Select(item => item.Sample)),
                 "The accepted sample source changed its provisional prefix.");
-            if (selectedPaymentEnabled) PublishEpochs(collection.EpochDiagnostics, samples.Count);
-            else Publish(result.Samples, samples.Count);
+            if (measurement is null)
+            {
+                if (selectedPaymentEnabled) PublishEpochs(collection.EpochDiagnostics, samples.Count);
+                else Publish(result.Samples, samples.Count);
+            }
             var drain = Stopwatch.StartNew();
-            while (pending is not null || accounting.Observe(state).Peer > 0)
+            while (pending is not null || measurement is null && accounting.Observe(state).Peer > 0)
             {
                 Require(drain.Elapsed < TimeSpan.FromMilliseconds(100), "The final sampled cooperative debt did not settle within 100 ms.");
                 Service();
@@ -453,7 +479,8 @@ static class BoundSampledPaymentWorkload
                     selectedPeriods += samples[index].Sample.PeriodNanoseconds;
             Require((UInt128)credit == selectedPeriods * (uint)settings.Percent / 100,
                 "Sample credits differ from selected periods after the epoch baseline.");
-            Require(settings.Percent == 0 ? credit == 0 && paid == 0 && payments.Count == 0 : credit > 0 && paid >= credit && payments.Count > 0,
+            Require(settings.Percent == 0 ? credit == 0 && paid == 0 && payments.Count == 0
+                : credit > 0 && (measurement is null ? paid >= credit : paid > 0) && payments.Count > 0,
                 "The sampled intervention did not reach its zero or positive payment condition.");
             if (selectedPaymentEnabled)
                 Require(settings.Percent == 0 ? selectedPaid == 0 && selectedPayments.Count == 0 && pauses.Count == 0
@@ -463,6 +490,9 @@ static class BoundSampledPaymentWorkload
         }
         catch (Exception error)
         {
+            measurement?.Fail(error);
+            try { measurement?.Freeze(ReadMeasurement); }
+            catch (Exception captureError) { measurement!.Fail(captureError); }
             var capturedDebt = lastObservedDebt;
             Func<CooperativeRawCapture?> readPeer = () => client is not null && client.HasPending(0)
                 ? OnController(() => client.CaptureDiagnostic(0), CooperativeDispatchOperation.PeerFailureCapture) : null;
@@ -577,12 +607,15 @@ static class BoundSampledPaymentWorkload
                 completed = true;
             }
         }
-        catch (Exception error) { verificationFailure = error.ToString(); }
+        catch (Exception error) { verificationFailure = error.ToString(); measurement?.Fail(error); }
+        var measurementAssessment = measurement?.Assess(completed, result is not null,
+            joined && controllerJoined && closed && cleanupErrors.Count == 0, collection?.Cleanup is null ? -1 : collection.Diagnostics.Count);
         var bindingEvidence = client?.Binding;
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
             schemaVersion = cadencePlan is not null ? 4 : selectedPaymentEnabled ? 3 : 1,
+            finiteMeasurementEnabled = measurement is not null, measurement, measurementAssessment,
             selectedCadence = cadencePlan?.Sampling.Cadence.ToString(), requestedBatches = cadencePlan?.Batches,
             selectedChecks = cadence?.Checks,
             selectedWorkStarted, selectedWorkFinished,

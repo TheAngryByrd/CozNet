@@ -32,6 +32,9 @@ Do not add an unnecessary warmup drain or claim that it fixes the endpoint.
 4. Integrate the assessment into the finite workload lifecycle.
    Close acceptance once, freeze before cleanup, and preserve failed capture.
    Preserve global correction, progress, capacity, debt, and handler gates.
+   The opt-in [cooperative measurement](../profiling/cooperative-measurement.md) now freezes real sampled inputs before cleanup.
+   Its first live capture preserves pending ownership and invalidation. Every result remains invalid or unqualified.
+   Known residuals no longer force post-window repayment in this finite mode. Default capacity checks retain full repayment.
 5. Run one predeclared matched physical comparison after review.
    Retain all cases. Do not retry unchanged failures to obtain a pass.
    A failed gate rejects this prototype claim and directs the next intervention decision.

@@ -1,5 +1,9 @@
 # Project scope
 
+An opt-in [finite cooperative capture](profiling/cooperative-measurement.md) freezes global delay and progress before cleanup.
+It preserves invalid outcomes and unqualified native ownership. The matched physical route remains incomplete.
+Its first Linux capture freezes a pending peer request before cleanup settlement. Both completed measurements remain unqualified.
+
 An opt-in [selected scheduling handoff](profiling/selected-handoff.md) preserves debt accounting and attempts one yield at a qualifying selected checkpoint.
 Its first CPU 0 treatment fails the handler bound while its control passes.
 The policy remains disabled by default. It does not establish a capacity or prediction fix.

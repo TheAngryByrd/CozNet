@@ -103,6 +103,14 @@ try {
             if ($outcome.passed -ne $matches) { throw 'Selected handoff mode did not control outcome acceptance.' }
         }
     }
+    foreach ($expected in @($false, $true)) {
+        foreach ($mode in @($false, $true, $null, 1, 'true')) {
+            @{ passed = $true; finiteMeasurementEnabled = $mode } | ConvertTo-Json | Set-Content -LiteralPath $path
+            $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedFiniteMeasurement $expected
+            $matches = $mode -is [bool] -and $mode -eq $expected
+            if ($outcome.passed -ne $matches) { throw 'Finite measurement mode did not control outcome acceptance.' }
+        }
+    }
     foreach ($version in @(1, 0, 2, $null, '1', $true)) {
         @{ passed = $true; receiptIntervalCaptureVersion = $version } | ConvertTo-Json | Set-Content -LiteralPath $path
         $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedReceiptCaptureVersion 1

@@ -1,4 +1,4 @@
-param([string]$EvidenceDirectory, [switch]$SelectedPayment, [switch]$PauseTiming, [switch]$ChildCpu, [switch]$OwnerDrain, [switch]$BatchService, [switch]$DispatchTiming, [switch]$DirectReceiptReady, [switch]$PeerProgress, [switch]$Scheduler, [switch]$SelectedHandoff,
+param([string]$EvidenceDirectory, [switch]$SelectedPayment, [switch]$PauseTiming, [switch]$ChildCpu, [switch]$OwnerDrain, [switch]$BatchService, [switch]$DispatchTiming, [switch]$DirectReceiptReady, [switch]$PeerProgress, [switch]$Scheduler, [switch]$SelectedHandoff, [switch]$FiniteMeasurement,
     [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
     [ValidateRange(1, 2147483647)][int]$SelectedBatches = 5000)
 $ErrorActionPreference = 'Stop'
@@ -14,6 +14,7 @@ if ($DispatchTiming -and -not $SelectedPayment) { throw 'Dispatch timing require
 if ($ChildCpu -and -not $SelectedPayment) { throw 'Child CPU capture requires selected payment.' }
 if ($OwnerDrain -and (-not $SelectedPayment -or -not $SelectedCadence)) { throw 'Owner draining requires selected payment and an explicit cadence.' }
 if ($SelectedHandoff -and -not $OwnerDrain) { throw 'Selected handoff requires owner draining and an explicit cadence.' }
+if ($FiniteMeasurement -and -not $OwnerDrain) { throw 'Finite measurement requires owner draining and an explicit cadence.' }
 $analysisScript = if ($SelectedPayment) { 'AnalyzeBoundSelectedPayment.py' } else { 'AnalyzeBoundSampledPayment.py' }
 $caseNames = if ($SelectedPayment) { @('0', '50', 'invalidate-after-selected-payment') } else { @('0', '50', 'invalidate-after-payment') }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -23,6 +24,7 @@ $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNo
 $native = Join-Path $run 'native'
 New-Item -ItemType Directory -Force $native | Out-Null
 $sources = @('build/build.fs', 'native/VerifyBoundSampledPayment.ps1', 'native/AnalyzeBoundSampledPayment.py', 'native/BoundSampledPaymentAnalysisChecks.py', 'native/VerifyServiceOwner.ps1', 'native/Profiler.cpp', 'native/ProbeLifetime.h', 'native/Sampler.h', 'native/BuildLinux.ps1', 'native/GenerateCallbacks.ps1', 'tests/Shared/IL.cs', 'tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj', 'native/service/CMakeLists.txt')
+$sources += 'native/CooperativeMeasurementEvidence.py'
 $sources += @('native/AnalyzeBoundSelectedPayment.py', 'native/BoundSelectedPaymentAnalysisChecks.py')
 $sources += @('native/AnalyzeCooperativePeerProgress.py', 'native/CooperativePeerProgressChecks.py')
 $sources += @('native/AnalyzeScheduler.py', 'native/BoundSchedulerEvidence.py', 'native/AnalyzeBoundScheduler.py', 'native/BoundSchedulerAnalysisChecks.py')
@@ -61,6 +63,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the Linux kernel.' }
 $managed = @()
 $managedChecks = @('--verify-bound-samples-managed', '--verify-bound-cooperative-managed')
 if ($SelectedPayment) { $managedChecks += '--verify-pausable-managed' }
+if ($FiniteMeasurement) { $managedChecks += '--verify-measurement-boundaries' }
 foreach ($check in $managedChecks) {
     & docker @container $image timeout -k 2s 30s dotnet /workload/CozNet.LinuxPerf.dll $check *> (Join-Path $run "$check.log")
     $managed += @{ check = $check; exitCode = $LASTEXITCODE }
@@ -75,6 +78,7 @@ $activation += @('--env', ('COZNET_BATCH_SERVICE=' + [int][bool]$BatchService))
 $activation += @('--env', ('COZNET_DISPATCH_TIMING=' + [int][bool]$DispatchTiming))
 $activation += @('--env', ('COZNET_BOUND_SCHEDULER=' + [int][bool]$Scheduler))
 $activation += @('--env', ('COZNET_SELECTED_HANDOFF=' + [int][bool]$SelectedHandoff))
+$activation += @('--env', ('COZNET_FINITE_MEASUREMENT=' + [int][bool]$FiniteMeasurement))
 $activation += @('--env', ('COZNET_PEER_PROGRESS=' + [int][bool]$PeerProgress))
 $activation += @('--env', ('COZNET_DIRECT_RECEIPT_READY=' + [int][bool]$DirectReceiptReady))
 $outcomes = @()
@@ -87,7 +91,7 @@ foreach ($case in $caseNames) {
         else { @('--sampled-bound-cooperative', "/evidence/$case.json", $case, '/native/libCozNet.Cooperative.so') }
     & docker @container @activation $image timeout -k 2s 30s dotnet /workload/CozNet.LinuxPerf.dll @arguments *> (Join-Path $run "$case.log")
     $caseExit = $LASTEXITCODE
-    $outcomes += Read-BoundSampledOutcome -Path (Join-Path $run "$case.json") -Case $case -ExitCode $caseExit -SelectedCadence $SelectedCadence -SelectedBatches $SelectedBatches -ExpectedPauseTiming ([bool]$PauseTiming) -ExpectedChildCpu ([bool]$ChildCpu) -ExpectedOwnerDrain ([bool]$OwnerDrain) -ExpectedReceiptCaptureVersion 1 -ExpectedBatchService ([bool]$BatchService) -ExpectedDispatchTiming ([bool]$DispatchTiming) -ExpectedDirectReceiptReady ([bool]$DirectReceiptReady) -ExpectedPeerProgress ([bool]$PeerProgress) -ExpectedScheduler ([bool]$Scheduler) -ExpectedSelectedHandoff ([bool]$SelectedHandoff)
+    $outcomes += Read-BoundSampledOutcome -Path (Join-Path $run "$case.json") -Case $case -ExitCode $caseExit -SelectedCadence $SelectedCadence -SelectedBatches $SelectedBatches -ExpectedPauseTiming ([bool]$PauseTiming) -ExpectedChildCpu ([bool]$ChildCpu) -ExpectedOwnerDrain ([bool]$OwnerDrain) -ExpectedReceiptCaptureVersion 1 -ExpectedBatchService ([bool]$BatchService) -ExpectedDispatchTiming ([bool]$DispatchTiming) -ExpectedDirectReceiptReady ([bool]$DirectReceiptReady) -ExpectedPeerProgress ([bool]$PeerProgress) -ExpectedScheduler ([bool]$Scheduler) -ExpectedSelectedHandoff ([bool]$SelectedHandoff) -ExpectedFiniteMeasurement ([bool]$FiniteMeasurement)
 }
 & python (Join-Path $run "source/native/$analysisScript") $run *> (Join-Path $run 'analysis.log')
 $analysisExit = $LASTEXITCODE
@@ -103,8 +107,8 @@ if ($Scheduler) {
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash (Join-Path $root $name)).Hash -eq $hashes[$name] }
 foreach ($file in $binaries.Keys) { $unchanged = $unchanged -and (Get-FileHash $file).Hash -eq $binaries[$file] }
-@{ sources = $hashes; binaries = $binaries; image = $image; source = 'selected Linux task-clock'; interval = 1024; runtimePerfMap = $false; order = $caseNames; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; dispatchTimingEnabled = [bool]$DispatchTiming; directReceiptReadyEnabled = [bool]$DirectReceiptReady; peerProgressEnabled = [bool]$PeerProgress; schedulerTiming = [bool]$Scheduler; selectedHandoffEnabled = [bool]$SelectedHandoff; selectedCadence = $SelectedCadence; requestedBatches = $(if ($SelectedCadence) { $SelectedBatches } else { $null }); measurementSeconds = $(if ($SelectedCadence) { $null } else { 2 }); debtLimitNanoseconds = 2000000 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
+@{ sources = $hashes; binaries = $binaries; image = $image; source = 'selected Linux task-clock'; interval = 1024; runtimePerfMap = $false; order = $caseNames; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; dispatchTimingEnabled = [bool]$DispatchTiming; directReceiptReadyEnabled = [bool]$DirectReceiptReady; peerProgressEnabled = [bool]$PeerProgress; schedulerTiming = [bool]$Scheduler; selectedHandoffEnabled = [bool]$SelectedHandoff; finiteMeasurementEnabled = [bool]$FiniteMeasurement; selectedCadence = $SelectedCadence; requestedBatches = $(if ($SelectedCadence) { $SelectedBatches } else { $null }); measurementSeconds = $(if ($SelectedCadence) { $null } else { 2 }); debtLimitNanoseconds = 2000000 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
 $passed = $unchanged -and $outcomeChecksExit -eq 0 -and $analysisChecksExit -eq 0 -and $analysisExit -eq 0 -and @($managed | Where-Object { $_.exitCode -ne 0 }).Count -eq 0 -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.passed -or $_.recordError }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; outcomeChecksExit = $outcomeChecksExit; analysisChecksExit = $analysisChecksExit; analysisExit = $analysisExit; managed = $managed; outcomes = $outcomes; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; dispatchTimingEnabled = [bool]$DispatchTiming; directReceiptReadyEnabled = [bool]$DirectReceiptReady; peerProgressEnabled = [bool]$PeerProgress; schedulerTiming = [bool]$Scheduler; selectedHandoffEnabled = [bool]$SelectedHandoff; selectedPaymentSupported = $false; predictionAccuracyEstablished = $false } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
+@{ passed = $passed; inputsUnchanged = $unchanged; outcomeChecksExit = $outcomeChecksExit; analysisChecksExit = $analysisChecksExit; analysisExit = $analysisExit; managed = $managed; outcomes = $outcomes; selectedPaymentEnabled = [bool]$SelectedPayment; pauseTimingEnabled = [bool]$PauseTiming; childCpuEnabled = [bool]$ChildCpu; ownerDrainEnabled = [bool]$OwnerDrain; batchServiceEnabled = [bool]$BatchService; dispatchTimingEnabled = [bool]$DispatchTiming; directReceiptReadyEnabled = [bool]$DirectReceiptReady; peerProgressEnabled = [bool]$PeerProgress; schedulerTiming = [bool]$Scheduler; selectedHandoffEnabled = [bool]$SelectedHandoff; finiteMeasurementEnabled = [bool]$FiniteMeasurement; selectedPaymentSupported = $false; predictionAccuracyEstablished = $false } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run
 if (-not $passed) { throw 'Bound sampled payment failed. Retain this run.' }

@@ -1,5 +1,7 @@
 # Lode index
 
+For frozen cooperative estimator inputs before cleanup, read [finite cooperative measurement](profiling/cooperative-measurement.md).
+
 For the opt-in selected-owner scheduling experiment, read [selected handoff](profiling/selected-handoff.md).
 
 For draft scheduler streams and clock brackets in the bound workload, read [bound scheduler capture](profiling/bound-scheduler.md).

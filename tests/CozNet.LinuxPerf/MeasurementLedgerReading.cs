@@ -44,6 +44,25 @@ sealed class MeasurementLedgerReading
         return new(snapshot.Ledger, null, 0, 0, 0);
     }
 
+    internal static MeasurementLedgerReading CaptureCooperative(SignalThreadSnapshot snapshot,
+        Guid? lease, long children, long wait, bool settled)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (children < 0 || wait < 0 || lease == Guid.Empty ||
+            (lease is null && (children != 0 || wait != 0 || settled)))
+            throw new InvalidDataException("Cooperative measurement ownership is invalid.");
+        if (snapshot.Operation is SignalOperationSnapshot.Service service)
+        {
+            if (!snapshot.Ledger.Phase.IsDelaying || settled || lease != SignalServiceLeaseModule.identity(service.lease)
+                || children != service.progress.Count || wait != service.progress.MeasuredNanoseconds)
+                throw new InvalidDataException("Cooperative measurement ownership differs from the accepted ledger prefix.");
+            return new(snapshot.Ledger, lease, children, service.progress.LastSequence, wait);
+        }
+        if (!snapshot.Operation.IsIdle || !snapshot.Ledger.Phase.IsRunnable || (lease is not null && !settled))
+            throw new InvalidDataException("Cooperative measurement has unsupported or unsettled ownership.");
+        return new(snapshot.Ledger, null, 0, 0, 0);
+    }
+
     internal bool Matches(long global, TimerServiceController.WorkerAccounting? controller) =>
         controller is not null && Global == global && (ServiceLease is { } lease
             ? controller.Pending is { LedgerSettled: false } pending && pending.Lease == lease

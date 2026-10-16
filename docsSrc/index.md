@@ -10,6 +10,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Capture a finite cooperative measurement](How_Tos/capture-cooperative-measurement.md).
+
 - [Compare selected scheduling handoff](How_Tos/compare-selected-handoff.md).
 
 - [Capture bound scheduler evidence](How_Tos/capture-bound-scheduler.md).
@@ -40,6 +42,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Finite cooperative measurement](Reference/cooperative-measurement.md): frozen estimator inputs and invalid outcomes.
 
 - [Selected scheduling handoff](Reference/selected-handoff.md): bounded attempts, unchanged accounting, and prediction limits.
 

@@ -6,6 +6,7 @@ import unittest
 
 from AnalyzeBoundSelectedPayment import main, verify_case, verify_record, verify_pause_timing, PAUSE_TIMING_FIELDS, verify_peer_progress
 from AnalyzeBoundSelectedPayment import verify_selected_handoff
+from CooperativeMeasurementEvidence import verify_measurement
 
 
 def payment(worker, ordinal, budget, waited, managed, native):
@@ -891,6 +892,217 @@ class SelectedHandoffAnalysisChecks(unittest.TestCase):
         record.update(ownerDrainEnabled=True, selectedHandoffEnabled=True, selectedHandoffAttempts=1, percent=0)
         with self.assertRaisesRegex(ValueError, 'Zero-speedup handoff contains attempts'):
             verify_selected_handoff(record)
+
+
+class CooperativeMeasurementEvidenceChecks(unittest.TestCase):
+    def finite_record(self):
+        record = SelectedPaymentAnalysisChecks().cadence_record()
+        record.update(finiteMeasurementEnabled=True, ownerDrainEnabled=True, peerBatches=10)
+
+        def worker(progress, released, local, global_delay):
+            return dict(Progress=progress, ReleasedWait=released, ActiveWait=0, Pending=None,
+                        Ledger=dict(Global=global_delay, Local=local, Phase="runnable", ServiceLease=None,
+                                    AcceptedChildren=0, LastSequence=0, UnsettledWait=0))
+
+        def boundary(stamp, global_delay, credit, prefix, epoch, selected, peer, journals):
+            return dict(BeforeTimestamp=stamp, AfterTimestamp=stamp, TimestampFrequency=1000000000,
+                        Accounting=dict(Global=global_delay, Credit=credit, AcceptedSampleSequence=prefix, Epoch=epoch,
+                                        Selected=selected, Peer=peer, Timer=None,
+                                        Cooperative=dict(Selected=None, Peer=None, ReleasedJournalCount=journals)))
+
+        start = boundary(1, 0, 0, 0, 1, worker(0, 0, 0, 0), worker(0, 0, 0, 0), 0)
+        end = boundary(99, 6, 2, 4, 2, worker(5, 4, 6, 6), worker(10, 6, 6, 6), 3)
+        record["measurement"] = dict(Window=dict(Status=2, Start=start, End=end), AcceptanceClosed=True,
+                                     CaptureFailure=None, Failure=None)
+        record["measurementAssessment"] = dict(Status="unqualified", Reasons=["sample-boundary-membership-unqualified",
+            "instrumentation-attribution-unqualified"], DescriptiveEstimate=dict(ElapsedLowerNanoseconds=98,
+            ElapsedUpperNanoseconds=98, GlobalDelayNanoseconds=6, EffectiveLowerNanoseconds=92,
+            EffectiveUpperNanoseconds=92, SelectedProgress=5, PeerProgress=10, AcceptedSamples=4))
+        return record
+
+    def test_full_replay_accepts_frozen_cooperative_estimate(self):
+        result = verify_record(self.finite_record())
+        self.assertEqual("unqualified", result["measurement"]["Status"])
+        self.assertEqual(92, result["measurement"]["DescriptiveEstimate"]["EffectiveLowerNanoseconds"])
+
+    def owned_record(self, children=0, wait=0, settled=False):
+        record = self.finite_record()
+        record["selectedWorkFinished"] = 84
+        boundary = record["measurement"]["Window"]["End"]
+        boundary.update(BeforeTimestamp=85, AfterTimestamp=85)
+        values = boundary["Accounting"]
+        lease = "00000000-0000-0000-0000-000000000001"
+        values["Cooperative"].update(ReleasedJournalCount=2, Peer=dict(Lease=lease, Command=2, Generation=2,
+            Budget=2, AcceptedChildren=children, ConfirmedWait=wait, LedgerSettled=settled))
+        values["Peer"].update(ReleasedWait=4, ActiveWait=wait, Pending=dict(Command=2, Generation=2))
+        values["Peer"]["Ledger"].update(Local=4 + (wait if settled else 0), Phase="runnable" if settled else "delaying",
+            ServiceLease=None if settled else lease, AcceptedChildren=0 if settled else children,
+            LastSequence=0 if settled or not children else (2 << 32) | children, UnsettledWait=0 if settled else wait)
+        reasons = record["measurementAssessment"]["Reasons"]
+        reasons.append("native-ownership-at-boundary")
+        if not settled or wait != 2:
+            reasons.append("unqualified-ledger-residual")
+        record["measurementAssessment"]["DescriptiveEstimate"].update(ElapsedLowerNanoseconds=84,
+            ElapsedUpperNanoseconds=84, EffectiveLowerNanoseconds=78, EffectiveUpperNanoseconds=78)
+        return record
+
+    def test_full_replay_retains_owned_prefix_and_later_release(self):
+        for children, wait, settled in ((0, 0, False), (1, 2, False), (1, 2, True)):
+            record = self.owned_record(children, wait, settled)
+            with self.subTest(children=children, settled=settled):
+                self.assertEqual("unqualified", verify_record(record)["measurement"]["Status"])
+                self.assertEqual(2, record["measurement"]["Window"]["End"]["Accounting"]["Cooperative"]["ReleasedJournalCount"])
+
+    def test_owned_prefix_cannot_change_its_later_receipt(self):
+        record = self.owned_record(1, 2, False)
+        values = record["measurement"]["Window"]["End"]["Accounting"]
+        values["Cooperative"]["Peer"]["ConfirmedWait"] = 1
+        values["Peer"]["ActiveWait"] = values["Peer"]["Ledger"]["UnsettledWait"] = 1
+        with self.assertRaisesRegex(ValueError, "Frozen accepted prefix differs"):
+            verify_record(record)
+
+    def test_settled_ownership_requires_complete_terminal_receipt(self):
+        with self.assertRaisesRegex(ValueError, "partial terminal receipt"):
+            verify_record(self.owned_record(0, 0, True))
+
+    def test_accepted_prefix_sequence_binds_native_generation_and_ordinal(self):
+        record = self.owned_record(1, 2, False)
+        record["measurement"]["Window"]["End"]["Accounting"]["Peer"]["Ledger"]["LastSequence"] = 1
+        with self.assertRaisesRegex(ValueError, "Frozen accepted prefix differs from ledger ownership"):
+            verify_record(record)
+
+    def test_required_native_and_residual_reasons_cannot_disappear(self):
+        for reason in ("native-ownership-at-boundary", "unqualified-ledger-residual"):
+            record = self.owned_record()
+            record["measurementAssessment"]["Reasons"].remove(reason)
+            with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, "omitted .* qualification"):
+                verify_record(record)
+
+    def test_source_tail_is_retained_without_entering_frozen_credit(self):
+        record = self.finite_record()
+        sample = dict(record["sourceSamples"][-1], Timestamp=5, CumulativeCpuNanoseconds=13, PeriodNanoseconds=1)
+        record["sourceSamples"].append(sample)
+        record["sourceEpochSamples"].append(dict(EligibilityEpoch=2, Sample=sample))
+        record["batch"].update(Samples=5, SelectedMethodSamples=5, RepresentedCpuNanoseconds=13)
+        record["finalCounters"]["LastReading"]["CpuNanoseconds"] = 13
+        record["measurementAssessment"]["Reasons"].append("source-tail-outside-frozen-prefix")
+        self.assertEqual(4, verify_record(record)["measurement"]["DescriptiveEstimate"]["AcceptedSamples"])
+        record["measurementAssessment"]["Reasons"].remove("source-tail-outside-frozen-prefix")
+        with self.assertRaisesRegex(ValueError, "omitted source tail"):
+            verify_record(record)
+
+    def test_focused_unsubmitted_ownership_uses_raw_pending_identity(self):
+        record = self.owned_record()
+        record.update(completed=False, passed=False, pending=dict(command=2, generation=0, budget=2, started=80))
+        record["payments"] = record["payments"][:1]
+        values = record["measurement"]["Window"]["End"]["Accounting"]
+        values["Cooperative"]["Peer"]["Generation"] = 0
+        values["Peer"]["Pending"]["Generation"] = 0
+        record["measurementAssessment"]["Status"] = "invalid"
+        self.assertEqual("invalid", verify_measurement(record)["Status"])
+        for children, wait, settled in ((1, 0, False), (0, 1, False), (0, 0, True)):
+            changed = copy.deepcopy(record)
+            changed["measurement"]["Window"]["End"]["Accounting"]["Cooperative"]["Peer"].update(
+                AcceptedChildren=children, ConfirmedWait=wait, LedgerSettled=settled)
+            with self.subTest(children=children, wait=wait, settled=settled), self.assertRaisesRegex(ValueError,
+                    "Unsubmitted ownership contains"):
+                verify_measurement(changed)
+        record["pending"]["command"] = 3
+        with self.assertRaisesRegex(ValueError, "does not match a retained request"):
+            verify_measurement(record)
+
+    def test_estimate_cannot_substitute_worker_wait_sum(self):
+        record = self.finite_record()
+        record["measurementAssessment"]["DescriptiveEstimate"].update(GlobalDelayNanoseconds=10,
+            EffectiveLowerNanoseconds=88, EffectiveUpperNanoseconds=88)
+        with self.assertRaisesRegex(ValueError, "Frozen estimator arithmetic differs"):
+            verify_record(record)
+
+    def test_selected_progress_cannot_change_with_consistent_estimate(self):
+        for start_count, end_count in ((0, 4), (1, 5)):
+            record = self.finite_record()
+            window = record["measurement"]["Window"]
+            window["Start"]["Accounting"]["Selected"]["Progress"] = start_count
+            window["End"]["Accounting"]["Selected"]["Progress"] = end_count
+            record["measurementAssessment"]["DescriptiveEstimate"]["SelectedProgress"] = end_count - start_count
+            with self.subTest(start=start_count, end=end_count), self.assertRaisesRegex(ValueError,
+                    "Frozen selected progress|fresh cooperative experiment"):
+                verify_record(record)
+
+    def test_global_delay_cannot_contradict_later_ledger(self):
+        for changed in (5, 7):
+            record = self.finite_record()
+            values = record["measurement"]["Window"]["End"]["Accounting"]
+            values["Global"] = changed
+            for name in ("Selected", "Peer"):
+                values[name]["Ledger"]["Global"] = changed
+            record["measurementAssessment"]["Reasons"].append("unqualified-ledger-residual")
+            record["measurementAssessment"]["DescriptiveEstimate"].update(GlobalDelayNanoseconds=changed,
+                EffectiveLowerNanoseconds=98-changed, EffectiveUpperNanoseconds=98-changed)
+            with self.subTest(delay=changed), self.assertRaisesRegex(ValueError, "post-freeze ledger"):
+                verify_record(record)
+
+    def test_finite_completion_retains_unpaid_residual_without_a_new_lease(self):
+        record = self.finite_record()
+        record["sourceSamples"][-1].update(PeriodNanoseconds=12, CumulativeCpuNanoseconds=23)
+        record["sourceEpochSamples"][-1]["Sample"] = record["sourceSamples"][-1]
+        record["samples"][-1].update(Sample=record["sourceSamples"][-1], Credit=6)
+        record["credit"] = 7
+        record["batch"]["RepresentedCpuNanoseconds"] = 23
+        record["finalCounters"]["LastReading"]["CpuNanoseconds"] = 23
+        record["finalDebt"] = debt(110, 11, 7, 6, 4)
+        values = record["measurement"]["Window"]["End"]["Accounting"]
+        values.update(Global=11, Credit=7)
+        values["Selected"]["Ledger"].update(Global=11, Local=11)
+        values["Peer"]["Ledger"]["Global"] = 11
+        record["measurementAssessment"]["Reasons"].append("unqualified-ledger-residual")
+        record["measurementAssessment"]["DescriptiveEstimate"].update(GlobalDelayNanoseconds=11,
+            EffectiveLowerNanoseconds=87, EffectiveUpperNanoseconds=87)
+        self.assertEqual("unqualified", verify_record(record)["measurement"]["Status"])
+        self.assertEqual(5, record["finalDebt"]["Peer"])
+        record.update(finiteMeasurementEnabled=False, measurement=None, measurementAssessment=None)
+        with self.assertRaisesRegex(ValueError, "Final ledger does not reconcile"):
+            verify_record(record)
+
+    def test_frozen_prefix_inventory_and_progress_bind_to_record(self):
+        mutations = [lambda a: a.update(Credit=3), lambda a: a.update(AcceptedSampleSequence=3),
+                     lambda a: a["Cooperative"].update(ReleasedJournalCount=4),
+                     lambda a: a["Peer"].update(ReleasedWait=7), lambda a: a["Selected"].update(Progress=6),
+                     lambda a: a.update(Timer={})]
+        for mutate in mutations:
+            record = self.finite_record()
+            mutate(record["measurement"]["Window"]["End"]["Accounting"])
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError):
+                verify_record(record)
+
+    def test_final_shutdown_cannot_define_frozen_endpoint(self):
+        record = self.finite_record()
+        end = record["measurement"]["Window"]["End"]
+        end.update(BeforeTimestamp=101, AfterTimestamp=101)
+        record["measurementAssessment"]["DescriptiveEstimate"].update(ElapsedLowerNanoseconds=100,
+            ElapsedUpperNanoseconds=100, EffectiveLowerNanoseconds=94, EffectiveUpperNanoseconds=94)
+        with self.assertRaisesRegex(ValueError, "Source shutdown preceded endpoint capture"):
+            verify_record(record)
+
+    def test_failure_after_freeze_preserves_invalid_outcome(self):
+        record = self.finite_record()
+        record.update(completed=False, passed=False, verificationFailure="source close failed")
+        record["measurement"]["Failure"] = record["verificationFailure"]
+        record["measurementAssessment"]["Status"] = "invalid"
+        self.assertEqual("invalid", verify_record(record)["measurement"]["Status"])
+        record["measurementAssessment"]["Status"] = "unqualified"
+        with self.assertRaisesRegex(ValueError, "Measurement outcome hides a failure"):
+            verify_record(record)
+
+    def test_activation_and_qualification_cannot_be_forged(self):
+        for mutate in (lambda r: r.update(finiteMeasurementEnabled=1), lambda r: r.update(ownerDrainEnabled=False),
+                       lambda r: r["measurement"].update(AcceptanceClosed=False),
+                       lambda r: r["measurementAssessment"].update(Status="qualified"),
+                       lambda r: r["measurementAssessment"].update(Reasons=[])):
+            record = self.finite_record()
+            mutate(record)
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError):
+                verify_record(record)
 
 
 if __name__ == "__main__":
