@@ -8,7 +8,10 @@ The [managed client](cooperative-managed.md) supports manual owner polling. No i
 ## Registration and lifetime
 
 `registerCurrentThread` binds a parsed `CooperativePollSite` to the current `std::thread::id`.
-The caller supplies a distinct, nonempty controller thread identity, journal capacity, code-lifetime object, and timing adapter.
+The caller supplies a nonempty controller thread identity, journal capacity, code-lifetime object, and timing adapter.
+The default `CooperativeOwnerRole::separate` requires a distinct controller thread.
+Explicit `CooperativeOwnerRole::controller` requires the registering thread to be the controller.
+Unknown role values fail registration. Controller operations retain the same thread checks in both modes.
 Capacity must be from 1 through 100,000 children.
 The site's code-version identity must match the code-lifetime object.
 Registration rejects revoked code.
@@ -17,7 +20,8 @@ The worker identity in the site is a logical label. It is not an OS thread ident
 The host must assign labels consistently and route each registration to its own target object.
 The object checks actual calling-thread identity independently of those labels.
 The owner must retire the registration before thread exit. Thread-identity reuse after an abnormal exit remains unsupported.
-The target and timing adapter must outlive every call. The host must join the owner before destroying target storage.
+The target and timing adapter must outlive every call. The host must join a separate owner before destroying target storage.
+A controller-owned target requires retirement and no active call before destruction.
 
 `CooperativeCodeLifetime` retains a code-version identity and a shared lifetime guard.
 `tryRevoke` returns false while another thread holds that guard. A false result does not revoke code.
@@ -29,6 +33,10 @@ The host must also obey CLR active-frame and unload rules.
 This hook does not automatically pin CLR code, intercept ReJIT, or verify probe origin.
 
 ## Controller operations
+
+Registration, revocation, submission, polling, cancellation, journal copies, release, and retirement reject same-thread nested transport entry.
+This applies across target objects before lock acquisition. Other threads can still use their permitted roles.
+Atomic receipt-readiness and progress observations do not grant controller authority.
 
 | Operation | Contract |
 | --- | --- |

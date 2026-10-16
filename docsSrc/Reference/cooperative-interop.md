@@ -14,11 +14,22 @@ C++ exceptions become status codes at the boundary.
 The opening thread owns submission, cancellation, snapshots, release, revocation, clock reads, and close.
 Each target registers, polls, and retires on its own thread.
 Registration requires a nonzero worker identity and site identity. A slot cannot register twice.
-The host must keep these threads alive and must join the owners before closing the session.
+The host must keep these threads alive and join separate owner threads before closing the session.
+An owner that is also the controller must retire its slot before close.
+
+`coz_cooperative_open_owner(code_version, targets, capacity, controller_slot, session)` reserves one slot for the opening thread.
+The slot must be less than `targets`. Invalid slots fail before session creation.
+Only the opening thread can register that slot. Other slots still require separate owner threads.
+The reservation is immutable. All controller operations retain opening-thread affinity.
+`coz_cooperative_open` retains the default separate-owner contract.
+Managed workload integration and a measured cost comparison remain pending.
 
 An API lifetime guard excludes close and registration while other API calls execute.
 Polls from different targets can execute together. This guard is separate from the code-revocation guard.
 The API guard and code guard add unmeasured lock costs.
+Calls that reach the shared entry boundary return `BUSY` on same-thread nesting, before either lock.
+Argument checks can return `INVALID` before that boundary.
+The API and target entry guards add thread-local accesses in both modes. Their cost has not been isolated.
 
 ## Operations
 

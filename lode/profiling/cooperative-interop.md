@@ -3,6 +3,10 @@
 `CozNet.Cooperative` exposes the portable target transport through a separate C ABI.
 One process can open one session. A shared API lifetime guard excludes registration and close from active calls.
 Controller operations retain thread affinity. Each target registers, polls, and retires on its owner thread.
+`coz_cooperative_open_owner` reserves one immutable slot for the creating controller thread.
+The reserved slot rejects other owners. All other slots retain separate ownership.
+The default open function preserves role separation. Nested API entry returns `BUSY` before locking.
+Managed workload integration and cost comparison for the new native mode remain pending.
 Polls can execute together. Shared API and code locks add unmeasured overhead.
 
 The ABI parses nonzero site identities into `CooperativePollSite` before registration or polling.

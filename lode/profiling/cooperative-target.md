@@ -1,6 +1,9 @@
 # Cooperative target transport
 
-`CooperativeTarget` binds one site descriptor to the registering native thread and a distinct controller thread.
+`CooperativeTarget` binds one site descriptor to the registering native thread and one controller thread.
+Default `CooperativeOwnerRole::separate` requires distinct threads.
+Explicit `CooperativeOwnerRole::controller` requires the registering thread to be the controller.
+Unknown role values fail registration. Thread-local entry guards reject nested transport mutation and code-lock access across targets.
 It composes the existing mailbox and target lease. A poll services at most one child.
 The [cooperative C ABI](cooperative-interop.md) provides production timing and receipt records.
 The [managed client](cooperative-managed.md) supports manual polls. Injected probe binding remains incomplete.
@@ -29,7 +32,7 @@ Shutdown must retain owner polling until termination and controller release. The
 
 The timing interface uses nonthrowing finite hooks in one monotonic nanosecond domain.
 The controller and owner can read it concurrently. Wait operations execute only on the owner.
-Hooks must not reenter transport or revocation operations. A nested poll is rejected.
+Hooks must not reenter transport or revocation operations. Nested calls fail before lock acquisition.
 Duration limits validate returned evidence. They cannot preempt a stuck hook.
 A zero pre-wait clock reading prevents the wait and retains a failed child with zero payment.
 `preWaitClockFailureRetainsEvidence` checks this boundary and requires a copied journal before release.

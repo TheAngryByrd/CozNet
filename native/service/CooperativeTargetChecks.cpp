@@ -27,6 +27,7 @@ public:
     std::atomic<bool> broken{}, hold{}, entered{}, resume{};
     std::atomic<TargetWaitStatus> outcome{TargetWaitStatus::completed};
     std::function<void()> duringWait;
+    std::function<void()> duringNow;
     uint64_t cpuCalls{}, cpuCost{};
     CooperativeCpuStatus cpuStatus{CooperativeCpuStatus::observed};
     CooperativeCpuReading cpu() noexcept override {
@@ -38,6 +39,7 @@ public:
         return {cpuStatus, CooperativeCpuClock::linux_thread, cpuCalls * 100, 1, 0};
     }
     uint64_t now() noexcept override {
+        if (duringNow) duringNow();
         if (broken.load()) return 0;
         const auto value = clock.fetch_add(100);
         return value == zeroAt.load() ? 0 : value;
@@ -450,7 +452,131 @@ static void disabledProgressRemainsUnavailable() {
     read(worker, *generation, children);
     require(worker.target->release(*generation) && worker.run([&] { return worker.target->retire(); }), 172);
 }
+static void controllerOwnerLifecycle() {
+    Worker peer;
+    Timing timing;
+    const auto controller = std::this_thread::get_id();
+    require(!CooperativeTarget::registerCurrentThread(site(), peer.code, controller, 4, timing), 180);
+    require(!CooperativeTarget::registerCurrentThread(site(), peer.code, controller, 4, timing,
+        false, false, static_cast<CooperativeOwnerRole>(99)), 181);
+    require(peer.run([&] { return !CooperativeTarget::registerCurrentThread(site(), peer.code,
+        controller, 4, timing, false, false, CooperativeOwnerRole::controller); }), 182);
+    auto target = CooperativeTarget::registerCurrentThread(site(), peer.code, controller, 4, timing,
+        true, true, CooperativeOwnerRole::controller);
+    require(target != nullptr, 183);
+    const auto generation = target->submit(101, 60000);
+    require(generation && !target->submit(102, 1) && !target->release(*generation) && !target->retire(), 184);
+    require(peer.run([&] {
+        std::array<TargetLeaseChild, 4> children{};
+        std::size_t count{};
+        return !target->submit(102, 1) && !target->cancel(*generation)
+            && !target->snapshot(*generation, children, count) && !target->release(*generation)
+            && target->poll(site()) == CooperativePollResult::rejected && !target->retire();
+    }), 185);
+    const auto peerGeneration = peer.target->submit(202, 1);
+    require(peerGeneration.has_value(), 186);
+    peer.timing.hold.store(true);
+    auto peerPoll = peer.enqueue([&] { return peer.target->poll(site()); });
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!peer.timing.entered.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::yield();
+    require(peer.timing.entered.load() && target->poll(site()) == CooperativePollResult::serviced
+        && target->poll(site()) == CooperativePollResult::serviced, 187);
+    std::size_t count{};
+    require(!target->snapshot(*generation, {}, count) && count == 2 && !target->release(*generation), 188);
+    std::array<TargetLeaseChild, 4> children{};
+    auto snapshot = target->snapshot(*generation, children, count);
+    require(snapshot && snapshot->command == 101 && snapshot->children == 2 && snapshot->measured == 60100
+        && children[0].requested == 50000 && children[1].requested == 9900
+        && snapshot->visibility == TargetLeaseVisibility::retired, 189);
+    std::array<CooperativeCpuChild, 4> cpu{};
+    require(target->cpuSnapshot(*generation, cpu) == 2 && cpu[0].command == 101
+        && target->progress(*generation)->phase == CooperativeProgressPhase::quiesced, 190);
+    require(target->release(*generation) && !target->release(*generation), 191);
+    peer.timing.resume.store(true, std::memory_order_release);
+    require(peerPoll.wait_for(std::chrono::seconds(5)) == std::future_status::ready
+        && peerPoll.get() == CooperativePollResult::serviced, 192);
+    auto peerSnapshot = read(peer, *peerGeneration, children);
+    require(peerSnapshot.command == 202 && peerSnapshot.measured == 101
+        && peer.target->release(*peerGeneration), 193);
+    const auto next = target->submit(103, 1);
+    require(next && *next != *generation && target->cancel(*next)
+        && target->poll(site()) == CooperativePollResult::serviced, 194);
+    snapshot = target->snapshot(*next, children, count);
+    require(snapshot && snapshot->measured == 0 && snapshot->visibility == TargetLeaseVisibility::retired
+        && target->release(*next), 195);
+    const auto revoked = target->submit(104, 1);
+    require(revoked && peer.code->tryRevoke() && target->poll(site()) == CooperativePollResult::serviced, 196);
+    snapshot = target->snapshot(*revoked, children, count);
+    require(snapshot && snapshot->measured == 0 && target->release(*revoked)
+        && !target->submit(105, 1) && target->retire() && target->retired()
+        && peer.run([&] { return peer.target->retire(); }), 197);
+}
+
+static void controllerOwnerRejectsReentrancy() {
+    Timing timing;
+    auto code = std::make_shared<CooperativeCodeLifetime>(site());
+    const auto controller = std::this_thread::get_id();
+    auto target = CooperativeTarget::registerCurrentThread(site(), code, controller, 4, timing,
+        true, false, CooperativeOwnerRole::controller);
+    require(target != nullptr, 198);
+    Timing otherTiming;
+    auto otherCode = std::make_shared<CooperativeCodeLifetime>(site());
+    auto otherTarget = CooperativeTarget::registerCurrentThread(site(), otherCode, controller, 4, otherTiming,
+        true, false, CooperativeOwnerRole::controller);
+    require(otherTarget != nullptr, 207);
+    const auto otherGeneration = otherTarget->submit(401, 1);
+    require(otherGeneration && otherTarget->poll(site()) == CooperativePollResult::serviced, 208);
+    std::array<TargetLeaseChild, 4> otherChildren{};
+    std::size_t otherCount{};
+    require(otherTarget->snapshot(*otherGeneration, otherChildren, otherCount).has_value(), 209);
+    uint32_t generation = 1;
+    unsigned callbacks{};
+    const auto reenter = [&] {
+        ++callbacks;
+        std::array<TargetLeaseChild, 4> children{};
+        std::array<CooperativeCpuChild, 4> cpu{};
+        std::size_t count{};
+        require(!target->submit(999, 1) && !target->cancel(generation)
+            && !target->snapshot(generation, children, count) && !target->cpuSnapshot(generation, cpu)
+            && !target->release(generation) && !target->retire(), 199);
+        require(target->poll(site()) == CooperativePollResult::rejected && !code->tryRevoke(), 200);
+        require(!otherTarget->cpuSnapshot(*otherGeneration, cpu)
+            && !otherTarget->release(*otherGeneration) && !otherCode->tryRevoke(), 210);
+        require(!CooperativeTarget::registerCurrentThread(site(), code, controller, 4, timing,
+            false, false, CooperativeOwnerRole::controller), 201);
+    };
+    timing.duringNow = reenter;
+    auto submitted = target->submit(301, 1);
+    require(submitted && callbacks > 0, 202);
+    generation = *submitted;
+    timing.duringNow = {};
+    const auto clockCallbacks = callbacks;
+    timing.duringWait = reenter;
+    require(target->poll(site()) == CooperativePollResult::serviced && callbacks == clockCallbacks + 1, 203);
+    timing.duringWait = {};
+    std::array<TargetLeaseChild, 4> children{};
+    std::size_t count{};
+    const auto snapshot = target->snapshot(generation, children, count);
+    require(snapshot && snapshot->command == 301 && snapshot->measured == 101 && count == 1
+        && target->release(generation), 204);
+    submitted = target->submit(302, 1);
+    require(submitted && *submitted != generation && target->poll(site()) == CooperativePollResult::serviced, 205);
+    require(target->snapshot(*submitted, children, count).has_value() && target->release(*submitted)
+        && target->retire() && code->tryRevoke(), 206);
+    std::array<CooperativeCpuChild, 4> otherCpu{};
+    require(otherTarget->cpuSnapshot(*otherGeneration, otherCpu) == 1 && otherCpu[0].command == 401
+        && otherTarget->release(*otherGeneration), 211);
+    const auto otherNext = otherTarget->submit(402, 1);
+    require(otherNext && *otherNext != *otherGeneration
+        && otherTarget->poll(site()) == CooperativePollResult::serviced, 212);
+    require(otherTarget->snapshot(*otherNext, otherChildren, otherCount).has_value()
+        && otherTarget->release(*otherNext) && otherTarget->retire(), 213);
+}
+
 int main() {
+    controllerOwnerLifecycle();
+    controllerOwnerRejectsReentrancy();
     progressPreservesGenerationAndTerminalPhase();
     progressConcurrentGenerationReplacement();
     progressObservesExecutingChildWithoutReceiptAuthority();

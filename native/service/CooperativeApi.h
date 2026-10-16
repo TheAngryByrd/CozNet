@@ -75,6 +75,7 @@ COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_cpu_snapshot
     uint32_t slot, uint64_t generation, CozCooperativeCpuChild* children, uint32_t capacity, uint32_t* required);
 
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_open(uint64_t code_version, uint32_t targets, uint32_t capacity, CozCooperativeSession** session);
+COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_open_owner(uint64_t code_version, uint32_t targets, uint32_t capacity, uint32_t controller_slot, CozCooperativeSession** session);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_register(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_poll(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t code_version, uint64_t site, uint32_t* result);
 COZ_COOPERATIVE_EXPORT int32_t COZ_COOPERATIVE_CALL coz_cooperative_submit(CozCooperativeSession* session, uint32_t slot, uint64_t command, uint64_t budget, uint64_t* generation);

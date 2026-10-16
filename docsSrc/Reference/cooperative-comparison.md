@@ -93,7 +93,8 @@ Successful platform runs do not establish those failure paths.
 The descriptive prediction interval is approximately −2.4% to +0.3% elapsed reduction.
 The physical interval is approximately +14.1% to +69.8%.
 Boundary widths, attribution, local optimization calibration, and single-block ordering prevent accuracy qualification.
-The next investigation will inspect the extra pause and receipt-observation work in treatment.
+The [phase capture](../Explanations/cooperative-pause-cost.md) separates selected pause intervals and retained controller dispatch brackets.
+It does not qualify observer cost or prediction accuracy.
 
 See [physical work](cooperative-physical-work.md), [finite measurement](cooperative-measurement.md),
 [comparison limits](../Explanations/cooperative-physical-comparison.md),

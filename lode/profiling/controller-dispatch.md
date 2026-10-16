@@ -51,7 +51,19 @@ Replay does not bind diagnostic request identities to payment or failure-boundar
 Operation labels and the selected/peer identity mapping have source review, not isolated workload-wiring checks.
 Header polling can evict submit records. Global maxima can belong to setup or cleanup.
 
-The unrestricted treatment completes 50,000 batches with 29,456 calls. All three cases pass.
+The [finite cost capture](../../docsSrc/Explanations/cooperative-pause-cost.md) records 1,344 treatment dispatches and 146 complete pauses.
+Pause totals are 39,796,340 ns. Publication through callback return totals 26,240,063 ns.
+Its recent tail contains 126 complete dispatches wholly inside conservative measurement endpoints.
+Queue and return sums exceed action sums for each retained operation. Do not extrapolate to evicted calls.
+The diagnostic leaves both completed measurements unqualified and intended invalidation invalid.
+
+The [owner/controller design](../../docsSrc/Research/cooperative-owner-controller.md) now has a native mode with an immutable reserved slot.
+Its narrow mode retains one creator/controller and permits that thread to own the selected slot.
+Native entry guards reject reentrancy before locking. Managed integration and explicit scheduler identity handling remain pending.
+Acceptance and release must remain separate when the managed workload adopts the mode.
+Default role separation and all accounting bounds remain required. Direct execution does not imply zero controller cost.
+
+The earlier unrestricted treatment completes 50,000 batches with 29,456 calls. All three cases pass.
 The one-CPU treatment fails at 19,944 batches with a 6,167,752 ns native child.
 Its failed peer read has a 0.316728 ms action bracket and 115.427269 ms return bracket.
 This separates recorded phases but does not isolate observer cost or a scheduling cause.

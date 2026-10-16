@@ -8,6 +8,21 @@
 #include <vector>
 
 namespace coz::service {
+namespace detail {
+template<class Domain> class CooperativeCallGuard {
+public:
+    CooperativeCallGuard() noexcept : entered_(!active_) { if (entered_) active_ = true; }
+    ~CooperativeCallGuard() { if (entered_) active_ = false; }
+    CooperativeCallGuard(const CooperativeCallGuard&) = delete;
+    CooperativeCallGuard& operator=(const CooperativeCallGuard&) = delete;
+    explicit operator bool() const noexcept { return entered_; }
+private:
+    inline static thread_local bool active_{};
+    const bool entered_;
+};
+struct CooperativeTargetCall;
+}
+enum class CooperativeOwnerRole { separate, controller };
 enum class CooperativeCpuClock : uint64_t { none, linux_thread };
 enum class CooperativeCpuStatus : uint64_t { unsupported, observed, failed };
 
@@ -48,7 +63,8 @@ class CooperativeTarget {
 public:
     static std::unique_ptr<CooperativeTarget> registerCurrentThread(CooperativePollSite site,
         std::shared_ptr<CooperativeCodeLifetime> code, std::thread::id controller,
-        std::size_t capacity, CooperativeTiming& timing, bool observeCpu = false, bool observeProgress = false);
+        std::size_t capacity, CooperativeTiming& timing, bool observeCpu = false, bool observeProgress = false,
+        CooperativeOwnerRole role = CooperativeOwnerRole::separate);
     CooperativeTarget(const CooperativeTarget&) = delete;
     CooperativeTarget& operator=(const CooperativeTarget&) = delete;
     std::optional<uint32_t> submit(uint64_t command, uint64_t budget);

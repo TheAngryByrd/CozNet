@@ -97,6 +97,10 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Explanation
 
+- [Cooperative pause and controller costs](Explanations/cooperative-pause-cost.md).
+
+- [Synchronous cooperative owner and controller](Research/cooperative-owner-controller.md): native mode and pending managed integration.
+
 - [Comparing cooperative work with a physical change](Explanations/cooperative-physical-comparison.md).
 
 - [Owner draining and payment capacity](Explanations/owner-drain-capacity.md).

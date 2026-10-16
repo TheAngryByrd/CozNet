@@ -44,7 +44,9 @@ The earlier physical-only capture has Linux start brackets of about 107 ms and 9
 Source hashes do not bind source to prebuilt binaries. Direct physical failure paths still lack fault-injection checks.
 These limits are accepted for an unqualified diagnostic capture, not for prediction or general failure-safety claims.
 General comparison reliability and accuracy qualification remain incomplete.
-Treatment has 143 selected pauses and 79,729 receipt-readiness calls. Inspect these costs before changing sampled accounting.
+Treatment has 143 selected pauses and 79,729 receipt-readiness calls.
+The separate [phase capture](../../docsSrc/Explanations/cooperative-pause-cost.md) records 146 pauses and identifies callback intervals for further investigation.
+Neither capture isolates observer cost or justifies changing sampled accounting.
 The optimized arithmetic does not establish an exact 50% region-time reduction.
 The shared checksum checks and counters change sampled per-batch costs relative to earlier captures.
 

@@ -4,7 +4,10 @@
 #include <algorithm>
 
 namespace coz::service {
+using TargetCallGuard = detail::CooperativeCallGuard<detail::CooperativeTargetCall>;
 bool CooperativeCodeLifetime::tryRevoke() {
+    TargetCallGuard entry;
+    if (!entry) return false;
     std::unique_lock lock(gate_, std::try_to_lock);
     if (!lock.owns_lock()) return false;
     active_ = false;
@@ -18,8 +21,11 @@ CooperativeTarget::CooperativeTarget(CooperativePollSite site, std::shared_ptr<C
 
 std::unique_ptr<CooperativeTarget> CooperativeTarget::registerCurrentThread(CooperativePollSite site,
     std::shared_ptr<CooperativeCodeLifetime> code, std::thread::id controller,
-    std::size_t capacity, CooperativeTiming& timing, bool observeCpu, bool observeProgress) {
-    if (!code || controller == std::thread::id{} || controller == std::this_thread::get_id()
+    std::size_t capacity, CooperativeTiming& timing, bool observeCpu, bool observeProgress, CooperativeOwnerRole role) {
+    TargetCallGuard entry;
+    if (!entry || (role != CooperativeOwnerRole::separate && role != CooperativeOwnerRole::controller)) return nullptr;
+    if (!code || controller == std::thread::id{}
+        || (controller == std::this_thread::get_id()) != (role == CooperativeOwnerRole::controller)
         || capacity == 0 || capacity > 100000 || code->version_ != site.codeVersion()) return nullptr;
     std::shared_lock guard(code->gate_);
     if (!code->active_) return nullptr;
@@ -27,6 +33,8 @@ std::unique_ptr<CooperativeTarget> CooperativeTarget::registerCurrentThread(Coop
 }
 
 std::optional<uint32_t> CooperativeTarget::submit(uint64_t command, uint64_t budget) {
+    TargetCallGuard entry;
+    if (!entry) return std::nullopt;
     if (!controller() || outstanding_.load(std::memory_order_acquire) != 0
         || !TargetLeasePlan::parseCooperative(1, command, budget, site_)) return std::nullopt;
     std::shared_lock guard(code_->gate_);
@@ -61,6 +69,8 @@ bool CooperativeTarget::finish() noexcept {
 }
 
 CooperativePollResult CooperativeTarget::poll(CooperativePollSite observed) {
+    TargetCallGuard entry;
+    if (!entry) return CooperativePollResult::rejected;
     if (std::this_thread::get_id() != owner_ || retired() || polling_) return CooperativePollResult::rejected;
     const auto generation = announced_.load(std::memory_order_acquire);
     if (generation == 0) return CooperativePollResult::idle;
@@ -120,6 +130,8 @@ CooperativePollResult CooperativeTarget::poll(CooperativePollSite observed) {
 }
 
 bool CooperativeTarget::cancel(uint32_t generation) noexcept {
+    TargetCallGuard entry;
+    if (!entry) return false;
     return controller() && generation != 0 && outstanding_.load(std::memory_order_acquire) == generation
         && mailbox_.cancel(generation);
 }
@@ -139,6 +151,8 @@ std::optional<CooperativeProgressSnapshot> CooperativeTarget::progress(uint32_t 
 }
 std::optional<TargetLeaseSnapshot> CooperativeTarget::snapshot(uint32_t generation,
     std::span<TargetLeaseChild> destination, std::size_t& required) noexcept {
+    TargetCallGuard entry;
+    if (!entry) return std::nullopt;
     if (!controller() || generation == 0 || outstanding_.load(std::memory_order_acquire) != generation) return std::nullopt;
     auto reader = mailbox_.read(generation);
     if (!reader) return std::nullopt;
@@ -148,6 +162,8 @@ std::optional<TargetLeaseSnapshot> CooperativeTarget::snapshot(uint32_t generati
 }
 std::optional<std::size_t> CooperativeTarget::cpuSnapshot(uint32_t generation,
     std::span<CooperativeCpuChild> destination) noexcept {
+    TargetCallGuard entry;
+    if (!entry) return std::nullopt;
     if (!controller() || !observe_cpu_ || generation == 0
         || outstanding_.load(std::memory_order_acquire) != generation) return std::nullopt;
     auto reader = mailbox_.read(generation);
@@ -158,6 +174,8 @@ std::optional<std::size_t> CooperativeTarget::cpuSnapshot(uint32_t generation,
 }
 
 bool CooperativeTarget::release(uint32_t generation) noexcept {
+    TargetCallGuard entry;
+    if (!entry) return false;
     if (!controller() || generation == 0 || outstanding_.load(std::memory_order_acquire) != generation
         || !observed_retired_) return false;
     {
@@ -169,6 +187,8 @@ bool CooperativeTarget::release(uint32_t generation) noexcept {
     return true;
 }
 bool CooperativeTarget::retire() noexcept {
+    TargetCallGuard entry;
+    if (!entry) return false;
     if (std::this_thread::get_id() != owner_ || outstanding_.load(std::memory_order_acquire) != 0
         || !mailbox_.close()) return false;
     retired_.store(true, std::memory_order_release);

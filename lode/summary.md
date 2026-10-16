@@ -1,9 +1,15 @@
 # Project scope
 
+An explicit [native owner/controller mode](profiling/cooperative-interop.md) reserves one slot for the session creator.
+Default role separation remains. Native checks pass on Windows and Linux.
+Managed integration and a cost comparison remain pending.
+
 An opt-in [finite cooperative capture](profiling/cooperative-measurement.md) freezes global delay and progress before cleanup.
 It preserves invalid outcomes and unqualified native ownership.
 The [first matched cooperative block](profiling/cooperative-physical.md) completes all four arms but remains unqualified.
-Its descriptive virtual and physical reductions differ. Pause and receipt-observation costs require further investigation.
+Its descriptive virtual and physical reductions differ.
+The [phase capture](../docsSrc/Explanations/cooperative-pause-cost.md) places 26.240063 ms of 39.796340 ms in publication through callback return.
+Controller round trips require investigation. The retained dispatch tail cannot establish total dispatch cost.
 Its first Linux capture freezes a pending peer request before cleanup settlement. Both completed measurements remain unqualified.
 
 An opt-in [selected scheduling handoff](profiling/selected-handoff.md) preserves debt accounting and attempts one yield at a qualifying selected checkpoint.

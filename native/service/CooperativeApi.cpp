@@ -28,11 +28,13 @@ struct Slot {
 struct CozCooperativeSession {
     const std::thread::id controller = std::this_thread::get_id();
     const uint64_t version;
+    const std::optional<uint32_t> controller_slot;
     CooperativeSpinTiming timing;
     std::shared_ptr<CooperativeCodeLifetime> code;
     std::vector<std::unique_ptr<Slot>> slots;
-    CozCooperativeSession(CooperativePollSite identity, uint32_t count, uint32_t capacity)
-        : version(identity.codeVersion()), code(std::make_shared<CooperativeCodeLifetime>(identity)) {
+    CozCooperativeSession(CooperativePollSite identity, uint32_t count, uint32_t capacity,
+        std::optional<uint32_t> controllerSlot)
+        : version(identity.codeVersion()), controller_slot(controllerSlot), code(std::make_shared<CooperativeCodeLifetime>(identity)) {
         for (uint32_t index = 0; index < count; ++index) slots.push_back(std::make_unique<Slot>(capacity));
     }
 };
@@ -40,7 +42,10 @@ namespace {
 std::shared_mutex api_gate;
 std::unique_ptr<CozCooperativeSession> active;
 bool opened{};
+struct ApiCall;
 template<class Action> int32_t translated(Action action) noexcept {
+    detail::CooperativeCallGuard<ApiCall> entry;
+    if (!entry) return COZ_COOPERATIVE_BUSY;
     try { return action(); }
     catch (const std::bad_alloc&) { return COZ_COOPERATIVE_MEMORY; }
     catch (...) { return COZ_COOPERATIVE_FAILURE; }
@@ -62,15 +67,17 @@ Slot* request(CozCooperativeSession& session, uint32_t slot, uint64_t generation
         && value->generation == generation ? value : nullptr;
 }
 }
-int32_t COZ_COOPERATIVE_CALL coz_cooperative_open(uint64_t version, uint32_t targets, uint32_t capacity, CozCooperativeSession** session) {
+static int32_t openSession(uint64_t version, uint32_t targets, uint32_t capacity,
+    std::optional<uint32_t> controllerSlot, CozCooperativeSession** session) {
     if (!session) return COZ_COOPERATIVE_INVALID;
     *session = nullptr;
     const auto identity = CooperativePollSite::parse(1, version, 1);
-    if (!identity || targets == 0 || targets > 64 || capacity == 0 || capacity > 100000) return COZ_COOPERATIVE_INVALID;
+    if (!identity || targets == 0 || targets > 64 || capacity == 0 || capacity > 100000
+        || (controllerSlot && *controllerSlot >= targets)) return COZ_COOPERATIVE_INVALID;
     return translated([&]() -> int32_t {
         std::unique_lock lock(api_gate);
         if (opened) return COZ_COOPERATIVE_BUSY;
-        auto candidate = std::make_unique<CozCooperativeSession>(*identity, targets, capacity);
+        auto candidate = std::make_unique<CozCooperativeSession>(*identity, targets, capacity, controllerSlot);
         if (candidate->timing.now() == 0) return COZ_COOPERATIVE_CLOCK;
         active = std::move(candidate);
         opened = true;
@@ -78,16 +85,24 @@ int32_t COZ_COOPERATIVE_CALL coz_cooperative_open(uint64_t version, uint32_t tar
         return COZ_COOPERATIVE_OK;
     });
 }
+int32_t COZ_COOPERATIVE_CALL coz_cooperative_open(uint64_t version, uint32_t targets, uint32_t capacity, CozCooperativeSession** session) {
+    return openSession(version, targets, capacity, std::nullopt, session);
+}
+int32_t COZ_COOPERATIVE_CALL coz_cooperative_open_owner(uint64_t version, uint32_t targets, uint32_t capacity,
+    uint32_t controller_slot, CozCooperativeSession** session) {
+    return openSession(version, targets, capacity, controller_slot, session);
+}
 static int32_t registerTarget(CozCooperativeSession* session, uint32_t slot, uint64_t worker, uint64_t site, bool observeCpu, bool observeProgress = false) {
     return translated([&]() -> int32_t {
         std::unique_lock lock(api_gate);
         if (!session || session != active.get()) return COZ_COOPERATIVE_INVALID;
-        if (session->controller == std::this_thread::get_id()) return COZ_COOPERATIVE_ROLE;
+        const auto role = session->controller_slot == slot ? CooperativeOwnerRole::controller : CooperativeOwnerRole::separate;
+        if ((session->controller == std::this_thread::get_id()) != (role == CooperativeOwnerRole::controller)) return COZ_COOPERATIVE_ROLE;
         const auto identity = CooperativePollSite::parse(worker, session->version, site);
         auto* value = get(*session, slot);
         if (!value || !identity) return COZ_COOPERATIVE_INVALID;
         if (value->target) return COZ_COOPERATIVE_BUSY;
-        auto target = CooperativeTarget::registerCurrentThread(*identity, session->code, session->controller, value->copy.size(), session->timing, observeCpu, observeProgress);
+        auto target = CooperativeTarget::registerCurrentThread(*identity, session->code, session->controller, value->copy.size(), session->timing, observeCpu, observeProgress, role);
         if (!target) return COZ_COOPERATIVE_BUSY;
         if (observeCpu) value->cpu_copy.resize(value->copy.size());
         value->owner = std::this_thread::get_id();

@@ -349,7 +349,89 @@ static void progressApiContract() {
     require(coz_cooperative_close(session) == COZ_COOPERATIVE_OK &&
         coz_cooperative_progress(session, 0, generation, &progress) == COZ_COOPERATIVE_INVALID, 137);
 }
+static void controllerOwnerApiContract() {
+    CozCooperativeSession* session{};
+    require(coz_cooperative_open_owner(2, 2, 4, 2, &session) == COZ_COOPERATIVE_INVALID && !session, 140);
+    require(coz_cooperative_open_owner(2, 2, 4, UINT32_MAX, &session) == COZ_COOPERATIVE_INVALID && !session, 141);
+    require(coz_cooperative_open_owner(2, 2, 4, 1, nullptr) == COZ_COOPERATIVE_INVALID, 142);
+    require(coz_cooperative_open_owner(2, 2, 4, 1, &session) == COZ_COOPERATIVE_OK && session, 143);
+    CozCooperativeSession* extra{};
+    require(coz_cooperative_open_owner(2, 2, 4, 0, &extra) == COZ_COOPERATIVE_BUSY && !extra, 144);
+    {
+        Worker peer;
+        require(peer.run([&] { return coz_cooperative_register(session, 1, 1, 3); }) == COZ_COOPERATIVE_ROLE, 145);
+        require(coz_cooperative_register(session, 0, 2, 4) == COZ_COOPERATIVE_ROLE, 146);
+        require(coz_cooperative_register_progress(session, 1, 1, 3, 1) == COZ_COOPERATIVE_OK
+            && coz_cooperative_close(session) == COZ_COOPERATIVE_BUSY, 147);
+        require(peer.run([&] { return coz_cooperative_register(session, 0, 2, 4); }) == COZ_COOPERATIVE_OK, 148);
+        uint64_t selectedGeneration{}, peerGeneration{};
+        require(coz_cooperative_submit(session, 1, 501, 1, &selectedGeneration) == COZ_COOPERATIVE_OK
+            && coz_cooperative_submit(session, 0, 502, 1, &peerGeneration) == COZ_COOPERATIVE_OK, 149);
+        require(peer.run([&] {
+            uint64_t rejected = 99;
+            uint32_t outcome{};
+            CozCooperativeSnapshot header{};
+            CozCooperativeChild child{};
+            return coz_cooperative_submit(session, 0, 503, 1, &rejected) == COZ_COOPERATIVE_ROLE && rejected == 0
+                && coz_cooperative_snapshot(session, 1, selectedGeneration, &header, &child, 1) == COZ_COOPERATIVE_ROLE
+                && coz_cooperative_release(session, 1, selectedGeneration) == COZ_COOPERATIVE_ROLE
+                && coz_cooperative_poll(session, 1, 1, 2, 3, &outcome) == COZ_COOPERATIVE_ROLE
+                && coz_cooperative_revoke(session) == COZ_COOPERATIVE_ROLE
+                && coz_cooperative_close(session) == COZ_COOPERATIVE_ROLE;
+        }), 150);
+        uint32_t result{};
+        require(coz_cooperative_poll(session, 0, 2, 2, 4, &result) == COZ_COOPERATIVE_ROLE, 151);
+        require(coz_cooperative_poll(session, 1, 1, 2, 3, &result) == COZ_COOPERATIVE_OK
+            && result == COZ_COOPERATIVE_SERVICED, 152);
+        CozCooperativeSnapshot snapshot{};
+        CozCooperativeChild child{};
+        require(coz_cooperative_release(session, 1, selectedGeneration) == COZ_COOPERATIVE_BUSY, 153);
+        require(coz_cooperative_snapshot(session, 1, selectedGeneration, &snapshot, nullptr, 0) == COZ_COOPERATIVE_BUFFER
+            && snapshot.children == 1 && coz_cooperative_release(session, 1, selectedGeneration) == COZ_COOPERATIVE_BUSY, 154);
+        require(coz_cooperative_snapshot(session, 1, selectedGeneration, &snapshot, &child, 1) == COZ_COOPERATIVE_OK
+            && snapshot.command == 501 && snapshot.visibility == 3 && child.worker == 1 && child.site == 3
+            && child.requested == 1 && child.valid == 1, 155);
+        CozCooperativeCpuChild cpu{};
+        uint32_t count{};
+        require(coz_cooperative_cpu_snapshot(session, 1, selectedGeneration, &cpu, 1, &count) == COZ_COOPERATIVE_OK
+            && count == 1 && cpu.command == 501, 156);
+        require(coz_cooperative_release(session, 1, selectedGeneration) == COZ_COOPERATIVE_OK, 157);
+        uint64_t next{};
+        require(coz_cooperative_submit(session, 1, 504, 1, &next) == COZ_COOPERATIVE_OK && next != selectedGeneration
+            && coz_cooperative_release(session, 1, selectedGeneration) == COZ_COOPERATIVE_INVALID, 158);
+        require(coz_cooperative_cancel(session, 1, next) == COZ_COOPERATIVE_OK
+            && coz_cooperative_poll(session, 1, 1, 2, 3, &result) == COZ_COOPERATIVE_OK, 159);
+        require(coz_cooperative_snapshot(session, 1, next, &snapshot, &child, 1) == COZ_COOPERATIVE_OK
+            && snapshot.command == 504 && snapshot.measured == 0
+            && coz_cooperative_release(session, 1, next) == COZ_COOPERATIVE_OK, 160);
+        require(coz_cooperative_retire(session, 1) == COZ_COOPERATIVE_OK
+            && coz_cooperative_close(session) == COZ_COOPERATIVE_BUSY, 161);
+        require(peer.run([&] { uint32_t outcome{};
+            return coz_cooperative_poll(session, 0, 2, 2, 4, &outcome) == COZ_COOPERATIVE_OK
+                && outcome == COZ_COOPERATIVE_SERVICED;
+        }), 162);
+        require(coz_cooperative_snapshot(session, 0, peerGeneration, &snapshot, &child, 1) == COZ_COOPERATIVE_OK
+            && snapshot.command == 502 && child.worker == 2 && child.site == 4
+            && coz_cooperative_release(session, 0, peerGeneration) == COZ_COOPERATIVE_OK, 163);
+        require(peer.run([&] { return coz_cooperative_retire(session, 0); }) == COZ_COOPERATIVE_OK, 164);
+    }
+    require(coz_cooperative_close(session) == COZ_COOPERATIVE_OK, 165);
+}
+
+static void controllerOwnerPartialSetupCloses() {
+    CozCooperativeSession* session{};
+    require(coz_cooperative_open_owner(2, 2, 4, 0, &session) == COZ_COOPERATIVE_OK, 166);
+    require(coz_cooperative_register(session, 0, 0, 3) == COZ_COOPERATIVE_INVALID, 167);
+    require(coz_cooperative_register(session, 0, 1, 3) == COZ_COOPERATIVE_OK, 169);
+    require(coz_cooperative_register(session, 1, 2, 4) == COZ_COOPERATIVE_ROLE, 170);
+    require(coz_cooperative_close(session) == COZ_COOPERATIVE_BUSY
+        && coz_cooperative_retire(session, 0) == COZ_COOPERATIVE_OK, 171);
+    require(coz_cooperative_close(session) == COZ_COOPERATIVE_OK, 168);
+}
+
 int main(int argc, char** argv) {
+    if (argc == 2 && std::string_view(argv[1]) == "owner-partial") { controllerOwnerPartialSetupCloses(); return 0; }
+    if (argc == 2 && std::string_view(argv[1]) == "owner") { controllerOwnerApiContract(); return 0; }
     if (argc == 2 && std::string_view(argv[1]) == "progress") { progressApiContract(); return 0; }
     if (argc == 2 && std::string_view(argv[1]) == "cpu") { cpuSnapshotContract(); return 0; }
     if (argc == 2 && std::string_view(argv[1]) == "timing") { nativeClockAndBoundedWait(); return 0; }
