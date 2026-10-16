@@ -2,6 +2,7 @@ import json
 import pathlib
 import sys
 from BoundSchedulerEvidence import verify_bound_scheduler
+from AnalyzeBoundSampledPayment import verify_probe_interval
 from CooperativeMeasurementEvidence import verify_measurement
 
 from AnalyzeBoundSampledPayment import count, require, signed_count, verify_payments, verify_receipt_interval, verify_rejected_receipt_interval, verify_sample_publication, verify_dispatch_timing
@@ -532,6 +533,7 @@ def verify_epoch_prefixes(record, last_cpu, payment_pauses):
 
 
 def verify_record(record):
+    verify_probe_interval(record)
     owner_controller = record.get("ownerControllerEnabled", False)
     require(type(owner_controller) is bool, "Owner controller activation is not Boolean")
     if owner_controller:

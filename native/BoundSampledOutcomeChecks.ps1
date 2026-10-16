@@ -9,6 +9,17 @@ function Read-Fixture {
     return Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode $ExitCode -SelectedCadence $Cadence -SelectedBatches 5
 }
 try {
+    foreach ($expected in @(1024, 8192)) {
+        @{ passed = $true } | ConvertTo-Json | Set-Content -LiteralPath $path
+        $missing = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedProbeInterval $expected
+        if ($missing.passed -or -not $missing.recordError) { throw 'Missing probe interval evidence was accepted.' }
+        foreach ($actual in @(1024, 8192, 8191, $null, '8192', $true, 8192.5)) {
+            @{ passed = $true; probeInterval = $actual } | ConvertTo-Json | Set-Content -LiteralPath $path
+            $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedProbeInterval $expected
+            $matches = ($actual -is [int] -or $actual -is [long]) -and $actual -eq $expected
+            if ($outcome.passed -ne $matches) { throw 'Probe interval settings did not control outcome acceptance.' }
+        }
+    }
     $valid = @{ passed = $true; schemaVersion = 4; selectedCadence = 'QualifiedSample'; requestedBatches = 5 }
     $outcome = Read-Fixture $valid
     if (-not $outcome.passed -or $outcome.recordError -or $outcome.case -ne '50' -or $outcome.exitCode -ne 0) { throw 'A valid matching case must pass with its identity.' }

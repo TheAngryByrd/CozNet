@@ -790,6 +790,7 @@ let nativeCountdownVerify script _ =
             64
             256
             1024
+            8192
         ] do
         nativeScriptWithArgs script [
             "-ProbeInterval"

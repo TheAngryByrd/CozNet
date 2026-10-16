@@ -13,7 +13,8 @@ Next, investigate profiler overhead and sampled attribution. Repeating boundary 
 The [idle-service comparison](../../reliability/features/native-signal/idle-service-cadence.md#four-arm-comparison-with-idle-reuse) completes four arms but retains a sampled slowdown of approximately 5.2% versus a physical reduction of approximately 49.8%.
 Repeated idle service is removed from most checks. Owner draining and publication still precede the guard.
 The [owner-drain diagnostic](../../reliability/features/native-signal/owner-drain-cost.md) measures a median paired 38.414 ms across 500,000 calls without application work or a peer.
-It does not isolate the full-workload cost. Investigate lower probe density with explicit interval parsing, probe reach, lifetime rejection, and unchanged payment bounds.
+It does not isolate the full-workload cost. The [8192 interval](../../reliability/features/native-signal/sparse-probe-interval.md) passes controlled Linux countdown and bound payment checks.
+Next, expose that opt-in interval in the four-arm runner and bind its plan to runtime evidence. Keep the default and all payment bounds unchanged.
 Source membership and instrumentation attribution require separate contracts before prediction qualification.
 Do not repeat the unchanged controller comparison as a substitute for those contracts.
 

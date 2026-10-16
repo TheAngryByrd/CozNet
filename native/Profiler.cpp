@@ -52,7 +52,7 @@ public:
 class Profiler final : public CallbackBase {
     std::atomic<ULONG> references{1};
     ComOwner<ICorProfilerInfo> info;
-    enum class ProbeInterval : INT32 { Dense = 1, Small = 64, Medium = 256, Large = 1024 };
+    enum class ProbeInterval : INT32 { Dense = 1, Small = 64, Medium = 256, Large = 1024, Sparse = 8192 };
     ProbeInterval probeInterval = ProbeInterval::Dense;
     const WCHAR* targetModule = COZ_TEXT("CozNet.Instrumentation.dll");
     const WCHAR* targetType = COZ_TEXT("CozNet.Instrumentation.Workload");
@@ -240,6 +240,7 @@ public:
         else if (std::string_view(interval) == "64") probeInterval = ProbeInterval::Small;
         else if (std::string_view(interval) == "256") probeInterval = ProbeInterval::Medium;
         else if (std::string_view(interval) == "1024") probeInterval = ProbeInterval::Large;
+        else if (std::string_view(interval) == "8192") probeInterval = ProbeInterval::Sparse;
         else { status.store(E_INVALIDARG); return E_INVALIDARG; }
         const char* placement = std::getenv("COZNET_PROBE_PLACEMENT");
         if (!placement || std::string_view(placement) == "branch") probePlacement = ProbePlacement::Branch;

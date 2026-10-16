@@ -1,6 +1,6 @@
 param(
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/native-linux/evidence-integrated'),
-    [ValidateSet(1, 64, 256, 1024)][int]$ProbeInterval = 1
+    [ValidateSet(1, 64, 256, 1024, 8192)][int]$ProbeInterval = 1
 )
 
 $ErrorActionPreference = 'Stop'

@@ -19,6 +19,12 @@ def signed_count(value):
     return value
 
 
+def verify_probe_interval(record):
+    if "probeInterval" in record:
+        require(type(record["probeInterval"]) is int and record["probeInterval"] in (1, 64, 256, 1024, 8192),
+                "Unsupported probe interval")
+
+
 def verify_receipt_interval(payment, frequency=None):
     interval = payment["ReceiptInterval"]
     started, observed, recorded_frequency = (count(interval[key]) for key in ("Started", "Observed", "TimestampFrequency"))
@@ -280,6 +286,7 @@ def verify_payments(payments, binding, worker):
 
 
 def verify_record(record):
+    verify_probe_interval(record)
     verify_dispatch_timing(record)
     verify_sample_publication(record)
     verify_rejected_receipt_interval(record)

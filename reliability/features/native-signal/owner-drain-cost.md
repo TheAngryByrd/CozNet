@@ -64,7 +64,7 @@ The loop does not execute the selected checksum workload or contend with a peer.
 Its cost cannot establish a full-workload saving, prediction accuracy, or a safe lower drain frequency.
 
 The measurement supports investigating fewer probe callbacks rather than assuming empty-ring reads dominate the remaining mismatch.
-The current managed and native parsers accept intervals 1, 64, 256, and 1024 only.
+At the time of this capture, the managed and native parsers accepted intervals 1, 64, 256, and 1024 only.
 A lower-density experiment needs an explicit interval extension and checks for probe reach, peer service, source collection, and lifetime rejection.
 All payment and debt bounds must remain unchanged.
 

@@ -656,6 +656,7 @@ static class BoundSampledPaymentWorkload
             sourceEpochPrefixes = result?.EpochPrefixes,
             sourceEpochPrefixEvidenceVersion = selectedPaymentEnabled ? 1 : (int?)null,
             serviceCadence,
+            probeInterval = plan.BackedgeInterval,
             selectedPaymentEnabled, pauseTimingEnabled, childCpuEnabled, ownerDrainEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false
         }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
         return completed || rejectionVerified ? 0 : 1;

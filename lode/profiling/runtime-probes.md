@@ -8,15 +8,27 @@ It inserts `Probe()` calls at entry and either calls or conditional countdown ga
 It redirects branch targets when an inserted probe precedes the target instruction.
 Exception handlers and switch instructions are unsupported.
 
-`COZNET_PROBE_INTERVAL` accepts `1`, `64`, `256`, or `1024`. An absent value selects `1`.
+The native profiler and the Instrumentation and LinuxPerf workload parsers accept `COZNET_PROBE_INTERVAL` values `1`, `64`, `256`, `1024`, or `8192`. An absent value selects `1`.
+NativeMap and the older perf, prediction, and cooperative-interop runners retain their existing interval sets.
 Interval `1` retains dense probes. Other values inject one `int32` local and a countdown at each backward branch.
 The positive-count path calls no helper. Expiration calls `Probe` and resets the counter.
 Method entry initializes the counter and always calls `Probe`. Original branches cannot reenter this initialization.
 This prevents repeated short calls from losing entry service. The interval bounds executed poll sites, not time.
 Both controlled targets accept countdown probes. The Linux perf workload checks each thread's exact helper count.
+
+Interval 8192 is an opt-in lower-density experiment. The checksum batch has one entry callback and one loop callback.
+The bound payment runner accepts `-ProbeInterval 1024` or `8192`, with 1024 unchanged as its default.
+It binds the numeric `probeInterval` result field to the requested value before accepting a case.
+Offline replay rejects malformed or unsupported interval metadata but retains legacy records without the field.
+The Linux 8192 countdown capture passes baseline, profiled, intervention, and unsupported-sampling checks.
+The Linux bound capture passes zero, 50-percent, and expected-invalidation cases with unchanged inputs and bounds.
+New Windows runtime coverage for 8192 remains unverified.
+See [the sparse-interval evidence](../../reliability/features/native-signal/sparse-probe-interval.md).
+
 The pinned local-signature helper returns zero for both failure and a valid first local.
 The prototype therefore rejects methods without existing locals rather than accepting an ambiguous result.
-`NativeCountdownVerify` and `NativeLinuxCountdownVerify` verify intervals 64, 256, and 1024 on Windows and Linux x64.
+`NativeCountdownVerify` and `NativeLinuxCountdownVerify` enumerate intervals 64, 256, 1024, and 8192.
+Existing evidence covers 64, 256, and 1024 on Windows and Linux x64. New 8192 evidence currently covers Linux x64 only.
 They check exact counts before, at, and after expiration, 100 short calls, and intervention during a million-iteration call.
 Linux x64 disassembly at interval 256 contains a decrement and branch on the fast path.
 The [Linux comparison](../../reliability/features/linux-perf/countdown-probes.md) measures countdown cost in the sampled workload.

@@ -285,6 +285,17 @@ class SelectedPaymentAnalysisChecks(unittest.TestCase):
         self.assertEqual((result["credit"], result["paid"], result["selectedPaid"], result["selectedPayments"]), (2, 6, 4, 1))
         self.assertTrue(result["casePassed"])
 
+    def test_probe_interval_metadata_preserves_legacy_and_rejects_invalid_values(self):
+        self.assertTrue(verify_record(valid_record())["casePassed"])
+        for interval in (1, 64, 256, 1024, 8192):
+            record = valid_record()
+            record["probeInterval"] = interval
+            self.assertTrue(verify_record(record)["casePassed"])
+        for interval in (None, True, "8192", 8192.0, 0, 8191, 8193):
+            record = valid_record()
+            record["probeInterval"] = interval
+            self.reject(record, "Unsupported probe interval")
+
     def test_zero_speedup_completes_without_payment_or_pause(self):
         record = valid_record()
         record.update(percent=0, credit=0, paid=0, selectedPaid=0, payments=[], selectedPayments=[], pauses=[],

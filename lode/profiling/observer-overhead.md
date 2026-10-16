@@ -13,8 +13,8 @@ At least 499,958 active calls publish no sample. Disabled-ring and baseline allo
 These results do not isolate one lifetime check or establish full-workload savings.
 The earlier `20261016T060101303` capture retains six active serialization failures and supplies no active timing result.
 The scratch harness now omits the unsupported native binding object from JSON.
-The next candidate is lower probe density, with explicit managed/native interval parsing and unchanged service bounds.
-Current parsers accept only 1, 64, 256, and 1024.
+The [sparse interval](runtime-probes.md) now adds opt-in 8192 to the profiler and controlled Instrumentation and LinuxPerf parsers.
+Its Linux checks pass with unchanged service bounds. A physical comparison at that interval remains required.
 
 ```csharp
 collection.DrainOnOwner();

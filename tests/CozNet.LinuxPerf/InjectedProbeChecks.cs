@@ -41,7 +41,7 @@ static class InjectedProbeChecks
                 throw new Exception("The default manual plan changed.");
         }
         foreach (var (raw, interval, calls) in new (string?, int, long)[]
-            { (null, 1, 10002), ("1", 1, 10002), ("64", 64, 157), ("256", 256, 40), ("1024", 1024, 10) })
+            { (null, 1, 10002), ("1", 1, 10002), ("64", 64, 157), ("256", 256, 40), ("1024", 1024, 10), ("8192", 8192, 2) })
         {
             var plan = ProbePlan.Parse("injected", raw);
             if (plan.Mode != ProbeMode.Injected || plan.BackedgeInterval != interval || plan.CallsPerBatch != calls)
@@ -49,7 +49,8 @@ static class InjectedProbeChecks
         }
         foreach (var (mode, interval) in new (string?, string?)[]
             { ("", "1"), ("other", "1"), ("injected", ""), ("injected", "0"), ("injected", "2"),
-              ("injected", "-1"), ("injected", "2048"), ("manual", "64"), (null, "256"), ("manual", "1024") })
+              ("injected", "-1"), ("injected", "2048"), ("manual", "64"), (null, "256"), ("manual", "1024"),
+              ("manual", "8192"), ("injected", "8191"), ("injected", "8193") })
         {
             try { ProbePlan.Parse(mode, interval); }
             catch (ArgumentException) { continue; }

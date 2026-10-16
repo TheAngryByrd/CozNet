@@ -122,6 +122,22 @@ An aggregate error retains the original failures in slot order.
 Cleanup polling requires a cancellation call that returned successfully for that slot.
 A later failure does not erase an earlier successful cancellation.
 
+## Probe interval
+
+`VerifyBoundSampledPayment.ps1 -ProbeInterval` accepts `1024` or `8192`. The default is `1024`.
+The result records the requested backedge interval in `probeInterval`.
+The runner rejects missing, noninteger, or mismatched values.
+Offline replay accepts older records without this field and rejects unsupported values when the field is present.
+
+Interval `8192` produces one entry callback and one loop callback per controlled 10,000-iteration batch.
+Interval `1024` produces one entry callback and nine loop callbacks.
+The interval bounds backedge counts, not elapsed time.
+Larger intervals can delay source draining and peer service. Debt and payment bounds remain unchanged.
+The new interval is experimental. Controlled Linux countdown, payment, and lifetime-rejection cases pass at 8192.
+Windows runtime behavior at 8192 remains unverified.
+Standalone replay checks interval metadata only. It does not prove the requested setting or actual callback count.
+The workload checks callback counts, and the runner checks the requested setting during capture.
+
 ## Idle service cadence
 
 `serviceCadence` contains three counters:

@@ -21,7 +21,8 @@ public static partial class Workload
             "64" => new(64),
             "256" => new(256),
             "1024" => new(1024),
-            _ => throw new ArgumentException("Select probe interval 1, 64, 256, or 1024.")
+            "8192" => new(8192),
+            _ => throw new ArgumentException("Select probe interval 1, 64, 256, 1024, or 8192.")
         };
         public long ExpectedCalls(int iterations) => 1 + ((long)iterations + 1) / Interval;
     }

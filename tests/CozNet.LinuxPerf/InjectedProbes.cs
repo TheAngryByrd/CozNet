@@ -25,7 +25,8 @@ sealed class ProbePlan
             "64" => 64,
             "256" => 256,
             "1024" => 1024,
-            _ => throw new ArgumentException("Select probe interval 1, 64, 256, or 1024.")
+            "8192" => 8192,
+            _ => throw new ArgumentException("Select probe interval 1, 64, 256, 1024, or 8192.")
         };
         if (parsedMode == ProbeMode.Manual && parsedInterval != 1)
             throw new ArgumentException("Manual probes require interval 1.");

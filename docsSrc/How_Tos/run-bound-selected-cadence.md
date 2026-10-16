@@ -45,6 +45,27 @@ Compare completed work duration, samples, pauses, and native receipts at the sam
 Do not infer prediction accuracy from a capacity pass.
 See [the collector reference](../Reference/pausable-sample-collector.md#owner-driven-collection) for ownership and failure behavior.
 
+## Run the lower-density probe experiment
+
+Rebuild the managed workload and Linux profiler:
+
+```powershell
+dotnet build tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj -c Release
+pwsh -NoProfile -File native/BuildLinux.ps1
+```
+
+Run the opt-in interval with the existing measurement and payment bounds:
+
+```powershell
+pwsh -NoProfile -File native/VerifyBoundSampledPayment.ps1 -ProbeInterval 8192 -SelectedPayment -OwnerDrain -DirectReceiptReady -FiniteMeasurement -SelectedCadence qualified-sample -SelectedBatches 50000 -EvidenceDirectory artifacts/sparse-probe-payment
+```
+
+Check the manifest's `interval` and each runtime record's `probeInterval` against `8192`.
+Keep zero-speedup, treatment, and invalidation records, including failures.
+Use `-ProbeInterval 1024` for the existing density with the same settings.
+Do not infer an isolated speedup from separate runs or prediction accuracy from a capacity pass.
+See [the interval contract](../Reference/bound-sampled-payment.md#probe-interval).
+
 ## Compare peer service after sample batches
 
 After the target builds the required binaries, run both publication modes with the same settings:
