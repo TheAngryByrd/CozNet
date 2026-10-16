@@ -1,5 +1,7 @@
 # Lode index
 
+For bound source-time membership and unchanged recorded credit, read [sample membership](profiling/sample-membership.md#bound-source-membership).
+
 For incremental sample totals at selected pauses and the retained long-run failure, read [pause accounting](profiling/sample-batch-snapshots.md#pause-accounting).
 
 For optional selected-thread CPU observations in all four comparison arms, read [selected CPU measurement](plans/selected-cpu.md).

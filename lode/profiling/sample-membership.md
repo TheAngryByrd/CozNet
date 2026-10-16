@@ -75,3 +75,32 @@ See [the clock reference](../../docsSrc/Reference/cpu-sample-clock.md#bound-samp
 The first read runs under the existing CLR lifetime guard, outside measurement.
 This fixed setup cost is accepted for the opt-in diagnostic.
 See [the Linux capture](../../reliability/features/native-signal/bound-sample-clock.md).
+
+## Bound source membership
+
+`AnalyzeBoundSampleMembership.py` parses full replay, clock policy, and closed source evidence before classification.
+The policy uses the existing half-open source-time rules and keeps ambiguous endpoints explicit.
+It partitions recorded credit without changing it. Frozen-prefix acceptance substitutes for unavailable receipt timestamps.
+Source checks also apply to failed workloads. Failed outcome and rejected comparison remain distinct.
+Arithmetic replay failures retain rejection reports.
+The command assumes stable analysis files. Its file hashes do not attest loaded Python code.
+
+```powershell
+python native/AnalyzeBoundSampleMembership.py capture/50.json membership.json
+python native/BoundSampleMembershipChecks.py
+```
+
+```mermaid
+flowchart LR
+    Replay[Verified bound replay] --> Policy[Parsed clock and source evidence]
+    Policy --> Membership[Source membership]
+    Prefix[Frozen acceptance prefix] --> Groups[Membership and acceptance groups]
+    Membership --> Groups
+    Credit[Unchanged recorded credit] --> Groups
+```
+
+The [first capture](../../reliability/features/native-signal/bound-sample-membership.md) retains unmapped samples before start and inside-window samples outside acceptance.
+All recorded selected credit is inside. This short diagnostic does not explain the earlier matched prediction gap.
+The [upstream comparison](../../docsSrc/Research/sample-boundary-semantics.md) gates credit by processing-time state, not strict source-time membership.
+Do not add retrospective credit or weaken qualification from these observations.
+See [the reference](../../docsSrc/Reference/bound-sample-membership.md).
