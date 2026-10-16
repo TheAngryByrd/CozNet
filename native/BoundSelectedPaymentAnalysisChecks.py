@@ -1131,5 +1131,189 @@ class CooperativeMeasurementEvidenceChecks(unittest.TestCase):
                 verify_record(record)
 
 
+def with_epoch_prefixes(record):
+    record["sourceEpochPrefixEvidenceVersion"] = 1
+    prefixes = []
+    final = record["finalCounters"]
+    baseline_cpu = 0
+    for index in range(final["Epoch"]):
+        members = [(i, item["Sample"]) for i, item in enumerate(record["sourceEpochSamples"])
+                   if item["EligibilityEpoch"] == index + 1]
+        baseline = copy.deepcopy(record["initialCounters"]["LastReading"])
+        if index:
+            before = final["Transitions"][index * 2 - 1]["After"] + 1
+            baseline.update(Epoch=index, Before=before, After=before + 1, CpuNanoseconds=baseline_cpu)
+        first_index, first = members[0] if members else (None, None)
+        prefixes.append(dict(Start=dict(Epoch=index + 1, DisabledBaseline=baseline,
+                                        Enable=copy.deepcopy(final["Transitions"][index * 2])),
+                             FirstSampleIndex=first_index, FirstSample=copy.deepcopy(first),
+                             EnabledPrefixCpuNanoseconds=None if first is None else first["CumulativeCpuNanoseconds"] - baseline_cpu))
+        if members:
+            baseline_cpu = members[-1][1]["CumulativeCpuNanoseconds"]
+    record["sourceEpochPrefixes"] = prefixes
+    return record
+
+
+class EpochPrefixEvidenceChecks(unittest.TestCase):
+    def test_replay_preserves_exact_prefix_arithmetic_and_claim_limits(self):
+        record = with_epoch_prefixes(valid_record())
+        before = copy.deepcopy(record)
+        result = verify_record(record)["epochPrefixes"]
+        self.assertEqual(("verified", 1, 2, 0, 4, 4, 2, 8, 8),
+                         tuple(result[key] for key in ("status", "version", "sourceEpochs", "emptyEpochs", "sourceSamples",
+                                                      "acceptedSamples", "acceptedMappedBaselines",
+                                                      "acceptedMappedEnabledPrefixNanoseconds", "acceptedMappedNominalNanoseconds")))
+        self.assertEqual([1, 7], [item["enabledCpuNanoseconds"] for item in result["epochs"]])
+        self.assertFalse(result["selectedCpuBoundEstablished"])
+        self.assertFalse(result["predictionAccuracyEstablished"])
+        self.assertEqual(before, record)
+
+    def test_legacy_absence_unversioned_presence_and_failed_collection_are_distinct(self):
+        self.assertEqual("absent", verify_record(valid_record())["epochPrefixes"]["status"])
+        legacy = with_epoch_prefixes(valid_record())
+        del legacy["sourceEpochPrefixEvidenceVersion"]
+        replay = verify_record(legacy)["epochPrefixes"]
+        self.assertEqual("verified", replay["status"])
+        self.assertEqual(1, replay["version"])
+        self.assertIsNone(replay["declaredVersion"])
+        failed = invalidated_record()
+        failed.update(sourceEpochPrefixEvidenceVersion=1, sourceEpochPrefixes=None)
+        result = verify_record(failed)
+        self.assertEqual("unavailable", result["epochPrefixes"]["status"])
+        self.assertFalse(result["completed"])
+
+    def test_later_workload_failure_keeps_valid_source_evidence(self):
+        result = verify_record(with_epoch_prefixes(failed_record()))
+        self.assertFalse(result["casePassed"])
+        self.assertEqual("verified", result["epochPrefixes"]["status"])
+
+    def test_version_requires_fields_and_rejects_unknown_or_boolean_versions(self):
+        for version in (True, 0, 2, "1", None):
+            record = with_epoch_prefixes(valid_record())
+            record["sourceEpochPrefixEvidenceVersion"] = version
+            with self.subTest(version=version), self.assertRaisesRegex(ValueError, "Unsupported epoch prefix"):
+                verify_record(record)
+        record = with_epoch_prefixes(valid_record())
+        del record["sourceEpochPrefixes"]
+        with self.assertRaisesRegex(ValueError, "Versioned epoch prefix evidence is missing"):
+            verify_record(record)
+        record["sourceEpochPrefixes"] = None
+        with self.assertRaisesRegex(ValueError, "Completed collection lost"):
+            verify_record(record)
+
+    def test_failed_measurement_capture_does_not_claim_frozen_membership(self):
+        record = with_epoch_prefixes(failed_record())
+        cadence = SelectedPaymentAnalysisChecks().cadence_record()
+        for key in ("schemaVersion", "selectedCadence", "requestedBatches", "selectedBatches", "selectedChecks",
+                    "checksum", "selectedWorkStarted", "selectedWorkFinished"):
+            record[key] = cadence[key]
+        record["pauses"][0]["Admission"] = cadence["pauses"][0]["Admission"]
+        record.update(finiteMeasurementEnabled=True, ownerDrainEnabled=True,
+                      measurement=dict(Window=dict(Status=3, Start=None, End=None), AcceptanceClosed=True,
+                                       CaptureFailure="capture failed", Failure=record["failure"]),
+                      measurementAssessment=dict(Status="invalid", DescriptiveEstimate=None,
+                          Reasons=["sample-boundary-membership-unqualified", "instrumentation-attribution-unqualified"]))
+        result = verify_record(record)
+        self.assertFalse(result["casePassed"])
+        self.assertEqual("invalid", result["measurement"]["Status"])
+        self.assertEqual("verified", result["epochPrefixes"]["status"])
+        self.assertEqual("accepted-prefix", result["epochPrefixes"]["membershipBasis"])
+
+    def test_empty_epoch_and_zero_prefix_remain_distinct(self):
+        record = SelectedPaymentAnalysisChecks().two_pause_cadence_record()
+        record["sourceSamples"][0]["CumulativeCpuNanoseconds"] = 0
+        result = verify_record(with_epoch_prefixes(record))["epochPrefixes"]
+        self.assertEqual(1, result["emptyEpochs"])
+        self.assertEqual([0, 7, None], [item["enabledCpuNanoseconds"] for item in result["epochs"]])
+        self.assertEqual([0, 2, None], [item["firstSourceIndex"] for item in result["epochs"]])
+        self.assertEqual(7, result["acceptedMappedEnabledPrefixNanoseconds"])
+        self.assertEqual(8, result["acceptedMappedNominalNanoseconds"])
+        record["sourceEpochPrefixes"][-1]["EnabledPrefixCpuNanoseconds"] = 0
+        with self.assertRaisesRegex(ValueError, "Empty epoch contains"):
+            verify_record(record)
+
+    def test_unmapped_first_sample_does_not_use_a_later_mapped_sample(self):
+        record = valid_record()
+        record["sourceSamples"][0].update(InstructionPointer=200, Method=None)
+        record["batch"].update(DistinctInstructionPointers=2, SelectedMethodSamples=3, UnmappedSamples=1)
+        result = verify_record(with_epoch_prefixes(record))["epochPrefixes"]
+        self.assertEqual((1, 7, 7), tuple(result[key] for key in ("acceptedMappedBaselines",
+            "acceptedMappedEnabledPrefixNanoseconds", "acceptedMappedNominalNanoseconds")))
+        self.assertEqual(dict(epoch=1, firstSourceIndex=0, accepted=True, mapped=False, enabledCpuNanoseconds=1), result["epochs"][0])
+
+    def test_baseline_source_clock_and_counter_corruption_reject(self):
+        for field, value in (("SourceIdentity", "foreign"), ("Epoch", 0), ("Epoch", True),
+                             ("Enabled", True), ("Error", "failed"), ("TimestampFrequency", 1),
+                             ("Before", 30), ("After", 62), ("CpuNanoseconds", 3), ("CpuNanoseconds", 13)):
+            record = with_epoch_prefixes(valid_record())
+            record["sourceEpochPrefixes"][1]["Start"]["DisabledBaseline"][field] = value
+            with self.subTest(field=field, value=value), self.assertRaises(ValueError):
+                verify_record(record)
+
+    def test_missing_extra_reordered_and_nonarray_epochs_reject(self):
+        for mutate in (lambda p: p.clear(), lambda p: p.pop(), lambda p: p.append(copy.deepcopy(p[-1])),
+                       lambda p: p.reverse(), lambda p: p[0]["Start"]["DisabledBaseline"].update(CpuNanoseconds=1)):
+            record = with_epoch_prefixes(valid_record())
+            mutate(record["sourceEpochPrefixes"])
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError):
+                verify_record(record)
+        record = with_epoch_prefixes(valid_record())
+        record["sourceEpochPrefixes"] = {}
+        with self.assertRaisesRegex(ValueError, "must be an array"):
+            verify_record(record)
+
+    def test_first_sample_identity_index_numeric_types_and_delta_reject(self):
+        mutations = (
+            lambda p: p.update(FirstSampleIndex=3),
+            lambda p: p.update(FirstSampleIndex=True),
+            lambda p: p.update(EnabledPrefixCpuNanoseconds=8),
+            lambda p: p.update(EnabledPrefixCpuNanoseconds=True),
+            lambda p: p["FirstSample"].update(ProcessId=2),
+            lambda p: p["FirstSample"].update(ProcessId=True),
+            lambda p: p["FirstSample"].update(CumulativeCpuNanoseconds=12),
+            lambda p: p["FirstSample"].update(Method="changed"),
+            lambda p: p["Start"]["Enable"].update(Before=60),
+            lambda p: p["Start"]["Enable"].update(Enabling=1),
+            lambda p: p["Start"].update(Epoch=1))
+        for mutate in mutations:
+            record = with_epoch_prefixes(valid_record())
+            mutate(record["sourceEpochPrefixes"][1])
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError):
+                verify_record(record)
+
+    def test_failed_workload_cannot_hide_source_loss_or_missing_cleanup(self):
+        for mutate in (lambda r: r["batch"].update(LostSamples=1),
+                       lambda r: r["sourceCleanup"].update(CollectorJoined=False),
+                       lambda r: r["finalCounters"].update(FailedReads=1)):
+            record = with_epoch_prefixes(failed_record())
+            mutate(record)
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError):
+                verify_record(record)
+
+    def test_frozen_prefix_excludes_a_later_first_sample(self):
+        record = CooperativeMeasurementEvidenceChecks().finite_record()
+        later = SelectedPaymentAnalysisChecks().two_pause_cadence_record()
+        for key in ("pauses", "finalCounters", "selectedChecks", "finalDebt"):
+            record[key] = later[key]
+        record["selectedWorkFinished"] = 104
+        end = record["measurement"]["Window"]["End"]
+        end.update(BeforeTimestamp=105, AfterTimestamp=105)
+        end["Accounting"]["Epoch"] = 3
+        record["measurementAssessment"]["DescriptiveEstimate"].update(
+            ElapsedLowerNanoseconds=104, ElapsedUpperNanoseconds=104,
+            EffectiveLowerNanoseconds=98, EffectiveUpperNanoseconds=98)
+        record["measurementAssessment"]["Reasons"].append("source-tail-outside-frozen-prefix")
+        sample = dict(record["sourceSamples"][-1], Timestamp=5, CumulativeCpuNanoseconds=13)
+        record["sourceSamples"].append(sample)
+        record["sourceEpochSamples"].append(dict(EligibilityEpoch=3, Sample=sample))
+        record["batch"].update(Samples=5, SelectedMethodSamples=5, RepresentedCpuNanoseconds=13)
+        record["finalCounters"]["LastReading"]["CpuNanoseconds"] = 13
+        result = verify_record(with_epoch_prefixes(record))["epochPrefixes"]
+        self.assertEqual("frozen-accepted-prefix", result["membershipBasis"])
+        self.assertEqual((5, 4, 2, 8), tuple(result[key] for key in
+                         ("sourceSamples", "acceptedSamples", "acceptedMappedBaselines", "acceptedMappedEnabledPrefixNanoseconds")))
+        self.assertEqual(dict(epoch=3, firstSourceIndex=4, accepted=False, mapped=True, enabledCpuNanoseconds=1), result["epochs"][-1])
+
+
 if __name__ == "__main__":
     unittest.main()

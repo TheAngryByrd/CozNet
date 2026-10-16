@@ -70,6 +70,41 @@ The collector still checks owner identity, source loss, final sample totals, and
 The [retained checks](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/epoch-prefix-evidence.md) cover host parsing and Linux collection with selected payment.
 See [the attribution explanation](../Explanations/cpu-counter-attribution.md).
 
+## Offline prefix replay
+
+The selected-payment producer declares `sourceEpochPrefixEvidenceVersion = 1`.
+That marker requires the `sourceEpochPrefixes` field.
+Earlier captures with an unversioned prefix field use the same parsing rules.
+Legacy captures without either field remain readable, but cannot report verified prefix evidence.
+
+`AnalyzeBoundSelectedPayment.py` adds `epochPrefixes` to each case result.
+
+| Field | Meaning |
+| --- | --- |
+| `status` | `absent` for legacy records without evidence, `unavailable` for null evidence, or `verified` after replay |
+| `version` | Replay contract version, or null when evidence is absent |
+| `declaredVersion` | Version declared by the input, or null for an unversioned capture |
+| `sourceEpochs`, `emptyEpochs` | Completed source epochs and epochs without samples |
+| `sourceSamples`, `acceptedSamples` | Complete source count and ledger-accepted prefix count |
+| `acceptedMappedBaselines` | Mapped first samples inside the accepted prefix |
+| `acceptedMappedEnabledPrefixNanoseconds` | Sum of enabled prefixes for those mapped first samples |
+| `acceptedMappedNominalNanoseconds` | Sum of their nominal sample periods |
+| `membershipBasis` | `frozen-accepted-prefix` only with a complete frozen window; otherwise `accepted-prefix` |
+| `epochs` | Per-epoch source index, accepted membership, mapping flag, and enabled CPU prefix |
+
+The replay checks source closure, baseline identity and clock brackets, enable records, sample bounds, first-sample identity, and subtraction.
+It reports complete source history separately from the accepted prefix.
+A later workload failure can retain verified source prefixes. The case still reports its failed workload outcome.
+Null evidence cannot accompany a completed case.
+
+Malformed prefix evidence rejects the whole case replay and invalidates a matched comparison arm.
+Removing both prefix fields instead produces legacy status `absent`. This compatibility path does not verify missing evidence.
+The analyzer checks internal consistency. It does not authenticate captured counter readings independently of the retained input files.
+`selectedCpuBoundEstablished` and `predictionAccuracyEstablished` remain false.
+
+See [the replay procedure](../How_Tos/run-bound-selected-payment.md)
+and [retained replay checks](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/epoch-prefix-replay.md).
+
 ## Limits
 
 This parser checks evidence. It does not enable, disable, drain, or dispose a source.

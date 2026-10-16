@@ -431,6 +431,106 @@ def verify_selected_handoff(record):
     return dict(enabled=enabled, attempts=attempts)
 
 
+def verify_source_batch(record):
+    source, batch = record["sourceSamples"], record["batch"]
+    counts({key: value for key, value in batch.items() if key != "SelectedSymbols"})
+    symbols = {sample["Method"] for sample in source if sample["Method"] is not None}
+    require(batch["Samples"] == len(source) and batch["LostRecords"] == batch["LostSamples"] == batch["Throttles"] == 0
+            and batch["RepresentedCpuNanoseconds"] == sum(sample["PeriodNanoseconds"] for sample in source)
+            and batch["DistinctInstructionPointers"] == len({sample["InstructionPointer"] for sample in source})
+            and batch["SelectedMethodSamples"] == sum(sample["Method"] is not None for sample in source)
+            and batch["UnmappedSamples"] == sum(sample["Method"] is None for sample in source)
+            and set(batch["SelectedSymbols"]) == symbols and len(batch["SelectedSymbols"]) == len(symbols),
+            "Accepted sample batch differs from retained records")
+
+
+def verify_epoch_prefixes(record, last_cpu, payment_pauses):
+    field, version_field = "sourceEpochPrefixes", "sourceEpochPrefixEvidenceVersion"
+    if version_field in record:
+        require(type(record[version_field]) is int and record[version_field] == 1, "Unsupported epoch prefix evidence version")
+        require(field in record, "Versioned epoch prefix evidence is missing")
+    claims = dict(declaredVersion=record.get(version_field), selectedCpuBoundEstablished=False, predictionAccuracyEstablished=False)
+    if field not in record:
+        return dict(status="absent", version=None, **claims)
+    prefixes = record[field]
+    if prefixes is None:
+        require(not record["completed"], "Completed collection lost epoch prefix evidence")
+        return dict(status="unavailable", version=1, **claims)
+    require(type(prefixes) is list, "Epoch prefixes must be an array")
+    cleanup = record["sourceCleanup"]
+    require(all(cleanup[key] is True for key in ("SourceCreated", "DisableSucceeded", "CollectorJoined", "SourceDisposed"))
+            and cleanup["Errors"] == [], "Epoch prefixes require clean source closure")
+    verify_counters(record, last_cpu, payment_pauses)
+    verify_source_batch(record)
+    final, initial = record["finalCounters"], record["initialCounters"]
+    transitions = final["Transitions"]
+    require(len(prefixes) == final["Epoch"] and len(prefixes) > 0, "Epoch prefix count differs from source epochs")
+    baselines = []
+    previous_cpu = 0
+    for index, prefix in enumerate(prefixes):
+        start = prefix["Start"]
+        baseline, enable = start["DisabledBaseline"], start["Enable"]
+        require(count(start["Epoch"]) == index + 1 and count(baseline["Epoch"]) == index,
+                "Epoch prefix order or baseline epoch differs")
+        require(baseline["SourceIdentity"] == final["SourceIdentity"] and baseline["Enabled"] is False
+                and baseline["Error"] is None and count(baseline["TimestampFrequency"]) == record["timestampFrequency"],
+                "Epoch prefix baseline changed source or state")
+        cpu = count(baseline["CpuNanoseconds"])
+        require(cpu >= previous_cpu, "Epoch prefix baseline counter regressed")
+        lower = initial["LastReading"]["Before"] if index == 0 else transitions[index * 2 - 1]["After"]
+        if index == 0:
+            require(baseline == initial["LastReading"] and cpu == 0, "First epoch prefix lost its fresh baseline")
+        require(lower <= count(baseline["Before"]) <= count(baseline["After"]) <= transitions[index * 2]["Before"],
+                "Epoch prefix baseline escaped its disabled interval")
+        for key in ("Epoch", "Before", "After", "TimestampFrequency"):
+            count(enable[key])
+        require(enable["Enabling"] is True and enable["Completed"] is True and enable["Error"] is None
+                and enable == transitions[index * 2], "Epoch prefix enable differs from its source journal")
+        baselines.append(cpu)
+        previous_cpu = cpu
+    baselines.append(count(final["LastReading"]["CpuNanoseconds"]))
+    require(baselines[-1] >= previous_cpu, "Final counter precedes an epoch baseline")
+    source = record["sourceEpochSamples"]
+    cursor = empty = mapped = enabled_cpu = nominal_cpu = 0
+    accepted = len(record["samples"])
+    rows = []
+    for index, prefix in enumerate(prefixes):
+        first = cursor
+        while cursor < len(source) and source[cursor]["EligibilityEpoch"] == index + 1:
+            cpu = count(source[cursor]["Sample"]["CumulativeCpuNanoseconds"])
+            require(baselines[index] <= cpu <= baselines[index + 1], "Epoch sample escaped its disabled counter boundaries")
+            cursor += 1
+        if cursor == first:
+            require(prefix["FirstSampleIndex"] is None and prefix["FirstSample"] is None
+                    and prefix["EnabledPrefixCpuNanoseconds"] is None, "Empty epoch contains a first sample")
+            empty += 1
+            rows.append(dict(epoch=index + 1, firstSourceIndex=None, accepted=False, mapped=False, enabledCpuNanoseconds=None))
+            continue
+        sample = source[first]["Sample"]
+        require(count(prefix["FirstSampleIndex"]) == first, "Epoch prefix changed its first source index")
+        retained = prefix["FirstSample"]
+        for key in ("ProcessId", "ThreadId", "Timestamp", "PeriodNanoseconds", "InstructionPointer", "CumulativeCpuNanoseconds"):
+            count(retained[key])
+        require(retained == sample and (retained["Method"] is None or type(retained["Method"]) is str),
+                "Epoch prefix changed its first source sample")
+        delta = sample["CumulativeCpuNanoseconds"] - baselines[index]
+        require(count(prefix["EnabledPrefixCpuNanoseconds"]) == delta, "Epoch prefix CPU arithmetic differs")
+        is_accepted, is_mapped = first < accepted, sample["Method"] is not None
+        if is_accepted and is_mapped:
+            mapped += 1
+            enabled_cpu += delta
+            nominal_cpu += sample["PeriodNanoseconds"]
+        rows.append(dict(epoch=index + 1, firstSourceIndex=first, accepted=is_accepted,
+                         mapped=is_mapped, enabledCpuNanoseconds=delta))
+    require(cursor == len(source), "Source sample has no epoch prefix")
+    frozen = record.get("finiteMeasurementEnabled", False) and record["measurement"]["Window"]["Status"] == 2
+    return dict(status="verified", version=1, sourceEpochs=len(prefixes), emptyEpochs=empty,
+                sourceSamples=len(source), acceptedSamples=accepted, acceptedMappedBaselines=mapped,
+                acceptedMappedEnabledPrefixNanoseconds=enabled_cpu, acceptedMappedNominalNanoseconds=nominal_cpu,
+                membershipBasis="frozen-accepted-prefix" if frozen else "accepted-prefix",
+                epochs=rows, **claims)
+
+
 def verify_record(record):
     owner_controller = record.get("ownerControllerEnabled", False)
     require(type(owner_controller) is bool, "Owner controller activation is not Boolean")
@@ -521,16 +621,7 @@ def verify_record(record):
                     and error["Type"] == "System.IO.InvalidDataException"
                     and "The CLR probe lifetime is no longer admitted." in error["Error"], "Unexpected source cleanup failure")
         verify_counters(record, last_cpu, payment_pauses)
-        source, batch = record["sourceSamples"], record["batch"]
-        counts({key: value for key, value in batch.items() if key != "SelectedSymbols"})
-        symbols = {sample["Method"] for sample in source if sample["Method"] is not None}
-        require(batch["Samples"] == len(source) and batch["LostRecords"] == batch["LostSamples"] == batch["Throttles"] == 0
-                and batch["RepresentedCpuNanoseconds"] == sum(sample["PeriodNanoseconds"] for sample in source)
-                and batch["DistinctInstructionPointers"] == len({sample["InstructionPointer"] for sample in source})
-                and batch["SelectedMethodSamples"] == sum(sample["Method"] is not None for sample in source)
-                and batch["UnmappedSamples"] == sum(sample["Method"] is None for sample in source)
-                and set(batch["SelectedSymbols"]) == symbols and len(batch["SelectedSymbols"]) == len(symbols),
-                "Accepted sample batch differs from retained records")
+        verify_source_batch(record)
         if record["selectedPayments"]:
             require(record["selectedCleanup"] == record["selectedPayments"][-1]["Cleanup"]
                     and record["selectedReceipt"] == record["selectedPayments"][-1]["Observation"],
@@ -562,10 +653,12 @@ def verify_record(record):
                 and record["rejectedAfterPayment"] and selected_paid > 0 and paid > 0
                 and "The CLR probe lifetime is no longer admitted." in record["failure"]
                 and record["pauses"][-1]["Resumed"] is None, "Expected selected invalidation was not verified")
+    epoch_prefixes = verify_epoch_prefixes(record, last_cpu, payment_pauses)
     return dict(samples=len(record["sourceSamples"]), credit=credit, paid=paid, selectedPaid=selected_paid,
                 selectedPayments=len(record["selectedPayments"]), pauses=len(record["pauses"]),
                 completed=record["completed"], casePassed=record["passed"], childCpu=child_cpu, scheduler=scheduler,
-                selectedHandoff=handoff, measurement=measurement, ownerControllerEnabled=owner_controller)
+                selectedHandoff=handoff, measurement=measurement, ownerControllerEnabled=owner_controller,
+                epochPrefixes=epoch_prefixes)
 
 
 def verify_case(record, name):

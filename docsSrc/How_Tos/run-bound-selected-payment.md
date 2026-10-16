@@ -34,6 +34,24 @@ See [the reference](../Reference/bound-sampled-payment.md) for the contracts and
 Use [the peer-only procedure](run-bound-sampled-payment.md) for the legacy command.
 
 
+## Replay epoch prefixes in an earlier capture
+
+Use a separate output file to preserve the original analysis.
+
+1. Run the current analyzer against the retained directory:
+
+   ```powershell
+   python native/AnalyzeBoundSelectedPayment.py <run> <new-output.json>
+   ```
+
+2. Check each case's `evidenceVerified`, `casePassed`, and `epochPrefixes.status` fields.
+3. Compare `acceptedMappedEnabledPrefixNanoseconds` with `acceptedMappedNominalNanoseconds` only when prefix status is `verified`.
+4. Keep `absent` and `unavailable` results separate from verified zero totals.
+5. Preserve the input files and the analyzer revision with the new report.
+
+The command reports arithmetic and membership consistency. It does not establish selected CPU or prediction accuracy.
+See [the prefix reference](../Reference/bound-cpu-session.md) for field definitions and compatibility rules.
+
 ## Capture child CPU observations
 
 After the target builds the required binaries, run the optional diagnostic:

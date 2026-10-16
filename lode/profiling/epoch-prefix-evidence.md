@@ -32,7 +32,18 @@ Any credit policy needs a separate attribution contract and validation of mixed 
 Authoritative wall-time payment and all debt limits remain unchanged.
 The [live evidence](../../reliability/features/native-signal/epoch-prefix-evidence.md) passes five collection cases and three selected-payment cases.
 One treatment retains 130 epochs and 61 accepted mapped baselines, with 59.999 ms of enabled prefix CPU versus 61 ms nominally.
-The existing offline analyzers do not yet require or replay the new optional fields.
+`verify_epoch_prefixes` now replays baseline identity, disabled brackets, enable transitions, source bounds, first samples, and counter subtraction.
+It reports `absent`, `unavailable`, or `verified` independently of workload success.
+The producer declares `sourceEpochPrefixEvidenceVersion = 1`; that marker requires the prefix field.
+Legacy records without either field remain readable with status `absent`.
+Earlier unversioned prefix arrays use the same version 1 replay rules.
+The report keeps `version` (parser contract) separate from `declaredVersion` (nullable input declaration).
+Verified summaries distinguish complete source epochs from the accepted prefix, including the frozen prefix when enabled.
+Mapped baseline totals exclude first samples outside that accepted prefix.
+Clean collection can retain valid prefixes after a later workload failure. The workload remains failed.
+These checks do not promote enabled CPU to selected CPU or qualify prediction accuracy.
+Malformed prefixes reject the complete case replay. Removing both fields instead reports legacy absence, never verified evidence.
+The parser checks consistency of retained data, not independent authenticity of counter readings.
 
 ```mermaid
 flowchart LR
