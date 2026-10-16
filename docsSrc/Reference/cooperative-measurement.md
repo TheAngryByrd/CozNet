@@ -7,7 +7,8 @@ Other activation values except `0` reject the run.
 
 ## Boundaries
 
-The selected owner captures the start after source setup and before its application loop.
+The selected owner prepares a separate capture before source creation.
+It captures the actual start after source setup and before its application loop.
 The peer already runs on its dedicated worker. Each boundary records both progress counters.
 The end freezes after the selected loop and before source closure or final payment cleanup.
 On failure, the owner attempts to freeze before diagnostic capture and cleanup.
@@ -26,12 +27,13 @@ It does not require cleanup to pay all residual peer debt. Residuals keep the me
 | --- | --- |
 | `finiteMeasurementEnabled` | Parsed activation Boolean. |
 | `measurement.Window` | One start and one end, with clock brackets and capture status. |
+| `measurement.Window.Preparation` | Separate preparation window, excluded from estimator inputs. |
 | `Accounting.Cooperative` | Released journal count and selected/peer ownership at that boundary. |
 | Ownership `Lease`, `Command`, `Generation`, `Budget` | Managed lease and native request identity. Generation zero retains unresolved submission. |
 | Ownership `AcceptedChildren`, `ConfirmedWait` | Accepted native prefix at capture time. |
 | Ownership `LedgerSettled` | Whether accepted wait has already entered local ledger credit. |
 | Worker `Ledger` | Global delay, local credit, phase, and separate unsettled service prefix. |
-| `measurement.CaptureFailure` | First capture error. |
+| `measurement.CaptureFailure` | First preparation or capture error. |
 | `measurement.Failure` | First workload or final verification error. |
 | `measurementAssessment` | Invalid or unqualified outcome, reasons, and optional descriptive estimate. |
 

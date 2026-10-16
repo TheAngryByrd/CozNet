@@ -17,6 +17,8 @@ flowchart LR
     End --> Cleanup[Stop and join peer]
 ```
 
+The route records a separate `measurementWindow.Preparation` before the real start.
+Preparation exercises the capture path without performing selected work or supplying measured progress.
 Frozen progress deltas define measured work. Final peer totals include boundary-external work.
 The route requires disabled tiering, ReadyToRun, and startup profiling.
 Its managed implementation still requires execution checks for other platform and runtime combinations.

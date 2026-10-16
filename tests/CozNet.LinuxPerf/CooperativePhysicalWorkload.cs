@@ -34,6 +34,7 @@ static class CooperativePhysicalWorkload
                 finally { stopped.Set(); }
             });
             if (!started.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("The physical peer did not start.");
+            measurement.Prepare(Read);
             measurement.Begin(Read, () => { });
             selectedWorkStarted = Stopwatch.GetTimestamp();
             while (work.SelectedProgress < plan.Batches)

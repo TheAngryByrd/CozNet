@@ -23,10 +23,12 @@ sealed class MeasurementWindowCapture
             Accounting = accounting;
         }
 
-        internal static Boundary Capture(TimeProvider clock, long frequency, Func<Readings> read, Action? release = null)
+        internal static Boundary Capture(TimeProvider clock, long frequency, Func<Readings> read, Action? release = null, long? earliest = null)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(frequency);
             long before = clock.GetTimestamp();
+            if (earliest is { } minimum && before < minimum)
+                throw new InvalidDataException("The measurement starts before preparation finished.");
             var values = read();
             if (values is null || values.Global < 0 || values.Credit < 0 || !Valid(values.Selected) || !Valid(values.Peer)
                 || !ValidTimer(values))
@@ -62,6 +64,8 @@ sealed class MeasurementWindowCapture
     public MeasurementCaptureStatus Status { get; private set; }
     public Boundary? Start { get; private set; }
     public Boundary? End { get; private set; }
+    public MeasurementWindowCapture? Preparation { get; private set; }
+    public bool PreparationAttempted { get; private set; }
 
     public MeasurementWindowCapture(TimeProvider clock)
     {
@@ -71,14 +75,29 @@ sealed class MeasurementWindowCapture
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(frequency);
     }
 
+    public void Prepare(Func<Readings> read)
+    {
+        if (Status != MeasurementCaptureStatus.NotStarted || PreparationAttempted)
+            throw new InvalidOperationException("Measurement preparation was already attempted or the window has started.");
+        ArgumentNullException.ThrowIfNull(read);
+        PreparationAttempted = true;
+        Preparation = new(clock);
+        if (Preparation.frequency != frequency)
+            throw new InvalidDataException("The measurement preparation clock frequency changed.");
+        Preparation.Begin(read, () => { });
+        Preparation.Finish(read);
+    }
+
     public void Begin(Func<Readings> read, Action release)
     {
         if (Status != MeasurementCaptureStatus.NotStarted)
             throw new InvalidOperationException("The measurement start was already attempted.");
+        if (PreparationAttempted && Preparation?.Status != MeasurementCaptureStatus.Complete)
+            throw new InvalidOperationException("Measurement preparation did not complete.");
         ArgumentNullException.ThrowIfNull(read);
         ArgumentNullException.ThrowIfNull(release);
         Status = MeasurementCaptureStatus.StartFailed;
-        Start = Boundary.Capture(clock, frequency, read, release);
+        Start = Boundary.Capture(clock, frequency, read, release, Preparation?.End?.AfterTimestamp);
         Status = MeasurementCaptureStatus.Active;
     }
 

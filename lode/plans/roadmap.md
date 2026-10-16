@@ -6,8 +6,10 @@ Keep the serial model separate from the proposed sampled engine.
 
 The [matched ownership comparison](../../reliability/features/native-signal/owner-controller-comparison.md) supports retaining owner/controller mode as an opt-in candidate.
 Its shorter selected intervals do not qualify an overall speedup. Zero-speedup elapsed times vary substantially.
-The next accuracy work must bound measurement endpoint cost and calibrate the physical selected-region reduction.
-Cold endpoint intervals are observed. Their cause remains unproven.
+Measurement preparation now separates first-call capture work from the actual start. Its cost is observed, not bounded.
+The prepared four-arm comparison still differs by about 42.6 percentage points between descriptive prediction and physical change.
+The earlier arithmetic calibration uses unchanged method source but does not qualify the current instrumented program.
+Next, investigate profiler overhead and sampled attribution. Repeating boundary preparation cannot resolve that mismatch.
 Source membership and instrumentation attribution require separate contracts before prediction qualification.
 Do not repeat the unchanged controller comparison as a substitute for those contracts.
 

@@ -5,8 +5,9 @@ static class MeasurementWindowCaptureChecks
         public int Reads;
         public int FailOnRead = int.MaxValue;
         public long Frequency = 1000000;
+        public bool FailFrequency;
         public readonly Exception Failure = new IOException("Injected measurement clock failure.");
-        public override long TimestampFrequency => Frequency;
+        public override long TimestampFrequency => FailFrequency ? throw Failure : Frequency;
         public override long GetTimestamp()
         {
             if (++Reads == FailOnRead) throw Failure;
@@ -19,6 +20,11 @@ static class MeasurementWindowCaptureChecks
 
     public static void Run()
     {
+        PreparationPreservesTheRealWindow();
+        PreparationCannotRepeatOrFollowStart();
+        FailedPreparationBlocksMeasurement();
+        PreparationClockMustMatchAndPrecedeMeasurement();
+        PreparationConstructorFailurePreventsReuse();
         FrozenEndExcludesShutdownChanges();
         ReleaseOccursInsideValidatedStartBracket();
         FailedFinishCannotCaptureShutdownState();
@@ -28,6 +34,120 @@ static class MeasurementWindowCaptureChecks
         CumulativeCountersCannotRegress();
         TimerSnapshotMustMatchWorkerAccounting();
         TimerInventoryCannotRegressOrChangeCapability();
+    }
+
+    private static void PreparationPreservesTheRealWindow()
+    {
+        var clock = new Clock(10, 20, 30, 40, 100, 110, 200, 210);
+        var capture = new MeasurementWindowCapture(clock);
+        int reads = 0, releases = 0;
+        var initial = Empty();
+        capture.Prepare(() => { reads++; return initial; });
+        Require(reads == 2 && clock.Reads == 4 && capture.Status == MeasurementCaptureStatus.NotStarted
+            && capture.Start is null && capture.End is null && capture.Preparation!.Status == MeasurementCaptureStatus.Complete
+            && capture.Preparation.Start!.BeforeTimestamp == 10 && capture.Preparation.End!.AfterTimestamp == 40,
+            "Preparation must retain its own complete window without starting measurement.");
+        capture.Begin(() => initial with { Peer = new(7, 0, 0, null) }, () => releases++);
+        capture.Finish(() => initial with { Selected = new(3, 0, 0, null), Peer = new(9, 0, 0, null) });
+        Require(releases == 1 && capture.Status == MeasurementCaptureStatus.Complete && capture.Start!.BeforeTimestamp == 100
+            && capture.Start.Accounting.Peer.Progress == 7 && capture.End!.AfterTimestamp == 210
+            && capture.End.Accounting.Selected.Progress == 3 && capture.Preparation!.End!.Accounting == initial,
+            "Preparation must not supply measured progress, release the workload, or change the final window.");
+    }
+
+    private static void PreparationCannotRepeatOrFollowStart()
+    {
+        var untouchedClock = new Clock(10, 20, 30, 40);
+        var untouched = new MeasurementWindowCapture(untouchedClock);
+        Require(Failure(() => untouched.Prepare(null!)) is ArgumentNullException
+            && untouched.Preparation is null && !untouched.PreparationAttempted && untouchedClock.Reads == 0,
+            "A missing preparation reader must reject without changing state or reading the clock.");
+        foreach (bool prepareFirst in new[] { false, true })
+        {
+            var clock = new Clock(10, 20, 30, 40);
+            var capture = new MeasurementWindowCapture(clock);
+            if (prepareFirst) capture.Prepare(Empty);
+            else capture.Begin(Empty, () => { });
+            int reads = clock.Reads;
+            bool invoked = false;
+            Require(Failure(() => capture.Prepare(() => { invoked = true; return Empty(); })) is InvalidOperationException
+                && !invoked && clock.Reads == reads,
+                "Repeated or late preparation must reject before reading clocks or accounting.");
+        }
+    }
+
+    private static void FailedPreparationBlocksMeasurement()
+    {
+        foreach (int failRead in new[] { 1, 2 })
+        {
+            var clock = new Clock(10, 20, 30, 40);
+            var capture = new MeasurementWindowCapture(clock);
+            var expected = new IOException("Controlled preparation failure.");
+            int reads = 0;
+            Require(ReferenceEquals(Failure(() => capture.Prepare(() => ++reads == failRead ? throw expected : Empty())), expected),
+                "Preparation must preserve the original accounting failure.");
+            var preparation = capture.Preparation!;
+            int clockReads = clock.Reads;
+            bool invoked = false;
+            Require(Failure(() => capture.Begin(() => { invoked = true; return Empty(); }, () => invoked = true)) is InvalidOperationException
+                && Failure(() => capture.Prepare(Empty)) is InvalidOperationException
+                && !invoked && clock.Reads == clockReads && ReferenceEquals(capture.Preparation, preparation)
+                && preparation.Status == (failRead == 1 ? MeasurementCaptureStatus.StartFailed : MeasurementCaptureStatus.FinishFailed)
+                && capture.Start is null && capture.End is null,
+                "Failed preparation must remain visible and prevent measurement or a later preparation attempt.");
+        }
+    }
+
+    private static void PreparationClockMustMatchAndPrecedeMeasurement()
+    {
+        foreach (long start in new[] { 39L, 40L })
+        {
+            var clock = new Clock(10, 20, 30, 40, start, 41);
+            var capture = new MeasurementWindowCapture(clock);
+            capture.Prepare(Empty);
+            if (start == 39)
+            {
+                bool invoked = false;
+                Require(Failure(() => capture.Begin(() => { invoked = true; return Empty(); }, () => invoked = true)) is InvalidDataException
+                    && !invoked && capture.Start is null && capture.Status == MeasurementCaptureStatus.StartFailed,
+                    "An overlapping start must reject before reading accounting or releasing work.");
+            }
+            else
+            {
+                capture.Begin(Empty, () => { });
+                Require(capture.Status == MeasurementCaptureStatus.Active && capture.Start!.BeforeTimestamp == 40,
+                    "Measurement must accept the exact preparation endpoint.");
+            }
+        }
+        var changedClock = new Clock(10, 20, 30, 40);
+        var changed = new MeasurementWindowCapture(changedClock);
+        changedClock.Frequency++;
+        Require(Failure(() => changed.Prepare(Empty)) is InvalidDataException
+            && changedClock.Reads == 0 && changed.Preparation is not null
+            && Failure(() => changed.Begin(Empty, () => { })) is InvalidOperationException,
+            "A changed preparation frequency must prevent timestamp reads and measurement.");
+    }
+
+    private static void PreparationConstructorFailurePreventsReuse()
+    {
+        foreach (bool throws in new[] { false, true })
+        {
+            var clock = new Clock(10, 20, 30, 40);
+            var capture = new MeasurementWindowCapture(clock);
+            clock.Frequency = 0;
+            clock.FailFrequency = throws;
+            var error = Failure(() => capture.Prepare(Empty));
+            Require((throws ? ReferenceEquals(error, clock.Failure) : error is ArgumentOutOfRangeException)
+                && capture.PreparationAttempted && capture.Preparation is null && clock.Reads == 0,
+                "Failed preparation construction must preserve its attempt and original exception.");
+            clock.Frequency = 1000000;
+            clock.FailFrequency = false;
+            bool invoked = false;
+            Require(Failure(() => capture.Begin(() => { invoked = true; return Empty(); }, () => invoked = true)) is InvalidOperationException
+                && Failure(() => capture.Prepare(() => { invoked = true; return Empty(); })) is InvalidOperationException
+                && !invoked && clock.Reads == 0 && capture.Start is null && capture.End is null,
+                "Restoring the clock must not permit reuse after failed preparation construction.");
+        }
     }
 
     private static void TimerSnapshotMustMatchWorkerAccounting()

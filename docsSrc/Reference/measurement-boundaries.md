@@ -111,3 +111,21 @@ The [native capture evidence](../../reliability/features/native-signal/frozen-ti
 
 See [the sampled timer reference](sampled-timer.md) and [the Coz port decision](../Research/coz-port-and-il-rewriting.md).
 The [retained evidence](../../reliability/features/native-signal/measurement-boundaries.md) includes portable checks and failed live treatments.
+
+
+## Preparation
+
+`MeasurementWindowCapture.Prepare(read)` records a separate start and end through the same accounting reader.
+`Preparation` retains this diagnostic window. Its progress and elapsed time do not enter the actual measurement.
+Preparation calls no workload-release action.
+It must precede `Begin` and can run only once.
+Failed preparation blocks the actual start. `PreparationAttempted` remains true even if construction fails before a preparation window exists.
+The actual start cannot precede the preparation endpoint or use a different captured clock frequency.
+An overlapping start rejects before accounting reads or workload release.
+Existing callers can omit preparation.
+Cooperative physical work and finite cooperative sampling use it before their actual measurement starts.
+The sampled path prepares before source creation.
+
+Preparation exercises capture and validation before timing the workload.
+It does not establish a cost bound or identify the cause of first-call cost.
+Current replay checks the actual measurement. It does not use preparation to qualify an estimate.

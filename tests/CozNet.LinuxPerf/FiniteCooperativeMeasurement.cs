@@ -21,6 +21,13 @@ sealed class FiniteCooperativeMeasurement
         return new(clock);
     }
 
+    public void Prepare(Func<MeasurementWindowCapture.Readings> read)
+    {
+        if (AcceptanceClosed) throw new InvalidOperationException("A closed experiment cannot prepare measurement.");
+        try { Window.Prepare(read); }
+        catch (Exception error) { CaptureFailure ??= error.ToString(); throw; }
+    }
+
     public void Begin(Func<MeasurementWindowCapture.Readings> read)
     {
         if (AcceptanceClosed) throw new InvalidOperationException("A closed experiment cannot begin.");

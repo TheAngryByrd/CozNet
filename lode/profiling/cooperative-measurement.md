@@ -10,6 +10,8 @@ measurement.Begin(ReadMeasurement);
 measurement.Freeze(ReadMeasurement);
 ```
 
+The caller prepares a separate `Window.Preparation` before source creation.
+Preparation reads the same accounting state but does not start or freeze the real window.
 The end precedes source closure and final peer settlement.
 After freezing, source tails remain diagnostic and no new experiment lease is reserved.
 Frozen global delay and progress survive subsequent cleanup.

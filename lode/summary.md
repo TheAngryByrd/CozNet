@@ -1,5 +1,12 @@
 # Project scope
 
+Cooperative physical and finite sampled work now [prepare measurement capture](profiling/measurement-boundaries.md) before the real start.
+Preparation has separate boundaries and permanent failure state. It does not supply estimator inputs.
+The [final prepared comparison](../reliability/features/native-signal/measurement-preparation.md) completes four arms but remains unqualified.
+Its descriptive sampled reduction is about 8.7%, versus about 51.3% physically. Smaller boundary brackets do not resolve that mismatch.
+Profiler overhead and sampled attribution remain the next accuracy issues.
+
+
 An explicit [native owner/controller mode](profiling/cooperative-interop.md) reserves one slot for the session creator.
 Default role separation remains. Native checks pass on Windows and Linux.
 The [managed integration](../docsSrc/Reference/owner-controller.md) passes twenty controlled CLR cases on Windows and Linux.

@@ -54,3 +54,9 @@ Argument parsing and output-write failures can prevent creation of the result fi
 
 See [the comparison explanation](../Explanations/cooperative-physical-comparison.md)
 and [finite cooperative measurement](cooperative-measurement.md).
+
+
+The physical route prepares capture and validation before the actual start.
+`measurementWindow.Preparation` retains those separate boundaries.
+Preparation progress and elapsed time do not enter the measured work or duration.
+See [the preparation contract](measurement-boundaries.md).

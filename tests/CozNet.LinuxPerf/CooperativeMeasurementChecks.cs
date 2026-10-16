@@ -26,6 +26,7 @@ static class CooperativeMeasurementChecks
     public static void Run()
     {
         ActivationRequiresOwnerCadence();
+        PreparationFailureRemainsACaptureFailure();
         FrozenEstimateUsesGlobalDelayAndSurvivesCleanup();
         AcceptedPrefixAndSettledOwnershipRemainDistinct();
         MismatchedOwnershipAndCapabilitiesReject();
@@ -34,6 +35,33 @@ static class CooperativeMeasurementChecks
         MissingSourceAndNonpositiveDurationReject();
         PendingNativeSuffixRemainsUnqualifiedAfterCleanup();
         OwnershipIdentityRejectsMalformedAndRetainsUnsubmitted();
+    }
+
+    private static void PreparationFailureRemainsACaptureFailure()
+    {
+        foreach (int failRead in new[] { 1, 2 })
+        {
+            var clock = new Clock(10, 20, 30, 40);
+            var measurement = new FiniteCooperativeMeasurement(clock);
+            var expected = new IOException("Controlled finite preparation failure.");
+            int reads = 0;
+            MeasurementWindowCapture.Readings Read() => ++reads == failRead ? throw expected
+                : new(0, 0, 0, 1, new(0, 0, 0, null), new(0, 0, 0, null));
+            Require(ReferenceEquals(Error(() => measurement.Prepare(Read)), expected)
+                && measurement.CaptureFailure?.Contains(expected.Message, StringComparison.Ordinal) == true
+                && measurement.Window.Status == MeasurementCaptureStatus.NotStarted && measurement.Window.Start is null,
+                "Failed finite preparation must retain the capture failure and leave the real window unopened.");
+            string? first = measurement.CaptureFailure;
+            int before = reads, beforeClock = clock.Reads;
+            Require(Error(() => measurement.Begin(Read)) is InvalidOperationException
+                && measurement.CaptureFailure == first && reads == before && clock.Reads == beforeClock,
+                "A later start must not replace the preparation failure or invoke the reader.");
+            measurement.Freeze(Read);
+            Require(measurement.AcceptanceClosed && Error(() => measurement.Prepare(Read)) is InvalidOperationException
+                && measurement.CaptureFailure == first && reads == before && clock.Reads == beforeClock
+                && measurement.Assess(false, false, true, 0).Status == "invalid",
+                "Closed admission must prevent preparation and retain an invalid measurement.");
+        }
     }
 
     private static void ActivationRequiresOwnerCadence()

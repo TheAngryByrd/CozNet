@@ -415,6 +415,7 @@ static class BoundSampledPaymentWorkload
             };
             peerLoop = cadencePlan is null ? Task.Run(() => worker.Run(peerWork)) : worker.Start(peerWork);
             Require(peerStarted.Wait(TimeSpan.FromSeconds(5)), "The paying peer did not start.");
+            measurement?.Prepare(ReadMeasurement);
             selectedOwner = readOwner();
             collection = new(new ClrProbeLifetime(binding), selectedOwner);
             if (selectedPaymentEnabled)
