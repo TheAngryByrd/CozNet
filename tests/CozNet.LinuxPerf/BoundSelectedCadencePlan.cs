@@ -1,18 +1,15 @@
-using System.Globalization;
-
 sealed class BoundSelectedCadencePlan
 {
     public SampledSignalPlan Sampling { get; }
-    public int Batches { get; }
+    public CooperativeWorkPlan Work { get; }
+    public int Batches => Work.Batches;
 
-    private BoundSelectedCadencePlan(SampledSignalPlan sampling, int batches) => (Sampling, Batches) = (sampling, batches);
+    private BoundSelectedCadencePlan(SampledSignalPlan sampling, CooperativeWorkPlan work) => (Sampling, Work) = (sampling, work);
 
     public static BoundSelectedCadencePlan Parse(string percent, string cadence, string batches)
     {
         var sampling = SampledSignalPlan.Parse(percent, cadence);
-        if (!int.TryParse(batches, NumberStyles.None, CultureInfo.InvariantCulture, out int count) || count <= 0)
-            throw new ArgumentException("Select a positive fixed selected batch count.");
-        return new(sampling, count);
+        return new(sampling, CooperativeWorkPlan.Parse(PhysicalWorkMode.Baseline, batches));
     }
 }
 

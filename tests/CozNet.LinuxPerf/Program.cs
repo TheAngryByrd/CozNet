@@ -4,6 +4,16 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--cooperative-physical", var cooperativePhysicalPath, var cooperativePhysicalMode, var cooperativePhysicalBatches])
+    return CooperativePhysicalWorkload.Run(cooperativePhysicalPath,
+        CooperativeWorkPlan.Parse(PhysicalWorkMode.Parse(cooperativePhysicalMode), cooperativePhysicalBatches));
+
+if (args is ["--verify-cooperative-work"])
+{
+    CooperativeCpuWorkChecks.Run();
+    return 0;
+}
+
 if (args is ["--verify-pausable-managed"])
 {
     PausableCollectorChecks.Run();

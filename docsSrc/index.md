@@ -10,6 +10,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Capture a cooperative comparison](How_Tos/capture-cooperative-comparison.md).
+
 - [Capture a finite cooperative measurement](How_Tos/capture-cooperative-measurement.md).
 
 - [Compare selected scheduling handoff](How_Tos/compare-selected-handoff.md).
@@ -42,6 +44,10 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Cooperative comparison analysis](Reference/cooperative-comparison.md): retained arms, input integrity, and descriptive bounds.
+
+- [Cooperative physical work](Reference/cooperative-physical-work.md): shared work, command inputs, and frozen output fields.
 
 - [Finite cooperative measurement](Reference/cooperative-measurement.md): frozen estimator inputs and invalid outcomes.
 
@@ -90,6 +96,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Timer worker lifecycle](Reference/timer-worker-lifetime.md): retirement, join, release, and fault-check scope.
 
 ## Explanation
+
+- [Comparing cooperative work with a physical change](Explanations/cooperative-physical-comparison.md).
 
 - [Owner draining and payment capacity](Explanations/owner-drain-capacity.md).
 - [Observer overhead in the bound workload](Explanations/bound-observer-overhead.md).

@@ -51,6 +51,9 @@ It also checks released journals, accepted prefixes, and applicable ownership, r
 
 ## Qualification limits
 
+The [cooperative physical route](cooperative-physical-work.md) shares checksum work with this sampled path.
+Controlled physical execution passes on Windows x64 and Linux x64. The first matched Linux block completes and remains unqualified.
+
 A failed workload, failed capture, rejected source, failed cleanup, or insufficient measurement reach produces `invalid`.
 An invalidation check can pass its intended rejection test while its measurement remains invalid.
 Other completed records remain `unqualified`.

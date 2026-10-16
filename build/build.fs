@@ -829,6 +829,47 @@ let linuxPerfWorkload _ =
         (rootDirectory
          </> "tests/CozNet.LinuxPerf/CozNet.LinuxPerf.csproj")
 
+let cooperativeComparisonChecks _ =
+    nativeScript "CooperativeComparisonRunnerChecks.ps1"
+
+    CreateProcess.fromRawCommand (Environment.environVarOrDefault "COZNET_PYTHON" "python") [
+        rootDirectory
+        </> "native/CooperativeComparisonChecks.py"
+    ]
+    |> CreateProcess.withWorkingDirectory rootDirectory
+    |> Proc.run
+    |> fun result ->
+        if
+            result.ExitCode
+            <> 0
+        then
+            failwith "Cooperative comparison analysis checks failed."
+
+    for argument in
+        [
+            "--verify-cooperative-work"
+            "--verify-bound-cooperative-managed"
+            "--verify-measurement-boundaries"
+        ] do
+        CreateProcess.fromRawCommand "dotnet" [
+            rootDirectory
+            </> "tests/CozNet.LinuxPerf/bin/Release/net10.0/CozNet.LinuxPerf.dll"
+            argument
+        ]
+        |> Proc.run
+        |> fun result ->
+            if
+                result.ExitCode
+                <> 0
+            then
+                failwithf "Cooperative comparison managed checks failed: %s" argument
+
+let linuxCooperativeComparison _ =
+    nativeScriptWithArgs "VerifyCooperativeComparison.ps1" [
+        "-PythonCommand"
+        Environment.environVarOrDefault "COZNET_PYTHON" "python"
+    ]
+
 let linuxPerfVerify _ = nativeScript "VerifyLinuxPerf.ps1"
 
 let linuxInjectedVerify _ = nativeScript "VerifyLinuxInjected.ps1"
@@ -1256,6 +1297,8 @@ let initTargets () =
     Target.create "LinuxPhysicalCalibration" linuxPhysicalCalibration
     Target.create "LinuxInterleavedCalibration" linuxInterleavedCalibration
     Target.create "LinuxMatchedPrediction" linuxMatchedPrediction
+    Target.create "CooperativeComparisonChecks" cooperativeComparisonChecks
+    Target.create "LinuxCooperativeComparison" linuxCooperativeComparison
     Target.create "LinuxFastTimerGc" linuxFastTimerGc
     Target.create "LinuxFastTimerScheduler" linuxFastTimerScheduler
     Target.create "LinuxFastTimerSchedulerNoGc" linuxFastTimerSchedulerNoGc
@@ -1388,6 +1431,11 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxMatchedPrediction"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "CooperativeComparisonChecks"
+    ==> "LinuxCooperativeComparison"
     |> ignore
 
     "LinuxPerfWorkload"

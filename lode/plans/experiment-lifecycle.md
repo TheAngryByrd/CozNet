@@ -38,6 +38,9 @@ Do not add an unnecessary warmup drain or claim that it fixes the endpoint.
 5. Run one predeclared matched physical comparison after review.
    Retain all cases. Do not retry unchanged failures to obtain a pass.
    A failed gate rejects this prototype claim and directs the next intervention decision.
+   The [first block](../../reliability/features/native-signal/cooperative-comparison.md) completes all four arms and remains unqualified.
+   Its descriptive prediction interval differs from the physical change interval.
+   Inspect selected pause, payment, and receipt-observation costs before changing accounting or collecting another matched block.
 
 ## Required evidence
 

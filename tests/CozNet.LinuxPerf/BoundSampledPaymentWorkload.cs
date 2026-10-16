@@ -109,13 +109,13 @@ static class BoundSampledPaymentWorkload
         Task? peerLoop = null;
         using var peerStarted = new ManualResetEventSlim();
         using var peerStopped = new ManualResetEventSlim();
-        int stop = 0;
+        var work = new CooperativeCpuWork(PhysicalWorkMode.Baseline);
         bool registered = false, joined = false, closed = false, completed = false;
         bool invalidated = false, rejectionVerified = false, rejectedAfterPayment = false;
         string? peerFailure = null;
         string? failure = null;
         string? verificationFailure = null;
-        long credit = 0, paid = 0, batches = 0, checksum = 0, peerBatches = 0, peerChecksum = 0, peerCalls = 0;
+        long credit = 0, paid = 0, peerCalls = 0;
         long pendingStarted = 0, pendingBudget = 0;
         ulong represented = 0, command = 0, generation = 0;
         Debt? selectedPeak = null, peerPeak = null, finalDebt = null;
@@ -188,7 +188,7 @@ static class BoundSampledPaymentWorkload
                 return owned is null ? null : CooperativeMeasurementSnapshot.Ownership.Parse(owned, id, nativeGeneration,
                     adapter?.AcceptedCount ?? 0, adapter?.ConfirmedNanoseconds ?? 0, adapter?.IsTerminal ?? false);
             }
-            return CooperativeMeasurementSnapshot.Capture(accounting.Observe(state), batches, Interlocked.Read(ref peerBatches),
+            return CooperativeMeasurementSnapshot.Capture(accounting.Observe(state), work.SelectedProgress, work.PeerProgress,
                 selectedPaid, paid, selectedPayments.Count + (long)payments.Count,
                 Ownership(selectedLease, selectedPending, selectedCommand, selectedGeneration, 1),
                 Ownership(lease, pending, command, generation, 0), credit, (ulong)samples.Count,
@@ -367,7 +367,7 @@ static class BoundSampledPaymentWorkload
 
         try
         {
-            Require(CpuWorkload.Run() == 49995000L, "Selected warmup changed its checksum.");
+            CooperativeCpuWork.Warmup();
             var binding = ClrProbeBinding.ReadCurrent();
             if (selectedPaymentEnabled) controller = new();
             client = OnController(() =>
@@ -396,7 +396,7 @@ static class BoundSampledPaymentWorkload
                 return registeredSite;
             });
             scheduling?.Begin();
-            worker.Run(() => Require(CpuWorkload.Run() == 49995000L, "Peer warmup changed its checksum."));
+            worker.Run(CooperativeCpuWork.Warmup);
             Action peerWork = () =>
             {
                 long initialCalls = InjectedProbes.Calls;
@@ -406,12 +406,7 @@ static class BoundSampledPaymentWorkload
                         Require(client.PollFromProbe(0, version, point) is CooperativePollOutcome.Idle or CooperativePollOutcome.Serviced,
                             "The peer probe rejected cooperative service."));
                     peerStarted.Set();
-                    while (Volatile.Read(ref stop) == 0)
-                    {
-                        peerChecksum += CpuWorkload.Run();
-                        if (measurement is null) peerBatches++;
-                        else Interlocked.Increment(ref peerBatches);
-                    }
+                    work.RunPeer();
                 }
                 finally { peerCalls = InjectedProbes.Calls - initialCalls; peerStopped.Set(); }
             };
@@ -430,11 +425,10 @@ static class BoundSampledPaymentWorkload
             var elapsed = Stopwatch.StartNew();
             measurement?.Begin(ReadMeasurement);
             if (cadencePlan is not null) selectedWorkStarted = Stopwatch.GetTimestamp();
-            while (cadencePlan is null ? elapsed.Elapsed < TimeSpan.FromSeconds(2) : batches < cadencePlan.Batches)
+            while (cadencePlan is null ? elapsed.Elapsed < TimeSpan.FromSeconds(2) : work.SelectedProgress < cadencePlan.Batches)
             {
                 Require(!peerLoop.IsCompleted, "The paying peer stopped during sample collection.");
-                checksum += CpuWorkload.Run();
-                batches++;
+                work.RunSelected();
                 if (ownerDrainEnabled) collection.DrainOnOwner();
                 if (collection.LiveSamples > samples.Count)
                 {
@@ -452,7 +446,7 @@ static class BoundSampledPaymentWorkload
             }
             if (cadencePlan is not null) selectedWorkFinished = Stopwatch.GetTimestamp();
             measurement?.Freeze(ReadMeasurement);
-            Require(InjectedProbes.Calls - initialCalls == checked(batches * plan.CallsPerBatch),
+            Require(InjectedProbes.Calls - initialCalls == checked(work.SelectedProgress * plan.CallsPerBatch),
                 "The selected workload changed its injected probe count.");
             result = collection.Complete();
             Require(result.Samples.Take(samples.Count).SequenceEqual(samples.Select(item => item.Sample)),
@@ -470,7 +464,8 @@ static class BoundSampledPaymentWorkload
                 Thread.Yield();
             }
             finalDebt = ObserveDebt();
-            Require(samples.Count > 1 && result.Batch.SelectedMethodSamples > 0 && batches > 0 && checksum == checked(batches * 49995000L),
+            Require(samples.Count > 1 && result.Batch.SelectedMethodSamples > 0 && work.SelectedProgress > 0
+                && work.SelectedChecksum == checked(work.SelectedProgress * CooperativeCpuWork.ExpectedChecksum),
                 "The sampled cooperative workload did not preserve selected work and sample reach.");
             UInt128 selectedPeriods = 0;
             for (int index = 1; index < samples.Count; ++index)
@@ -512,7 +507,7 @@ static class BoundSampledPaymentWorkload
         {
             try { selectedCallback?.Dispose(); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             try { collection?.CloseForCleanup(); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
-            Volatile.Write(ref stop, 1);
+            work.RequestPeerStop();
             bool stopped = peerLoop is null;
             if (peerLoop is not null)
             {
@@ -601,8 +596,8 @@ static class BoundSampledPaymentWorkload
             else
             {
                 Require(failure is null && result is not null, "The sampled source did not complete.");
-                Require(peerBatches > 0 && peerChecksum == checked(peerBatches * 49995000L)
-                    && peerCalls == checked(peerBatches * plan.CallsPerBatch), "The paying peer changed its work or injected probe count.");
+                Require(work.PeerProgress > 0 && work.PeerChecksum == checked(work.PeerProgress * CooperativeCpuWork.ExpectedChecksum)
+                    && peerCalls == checked(work.PeerProgress * plan.CallsPerBatch), "The paying peer changed its work or injected probe count.");
                 client!.Complete();
                 completed = true;
             }
@@ -633,7 +628,9 @@ static class BoundSampledPaymentWorkload
             schedulerOwners = scheduling is null ? null : new[] { schedulerControllerOwner, selectedOwner, peerOwner },
             binding = bindingEvidence is null ? null : new { bindingEvidence.Generation, Module = (ulong)bindingEvidence.Module,
                 Function = (ulong)bindingEvidence.Function, bindingEvidence.Method, bindingEvidence.Sites }, nativeRange = collection?.Map.Range,
-            selectedBatches = batches, checksum, peerBatches, peerChecksum, peerCalls,
+            workloadProtocol = CooperativeCpuWork.Protocol,
+            selectedBatches = work.SelectedProgress, checksum = work.SelectedChecksum,
+            peerBatches = work.PeerProgress, peerChecksum = work.PeerChecksum, peerCalls,
             credit, paid, selectedPeak, peerPeak, finalDebt, samples, payments,
             selectedPaid, selectedPayments, pauses, selectedFailureBoundary, selectedCleanup, selectedReceipt,
             selectedPending = selectedLease is null ? null : new { command = selectedCommand, generation = selectedGeneration,

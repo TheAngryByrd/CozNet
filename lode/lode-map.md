@@ -1,5 +1,7 @@
 # Lode index
 
+For shared cooperative checksum work and the unqualified comparison, read [cooperative physical work](profiling/cooperative-physical.md).
+
 For frozen cooperative estimator inputs before cleanup, read [finite cooperative measurement](profiling/cooperative-measurement.md).
 
 For the opt-in selected-owner scheduling experiment, read [selected handoff](profiling/selected-handoff.md).
