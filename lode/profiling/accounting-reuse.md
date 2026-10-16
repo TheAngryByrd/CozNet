@@ -29,6 +29,17 @@ flowchart LR
 Peer overshoot is published through the full catch-up operation before its idle result is cached.
 Pending and settled service states are different objects, so their observations cannot reuse older operation data.
 Fresh debt records retain current timestamps and enforce the unchanged 2 ms gate.
+`BoundSampledPaymentWorkload.Debt` is a readonly value record with nine signed 64-bit fields.
+Each observation still reads the current timestamp and accounting snapshot.
+Nullable peak, final, and failure observations retain value copies without one heap object per observation.
+`ObservePeaks` selects each debt maximum independently and retains the original timestamp on ties.
+Its direct check covers initial absence, independent increases, decreases, and ties.
+The JSON shape retains the same nine properties and null for an absent observation.
+The calling-thread allocation check detects 880,000 bytes over 10,000 observations with the earlier reference record.
+It requires zero bytes for the value-record construction and retention path.
+This removes allocation, not the observation, native polling, or debt gate.
+The [live integration](../../reliability/features/native-signal/debt-value-observations.md) passes zero, 50-percent, and expected-invalidation cases.
+The final helper and allocation checks pass on Windows and Linux. Full-workload timing benefit remains unmeasured.
 The debt error message is formatted only when the gate fails.
 `CooperativeAccountingCacheChecks` covers reuse, new credit, pending and unsettled service, overshoot publication,
 equal-debt distinct state, foreign-state rejection, and recovery of the previous valid cache entry.

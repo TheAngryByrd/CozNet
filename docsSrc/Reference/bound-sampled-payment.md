@@ -188,6 +188,18 @@ Probe, outer-loop, and final settlement service calls remain independent of this
 It excludes service calls outside publication and does not count controller dispatches.
 Replay checks count bounds, not the exact history of published batches.
 The runner rejects a result whose mode differs from the requested mode.
+
+## Debt observation storage
+
+Each debt observation retains a fresh timestamp and the current accounting values.
+The observation uses a readonly value record with nine signed 64-bit fields.
+Peak, final, and failure observations use nullable value copies. An absent observation remains null in JSON.
+The JSON property names and numeric values remain unchanged.
+
+This representation avoids a separate heap object for every debt observation.
+It does not skip service, native polling, timestamp reads, or the 2 ms debt checks.
+Serialization can still allocate after measurement. Value copies can still cost CPU time.
+The [retained checks](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/debt-value-observations.md) cover allocation, JSON, and live selected payment.
 Legacy replay records without both fields remain readable.
 
 See [the scheduling comparison](../Explanations/owner-drain-capacity.md#native-coz-applies-a-batch-before-its-delay-check).

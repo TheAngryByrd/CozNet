@@ -4,6 +4,19 @@ The bound sampled workload performs profiler work on the selected thread.
 Injected probes check CLR lifetime, poll native requests, publish samples, and inspect debt.
 A zero-speedup run still performs this work, even when it pays no delay.
 
+## Repeated debt records
+
+Each service check records debt even when accounting state has not changed.
+The reference record allocated 88 bytes per observation in the isolated host check.
+The readonly value record now allocates zero calling-thread bytes for the same construction and nullable retention path.
+It preserves timestamps and earlier observations without caching a stale debt result.
+
+This removes one allocation source from repeated service checks.
+It does not measure the allocation's share of total observer cost or establish a full-workload speedup.
+The [retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/debt-value-observations.md) separates the allocation check from live integration.
+
+## Fixed-work reference
+
 The fixed-work reference compares the same checksum arithmetic and 5,000 selected batches.
 Both paths use the existing dedicated peer worker.
 The reference disables the native profiler and omits sampling, probe callbacks, and accounting.

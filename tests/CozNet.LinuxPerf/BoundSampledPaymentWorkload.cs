@@ -10,7 +10,7 @@ static class BoundSampledPaymentWorkload
     private sealed record CreditedSample(int Index, CpuSample Sample, long Credit, ulong EligibilityEpoch);
     private sealed record Payment(ulong Command, ulong Generation, long Budget, long Started,
         long Finished, CooperativeObservation Observation, CooperativeCleanupCapture Cleanup, CooperativeReceiptInterval ReceiptInterval);
-    private sealed record Debt(long Timestamp, long Global, long SelectedCredit, long PeerWait, long Selected, long Peer,
+    internal readonly record struct Debt(long Timestamp, long Global, long SelectedCredit, long PeerWait, long Selected, long Peer,
         long SelectedLocal, long PeerLocal, long SelectedWait);
     private sealed record PauseBoundary(long Started, int FirstUnprocessed, int? FinalDrainCount = null,
         long? CallbackFinished = null, long? Resumed = null, BoundSelectedAdmission? Admission = null, BoundPauseTiming? Timing = null);
@@ -19,6 +19,12 @@ static class BoundSampledPaymentWorkload
 
     private sealed record PeerProgressObservation(uint Slot, ulong Command, ulong Generation, long Budget,
         long RequestStarted, CpuSampleOwner? Owner, long? DebtTimestamp, CooperativeProgressCapture? Capture, string? Unavailable);
+    internal static void ObservePeaks(in Debt debt, ref Debt? selectedPeak, ref Debt? peerPeak)
+    {
+        if (selectedPeak is not { } selectedMaximum || debt.Selected > selectedMaximum.Selected) selectedPeak = debt;
+        if (peerPeak is not { } peerMaximum || debt.Peer > peerMaximum.Peer) peerPeak = debt;
+    }
+
     public static int Run(string path, SampledSignalPlan settings, string library,
         Func<CpuSampleOwner> readOwner, Func<IInstructionMap, ICpuSampleSink, ICpuEventSession> createSource,
         bool invalidateAfterPayment = false,
@@ -170,8 +176,7 @@ static class BoundSampledPaymentWorkload
             var debt = new Debt(Stopwatch.GetTimestamp(), observed.Global, credit, paid,
                 observed.Selected, observed.Peer, observed.SelectedLocal, observed.PeerLocal, selectedPaid);
             lastObservedDebt = debt;
-            if (selectedPeak is null || debt.Selected > selectedPeak.Selected) selectedPeak = debt;
-            if (peerPeak is null || debt.Peer > peerPeak.Peer) peerPeak = debt;
+            ObservePeaks(debt, ref selectedPeak, ref peerPeak);
             if (debt.Selected > 2000000 || debt.Peer > 2000000)
             {
                 if (peerProgressEnabled && peerDebtProgress is null) peerDebtProgress = CapturePeerProgress(debt.Timestamp);
