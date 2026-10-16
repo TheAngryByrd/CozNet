@@ -4,7 +4,8 @@ The callback-reuse comparison completes but retains a 9.9977–10.0364 percentag
 All recorded treatment credit is source-inside. Allocation reuse does not resolve instrumentation attribution or extra treatment CPU.
 The timer workload implements opt-in [nominal-event credit](plans/timer-nominal-credit.md) without IL loop probes.
 Its declared capture verifies preparation, live reset, and both accounting replays but retains a 2,361,731 ns treatment peer-debt failure.
-Investigate this retained failure before another matched series. Existing timer capacity and CLR safety limits remain.
+The receipt audit identifies delayed same-epoch credit publication. A separate scheduler diagnostic measures 13.800756 ms controller preemption during a receipt gap.
+Next, compare target-local sample processing with the managed drain dependency. Existing timer capacity and CLR safety limits remain.
 
 Optional clock capture now binds both sampled arms to the [matched comparison plan](profiling/sample-membership.md#matched-comparison-activation).
 The retained 500,000-batch block places all recorded treatment credit inside the observed source window and frozen prefix.

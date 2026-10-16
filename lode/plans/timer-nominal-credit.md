@@ -55,6 +55,11 @@ Managed checks, counter replay, membership replay, and matched-plan rejection ch
 Both adversarial reviews clear the fixed live-period declaration. Injected preparation failure remains an accepted test gap.
 The [declared capture](../../reliability/features/native-signal/timer-nominal-credit.md) passes both replays but retains a 2,361,731 ns treatment peer-debt failure.
 Successful preparation and live reset are verified on Linux x64. Native safety, stable capacity, and prediction accuracy remain unverified.
-Investigate the retained failure before another matched series. Do not retry the unchanged capture.
+The receipt audit finds five same-epoch events posting 2.5 ms credit after a 5.212683 ms receipt gap, with no pending payment at failure.
+A separate nominal scheduler diagnostic retains a 6,499,906 ns peer-debt failure and passes both accounting replays.
+Its 13.959906 ms receipt gap contains 13.800756 ms controller preemption, followed by thirteen same-epoch events posting 6.5 ms credit.
+This identifies controller descheduling in that diagnostic run, not its cause or the earlier run's cause.
+Next, compare target-local sample processing and payment ownership against the managed drain dependency.
+Do not divide retrospective credit or relax debt bounds to make the failure pass. Do not retry unchanged captures.
 The matched timer protocol remains interval-only.
 See [nominal credit](../profiling/nominal-event-credit.md), [sampled timers](../profiling/timer-sampled.md), and [the roadmap](roadmap.md).

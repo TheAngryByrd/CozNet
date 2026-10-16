@@ -1,6 +1,6 @@
 # Lode index
 
-For the next uninstrumented-backend experiment and its estimator mismatch, read [timer nominal credit](plans/timer-nominal-credit.md).
+For nominal timer credit, the retained controller-preemption backlog, and the next sample-processing design, read [timer nominal credit](plans/timer-nominal-credit.md).
 
 For bound source-time membership and unchanged recorded credit, read [sample membership](profiling/sample-membership.md#bound-source-membership).
 

@@ -24,6 +24,9 @@ The existing matched timer plan rejects nominal records.
 The [declared nominal capture](../../reliability/features/native-signal/timer-nominal-credit.md) passes both policy-bound replays and verifies preparation and reset.
 The zero-speedup case passes. Treatment fails at 2,361,731 ns peer debt and completes native cleanup.
 Nominal credit removes first-event exclusion but does not establish stable capacity or prediction accuracy.
+The [receipt audit and scheduler diagnostic](../../reliability/features/native-signal/timer-nominal-credit.md#scheduler-diagnostic) expose the managed drain dependency.
+The diagnostic records 13.800756 ms controller preemption during a 13.959906 ms receipt gap, followed by 6.5 ms of same-epoch credit.
+It retains a 6,499,906 ns peer-debt failure. The cause of preemption remains unknown; target-local sample processing is the next design question.
 Observed debt subtracts active confirmed waits for both workers, in addition to committed waits and selected credit.
 Scalar debt checks run every iteration. Boundary snapshots are allocated for periodic capture, new peaks, and failures.
 The 2 ms observed debt bound, 2 ms lease budget, 50 µs requested wait, 5 ms handler bound, and 100 ms receipt bound remain fixed.

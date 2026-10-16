@@ -63,7 +63,20 @@ The zero-speedup workload completes. The 50% workload fails the unchanged 2 ms d
 Both cases complete native cleanup. The capture verifies synthetic preparation and a fresh live stream with the declared period.
 The treatment credits 1,026 selected events across 18 recorded epochs, with no first-event exclusion.
 This removes the event-rule difference but does not establish timer capacity or prediction accuracy.
-The retained debt failure needs investigation before another matched series.
+An audit finds five same-epoch events posting 2.5 ms of credit after a 5.212683 ms receipt gap.
+No native payment remains pending at the frozen failure endpoint.
+This failure therefore exposes delayed credit publication, rather than an epoch-transition error.
+
+A separate scheduler diagnostic retains another debt failure at 6.499906 ms.
+Its controller has 13.800756 ms of observed preemption within a 13.959906 ms receipt gap.
+Thirteen delayed events then post 6.5 ms of credit. The selected worker has no observed switch-out in that gap.
+This evidence supports controller descheduling as the source of that run's backlog.
+It does not identify the cause of preemption or explain the earlier run without scheduler data.
+
+The current timer path still depends on managed sample consumption before credit publication and payment reservation.
+Target-local sample processing is the next architectural question. It still needs source-admission, accounting, and CLR lifetime contracts.
+Reducing a recorded burst after capture would not establish that debt stayed bounded during the delay.
+Capacity remains unverified, so a matched prediction series is deferred.
 See [the nominal timer evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/timer-nominal-credit.md).
 See [the retained audit](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/timer-estimator-audit.md) for all cases and replay limits.
 
