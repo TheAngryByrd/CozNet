@@ -4,7 +4,42 @@ import pathlib
 import tempfile
 import unittest
 
-from AnalyzeBoundSampledPayment import main, verify_record, verify_receipt_readiness
+from AnalyzeBoundSampledPayment import main, verify_record, verify_receipt_readiness, verify_receipt_preparation
+
+
+class ReceiptPreparationChecks(unittest.TestCase):
+    def test_preparation_requires_mode_settlement_and_premeasurement_order(self):
+        record = dict(receiptPreparationEnabled=True, selectedPaymentEnabled=True, finiteMeasurementEnabled=True,
+                      passed=True, completed=True, timestampFrequency=1000,
+                      receiptPreparation=dict(Started=1, Observed=2, Accepted=3, Children=10,
+                                              ConfirmedNanoseconds=500000, Terminal=True, RemainingNanoseconds=0),
+                      measurement=dict(Window=dict(Start=dict(BeforeTimestamp=4, TimestampFrequency=1000))))
+        verify_receipt_preparation(record)
+        for mutate, message in (
+            (lambda r: r.update(receiptPreparationEnabled=1), "not Boolean"),
+            (lambda r: r.update(receiptPreparationEnabled=False), "Disabled"),
+            (lambda r: r.update(selectedPaymentEnabled=False), "requires"),
+            (lambda r: r.update(finiteMeasurementEnabled=False), "requires"),
+            (lambda r: r.update(receiptPreparation=None), "no receipt preparation"),
+            (lambda r: r["receiptPreparation"].update(Observed=4), "clock order"),
+            (lambda r: r["receiptPreparation"].update(Children=9), "isolated lease"),
+            (lambda r: r["receiptPreparation"].update(ConfirmedNanoseconds=499999), "isolated lease"),
+            (lambda r: r["receiptPreparation"].update(Terminal=False), "isolated lease"),
+            (lambda r: r["receiptPreparation"].update(RemainingNanoseconds=1), "isolated lease"),
+            (lambda r: r["receiptPreparation"].update(Accepted=5), "overlaps measurement"),
+            (lambda r: r.pop("receiptPreparationEnabled"), "no activation flag"),
+        ):
+            with self.subTest(message=message):
+                changed = copy.deepcopy(record)
+                mutate(changed)
+                with self.assertRaisesRegex(ValueError, message):
+                    verify_receipt_preparation(changed)
+
+    def test_disabled_legacy_and_failed_preparation(self):
+        verify_receipt_preparation({})
+        verify_receipt_preparation(dict(receiptPreparationEnabled=False, receiptPreparation=None))
+        verify_receipt_preparation(dict(receiptPreparationEnabled=True, selectedPaymentEnabled=True,
+                                       finiteMeasurementEnabled=True, passed=False, completed=False, receiptPreparation=None))
 
 
 def valid_record():

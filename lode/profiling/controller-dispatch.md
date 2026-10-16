@@ -72,7 +72,18 @@ Their first acceptance brackets span 9.161252–13.760920 ms, with later medians
 All 96 configured leases settle exactly, with unchanged DLL hashes across the series.
 Every first component bracket exceeds its later per-process median. Native snapshot and concurrent-workload costs remain excluded.
 See [the results](../../reliability/features/native-signal/cooperative-receipt-cost.md).
-Managed-path preparation before measurement is a candidate experiment, not current live behavior.
+The bound workload supports opt-in `COZNET_PREPARE_RECEIPTS=1`, exposed as `-PrepareReceipts`.
+It requires selected payment and finite measurement. Disabled mode does not dispatch or create evidence.
+One isolated synthetic exercise runs on the controller before native creation or sampling. Owner/controller mode runs it directly.
+The exercise shares its implementation with the portable receipt-cost diagnostic.
+It returns scalar timing and settlement evidence, never live accounting state.
+Replay checks settlement and premeasurement timing. The runner binds the requested mode to result metadata.
+The mode does not prepare native snapshots, all selected paths, or every receipt outcome. Capacity and prediction benefits remain unverified.
+The [matched preparation comparison](../../reliability/features/native-signal/receipt-preparation-comparison.md) passes all twelve expected outcomes with matching input identities.
+Prepared first peer read actions take 2.37–2.52 ms versus 11.38–16.52 ms unprepared.
+Zero-speedup variation prevents an overall speedup claim. All normal measurements remain unqualified.
+Initial global delay stays zero. Preparation remains opt-in pending a prepared physical comparison.
+Failed settlement results remain in `LastResult`; a new dispatch clears stale evidence before execution.
 `FirstManagedReceiptUpper` uses the native clock. Request and dispatch brackets use `Stopwatch`.
 Do not subtract their absolute timestamps without a verified clock mapping.
 

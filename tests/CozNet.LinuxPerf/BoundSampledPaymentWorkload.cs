@@ -92,6 +92,8 @@ static class BoundSampledPaymentWorkload
         Require(!handoff.Enabled || ownerDrainEnabled, "Selected handoff requires owner draining and an explicit cadence.");
         var measurement = FiniteCooperativeMeasurement.Parse(Environment.GetEnvironmentVariable("COZNET_FINITE_MEASUREMENT"),
             ownerDrainEnabled, cadencePlan is not null, TimeProvider.System);
+        var receiptPreparationPlan = CooperativeReceiptPreparation.Parse(Environment.GetEnvironmentVariable("COZNET_PREPARE_RECEIPTS"),
+            selectedPaymentEnabled, measurement is not null);
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
@@ -380,6 +382,7 @@ static class BoundSampledPaymentWorkload
             CooperativeCpuWork.Warmup();
             var binding = ClrProbeBinding.ReadCurrent();
             if (selectedPaymentEnabled && !controllerPlan.OwnerEnabled) controller = new();
+            receiptPreparationPlan.Execute(action => controller is null ? action() : controller.Run(action));
             client = OnController(() =>
             {
                 scheduling?.Register(0);
@@ -633,6 +636,7 @@ static class BoundSampledPaymentWorkload
             receiptIntervalCaptureVersion = 1, receiptIntervalRejection = receiptIntervals.Rejected,
             batchServiceEnabled = publication.BatchServiceEnabled, sampleServiceCalls = publication.ServiceCalls,
             ownerControllerEnabled = controllerPlan.OwnerEnabled,
+            receiptPreparationEnabled = receiptPreparationPlan.Enabled, receiptPreparation = receiptPreparationPlan.LastResult,
             dispatchTimingEnabled = dispatchTiming is not null, dispatchTiming,
             directReceiptReadyEnabled = receiptReadiness.DirectEnabled, receiptReadyCalls = receiptReadiness.Calls,
             peerProgressEnabled, peerOwner, peerOwnerFailure, peerSubmitProgress, peerDebtProgress,

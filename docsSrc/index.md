@@ -10,6 +10,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Compare managed receipt preparation](How_Tos/compare-receipt-preparation.md).
+
 - [Measure cooperative receipt cost](How_Tos/measure-cooperative-receipt-cost.md).
 
 - [Capture a cooperative comparison](How_Tos/capture-cooperative-comparison.md).

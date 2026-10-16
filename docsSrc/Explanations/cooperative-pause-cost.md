@@ -121,10 +121,30 @@ The diagnostic does not identify a specific cause for the first-call difference.
 
 The Windows capture uses .NET 10.0.13. The Linux capture uses .NET 10.0.0.
 Their timings do not isolate an operating-system difference.
-No live warmup policy or payment rule changes as a result of this diagnostic.
+An optional managed preparation experiment now uses the same isolated exercise before measurement.
+Payment rules and the default remain unchanged.
 
 See [the retained results](../../reliability/features/native-signal/cooperative-receipt-cost.md)
 and [the diagnostic procedure](../How_Tos/measure-cooperative-receipt-cost.md).
+
+## Managed preparation comparison
+
+A four-group comparison uses unprepared/prepared/prepared/unprepared order with identical source hashes, binaries, and image identity.
+All twelve expected outcomes pass, including lifetime invalidation. Every normal measurement remains unqualified.
+
+Prepared first peer read actions take 2.37–2.52 ms. Unprepared first read actions take 11.38–16.52 ms.
+Prepared first request brackets are also shorter in both groups.
+This supports the optional preparation mode for further controlled experiments.
+It does not prove an overall speedup or accurate prediction. Zero-speedup costs vary substantially across the groups.
+
+Preparation uses a separate synthetic ledger before native session creation or sampling.
+It does not transfer synthetic payment into live accounting. All initial measurement snapshots retain zero global delay.
+It also invokes the controller, so the comparison does not isolate the prepared managed components from controller initialization.
+Native snapshots, selected-slot acceptance, and other receipt outcomes remain outside the preparation exercise.
+
+The next accuracy check needs a prepared comparison against a physical optimization.
+See [the retained comparison](../../reliability/features/native-signal/receipt-preparation-comparison.md)
+and [the preparation procedure](../How_Tos/compare-receipt-preparation.md).
 
 ## Measurement limits
 

@@ -54,6 +54,33 @@ def verify_receipt_readiness(record):
                 "Direct receipt readiness retained normal header dispatches")
 
 
+def verify_receipt_preparation(record):
+    if "receiptPreparationEnabled" not in record:
+        require("receiptPreparation" not in record, "Receipt preparation has no activation flag")
+        return
+    enabled = record["receiptPreparationEnabled"]
+    require(type(enabled) is bool, "Receipt preparation activation is not Boolean")
+    preparation = record["receiptPreparation"]
+    if not enabled:
+        require(preparation is None, "Disabled receipt preparation contains evidence")
+        return
+    require(record.get("selectedPaymentEnabled") is True and record.get("finiteMeasurementEnabled") is True,
+            "Receipt preparation requires selected payment and finite measurement")
+    if preparation is None:
+        require(not record["passed"] and not record["completed"], "Successful workload has no receipt preparation")
+        return
+    started, observed, accepted = (count(preparation[key]) for key in ("Started", "Observed", "Accepted"))
+    require(started <= observed <= accepted, "Receipt preparation clock order is invalid")
+    require(count(preparation["Children"]) == 10 and count(preparation["ConfirmedNanoseconds"]) == 500000
+            and preparation["Terminal"] is True and count(preparation["RemainingNanoseconds"]) == 0,
+            "Receipt preparation did not settle its isolated lease")
+    window = (record.get("measurement") or {}).get("Window") or {}
+    start = window.get("Start")
+    if start is not None:
+        require(start["TimestampFrequency"] == record["timestampFrequency"]
+                and accepted <= count(start["BeforeTimestamp"]), "Receipt preparation overlaps measurement")
+
+
 def verify_dispatch_timing(record):
     verify_receipt_readiness(record)
     if "dispatchTimingEnabled" not in record:
@@ -297,6 +324,7 @@ def verify_payments(payments, binding, worker):
 
 
 def verify_record(record):
+    verify_receipt_preparation(record)
     verify_probe_interval(record)
     verify_dispatch_timing(record)
     verify_sample_publication(record)

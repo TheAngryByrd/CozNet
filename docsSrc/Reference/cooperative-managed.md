@@ -154,6 +154,36 @@ Controlled checks cover the capture helper and replay rules.
 They do not force rejection through either workload call site or verify its ledger assignment order at runtime.
 The retained live captures contain no parser rejection.
 
+## Optional managed receipt preparation
+
+`COZNET_PREPARE_RECEIPTS` accepts `0` or `1`. An absent value disables preparation.
+The bound runner exposes `-PrepareReceipts`. It requires selected payment and finite measurement.
+Finite measurement also requires owner draining and an explicit selected cadence.
+
+Enabled preparation runs one synthetic ten-child receipt exercise on the controller thread.
+Owner/controller mode executes it on the calling thread.
+The exercise creates its own ledger, lease, receipt tracker, and accounting adapter.
+It returns only timing and settlement evidence. It does not receive or return live accounting state.
+Preparation runs before native session creation, peer work, and CPU sample collection.
+It does not prepare native snapshot calls, selected-slot acceptance, or all possible receipt outcomes.
+The separate-controller dispatch can also initialize shared controller paths.
+
+`receiptPreparationEnabled` records the requested mode. `receiptPreparation` is null when disabled or when the exercise throws before returning evidence.
+If settlement validation fails after the exercise returns, its result remains in the failed workload record.
+Successful preparation records `Started`, `Observed`, `Accepted`, `Children`, `ConfirmedNanoseconds`, `Terminal`, and `RemainingNanoseconds`.
+The three timestamps use the workload's managed timestamp frequency.
+They bracket observation and acceptance after fixture setup. They do not measure total preparation or controller dispatch time.
+The settlement must contain ten children, 500,000 ns, terminal state, and zero remaining peer debt.
+Preparation failure aborts the workload through its existing failure and cleanup path.
+
+Replay checks activation, settlement, timestamp order, and completion before the recorded measurement start.
+The runner rejects missing or mismatched activation metadata for both enabled and disabled requests.
+Legacy records without either preparation field remain readable.
+Replay does not prove controller-thread execution or the absence of sampling before preparation. Those guarantees come from workload ordering.
+Preparation does not qualify sample attribution, source membership, or causal prediction.
+
+See [the comparison procedure](../How_Tos/compare-receipt-preparation.md).
+
 ## Controlled receipt cost diagnostic
 
 `--measure-cooperative-receipt-cost <outputPath>` runs 32 sequential iterations in the managed workload executable.
