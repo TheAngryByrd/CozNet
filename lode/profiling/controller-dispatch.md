@@ -1,5 +1,11 @@
 # Cooperative controller dispatch timing
 
+The [prepared service comparison](../../reliability/features/native-signal/prepared-service-ownership.md) retains four groups with identical input identities.
+Both modes use receipt preparation and service timing at interval 8192, with dispatch timing disabled.
+All twelve expected outcomes pass. Owner receipt means are 49.9–68.0 µs versus 185.0–207.0 µs for separate controllers.
+Owner submission means are 14.0–14.4 µs versus 112.9–114.7 µs. Both totals and call counts also decrease.
+The result supports a prepared owner/controller physical comparison. It does not isolate CPU cost or establish prediction accuracy.
+
 `COZNET_DISPATCH_TIMING=1` enables timing on the selected-payment workload's controller calls.
 `CooperativeDispatchTiming.Parse` returns no observer for an absent value or `0`.
 The shared observer uses `Stopwatch` and managed synchronization. It has no platform-specific API.

@@ -63,7 +63,44 @@ def preparation_record(percent=50, enabled=True):
     return record
 
 
+def ownership_record(percent=50, enabled=True):
+    record = sampled_record(percent)
+    record.update(ownerControllerEnabled=enabled, dispatchTimingEnabled=False, dispatchTiming=None, schedulerTiming=False)
+    return record
+
+
 class CooperativeComparisonChecks(unittest.TestCase):
+    def test_ownership_plan_requires_explicit_versioned_boolean(self):
+        self.assertEqual((False, False), subject.controller_ownership_plan({}))
+        self.assertEqual((False, False), subject.controller_ownership_plan(dict(ownerController=False)))
+        for enabled in (False, True):
+            self.assertEqual((enabled, True), subject.controller_ownership_plan(
+                dict(ownerController=enabled, controllerOwnershipEvidenceVersion=1)))
+        for plan in (dict(ownerController=True), dict(ownerController=0), dict(controllerOwnershipEvidenceVersion=1),
+                     *[dict(ownerController=True, controllerOwnershipEvidenceVersion=v) for v in (None, True, '1', 1.0, 0, 2)],
+                     *[dict(ownerController=v, controllerOwnershipEvidenceVersion=1) for v in (None, 0, 1, 'true')]):
+            with self.subTest(plan=plan), self.assertRaises(ValueError):
+                subject.controller_ownership_plan(plan)
+
+    def test_ownership_binds_both_sampled_arms_and_preserves_legacy(self):
+        for mode, percent in (("sampled-zero", 0), ("sampled-half", 50)):
+            for enabled in (False, True):
+                record = ownership_record(percent, enabled)
+                self.assertEqual("unqualified", subject.analyze_case(record, mode, 5, 0,
+                    owner_controller=enabled, require_ownership=True)[0])
+                for actual in (None, 0, 1, 'true', not enabled):
+                    changed = dict(record, ownerControllerEnabled=actual)
+                    with self.subTest(mode=mode, enabled=enabled, actual=actual), self.assertRaisesRegex(ValueError, 'ownership differs'):
+                        subject.analyze_case(changed, mode, 5, 0, owner_controller=enabled, require_ownership=True)
+                del record['ownerControllerEnabled']
+                with self.assertRaisesRegex(ValueError, 'lacks declared controller ownership'):
+                    subject.analyze_case(record, mode, 5, 0, owner_controller=enabled, require_ownership=True)
+            self.assertEqual('unqualified', subject.analyze_case(sampled_record(percent), mode, 5, 0)[0])
+            with self.assertRaisesRegex(ValueError, 'ownership differs'):
+                subject.analyze_case(ownership_record(percent), mode, 5, 0)
+        self.assertEqual('complete', subject.analyze_case(physical_record(), 'physical-baseline', 5, 0,
+            owner_controller=True, require_ownership=True)[0])
+
     def test_preparation_plan_requires_explicit_versioned_boolean(self):
         self.assertEqual((False, False), subject.receipt_preparation_plan({}))
         self.assertEqual((False, False), subject.receipt_preparation_plan(dict(prepareReceipts=False)))
@@ -272,7 +309,8 @@ class ComparisonCollectionChecks(unittest.TestCase):
         (self.root / name).write_text(json.dumps(value), encoding="utf-8")
 
     def analyze_with_parsed_arms(self):
-        def parsed(record, mode, batches, code, probe_interval, require_probe_interval, prepare_receipts, require_preparation):
+        def parsed(record, mode, batches, code, probe_interval, require_probe_interval, prepare_receipts, require_preparation,
+                   owner_controller, require_ownership):
             if code:
                 return "invalid", ["process failed"], None
             return "unqualified", ["fixture"], subject.Cost(Fraction(10), Fraction(12), 5)
@@ -346,6 +384,30 @@ class ComparisonCollectionChecks(unittest.TestCase):
                 self.assertEqual((3, 1), (result["completed"], result["invalid"]))
                 self.assertEqual("invalid", next(case for case in result["cases"] if case["mode"] == target)["status"])
                 self.assertIsNone(result["descriptiveComparison"])
+
+    def test_ownership_mismatch_preserves_other_arms_and_suppresses_comparison(self):
+        plan = subject.read(self.root / 'plan.json')
+        plan.update(ownerController=True, controllerOwnershipEvidenceVersion=1)
+        self.save('plan.json', plan)
+        self.manifest['files']['plan.json'] = hashlib.sha256((self.root / 'plan.json').read_bytes()).hexdigest()
+        self.save('manifest.json', self.manifest)
+        self.save('physical-baseline.json', physical_record())
+        self.save('physical-optimized.json', physical_record('optimized'))
+        for target, percent in (('sampled-zero', 0), ('sampled-half', 50)):
+            for missing in (False, True):
+                self.save('sampled-zero.json', ownership_record(0))
+                self.save('sampled-half.json', ownership_record())
+                complete = subject.analyze(self.root)
+                self.assertTrue(complete['collectionComplete'])
+                self.assertEqual((True, 1), (complete['ownerController'], complete['controllerOwnershipEvidenceVersion']))
+                changed = ownership_record(percent, False)
+                if missing:
+                    del changed['ownerControllerEnabled']
+                self.save(target + '.json', changed)
+                result = subject.analyze(self.root)
+                self.assertEqual((3, 1), (result['completed'], result['invalid']))
+                self.assertEqual('invalid', next(case for case in result['cases'] if case['mode'] == target)['status'])
+                self.assertIsNone(result['descriptiveComparison'])
 
     def test_failed_and_unexecuted_arms_remain_in_report(self):
         self.outcomes[1].update(exitCode=137)

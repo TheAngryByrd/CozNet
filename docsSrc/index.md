@@ -10,6 +10,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Measure recurring cooperative service](How_Tos/measure-cooperative-service.md).
+
 - [Compare managed receipt preparation](How_Tos/compare-receipt-preparation.md).
 
 - [Measure cooperative receipt cost](How_Tos/measure-cooperative-receipt-cost.md).
@@ -48,6 +50,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Cooperative service timing](Reference/cooperative-service-timing.md): activity buckets, measurement subsets, and timing limits.
 
 - [Managed owner/controller mode](Reference/owner-controller.md): activation, ownership, and unsupported diagnostic combinations.
 

@@ -3,6 +3,12 @@
 The implemented scope is a serial experiment prototype. The goal is a .NET implementation of sampled Coz semantics.
 Keep the serial model separate from the proposed sampled engine.
 
+The [prepared ownership service comparison](../../reliability/features/native-signal/prepared-service-ownership.md) passes twelve expected outcomes with matching inputs.
+Owner/controller receipt and submission paths take less recorded time, both in total and per call.
+The [prepared owner physical block](../../reliability/features/native-signal/prepared-owner-physical-comparison.md) still underpredicts by about 28.8 percentage points.
+It freezes no pending native request, but retains a 65 ns selected ledger residual and two source-tail records.
+Next, investigate sampled attribution and boundary membership. Do not treat more controller tuning as proof of prediction accuracy.
+
 
 The [matched ownership comparison](../../reliability/features/native-signal/owner-controller-comparison.md) supports retaining owner/controller mode as an opt-in candidate.
 Its shorter selected intervals do not qualify an overall speedup. Zero-speedup elapsed times vary substantially.

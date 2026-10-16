@@ -1,5 +1,18 @@
 # Cooperative physical work
 
+The four-arm runner accepts `-OwnerController` after the existing parameters.
+New plans bind Boolean `ownerController` with `controllerOwnershipEvidenceVersion=1`.
+Both sampled records require matching activation metadata and full selected-payment replay.
+Physical arms remain uninstrumented and receive no controller activation.
+Legacy plans permit only separate-controller records. Mismatched ownership invalidates that arm and suppresses comparison.
+The default remains separate-controller execution. Accounting and qualification limits remain unchanged.
+Comparison checks bind requested activation to reported metadata. They do not independently prove controller thread placement.
+This accepted coverage limit uses the existing owner/controller implementation and its separate native and CLR checks.
+The [prepared owner block](../../reliability/features/native-signal/prepared-owner-physical-comparison.md) completes all four arms with unchanged inputs.
+Sampled effective elapsed reduction is 23.6278–23.7299%, versus 52.4898–52.5011% physically.
+No native request remains pending at the treatment endpoint. A 65 ns selected ledger residual and two source-tail records remain.
+The prediction remains unqualified. Separate earlier blocks do not isolate ownership effects on prediction accuracy.
+
 The four-arm runner accepts opt-in `-PrepareReceipts` for both sampled arms.
 New plans bind Boolean `prepareReceipts` with `receiptPreparationEvidenceVersion=1`.
 Both sampled records must contain matching Boolean activation metadata and pass full preparation replay.

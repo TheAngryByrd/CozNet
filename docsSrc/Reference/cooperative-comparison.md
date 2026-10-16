@@ -14,6 +14,7 @@ It preserves pending treatment ownership and source tails. No prediction-accurac
 | `ProbeInterval` | `1024` | Sampled-arm backedge interval. Accepts `1024` or `8192`. |
 | `PythonCommand` | `python` | Python command for retained checks and analysis. |
 | `PrepareReceipts` | Disabled | Prepare isolated managed receipt paths before both sampled measurements. |
+| `OwnerController` | Disabled | Run both sampled controllers on the selected owner thread. |
 
 The runner saves the plan and four unexecuted outcomes before preparation.
 It snapshots source files, managed workload files, and the existing Linux profiler.
@@ -58,6 +59,13 @@ Sampled clock frequency must be positive before replay arithmetic starts.
 An arithmetic failure within one arm invalidates that arm without discarding the other arm results.
 
 Physical parsing checks checksum totals, fixed selected work, frozen progress, and absence of intervention accounting.
+
+New plans declare Boolean `ownerController` and `controllerOwnershipEvidenceVersion=1`.
+Both sampled arms must report matching Boolean `ownerControllerEnabled` metadata and pass the full selected-payment replay.
+Missing or mismatched ownership metadata invalidates that arm and suppresses the aggregate comparison.
+Legacy plans without the version marker permit only separate-controller execution.
+Physical arms require no ownership metadata and receive no controller activation.
+The default remains separate-controller execution. The new switch follows all existing positional parameters.
 Sampled parsing uses the full selected-payment replay.
 It requires finite measurement, qualified selected cadence, direct receipt readiness, and disabled selected handoff.
 

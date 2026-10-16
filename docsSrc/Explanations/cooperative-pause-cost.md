@@ -142,9 +142,30 @@ It does not transfer synthetic payment into live accounting. All initial measure
 It also invokes the controller, so the comparison does not isolate the prepared managed components from controller initialization.
 Native snapshots, selected-slot acceptance, and other receipt outcomes remain outside the preparation exercise.
 
-The next accuracy check needs a prepared comparison against a physical optimization.
+The [prepared physical comparison](../../reliability/features/native-signal/prepared-physical-comparison.md) now completes all four arms.
+Its sampled effective elapsed reduction is 9.52–9.84%, versus 51.58–51.60% for the physical optimization.
+Preparation does not resolve this mismatch. Recurring service cost and sampled attribution remain separate questions.
 See [the retained comparison](../../reliability/features/native-signal/receipt-preparation-comparison.md)
 and [the preparation procedure](../How_Tos/compare-receipt-preparation.md).
+
+## Prepared recurring service comparison
+
+A prepared comparison uses service timing in separate/owner/owner/separate order at probe interval 8192.
+Both modes disable dispatch timing. All twelve expected outcomes pass with matching source, binary, and image identities.
+Owner/controller receipt calls average 49.9–68.0 µs, versus 185.0–207.0 µs with a separate controller.
+Submission calls average 14.0–14.4 µs, versus 112.9–114.7 µs.
+Both total time and time per call decrease in these recorded paths.
+The owner mode also records fewer receipt and submission calls.
+
+These results support testing prepared owner/controller execution against the physical optimization.
+They do not isolate dispatch CPU cost or establish prediction accuracy.
+Zero-speedup times vary. The observer changes execution, and its brackets include scheduling delays.
+See [the retained comparison](../../reliability/features/native-signal/prepared-service-ownership.md).
+
+The subsequent [prepared owner/controller physical comparison](../../reliability/features/native-signal/prepared-owner-physical-comparison.md) completes all four arms.
+Its sampled reduction is 23.63–23.73%, versus 52.49–52.50% physically.
+No native request remains pending at the treatment endpoint. Prediction still remains unqualified.
+Attribution and sample-boundary membership require investigation independent of controller cost.
 
 ## Measurement limits
 

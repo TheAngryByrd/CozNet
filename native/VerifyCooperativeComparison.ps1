@@ -3,7 +3,8 @@ param(
     [ValidateRange(1, 2147483647)][int]$SelectedBatches = 50000,
     [string]$PythonCommand = 'python',
     [ValidateSet(1024, 8192)][int]$ProbeInterval = 1024,
-    [switch]$PrepareReceipts
+    [switch]$PrepareReceipts,
+    [switch]$OwnerController
 )
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
@@ -23,6 +24,7 @@ Save-Json 'plan.json' @{
     selectedCadence = 'qualified-sample'; ownerDrain = $true; directReceiptReady = $true
     selectedHandoff = $false; finiteMeasurement = $true
     prepareReceipts = [bool]$PrepareReceipts; receiptPreparationEvidenceVersion = 1
+    ownerController = [bool]$OwnerController; controllerOwnershipEvidenceVersion = 1
     debtBoundNanoseconds = 2000000; leaseBoundNanoseconds = 2000000; requestedChildBoundNanoseconds = 50000
     handlerBoundNanoseconds = 5000000; receiptBoundNanoseconds = 100000000
 }
@@ -120,7 +122,8 @@ try {
                 '--env', 'COZNET_FINITE_MEASUREMENT=1', '--env', 'COZNET_SELECTED_HANDOFF=0',
                 '--env', 'COZNET_PAUSE_TIMING=0', '--env', 'COZNET_CHILD_CPU=0', '--env', 'COZNET_BATCH_SERVICE=0',
                 '--env', 'COZNET_DISPATCH_TIMING=0', '--env', 'COZNET_BOUND_SCHEDULER=0', '--env', 'COZNET_PEER_PROGRESS=0',
-                '--env', ('COZNET_PREPARE_RECEIPTS=' + [int][bool]$PrepareReceipts))
+                '--env', ('COZNET_PREPARE_RECEIPTS=' + [int][bool]$PrepareReceipts),
+                '--env', ('COZNET_OWNER_CONTROLLER=' + [int][bool]$OwnerController))
             $percent = if ($mode -eq 'sampled-zero') { '0' } else { '50' }
             $arguments = @('--sampled-bound-selected-cadence', '/evidence/result.json', $percent,
                 '/native/libCozNet.Cooperative.so', 'qualified-sample', [string]$SelectedBatches)

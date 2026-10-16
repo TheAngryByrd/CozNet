@@ -34,5 +34,10 @@ Check `plan.json` for `prepareReceipts=true` and `receiptPreparationEvidenceVers
 Both sampled results must report `receiptPreparationEnabled=true` and retain their preparation evidence.
 The physical arms continue to run without profiling or receipt preparation.
 
+To use the selected owner as controller, add `-OwnerController` to the runner command.
+Check `plan.json` for `ownerController=true` and `controllerOwnershipEvidenceVersion=1`.
+Confirm that both sampled results report `ownerControllerEnabled=true`.
+Combine `-OwnerController`, `-PrepareReceipts`, and `-ProbeInterval 8192` for the prepared owner/controller comparison.
+
 See [the reference](../Reference/cooperative-comparison.md) for field contracts
 and [the explanation](../Explanations/cooperative-physical-comparison.md) for comparison limits.
