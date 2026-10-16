@@ -22,7 +22,8 @@ The slot must be less than `targets`. Invalid slots fail before session creation
 Only the opening thread can register that slot. Other slots still require separate owner threads.
 The reservation is immutable. All controller operations retain opening-thread affinity.
 `coz_cooperative_open` retains the default separate-owner contract.
-Managed workload integration and a measured cost comparison remain pending.
+The [managed owner/controller mode](owner-controller.md) integrates this entry point.
+Controlled CLR-bound execution passes on Windows and Linux. A sampled cost comparison remains pending.
 
 An API lifetime guard excludes close and registration while other API calls execute.
 Polls from different targets can execute together. This guard is separate from the code-revocation guard.

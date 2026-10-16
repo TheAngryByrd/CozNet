@@ -432,6 +432,13 @@ def verify_selected_handoff(record):
 
 
 def verify_record(record):
+    owner_controller = record.get("ownerControllerEnabled", False)
+    require(type(owner_controller) is bool, "Owner controller activation is not Boolean")
+    if owner_controller:
+        require(record.get("selectedPaymentEnabled") is True
+                and record.get("dispatchTimingEnabled") is False and record.get("dispatchTiming") is None
+                and record.get("schedulerTiming") is False,
+                "Owner controller requires selected payment without scheduler or dispatch timing")
     measurement = verify_measurement(record)
     handoff = verify_selected_handoff(record)
     scheduler = verify_bound_scheduler(record)
@@ -558,7 +565,7 @@ def verify_record(record):
     return dict(samples=len(record["sourceSamples"]), credit=credit, paid=paid, selectedPaid=selected_paid,
                 selectedPayments=len(record["selectedPayments"]), pauses=len(record["pauses"]),
                 completed=record["completed"], casePassed=record["passed"], childCpu=child_cpu, scheduler=scheduler,
-                selectedHandoff=handoff, measurement=measurement)
+                selectedHandoff=handoff, measurement=measurement, ownerControllerEnabled=owner_controller)
 
 
 def verify_case(record, name):

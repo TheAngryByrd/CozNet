@@ -45,6 +45,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Reference
 
+- [Managed owner/controller mode](Reference/owner-controller.md): activation, ownership, and unsupported diagnostic combinations.
+
 - [Cooperative comparison analysis](Reference/cooperative-comparison.md): retained arms, input integrity, and descriptive bounds.
 
 - [Cooperative physical work](Reference/cooperative-physical-work.md): shared work, command inputs, and frozen output fields.

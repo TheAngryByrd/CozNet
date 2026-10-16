@@ -33,6 +33,9 @@ static unsafe partial class CooperativeNativeMethods
     [LibraryImport(Library, EntryPoint = "coz_cooperative_open")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int Open(ulong version, uint targets, uint capacity, out CooperativeSessionHandle session);
+    [LibraryImport(Library, EntryPoint = "coz_cooperative_open_owner")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial int OpenOwner(ulong version, uint targets, uint capacity, uint controllerSlot, out CooperativeSessionHandle session);
     [LibraryImport(Library, EntryPoint = "coz_cooperative_register")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int Register(CooperativeSessionHandle session, uint slot, ulong worker, ulong site);
@@ -101,18 +104,21 @@ sealed class NativeCooperativeClient
             || Marshal.SizeOf<CooperativeNativeSnapshot>() != 88 || Marshal.OffsetOf<CooperativeNativeSnapshot>(nameof(CooperativeNativeSnapshot.Captured)).ToInt64() != 80)
             throw new InvalidDataException("The cooperative ABI layout differs.");
     }
-    public NativeCooperativeClient(ulong version, uint targets = 1, uint capacity = 64, bool observeCpu = false)
+    public NativeCooperativeClient(ulong version, uint targets = 1, uint capacity = 64, bool observeCpu = false, uint? controllerSlot = null)
     {
         _ = CooperativeSite.Parse(1, version, 1);
         if (targets is 0 or > 64 || capacity is 0 or > 100000 || targets > 1000000 / capacity)
             throw new ArgumentOutOfRangeException(nameof(capacity));
+        if (controllerSlot >= targets) throw new ArgumentOutOfRangeException(nameof(controllerSlot));
         VerifyLayout();
         this.version = version;
         buffers = Enumerable.Range(0, (int)targets).Select(_ => new CooperativeNativeChild[capacity]).ToArray();
         cpuBuffers = observeCpu ? Enumerable.Range(0, (int)targets).Select(_ => new CooperativeNativeCpuChild[capacity]).ToArray() : null;
         trackers = new CooperativeReceipts[targets];
         generations = new ulong[targets];
-        Check(CooperativeNativeMethods.Open(version, targets, capacity, out session), "open");
+        Check(controllerSlot is { } slot
+            ? CooperativeNativeMethods.OpenOwner(version, targets, capacity, slot, out session)
+            : CooperativeNativeMethods.Open(version, targets, capacity, out session), "open");
     }
     public void RegisterCurrentThread(uint slot, CooperativeSite site, bool observeProgress = false)
     {

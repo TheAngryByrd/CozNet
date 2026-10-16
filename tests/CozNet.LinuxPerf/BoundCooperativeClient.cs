@@ -12,13 +12,13 @@ sealed class BoundCooperativeClient
     public CooperativeObservation? LastAccountingObservation { get; private set; }
     public ClrProbeBinding Binding => lifetime.Binding;
 
-    public BoundCooperativeClient(ClrProbeBinding binding, uint targets = 1, uint capacity = 64, bool observeCpu = false)
+    public BoundCooperativeClient(ClrProbeBinding binding, uint targets = 1, uint capacity = 64, bool observeCpu = false, uint? controllerSlot = null)
     {
         lifetime = new(binding);
         lifetime.RequireCurrent();
         if (targets is 0 or > 64) throw new ArgumentOutOfRangeException(nameof(targets));
         sites = new CooperativeSite[targets];
-        native = new(binding.Generation, targets, capacity, observeCpu);
+        native = new(binding.Generation, targets, capacity, observeCpu, controllerSlot);
         cleanup = new(targets, native.HasPending, slot => native.Probe(slot).Visibility, native.Cancel);
     }
     private void RequireActive()

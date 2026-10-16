@@ -663,12 +663,15 @@ let probeIdentityVerify platform _ =
         "-ProbeIdentity"
     ]
 
-let boundCooperativeVerify platform _ =
-    nativeScriptWithArgs "VerifyCooperativeInterop.ps1" [
-        "-Platform"
-        platform
-        "-BoundCooperative"
-    ]
+let boundCooperativeVerify platform ownerController _ =
+    nativeScriptWithArgs
+        "VerifyCooperativeInterop.ps1"
+        ([
+            "-Platform"
+            platform
+            "-BoundCooperative"
+         ]
+         @ if ownerController then [ "-OwnerController" ] else [])
 
 let boundSamplesManagedVerify _ =
     for argument in
@@ -1312,8 +1315,10 @@ let initTargets () =
     Target.create "LinuxCooperativeInteropVerify" (cooperativeInteropVerify "LinuxContainer")
     Target.create "ProbeIdentityVerify" (probeIdentityVerify "Host")
     Target.create "LinuxProbeIdentityVerify" (probeIdentityVerify "LinuxContainer")
-    Target.create "BoundCooperativeVerify" (boundCooperativeVerify "Host")
-    Target.create "LinuxBoundCooperativeVerify" (boundCooperativeVerify "LinuxContainer")
+    Target.create "BoundCooperativeVerify" (boundCooperativeVerify "Host" false)
+    Target.create "LinuxBoundCooperativeVerify" (boundCooperativeVerify "LinuxContainer" false)
+    Target.create "BoundOwnerControllerVerify" (boundCooperativeVerify "Host" true)
+    Target.create "LinuxBoundOwnerControllerVerify" (boundCooperativeVerify "LinuxContainer" true)
     Target.create "BoundSamplesManagedVerify" boundSamplesManagedVerify
     Target.create "LinuxBoundSamplesVerify" linuxBoundSamplesVerify
     Target.create "LinuxBoundSampledPayment" linuxBoundSampledPayment
@@ -1497,6 +1502,22 @@ let initTargets () =
 
     "LinuxPerfWorkload"
     ==> "LinuxProbeIdentityVerify"
+    |> ignore
+
+    "NativeBuild"
+    ==> "BoundOwnerControllerVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "BoundOwnerControllerVerify"
+    |> ignore
+
+    "NativeLinuxBuild"
+    ==> "LinuxBoundOwnerControllerVerify"
+    |> ignore
+
+    "LinuxPerfWorkload"
+    ==> "LinuxBoundOwnerControllerVerify"
     |> ignore
 
     "NativeBuild"

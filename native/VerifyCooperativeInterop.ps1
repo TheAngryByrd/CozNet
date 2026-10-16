@@ -3,12 +3,15 @@ param(
     [switch]$Injected,
     [switch]$ProbeIdentity,
     [switch]$BoundCooperative,
+    [switch]$OwnerController,
     [string]$ProfilerDirectory,
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/cooperative-interop')
 )
 $ErrorActionPreference = 'Stop'
+if ($OwnerController -and -not $BoundCooperative) { throw 'Owner controller interop requires BoundCooperative.' }
 if ($ProbeIdentity -and $BoundCooperative) { throw 'Select probe identity or bound cooperative checks.' }
 if ($ProbeIdentity -or $BoundCooperative) { $Injected = $true }
+. (Join-Path $PSScriptRoot 'ReadBoundSampledOutcome.ps1')
 $contractMode = if ($BoundCooperative -or $ProbeIdentity) { '--verify-bound-cooperative-managed' } else { '--verify-cooperative-managed' }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -38,6 +41,8 @@ $sources = @('native/service/CooperativeApi.cpp', 'native/service/CooperativeApi
     'native/VerifyCooperativeInterop.ps1', 'native/VerifyServiceOwner.ps1', 'build/build.fs')
 $sources += @('tests/CozNet.LinuxPerf/CooperativeFailureCapture.cs', 'tests/CozNet.LinuxPerf/CooperativeFailureCaptureChecks.cs')
 $hashes = @{}
+$sources += @('native/ReadBoundSampledOutcome.ps1', 'native/BoundSampledOutcomeChecks.ps1')
+$sources += @('tests/CozNet.LinuxPerf/BoundControllerPlan.cs', 'tests/CozNet.LinuxPerf/BoundControllerPlanChecks.cs')
 if ($ProbeIdentity -or $BoundCooperative) {
     $sources += @('tests/CozNet.LinuxPerf/ClrBoundInstructionMap.cs', 'tests/CozNet.LinuxPerf/ClrBoundInstructionMapChecks.cs',
         'tests/CozNet.LinuxPerf/ClrProbeLifetime.cs', 'tests/CozNet.LinuxPerf/ClrProbeLifetimeChecks.cs', 'tests/CozNet.LinuxPerf/InstructionMap.cs')
@@ -79,6 +84,7 @@ function Invoke-HostCase([string[]]$Arguments, [string]$Name, [int]$Interval = 0
         if ($IsLinux) { $start.Environment['LD_LIBRARY_PATH'] = $ProfilerDirectory }
         if ($IsMacOS) { $start.Environment['DYLD_LIBRARY_PATH'] = $ProfilerDirectory }
     }
+    $start.Environment['COZNET_OWNER_CONTROLLER'] = [string][int][bool]$OwnerController
     foreach ($argument in $Arguments) { $start.ArgumentList.Add($argument) }
     $process = [Diagnostics.Process]::Start($start)
     try {
@@ -134,6 +140,7 @@ foreach ($case in $cases) {
                 '--env', 'COZNET_IL_MAP_MODE=registered', '--env', 'COZNET_PROBE_PLACEMENT=branch')
             $activation += @('--env', "COZNET_PROBE_IDENTITY=$(if ($ProbeIdentity -or $BoundCooperative) { 'bound' } else { 'legacy' })")
         }
+        $activation += @('--env', ('COZNET_OWNER_CONTROLLER=' + [int][bool]$OwnerController))
         $caseArguments = if ($BoundCooperative) { @('--verify-bound-cooperative', "/evidence/$name.json", $mode, "/evidence/native/$binary") }
         elseif ($ProbeIdentity) { @('--verify-probe-identity', "/evidence/$name.json", $mode) }
         else { @('--verify-cooperative-interop', "/evidence/$name.json", $mode, "/evidence/native/$binary") }
@@ -145,23 +152,18 @@ foreach ($case in $cases) {
         else { @('--verify-cooperative-interop', $record, $mode, $library) }
         $exitCode = Invoke-HostCase (@((Join-Path $workload 'CozNet.LinuxPerf.dll')) + $caseArguments) $name $case.interval
     }
-    $exists = Test-Path -LiteralPath $record
-    $passed = $false
-    $recordError = $null
-    if ($exists) {
-        try {
-            $result = Get-Content -LiteralPath $record -Raw | ConvertFrom-Json
-            $passed = $result.passed -is [bool] -and $result.passed
-        } catch { $recordError = $_.Exception.Message }
-    }
-    $outcomes += @{ mode = $mode; interval = $case.interval; exitCode = $exitCode; recordExists = $exists; passed = $passed; recordError = $recordError }
+    $expectedOwner = if ($BoundCooperative) { [bool]$OwnerController } else { $null }
+    $outcome = Read-BoundSampledOutcome -Path $record -Case $mode -ExitCode $exitCode -ExpectedOwnerController $expectedOwner
+    $outcomes += @{ mode = $mode; interval = $case.interval; exitCode = $exitCode;
+        recordExists = (Test-Path -LiteralPath $record); passed = $outcome.passed; recordError = $outcome.recordError }
+
 }
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash -eq $hashes[$name] }
 foreach ($file in $binaries.Keys) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -eq $binaries[$file] }
-@{ sources = $hashes; binaries = $binaries; platform = $Platform; runtimeImage = $runtimeImage } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
-$passed = $unchanged -and $contractExit -eq 0 -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.passed }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; contractExitCode = $contractExit; outcomes = $outcomes;
+@{ sources = $hashes; binaries = $binaries; platform = $Platform; ownerControllerEnabled = [bool]$OwnerController; runtimeImage = $runtimeImage } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'manifest.json')
+$passed = $unchanged -and $contractExit -eq 0 -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.passed -or $_.recordError }).Count -eq 0
+@{ passed = $passed; inputsUnchanged = $unchanged; contractExitCode = $contractExit; ownerControllerEnabled = [bool]$OwnerController; outcomes = $outcomes;
     sampledCapacityEstablished = $false; generalClrSafetyEstablished = $false; predictionAccuracyEstablished = $false
 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run

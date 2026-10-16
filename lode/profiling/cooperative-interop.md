@@ -6,7 +6,8 @@ Controller operations retain thread affinity. Each target registers, polls, and 
 `coz_cooperative_open_owner` reserves one immutable slot for the creating controller thread.
 The reserved slot rejects other owners. All other slots retain separate ownership.
 The default open function preserves role separation. Nested API entry returns `BUSY` before locking.
-Managed workload integration and cost comparison for the new native mode remain pending.
+The [managed mode](../../docsSrc/Reference/owner-controller.md) forwards an optional reserved slot through both clients.
+Twenty owner/controller CLR cases pass on each of Windows and Linux. Sampled execution and cost comparison remain pending.
 Polls can execute together. Shared API and code locks add unmeasured overhead.
 
 The ABI parses nonzero site identities into `CooperativePollSite` before registration or polling.

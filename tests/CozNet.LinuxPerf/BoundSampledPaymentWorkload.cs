@@ -27,6 +27,9 @@ static class BoundSampledPaymentWorkload
     {
         Require(cadencePlan is null || selectedPaymentSource is not null && ReferenceEquals(settings, cadencePlan.Sampling),
             "A cadence comparison requires its parsed settings and a pausable source.");
+        var dispatchTiming = CooperativeDispatchTiming.Parse(Environment.GetEnvironmentVariable("COZNET_DISPATCH_TIMING"));
+        var controllerPlan = BoundControllerPlan.Parse(Environment.GetEnvironmentVariable("COZNET_OWNER_CONTROLLER"),
+            selectedPaymentSource is not null, schedulerBackend is not null, dispatchTiming is not null);
         NativeLibrary.SetDllImportResolver(typeof(CooperativeNativeMethods).Assembly,
             (name, _, _) => name == "CozNet.Cooperative" ? NativeLibrary.Load(Path.GetFullPath(library)) : IntPtr.Zero);
         var plan = ProbePlan.Parse("injected", Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL"));
@@ -126,7 +129,6 @@ static class BoundSampledPaymentWorkload
         var receiptReadiness = BoundReceiptReadiness.Parse(Environment.GetEnvironmentVariable("COZNET_DIRECT_RECEIPT_READY"));
         Require(!receiptReadiness.DirectEnabled || selectedPaymentEnabled, "Direct receipt readiness requires selected payment.");
 
-        var dispatchTiming = CooperativeDispatchTiming.Parse(Environment.GetEnvironmentVariable("COZNET_DISPATCH_TIMING"));
         Require(dispatchTiming is null || selectedPaymentEnabled, "Dispatch timing requires the selected-payment controller.");
 
         T OnController<T>(Func<T> action, CooperativeDispatchOperation operation)
@@ -369,12 +371,13 @@ static class BoundSampledPaymentWorkload
         {
             CooperativeCpuWork.Warmup();
             var binding = ClrProbeBinding.ReadCurrent();
-            if (selectedPaymentEnabled) controller = new();
+            if (selectedPaymentEnabled && !controllerPlan.OwnerEnabled) controller = new();
             client = OnController(() =>
             {
                 scheduling?.Register(0);
                 if (scheduling is not null) schedulerControllerOwner = readOwner();
-                return new BoundCooperativeClient(binding, selectedPaymentEnabled ? 2U : 1U, observeCpu: childCpuEnabled);
+                return new BoundCooperativeClient(binding, selectedPaymentEnabled ? 2U : 1U, observeCpu: childCpuEnabled,
+                    controllerSlot: controllerPlan.OwnerEnabled ? 1U : null);
             }, CooperativeDispatchOperation.Create);
             if (selectedPaymentEnabled)
             {
@@ -620,6 +623,7 @@ static class BoundSampledPaymentWorkload
             invalidated, rejectionVerified, rejectedAfterPayment, failure, failureBoundary, verificationFailure, peerFailure, cleanupErrors, joined, controllerJoined, closed,
             receiptIntervalCaptureVersion = 1, receiptIntervalRejection = receiptIntervals.Rejected,
             batchServiceEnabled = publication.BatchServiceEnabled, sampleServiceCalls = publication.ServiceCalls,
+            ownerControllerEnabled = controllerPlan.OwnerEnabled,
             dispatchTimingEnabled = dispatchTiming is not null, dispatchTiming,
             directReceiptReadyEnabled = receiptReadiness.DirectEnabled, receiptReadyCalls = receiptReadiness.Calls,
             peerProgressEnabled, peerOwner, peerOwnerFailure, peerSubmitProgress, peerDebtProgress,

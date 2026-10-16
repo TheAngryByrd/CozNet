@@ -59,8 +59,13 @@ The diagnostic leaves both completed measurements unqualified and intended inval
 
 The [owner/controller design](../../docsSrc/Research/cooperative-owner-controller.md) now has a native mode with an immutable reserved slot.
 Its narrow mode retains one creator/controller and permits that thread to own the selected slot.
-Native entry guards reject reentrancy before locking. Managed integration and explicit scheduler identity handling remain pending.
-Acceptance and release must remain separate when the managed workload adopts the mode.
+Native entry guards reject reentrancy before locking.
+`BoundControllerPlan` parses `COZNET_OWNER_CONTROLLER` and rejects selected-payment absence, scheduler capture, and dispatch timing when enabled.
+The sampled mode creates no separate controller worker and reserves slot 1 for the selected caller.
+Acceptance, receipt interval validation, and release retain their existing sequence.
+The controlled CLR runner can use caller-owned slot 0 for payment and invalidation checks.
+Twenty owner/controller CLR cases pass on Windows and Linux. Sampled two-thread execution remains pending.
+Shared scheduler identity and direct-operation timing records remain unsupported.
 Default role separation and all accounting bounds remain required. Direct execution does not imply zero controller cost.
 
 The earlier unrestricted treatment completes 50,000 batches with 29,456 calls. All three cases pass.

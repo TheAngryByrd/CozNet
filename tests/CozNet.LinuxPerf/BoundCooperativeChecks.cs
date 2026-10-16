@@ -38,10 +38,16 @@ static class BoundCooperativeChecks
     {
         if (mode is not ("paid" or "before-submit" or "before-poll" or "before-receipt" or "after-settlement"))
             throw new ArgumentException("Select paid, before-submit, before-poll, before-receipt, or after-settlement.");
+        var controllerPlan = BoundControllerPlan.Parse(Environment.GetEnvironmentVariable("COZNET_OWNER_CONTROLLER"), true, false, false);
         NativeLibrary.SetDllImportResolver(typeof(CooperativeNativeMethods).Assembly,
             (name, _, _) => name == "CozNet.Cooperative" ? NativeLibrary.Load(Path.GetFullPath(library)) : IntPtr.Zero);
         var plan = ProbePlan.Parse("injected", Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL"));
         CooperativeInteropChecks.Worker? worker = null;
+        T OnOwner<T>(Func<T> action) => worker is null ? action() : worker.Run(action);
+        void OnOwnerAction(Action action)
+        {
+            if (worker is null) action(); else worker.Run(action);
+        }
         BoundCooperativeClient? client = null;
         ClrProbeBinding? binding = null;
         bool registered = false, joined = false, closed = false, completed = false, bodyPassed = false;
@@ -52,8 +58,8 @@ static class BoundCooperativeChecks
         CooperativeCleanupCapture? firstCleanup = null;
         try
         {
-            worker = new();
-            worker.Run(() =>
+            if (!controllerPlan.OwnerEnabled) worker = new();
+            OnOwnerAction(() =>
             {
                 long before = InjectedProbes.Calls;
                 Require(CpuWorkload.Run() == (long)CpuWorkload.Iterations * (CpuWorkload.Iterations - 1) / 2,
@@ -78,10 +84,10 @@ static class BoundCooperativeChecks
                 try { guard.RequireCurrent(); } catch (InvalidDataException) { foreignRejected = true; }
                 Require(foreignRejected && guard.FirstFailure is not null, "An altered CLR binding passed the native identity comparison.");
             }
-            client = new(binding, capacity: 8);
+            client = new(binding, capacity: 8, controllerSlot: controllerPlan.OwnerEnabled ? 0U : null);
             registered = true;
-            var site = worker.Run(() => client.RegisterCurrentThread(0, 1));
-            worker.Run(() =>
+            var site = OnOwner(() => client.RegisterCurrentThread(0, 1));
+            OnOwnerAction(() =>
             {
                 using var callback = InjectedProbes.BindBound((generation, point) =>
                     Require(client.PollFromProbe(0, generation, point) == CooperativePollOutcome.Idle, "A bound idle probe performed work."));
@@ -103,13 +109,13 @@ static class BoundCooperativeChecks
                 if (mode == "before-poll")
                 {
                     ProbeIdentityChecks.InvalidateWithDuplicateModule(plan);
-                    Reject(client, () => worker.Run(() => Pay(client, plan)));
+                    Reject(client, () => OnOwner(() => Pay(client, plan)));
                     Require(client.CleanupHeader(0).Children == 0, "Rejected probe admission created a child.");
                     rejected = true;
                 }
                 else
                 {
-                    serviceProbes.Add(worker.Run(() => Pay(client, plan)));
+                    serviceProbes.Add(OnOwner(() => Pay(client, plan)));
                     if (mode == "before-receipt")
                     {
                         ProbeIdentityChecks.InvalidateWithDuplicateModule(plan);
@@ -128,7 +134,7 @@ static class BoundCooperativeChecks
                             firstCleanup = client.LastCleanup;
                             var independent = Reserve(100000);
                             ulong next = client.Submit(0, 8, 50000);
-                            serviceProbes.Add(worker.Run(() => Pay(client, plan)));
+                            serviceProbes.Add(OnOwner(() => Pay(client, plan)));
                             var again = new CooperativeAccountingAdapter(CooperativeAccountingBinding.Parse(independent.Lease, next, 8, site));
                             var accepted = client.ReadAndAccept(0, again, independent.State);
                             reuse = next == generation + 1 && accepted.Adapter.IsTerminal && Remaining(independent, accepted.State) == 0;
@@ -151,7 +157,7 @@ static class BoundCooperativeChecks
         catch (Exception error) { failure = error.ToString(); }
         finally
         {
-            if (client is not null && worker is not null && registered)
+            if (client is not null && registered)
             {
                 try
                 {
@@ -162,15 +168,16 @@ static class BoundCooperativeChecks
                         while (client.CleanupHeader(0).Visibility < 3)
                         {
                             Require(deadline.Elapsed < TimeSpan.FromSeconds(2), "Bound cleanup did not terminate the native request.");
-                            worker.Run(() => client.PollForCleanup(0));
+                            OnOwner(() => client.PollForCleanup(0));
                         }
                         client.ReleaseAfterRetiredCopy(0);
                     }
-                    worker.Run(() => client.RetireCurrentThread(0));
+                    OnOwnerAction(() => client.RetireCurrentThread(0));
                     registered = false;
                 }
                 catch (Exception error) { cleanupFailures.Add(error.ToString()); }
             }
+            if (worker is null && controllerPlan.OwnerEnabled && !registered) joined = true;
             if (worker is not null && !registered)
                 try { joined = worker.Join(); } catch (Exception error) { cleanupFailures.Add(error.ToString()); }
             if (client is not null && !registered && joined)
@@ -196,7 +203,7 @@ static class BoundCooperativeChecks
         bool passed = bodyPassed && joined && closed && cleanupFailures.Count == 0 && cleanupVerified
             && (mode == "paid" ? completed && reuse && !rejected : rejected && !completed);
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, JsonSerializer.Serialize(new { mode, passed, failure, cleanupFailures, joined, closed, completed,
+        File.WriteAllText(path, JsonSerializer.Serialize(new { mode, ownerControllerEnabled = controllerPlan.OwnerEnabled, passed, failure, cleanupFailures, joined, closed, completed,
             settled, rejected, reservationRetained, reuse, serviceProbes, firstCleanup, cleanupVerified, cleanup = client?.LastCleanup,
             lifetimeFailure = client?.FirstFailure?.ToString(),
             binding = binding is null ? null : new { binding.Generation, Module = (ulong)binding.Module,

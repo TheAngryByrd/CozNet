@@ -2,7 +2,9 @@
 
 An explicit [native owner/controller mode](profiling/cooperative-interop.md) reserves one slot for the session creator.
 Default role separation remains. Native checks pass on Windows and Linux.
-Managed integration and a cost comparison remain pending.
+The [managed integration](../docsSrc/Reference/owner-controller.md) passes twenty controlled CLR cases on Windows and Linux.
+The first Linux sampled diagnostic passes zero-speedup, 50-percent, and expected-invalidation checks with a separate peer.
+The measurement remains unqualified. A matched cost comparison remains pending.
 
 An opt-in [finite cooperative capture](profiling/cooperative-measurement.md) freezes global delay and progress before cleanup.
 It preserves invalid outcomes and unqualified native ownership.

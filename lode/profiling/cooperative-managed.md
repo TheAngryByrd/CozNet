@@ -3,6 +3,9 @@
 `NativeCooperativeClient` uses source-generated imports and a controller-owned native session handle.
 Both ABI layouts are checked at 88 bytes. The finalizer retains unresolved native ownership.
 Successful submission records generation ownership before receipt-tracker allocation.
+An optional `controllerSlot` selects the explicit native owner/controller entry point.
+The constructor rejects out-of-range slots before opening a native session.
+The bound client forwards that choice without changing lifetime checks or receipt acceptance.
 
 `CooperativeSite` and `CooperativeLeaseIdentity` parse identities before dependent operations.
 The child representation carries explicit site fields. It does not reuse interrupted instruction addresses.
@@ -24,7 +27,9 @@ Cancellation requires managed intent. A valid terminal journal requires at least
 
 Cleanup copies and releases native journals independently of receipt acceptance.
 It retains an immutable final header, child list, and status before release.
-The owner continues polling through termination, then retires only after release. The controller closes only after owner join.
+The owner continues polling through termination, then retires only after release.
+The controller closes after its own target retires and any separate owner threads join.
+The existing `CloseAfterThreadJoin` method name does not require the controller to join itself.
 The interop fixture keeps unresolved owner state alive for process termination instead of forcing native close.
 Six cases verify tracker reset and independent settlement on a second generation, including after receipt rejection.
 The diagnostic case preserves raw native snapshots across reuse without updating receipt tracking or settling the ledger.
@@ -79,3 +84,13 @@ The current runner requires capture version 1 in every result.
 Controlled checks cover the capture helper and replay rules.
 They do not force rejection through either workload call site or verify its ledger assignment order at runtime.
 The retained live captures contain no parser rejection.
+
+
+## Owner/controller evidence
+
+The optional mode passes controlled CLR matrices in both ownership modes on Windows and Linux.
+A first Linux sampled diagnostic passes zero-speedup, 50-percent, and expected-invalidation checks with the separate peer.
+The treatment completes 50,000 selected batches and closes without cleanup errors.
+Its frozen selected ledger retains 178 ns of debt. Sample boundaries and instrumentation attribution remain unqualified.
+This result does not establish stable capacity or a controller-cost improvement.
+See [the retained measurements](../../reliability/features/native-signal/managed-owner-controller.md#sampled-diagnostic).

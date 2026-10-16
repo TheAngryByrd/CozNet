@@ -1,5 +1,9 @@
 # MiniScaffold build
 
+`BoundOwnerControllerVerify` and `LinuxBoundOwnerControllerVerify` run the bound interop matrix with `-OwnerController`.
+They retain the existing native-profiler and managed-workload build dependencies.
+The original bound targets retain separate ownership. See [the managed mode](../../docsSrc/Reference/owner-controller.md).
+
 `LinuxMatchedPrediction` uses `LinuxPerfWorkload` and `VerifyMatchedPrediction.ps1` for eight four-case diagnostic blocks.
 It requires `COZNET_CALIBRATION_DIRECTORY` and supports `COZNET_PYTHON` for the Python command.
 The analyzer currently rejects accuracy because attribution and calibration bounds remain unresolved.

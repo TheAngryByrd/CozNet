@@ -178,6 +178,32 @@ class ChildCpuAnalysisChecks(unittest.TestCase):
 
 
 class SelectedPaymentAnalysisChecks(unittest.TestCase):
+    def test_legacy_and_disabled_owner_controller_remain_separate(self):
+        record = valid_record()
+        self.assertFalse(verify_record(record)["ownerControllerEnabled"])
+        record["ownerControllerEnabled"] = False
+        self.assertFalse(verify_record(record)["ownerControllerEnabled"])
+
+    def test_owner_controller_replays_with_explicit_compatible_modes(self):
+        record = valid_record()
+        record.update(ownerControllerEnabled=True, schedulerTiming=False,
+                      dispatchTimingEnabled=False, dispatchTiming=None)
+        result = verify_record(record)
+        self.assertTrue(result["casePassed"])
+        self.assertTrue(result["ownerControllerEnabled"])
+
+    def test_owner_controller_rejects_incompatible_or_forged_modes(self):
+        for change in (dict(ownerControllerEnabled=1), dict(ownerControllerEnabled="true"),
+                       dict(ownerControllerEnabled=None), dict(schedulerTiming=True),
+                       dict(dispatchTimingEnabled=True), dict(dispatchTiming={}),
+                       dict(selectedPaymentEnabled=False)):
+            record = valid_record()
+            record.update(ownerControllerEnabled=True, schedulerTiming=False,
+                          dispatchTimingEnabled=False, dispatchTiming=None)
+            record.update(change)
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "Owner controller"):
+                verify_record(record)
+
     def test_full_replay_checks_readiness_activation(self):
         record = valid_record()
         record.update(directReceiptReadyEnabled=False, receiptReadyCalls=0)

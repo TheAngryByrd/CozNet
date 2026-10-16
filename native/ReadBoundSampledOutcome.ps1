@@ -2,11 +2,14 @@ function Read-BoundSampledOutcome {
     param([string]$Path, [string]$Case, [int]$ExitCode,
         [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
         [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null, [Nullable[bool]]$ExpectedChildCpu = $null, [Nullable[bool]]$ExpectedOwnerDrain = $null,
-        [Nullable[int]]$ExpectedReceiptCaptureVersion = $null, [Nullable[bool]]$ExpectedBatchService = $null, [Nullable[bool]]$ExpectedDispatchTiming = $null, [Nullable[bool]]$ExpectedDirectReceiptReady = $null, [Nullable[bool]]$ExpectedPeerProgress = $null, [Nullable[bool]]$ExpectedScheduler = $null, [Nullable[bool]]$ExpectedSelectedHandoff = $null, [Nullable[bool]]$ExpectedFiniteMeasurement = $null)
+        [Nullable[int]]$ExpectedReceiptCaptureVersion = $null, [Nullable[bool]]$ExpectedBatchService = $null, [Nullable[bool]]$ExpectedDispatchTiming = $null, [Nullable[bool]]$ExpectedDirectReceiptReady = $null, [Nullable[bool]]$ExpectedPeerProgress = $null, [Nullable[bool]]$ExpectedScheduler = $null, [Nullable[bool]]$ExpectedSelectedHandoff = $null, [Nullable[bool]]$ExpectedFiniteMeasurement = $null, [Nullable[bool]]$ExpectedOwnerController = $null)
     $passed = $false
     $recordError = $null
     try {
         $record = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        if ($null -ne $ExpectedOwnerController -and ($record.ownerControllerEnabled -isnot [bool] -or $record.ownerControllerEnabled -ne $ExpectedOwnerController)) {
+            throw 'Owner controller evidence differs from the requested setting.'
+        }
         if ($record.passed -isnot [bool]) { throw 'The case record lacks a Boolean outcome.' }
         if ($null -ne $ExpectedFiniteMeasurement -and ($record.finiteMeasurementEnabled -isnot [bool] -or $record.finiteMeasurementEnabled -ne $ExpectedFiniteMeasurement)) { throw 'Finite measurement evidence differs from the requested setting.' }
         if ($null -ne $ExpectedSelectedHandoff -and ($record.selectedHandoffEnabled -isnot [bool] -or $record.selectedHandoffEnabled -ne $ExpectedSelectedHandoff)) { throw 'Selected handoff evidence differs from the requested setting.' }
