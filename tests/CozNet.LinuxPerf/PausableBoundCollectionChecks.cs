@@ -103,8 +103,60 @@ static class PausableBoundCollectionChecks
         ResumeCounterFailureRejectsCollection();
         LateLossRejectsEarlierEpochs();
         InconsistentPausePreventsCallback();
+        PauseAcceptsMatchingAggregate();
+        PauseRejectsChangedAggregate();
         WrongThreadControlIsRejected();
         EpochReadsPreserveOwnershipAndRejectInvalidOffsets();
+    }
+
+    private static void PauseAcceptsMatchingAggregate()
+    {
+        var collection = Create();
+        Source? source = null;
+        collection.StartOwnerPausable((_, sink) => source = new(sink));
+        source!.DrainOverride = new(1, 1, 1000, 0, 0, 0, 1, 0, new[] { OverheadWorkload.SelectedSymbol });
+        bool called = false;
+        try
+        {
+            collection.ExecuteExcluded(samples =>
+            {
+                Require(samples.Count == 1 && samples[0].Sample.CumulativeCpuNanoseconds == 1000,
+                    "Matching pause accounting changed its frozen sample prefix.");
+                called = true;
+            });
+            Require(called && source.Enables == 2, "Matching pause accounting did not call payment and resume sampling.");
+            source.DrainOverride = null;
+            Require(collection.Complete().Samples.Count == 2, "Final audit lost a sample after the matching pause.");
+        }
+        finally { collection.CloseForCleanup(); }
+    }
+
+    private static void PauseRejectsChangedAggregate()
+    {
+        var valid = new SampleBatch(1, 1, 1000, 0, 0, 0, 1, 0, new[] { OverheadWorkload.SelectedSymbol });
+        foreach (var invalid in new[]
+        {
+            valid with { Samples = 0 }, valid with { DistinctInstructionPointers = 2 },
+            valid with { RepresentedCpuNanoseconds = 999 }, valid with { LostRecords = 1 },
+            valid with { LostSamples = 1 }, valid with { Throttles = 1 },
+            valid with { SelectedMethodSamples = 0 }, valid with { UnmappedSamples = 1 },
+            valid with { SelectedSymbols = Array.Empty<string>() },
+            valid with { SelectedSymbols = new[] { "foreign" } }
+        })
+        {
+            var collection = Create();
+            Source? source = null;
+            collection.StartOwnerPausable((_, sink) => source = new(sink));
+            source!.DrainOverride = invalid;
+            bool called = false;
+            try
+            {
+                Fails<InvalidDataException>(() => collection.ExecuteExcluded(_ => called = true));
+                Require(!called && source.Enables == 1, "Inconsistent pause accounting reached payment or resumed sampling.");
+            }
+            finally { collection.CloseForCleanup(); }
+            Require(source.Disposes == 1, "Failed pause accounting did not dispose its source.");
+        }
     }
 
     private static void OwnerDrainsReuseStableSnapshots()

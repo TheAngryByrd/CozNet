@@ -4,6 +4,24 @@ The bound sampled workload performs profiler work on the selected thread.
 Injected probes check CLR lifetime, poll native requests, publish samples, and inspect debt.
 A zero-speedup run still performs this work, even when it pays no delay.
 
+## Sample history at pause boundaries
+
+Each selected pause previously copied and rescanned the full sample history to check source accounting.
+An isolated Linux measurement found repeated validation costs of 4–5 µs for 50 samples and 92–94 µs for 1,500 samples.
+These component measurements do not establish their share of live profiler cost.
+
+The capture now maintains counts, represented CPU, maximum cumulative CPU, distinct instruction pointers, and symbols during sample admission.
+Only pausable captures maintain these totals.
+Pause validation checks these totals against the source batch.
+Final completion still performs the independent full-history check.
+The callback still receives its frozen epoch snapshot.
+This removes a repeated scan without changing sample credit, source ownership, or payment bounds.
+The isolated aggregate check takes about 0.11 µs at 1,500 samples, but this excludes admission cost.
+Controlled source checks and the three-case Linux integration pass.
+The longer comparison completes all arms, but its prediction still falls short by about 15.9 percentage points.
+Total-workload savings and stable capacity remain unverified.
+See [the retained validation evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/incremental-pause-validation.md).
+
 ## Repeated debt records
 
 Each executed service check records debt.

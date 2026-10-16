@@ -1,5 +1,7 @@
 # Lode index
 
+For incremental sample totals at selected pauses and the retained long-run failure, read [pause accounting](profiling/sample-batch-snapshots.md#pause-accounting).
+
 For optional selected-thread CPU observations in all four comparison arms, read [selected CPU measurement](plans/selected-cpu.md).
 
 For the separate statistical event estimator, read [nominal event credit](profiling/nominal-event-credit.md).

@@ -32,8 +32,9 @@ sealed class BoundSampleCollection
         private readonly object gate = new();
         private readonly List<CpuSample> samples = [];
         private readonly List<BoundEpochSample> epochs = [];
+        private BoundSampleAggregate? aggregate;
         private ulong eligibilityEpoch;
-        public bool TrackEpochs { get; set; }
+        public void PreparePausableCapture() => aggregate = new();
         private bool accepting;
         private ulong lastTimestamp, lastCounter;
         public int Count { get { lock (gate) return samples.Count; } }
@@ -57,6 +58,11 @@ sealed class BoundSampleCollection
                 return Array.AsReadOnly(samples.GetRange(offset, samples.Count - offset).ToArray());
             }
         }
+        public void Validate(SampleBatch batch, ulong cpuNanoseconds)
+        {
+            lock (gate)
+                (aggregate ?? throw new InvalidOperationException("Pause accounting requires pausable capture.")).Validate(batch, cpuNanoseconds);
+        }
         public void Publish(CpuSample sample)
         {
             lock (gate)
@@ -76,8 +82,9 @@ sealed class BoundSampleCollection
                     if (self.samples.Count == 10000) throw new InvalidDataException("The bound sample epoch exceeded its record limit.");
                     return item;
                 });
+                aggregate?.Add(accepted);
                 samples.Add(accepted);
-                if (TrackEpochs) epochs.Add(new(eligibilityEpoch, accepted));
+                if (aggregate is not null) epochs.Add(new(eligibilityEpoch, accepted));
                 lastTimestamp = accepted.Timestamp;
                 lastCounter = accepted.CumulativeCpuNanoseconds!.Value;
             }
@@ -160,10 +167,10 @@ sealed class BoundSampleCollection
         if (started || Cleanup is not null) throw new InvalidOperationException("A bound collection can start only once.");
         started = true;
         pausable = allowPause;
-        capture.TrackEpochs = allowPause;
+        if (allowPause) capture.PreparePausableCapture();
         lifetime.Execute(createSource, factory =>
         {
-            PrepareValidation();
+            PrepareValidation(allowPause);
             source = factory(Map, capture) ?? throw new InvalidDataException("The sample factory returned no source.");
             var counters = source.CounterEvidence ?? throw new InvalidDataException("The bound source has no counter epoch evidence.");
             _ = counters.ReadCounter();
@@ -256,7 +263,7 @@ sealed class BoundSampleCollection
                 if (timing is not null) timing.DrainAcknowledged = System.Diagnostics.Stopwatch.GetTimestamp();
                 capture.Close();
                 lifetime.RequireCurrent();
-                ValidateBatch(finalBatch ?? throw new InvalidDataException("The paused source has no final drain evidence."), capture.Snapshot(), cpuNanoseconds);
+                capture.Validate(finalBatch ?? throw new InvalidDataException("The paused source has no final drain evidence."), cpuNanoseconds);
                 if (timing is not null) timing.BatchValidated = System.Diagnostics.Stopwatch.GetTimestamp();
                 var snapshot = capture.EpochSnapshot(0);
                 if (timing is not null) timing.SnapshotReady = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -361,7 +368,7 @@ sealed class BoundSampleCollection
         return result;
     }
 
-    private static void PrepareValidation()
+    private static void PrepareValidation(bool pausable)
     {
         var samples = Array.AsReadOnly(new[]
         {
@@ -371,6 +378,12 @@ sealed class BoundSampleCollection
         });
         var batch = new SampleBatch(3, 2, 3, 0, 0, 0, 2, 1, new[] { OverheadWorkload.SelectedSymbol });
         ValidateBatch(batch, samples, 3);
+        if (pausable)
+        {
+            var aggregate = new BoundSampleAggregate();
+            foreach (var sample in samples) aggregate.Add(sample);
+            aggregate.Validate(batch, 3);
+        }
     }
 
     private static void ValidateBatch(SampleBatch batch, IReadOnlyList<CpuSample> samples, ulong cpuNanoseconds)
