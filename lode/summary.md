@@ -5,7 +5,8 @@ All recorded treatment credit is source-inside. Allocation reuse does not resolv
 The timer workload implements opt-in [nominal-event credit](plans/timer-nominal-credit.md) without IL loop probes.
 Its declared capture verifies preparation, live reset, and both accounting replays but retains a 2,361,731 ns treatment peer-debt failure.
 The receipt audit identifies delayed same-epoch credit publication. A separate scheduler diagnostic measures 13.800756 ms controller preemption during a receipt gap.
-Next, compare target-local sample processing with the managed drain dependency. Existing timer capacity and CLR safety limits remain.
+The portable [native sample decoder](plans/target-local-samples.md) accepts one validated perf record per call and preserves terminal failures.
+Live ring ordering, target notification, credit, and payment integration remain unimplemented. Existing timer capacity and CLR safety limits remain.
 
 Optional clock capture now binds both sampled arms to the [matched comparison plan](profiling/sample-membership.md#matched-comparison-activation).
 The retained 500,000-batch block places all recorded treatment credit inside the observed source window and frozen prefix.

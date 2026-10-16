@@ -3,7 +3,9 @@
 The implemented scope is a serial experiment prototype. The goal is a .NET implementation of sampled Coz semantics.
 Keep the serial model separate from the proposed sampled engine.
 
-Next, compare target-local sample processing with the managed drain dependency exposed by [nominal timer diagnostics](timer-nominal-credit.md).
+The [target-local sample plan](target-local-samples.md) starts with a portable one-record decoder.
+Next, implement Linux ring ordering and bounded target notification before credit or payment integration.
+The managed drain dependency remains in the live backend exposed by [nominal timer diagnostics](timer-nominal-credit.md).
 The timer path avoids loop probes. Its default interval policy still discards first-event weights.
 The new callback-reuse comparison completes but retains about ten percentage points of shortfall.
 This directs the next backend comparison; it does not establish a fix for capacity or prediction.

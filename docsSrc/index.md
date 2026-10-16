@@ -60,6 +60,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Reference
 
+- [Native perf sample decoder](Reference/native-perf-decoder.md): record layout, terminal errors, and platform ownership.
+
 - [Bound sample membership](Reference/bound-sample-membership.md).
 
 - [Cooperative component CPU](Reference/cooperative-component-cpu.md): drain and service CPU buckets and observer limits.
@@ -123,6 +125,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Timer worker lifecycle](Reference/timer-worker-lifetime.md): retirement, join, release, and fault-check scope.
 
 ## Explanation
+
+- [Target-local sample processing](Explanations/target-local-sample-processing.md): upstream designs and remaining runtime contracts.
 
 - [CPU time and the prediction gap](Explanations/selected-cpu.md).
 
