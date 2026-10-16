@@ -102,12 +102,28 @@ def physical(record, mode, batches):
     return result
 
 
-def analyze_case(record, mode, batches, exit_code):
+def probe_interval_plan(plan):
+    interval = plan.get("probeInterval", 1024)
+    version = plan.get("probeIntervalEvidenceVersion")
+    if "probeIntervalEvidenceVersion" not in plan:
+        require(type(interval) is int and interval == 1024, "Legacy plan requires probe interval 1024")
+        return interval, False
+    require(type(version) is int and version == 1, "Unsupported probe interval evidence version")
+    require("probeInterval" in plan and type(interval) is int and interval in (1024, 8192),
+            "Unsupported declared probe interval")
+    return interval, True
+
+
+def analyze_case(record, mode, batches, exit_code, probe_interval=1024, require_probe_interval=False):
     require(mode in MODES and type(exit_code) is int, "Unknown arm or invalid process exit code")
     require(record["workloadProtocol"] == WORKLOAD, "The case does not use the shared cooperative work")
     if mode.startswith("physical-"):
         require(type(exit_code) is int and exit_code == 0, "Physical process failed")
         return "complete", [], physical(record, mode, batches)
+    require(not require_probe_interval or "probeInterval" in record, "Sampled arm lacks declared probe interval evidence")
+    actual_interval = record.get("probeInterval", 1024)
+    require(type(actual_interval) is int and actual_interval == probe_interval,
+            "Sampled probe interval differs from the declared plan")
     require(count(record["timestampFrequency"]) > 0, "The sampled clock frequency is zero")
     replay = verify_record(record)
     require(record["finiteMeasurementEnabled"] is True and count(record["percent"]) == (0 if mode == "sampled-zero" else 50)
@@ -172,6 +188,7 @@ def analyze(root):
     root = root.resolve()
     plan, manifest, raw_outcomes = (read(root / name) for name in ("plan.json", "manifest.json", "outcomes.json"))
     require(plan["protocol"] == PROTOCOL and plan["order"] == list(MODES), "Comparison order or protocol changed")
+    probe_interval, require_probe_interval = probe_interval_plan(plan)
     batches = count(plan["selectedBatches"])
     require(0 < batches <= 2147483647 and plan["predictionErrorBound"] == 0.02
             and plan["localOptimizationCalibrated"] is False, "Comparison work or accuracy contract changed")
@@ -203,7 +220,8 @@ def analyze(root):
         state, reasons, value = "invalid", [], None
         try:
             require(outcome.executed and outcome.record_exists, "Case was not executed or has no retained result")
-            state, reasons, value = analyze_case(read(root / (mode + ".json")), mode, batches, outcome.exit_code)
+            state, reasons, value = analyze_case(read(root / (mode + ".json")), mode, batches, outcome.exit_code,
+                                                probe_interval, require_probe_interval)
         except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError, ArithmeticError) as error:
             reasons = [str(error)]
         if value is not None:
@@ -214,6 +232,7 @@ def analyze(root):
     complete = not runner_errors and not integrity_errors and len(costs) == 4
     descriptive = compare(costs) if complete else None
     return dict(protocol=PROTOCOL, status="unqualified" if complete else "invalid", collectionComplete=complete,
+                probeInterval=probe_interval, probeIntervalEvidenceVersion=1 if require_probe_interval else None,
                 attempted=sum(item.attempted for item in outcomes), completed=len(costs), qualified=0,
                 invalid=sum(item["status"] == "invalid" for item in cases), cases=cases,
                 integrityErrors=integrity_errors, runnerErrors=runner_errors, descriptiveComparison=descriptive,

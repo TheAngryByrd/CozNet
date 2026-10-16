@@ -1,7 +1,8 @@
 param(
     [string]$EvidenceDirectory,
     [ValidateRange(1, 2147483647)][int]$SelectedBatches = 50000,
-    [string]$PythonCommand = 'python'
+    [string]$PythonCommand = 'python',
+    [ValidateSet(1024, 8192)][int]$ProbeInterval = 1024
 )
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
@@ -17,7 +18,7 @@ Save-Json 'plan.json' @{
     protocol = 'cooperative-matched-v1'; order = $modes; selectedBatches = $SelectedBatches
     workloadProtocol = 'cooperative-checksum-v1'; predictionErrorBound = 0.02; localOptimizationCalibrated = $false
     backend = 'LinuxContainer'; watchdogSeconds = 30; killGraceSeconds = 2
-    tieredCompilation = '0'; readyToRun = '0'; perfMapEnabled = '0'; probeInterval = 1024
+    tieredCompilation = '0'; readyToRun = '0'; perfMapEnabled = '0'; probeInterval = $ProbeInterval; probeIntervalEvidenceVersion = 1
     selectedCadence = 'qualified-sample'; ownerDrain = $true; directReceiptReady = $true
     selectedHandoff = $false; finiteMeasurement = $true
     debtBoundNanoseconds = 2000000; leaseBoundNanoseconds = 2000000; requestedChildBoundNanoseconds = 50000
@@ -112,7 +113,7 @@ try {
                 '--env', 'CORECLR_PROFILER={6E51C528-23F1-49EA-9346-2A7A8D911B61}',
                 '--env', 'CORECLR_PROFILER_PATH=/profiler/libCozNet.Profiler.so',
                 '--env', 'COZNET_PROBE_TARGET=linux-perf', '--env', 'COZNET_PROBE_IDENTITY=bound',
-                '--env', 'COZNET_IL_MAP_MODE=registered', '--env', 'COZNET_PROBE_INTERVAL=1024',
+                '--env', 'COZNET_IL_MAP_MODE=registered', '--env', ('COZNET_PROBE_INTERVAL=' + $ProbeInterval),
                 '--env', 'COZNET_OWNER_DRAIN=1', '--env', 'COZNET_DIRECT_RECEIPT_READY=1',
                 '--env', 'COZNET_FINITE_MEASUREMENT=1', '--env', 'COZNET_SELECTED_HANDOFF=0',
                 '--env', 'COZNET_PAUSE_TIMING=0', '--env', 'COZNET_CHILD_CPU=0', '--env', 'COZNET_BATCH_SERVICE=0',

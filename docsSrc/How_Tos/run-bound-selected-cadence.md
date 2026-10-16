@@ -66,6 +66,15 @@ Use `-ProbeInterval 1024` for the existing density with the same settings.
 Do not infer an isolated speedup from separate runs or prediction accuracy from a capacity pass.
 See [the interval contract](../Reference/bound-sampled-payment.md#probe-interval).
 
+Run the four-arm physical comparison at the same interval:
+
+```powershell
+pwsh -NoProfile -File native/VerifyCooperativeComparison.ps1 -ProbeInterval 8192 -SelectedBatches 50000 -EvidenceDirectory artifacts/sparse-probe-comparison
+```
+
+Inspect every arm and `analysis.json`. The runner returns failure while prediction remains unqualified, even when all processes complete.
+See [the comparison reference](../Reference/cooperative-comparison.md).
+
 ## Compare peer service after sample batches
 
 After the target builds the required binaries, run both publication modes with the same settings:

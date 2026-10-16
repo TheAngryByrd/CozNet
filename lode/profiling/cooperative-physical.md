@@ -1,5 +1,12 @@
 # Cooperative physical work
 
+The [8192 comparison](../../reliability/features/native-signal/sparse-probe-comparison.md) completes all four arms with matching interval evidence and unchanged inputs.
+Its descriptive sampled reduction is −14.4322% to −13.9043%, against 46.5633% to 46.5761% physically.
+Treatment freezes pending peer command 231 with budget 499,895 ns. The comparison remains unqualified.
+Selected pause brackets total 19.943184 ms. The first peer request bracket is 27.378076 ms.
+Those wall-time observations do not identify CPU cost or a scheduling cause. First-use receipt work needs separate investigation.
+The final checks preserve old positional runner arguments and reject legacy-plan interval mismatches.
+
 `CooperativeCpuWork` shares checksum arithmetic and atomic progress publication between physical and bound sampled routes.
 The protocol is `cooperative-checksum-v1`. Each batch must produce `49995000` before progress publication.
 The physical route runs selected work on the caller and peer work on a dedicated worker.
@@ -34,6 +41,12 @@ Each Linux container has read-only inputs and a separate writable arm directory.
 Controlled runner checks cover successful collection, launch failure, nonzero exit, preflight failure, and changed inputs.
 Original inputs are checked after capture. Changed retained hashes prevent analyzer execution.
 The runner always returns failure while prediction qualification remains unmet.
+The runner accepts opt-in `-ProbeInterval 8192`; its default remains 1024.
+New plans declare `probeIntervalEvidenceVersion = 1` and require matching integer interval metadata in both sampled arms.
+A missing or mismatched sampled value invalidates that arm and suppresses the comparison.
+Legacy plans without the marker accept only 1024 and can lack record interval fields.
+The output retains the parsed interval and nullable evidence version. This identifies the contract, not proof of collection success.
+Physical arms remain uninstrumented. Payment bounds and qualification rules are unchanged.
 The MiniScaffold targets are `CooperativeComparisonChecks` and `LinuxCooperativeComparison`.
 `AnalyzeCooperativeComparison.py` parses process outcomes before aggregation and retains missing or failed arms.
 It rejects duplicate JSON fields, Boolean counters, incomplete image digests, and missing required snapshots.

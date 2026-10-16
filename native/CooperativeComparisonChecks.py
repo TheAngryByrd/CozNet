@@ -27,14 +27,67 @@ def physical_record(mode="baseline"):
                 timestampFrequency=1000000000, selectedWorkStarted=110, selectedWorkFinished=200)
 
 
-def sampled_record():
+def sampled_record(percent=50):
     record = fixtures.CooperativeMeasurementEvidenceChecks().finite_record()
     record.update(workloadProtocol=subject.WORKLOAD, directReceiptReadyEnabled=True, receiptReadyCalls=0,
                   selectedHandoffEnabled=False, selectedHandoffAttempts=0)
+    if percent == 0:
+        record.update(percent=0, credit=0, paid=0, selectedPaid=0, payments=[], selectedPayments=[], pauses=[],
+                      selectedReceipt=None, selectedCleanup=None, nativeCleanup=None)
+        for item in record["sourceEpochSamples"]:
+            item["EligibilityEpoch"] = 1
+        for item in record["samples"]:
+            item.update(EligibilityEpoch=1, Credit=0)
+        for key in ("selectedPeak", "peerPeak", "finalDebt"):
+            record[key] = fixtures.debt(110, 0, 0, 0, 0)
+        final = record["finalCounters"]
+        final.update(Epoch=1, Transitions=[final["Transitions"][0], dict(final["Transitions"][-1], Epoch=1)])
+        final["LastReading"]["Epoch"] = 1
+        end = record["measurement"]["Window"]["End"]["Accounting"]
+        end.update(Global=0, Credit=0, Epoch=1)
+        end["Cooperative"]["ReleasedJournalCount"] = 0
+        for name in ("Selected", "Peer"):
+            end[name]["ReleasedWait"] = 0
+            end[name]["Ledger"].update(Global=0, Local=0)
+        record["measurementAssessment"]["DescriptiveEstimate"].update(
+            GlobalDelayNanoseconds=0, EffectiveLowerNanoseconds=98, EffectiveUpperNanoseconds=98)
     return record
 
 
 class CooperativeComparisonChecks(unittest.TestCase):
+    def test_probe_interval_plan_preserves_legacy_and_requires_versioned_sparse_plan(self):
+        self.assertEqual((1024, False), subject.probe_interval_plan({}))
+        self.assertEqual((1024, False), subject.probe_interval_plan(dict(probeInterval=1024)))
+        for interval in (1024, 8192):
+            self.assertEqual((interval, True), subject.probe_interval_plan(
+                dict(probeInterval=interval, probeIntervalEvidenceVersion=1)))
+        for plan in (dict(probeInterval=8192), dict(probeInterval=True),
+                     dict(probeIntervalEvidenceVersion=1),
+                     *[dict(probeInterval=8192, probeIntervalEvidenceVersion=v) for v in (None, True, "1", 1.0, 0, 2)],
+                     *[dict(probeInterval=v, probeIntervalEvidenceVersion=1) for v in (None, True, "8192", 8192.0, 1, 8191, 8193)]):
+            with self.subTest(plan=plan), self.assertRaises(ValueError):
+                subject.probe_interval_plan(plan)
+
+    def test_sampled_interval_must_match_versioned_plan(self):
+        for interval in (1024, 8192):
+            record = sampled_record()
+            record["probeInterval"] = interval
+            self.assertEqual("unqualified", subject.analyze_case(record, "sampled-half", 5, 0, interval, True)[0])
+            for actual in (None, True, str(interval), float(interval), 8192 if interval == 1024 else 1024):
+                record["probeInterval"] = actual
+                with self.subTest(interval=interval, actual=actual), self.assertRaisesRegex(ValueError, "differs from the declared plan"):
+                    subject.analyze_case(record, "sampled-half", 5, 0, interval, True)
+            del record["probeInterval"]
+            with self.assertRaisesRegex(ValueError, "lacks declared probe interval"):
+                subject.analyze_case(record, "sampled-half", 5, 0, interval, True)
+        self.assertEqual("unqualified", subject.analyze_case(sampled_record(), "sampled-half", 5, 0)[0])
+        record = sampled_record()
+        record["probeInterval"] = 1024
+        self.assertEqual("unqualified", subject.analyze_case(record, "sampled-half", 5, 0, 1024, False)[0])
+        record["probeInterval"] = 8192
+        with self.assertRaisesRegex(ValueError, "differs from the declared plan"):
+            subject.analyze_case(record, "sampled-half", 5, 0, 1024, False)
+
     def test_physical_cost_uses_frozen_progress_and_clock_brackets(self):
         result = subject.analyze_case(physical_record(), "physical-baseline", 5, 0)
         self.assertEqual(("complete", [], subject.Cost(Fraction(18), Fraction(24), 5)), result)
@@ -177,7 +230,7 @@ class ComparisonCollectionChecks(unittest.TestCase):
         (self.root / name).write_text(json.dumps(value), encoding="utf-8")
 
     def analyze_with_parsed_arms(self):
-        def parsed(record, mode, batches, code):
+        def parsed(record, mode, batches, code, probe_interval, require_probe_interval):
             if code:
                 return "invalid", ["process failed"], None
             return "unqualified", ["fixture"], subject.Cost(Fraction(10), Fraction(12), 5)
@@ -194,6 +247,39 @@ class ComparisonCollectionChecks(unittest.TestCase):
         self.assertFalse(result["predictionAccuracyEstablished"])
         self.assertFalse(result["passed"])
         self.assertIsNone(result["qualifiedComparison"])
+        self.assertEqual((1024, None), (result["probeInterval"], result["probeIntervalEvidenceVersion"]))
+
+    def test_declared_interval_reaches_all_arm_parsers(self):
+        plan = subject.read(self.root / "plan.json")
+        plan.update(probeInterval=8192, probeIntervalEvidenceVersion=1)
+        self.save("plan.json", plan)
+        self.manifest["files"]["plan.json"] = hashlib.sha256((self.root / "plan.json").read_bytes()).hexdigest()
+        self.save("manifest.json", self.manifest)
+        with patch.object(subject, "analyze_case", return_value=("unqualified", [], subject.Cost(Fraction(10), Fraction(12), 5))) as parsed:
+            result = subject.analyze(self.root)
+        self.assertEqual(4, parsed.call_count)
+        self.assertEqual([(8192, True)] * 4, [call.args[4:] for call in parsed.call_args_list])
+        self.assertEqual((8192, 1), (result["probeInterval"], result["probeIntervalEvidenceVersion"]))
+        self.assertTrue(result["collectionComplete"])
+
+    def test_mismatched_sampled_interval_preserves_other_arms_and_suppresses_comparison(self):
+        plan = subject.read(self.root / "plan.json")
+        plan.update(probeInterval=8192, probeIntervalEvidenceVersion=1)
+        self.save("plan.json", plan)
+        self.manifest["files"]["plan.json"] = hashlib.sha256((self.root / "plan.json").read_bytes()).hexdigest()
+        self.save("manifest.json", self.manifest)
+        self.save("physical-baseline.json", physical_record())
+        self.save("physical-optimized.json", physical_record("optimized"))
+        self.save("sampled-zero.json", dict(sampled_record(0), probeInterval=8192))
+        self.save("sampled-half.json", dict(sampled_record(), probeInterval=8192))
+        self.assertTrue(subject.analyze(self.root)["collectionComplete"])
+        for record in (dict(sampled_record(), probeInterval=1024), sampled_record()):
+            self.save("sampled-half.json", record)
+            result = subject.analyze(self.root)
+            self.assertEqual((3, 1), (result["completed"], result["invalid"]))
+            self.assertEqual(["complete", "complete", "unqualified", "invalid"], [case["status"] for case in result["cases"]])
+            self.assertIn("probe interval", result["cases"][3]["reasons"][0])
+            self.assertIsNone(result["descriptiveComparison"])
 
     def test_failed_and_unexecuted_arms_remain_in_report(self):
         self.outcomes[1].update(exitCode=137)

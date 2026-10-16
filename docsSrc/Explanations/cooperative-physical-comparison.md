@@ -1,5 +1,23 @@
 # Comparing cooperative work with a physical change
 
+## Result at probe interval 8192
+
+The four-arm runner accepts `-ProbeInterval 8192` as an opt-in setting. Its default remains 1024.
+The first 8192 block completes all four arms with unchanged inputs and no invalid records.
+Both sampled records match the declared interval.
+
+The sampled elapsed reduction is −14.4322% to −13.9043%, compared with a physical reduction of 46.5633% to 46.5761%.
+The sampled treatment is slower in this block. Lower probe density has not resolved the mismatch.
+Separate earlier captures cannot isolate the performance effect of changing the interval.
+
+Treatment retains a pending peer request at measurement freeze.
+The comparison remains unqualified for native ownership, ledger residuals, source membership, and instrumentation attribution.
+Its ranges describe clock boundaries, not accuracy bounds.
+See [the retained result](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/sparse-probe-comparison.md)
+and [the interval contract](../Reference/cooperative-comparison.md#probe-interval-contract).
+
+## Shared work and measurement
+
 A physical comparison needs the same application work and worker roles as the sampled experiment.
 The older timer route runs two workers with a sleeping controller.
 The bound cooperative route uses the caller as the selected owner.

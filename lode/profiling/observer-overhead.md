@@ -14,7 +14,7 @@ These results do not isolate one lifetime check or establish full-workload savin
 The earlier `20261016T060101303` capture retains six active serialization failures and supplies no active timing result.
 The scratch harness now omits the unsupported native binding object from JSON.
 The [sparse interval](runtime-probes.md) now adds opt-in 8192 to the profiler and controlled Instrumentation and LinuxPerf parsers.
-Its Linux checks pass with unchanged service bounds. A physical comparison at that interval remains required.
+Its Linux checks pass with unchanged service bounds. The [physical comparison](cooperative-physical.md) at that interval completes but remains unqualified.
 
 ```csharp
 collection.DrainOnOwner();

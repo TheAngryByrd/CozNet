@@ -73,7 +73,8 @@ The single loop callback occurs at a fixed position in each checksum batch and c
 A passing controlled run does not establish stable capacity or general application safety.
 NativeMap and older perf, prediction, and cooperative-interop runners retain their existing interval sets.
 Interval lists remain duplicated across components and require an explicit audit when another value is added.
-The four-arm comparison runner still selects 1024, so this capture supplies no physical-prediction comparison at 8192.
+This integration capture supplies no physical-prediction comparison at 8192.
+The [subsequent four-arm capture](sparse-probe-comparison.md) completes and remains unqualified.
 No elapsed-time benefit or prediction accuracy is established.
 
 See [the procedure](../../../docsSrc/How_Tos/run-bound-selected-cadence.md#run-the-lower-density-probe-experiment)

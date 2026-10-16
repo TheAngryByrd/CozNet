@@ -11,6 +11,7 @@ It preserves pending treatment ownership and source tails. No prediction-accurac
 | --- | --- | --- |
 | `EvidenceDirectory` | `artifacts/cooperative-comparison` | Parent for a new capture directory. |
 | `SelectedBatches` | `50000` | Positive `Int32` selected batch count for every arm. |
+| `ProbeInterval` | `1024` | Sampled-arm backedge interval. Accepts `1024` or `8192`. |
 | `PythonCommand` | `python` | Python command for retained checks and analysis. |
 
 The runner saves the plan and four unexecuted outcomes before preparation.
@@ -59,7 +60,22 @@ Physical parsing checks checksum totals, fixed selected work, frozen progress, a
 Sampled parsing uses the full selected-payment replay.
 It requires finite measurement, qualified selected cadence, direct receipt readiness, and disabled selected handoff.
 
+## Probe interval contract
+
+New plans contain `probeIntervalEvidenceVersion=1` and an explicit integer `probeInterval`.
+Both sampled records must contain an integer `probeInterval` equal to the plan.
+A missing or mismatched value invalidates that arm and suppresses the descriptive comparison.
+Physical arms do not require probe metadata because profiling remains disabled.
+
+Legacy plans without the version marker accept only interval 1024, including an omitted plan interval.
+Legacy sampled records can omit the interval. Present values must still match 1024.
+Null, Boolean, floating-point, or unknown version markers reject the plan.
+An unversioned 8192 plan is invalid.
+
 ## Output
+
+`probeInterval` records the parsed plan interval. `probeIntervalEvidenceVersion` is 1 for the new contract and null for legacy plans.
+The version describes required evidence. It does not prove collection success or callback reach.
 
 The CLI writes `analysis.json` and returns `1` while qualification remains unmet.
 `passed` and `predictionAccuracyEstablished` remain `false`. `qualifiedComparison` remains `null`.
