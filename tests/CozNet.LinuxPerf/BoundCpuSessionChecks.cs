@@ -12,6 +12,7 @@ static class BoundCpuSessionChecks
     public static void Run()
     {
         CpuCounterHistoryChecks.Run();
+        BoundCpuEpochPrefixChecks.Run();
         MultipleEpochsPreserveSourceAndCounter();
         TransitionCorruptionCannotAdvance();
         FailedOperationsCannotBecomeAnEpoch();

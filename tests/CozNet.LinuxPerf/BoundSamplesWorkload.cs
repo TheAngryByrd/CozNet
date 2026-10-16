@@ -153,6 +153,7 @@ static class BoundSamplesWorkload
             pauses,
             excludedCounters,
             epochSamples = mode == "pause" ? collection?.EpochDiagnostics : null,
+            epochPrefixes = result?.EpochPrefixes,
             sampledPaymentCapacityEstablished = false, predictionAccuracyEstablished = false, codePinned = false
         }, new JsonSerializerOptions { WriteIndented = true }));
         return passed ? 0 : 1;

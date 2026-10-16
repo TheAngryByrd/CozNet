@@ -20,7 +20,10 @@ interface IOwnerStoppedCpuEventSession : ICpuEventSession
 sealed record BoundSampleCleanup(bool SourceCreated, bool DisableSucceeded, bool CollectorJoined, bool SourceDisposed, BoundSampleCleanupError[] Errors);
 sealed record BoundSampleResult(ClrProbeBinding Binding, ClrNativeRange Range, SampleBatch Batch,
     IReadOnlyList<CpuSample> Samples, ulong CpuNanoseconds, CpuCounterSourceSnapshot InitialCounters,
-    CpuCounterSourceSnapshot FinalCounters, BoundSampleCleanup Cleanup);
+    CpuCounterSourceSnapshot FinalCounters, BoundSampleCleanup Cleanup)
+{
+    public IReadOnlyList<BoundCpuEpochPrefix>? EpochPrefixes { get; init; }
+}
 
 sealed class BoundSampleCollection
 {
@@ -87,6 +90,7 @@ sealed class BoundSampleCollection
     private LiveSampleCollector? collector;
     private IPausableSampleCollector? pausableCollector;
     private BoundCpuSession? session;
+    private readonly List<BoundCpuEpochStart> epochStarts = [];
     private readonly int owner = Environment.CurrentManagedThreadId;
     private bool pausable, excluding, drainingOnOwner, sourceDisabled = true;
     private bool started, enableAttempted, completed;
@@ -178,7 +182,9 @@ sealed class BoundSampleCollection
             if (pausable)
             {
                 _ = counters.ReadCounter();
-                session = session!.Enable(counters.DescribeCounters());
+                var enabled = BoundCpuEpochStart.Parse(session!, counters.DescribeCounters());
+                session = enabled.Session;
+                epochStarts.Add(enabled.Start);
                 Action drain = () =>
                 {
                     if (ownerDriven) drainingOnOwner = true;
@@ -263,7 +269,9 @@ sealed class BoundSampleCollection
                 if (timing is not null) timing.SourceEnabled = System.Diagnostics.Stopwatch.GetTimestamp();
                 var counters = source.CounterEvidence ?? throw new InvalidDataException("The pausable source lost counter evidence.");
                 _ = counters.ReadCounter();
-                session = session!.Enable(counters.DescribeCounters());
+                var enabled = BoundCpuEpochStart.Parse(session!, counters.DescribeCounters());
+                session = enabled.Session;
+                epochStarts.Add(enabled.Start);
                 if (timing is not null) timing.EnabledCountersAccepted = System.Diagnostics.Stopwatch.GetTimestamp();
                 pausableCollector.Resume(pause);
                 if (timing is not null) timing.CollectorResumed = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -344,7 +352,10 @@ sealed class BoundSampleCollection
             if (epoch is null || finalCounters is null) throw new InvalidDataException("The bound source lost its counter epoch evidence.");
             var counters = pausable ? session!.Close(finalCounters, cpuNanoseconds) : epoch.Close(finalCounters, cpuNanoseconds);
             ValidateBatch(batch, samples, cpuNanoseconds);
-            return new BoundSampleResult(lifetime.Binding, Map.Range, batch, samples, cpuNanoseconds, epoch.Initial, counters, value);
+            return new BoundSampleResult(lifetime.Binding, Map.Range, batch, samples, cpuNanoseconds, epoch.Initial, counters, value)
+            {
+                EpochPrefixes = pausable ? BoundCpuEpochPrefixes.Parse(epochStarts, capture.EpochSnapshot(0), session!, counters) : null
+            };
         });
         completed = true;
         return result;

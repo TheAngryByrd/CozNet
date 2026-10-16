@@ -183,6 +183,11 @@ static class PausableBoundCollectionChecks
             "Owner collection did not release source ownership cleanly.");
         Require(collection.EpochDiagnostics.Select(item => item.EligibilityEpoch).SequenceEqual(new ulong[] { 1, 2, 3 }),
             "Owner cleanup lost cumulative sample epochs.");
+        Require(result.EpochPrefixes is { Count: 3 }
+            && result.EpochPrefixes.Select(item => item.Start.DisabledBaseline.CpuNanoseconds).SequenceEqual(new ulong?[] { 0, 1000, 2000 })
+            && result.EpochPrefixes.Select(item => item.EnabledPrefixCpuNanoseconds).SequenceEqual(new ulong?[] { 1000, 1000, 1000 })
+            && result.EpochPrefixes.Select(item => item.FirstSampleIndex).SequenceEqual(new int?[] { 0, 1, 2 }),
+            "Owner completion must preserve every disabled baseline and its first sample prefix.");
         Fails<InvalidOperationException>(collection.DrainOnOwner);
     }
 

@@ -8,10 +8,17 @@ A nominal first period can therefore span enabled CPU on both sides of a payment
 `ReadDisabledCounters` validates the stopped event count.
 `BoundCpuSession` keeps initial and current snapshots, replacing the current snapshot on each transition.
 `CpuCounterTransition` has no CPU count. `BoundEpochSample` has only an epoch and sample.
-The final evidence cannot reconstruct each disabled baseline from those fields.
+Those fields alone cannot reconstruct each disabled baseline.
+`BoundCpuEpochStart.Parse` now retains the disabled reading and successful enable transition from a validated session advance.
+The pausable collector stores each start before resuming its drain.
+Successful collection completion derives immutable `EpochPrefixes` with the first source sample index and enabled CPU delta.
+Empty epochs retain their start with null sample and delta fields.
+The sampled workload emits `sourceEpochPrefixes`; the collection workload emits `epochPrefixes`.
+Failed collection emits no validated prefix list.
+Inconsistent prefix evidence rejects `Complete()` after source cleanup. This is a consistency gate, not a credit-policy change.
 
-The next diagnostic should retain the disabled reading before each enable and bind it to the resulting epoch.
-It must keep source identity, native owner, drained old records, successful transitions, counter order, loss checks, and CLR lifetime validation.
+Prefix parsing checks source identity, epoch order, enable records, and sample counts against adjacent disabled baselines.
+Collection completion retains native owner, drained old records, successful transitions, loss checks, and CLR lifetime validation.
 The calculation is:
 
 ```text
@@ -23,6 +30,9 @@ A post-enable read is not a substitute: the first sample can already precede tha
 Filtered kernel samples can enlarge a visible sample's counter delta.
 Any credit policy needs a separate attribution contract and validation of mixed nominal/counter weights.
 Authoritative wall-time payment and all debt limits remain unchanged.
+The [live evidence](../../reliability/features/native-signal/epoch-prefix-evidence.md) passes five collection cases and three selected-payment cases.
+One treatment retains 130 epochs and 61 accepted mapped baselines, with 59.999 ms of enabled prefix CPU versus 61 ms nominally.
+The existing offline analyzers do not yet require or replay the new optional fields.
 
 ```mermaid
 flowchart LR

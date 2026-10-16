@@ -50,11 +50,11 @@ That prefix can include resume bookkeeping, other methods, and kernel work.
 The sample IP cannot classify the whole prefix as selected-method CPU.
 A post-enable counter read is unsuitable as the baseline because a sample can occur before that read.
 
-CozNet checks disabled readings but does not retain each reading in its final transition journal.
-The journal retains transition timestamps. Each source snapshot retains only its latest reading.
-The next evidence change should retain the disabled baseline for each epoch and bind it to that epoch's samples.
-It must preserve source identity, complete old-epoch draining, counter order, loss checks, and CLR lifetime checks.
-This would permit prefix diagnostics. It would not by itself justify changing credit.
+CozNet now retains each disabled baseline separately from the transition journal when pausable collection completes successfully.
+The [completed epoch prefixes](../Reference/bound-cpu-session.md) bind those readings to first source samples.
+They preserve source identity, complete old-epoch draining, counter order, loss checks, and CLR lifetime checks.
+These diagnostics cover the complete source, including samples outside the frozen measurement prefix.
+They do not change credit or establish selected-method CPU.
 
 ## Size of the discarded nominal credit
 

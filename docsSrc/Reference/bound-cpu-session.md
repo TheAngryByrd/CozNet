@@ -37,6 +37,39 @@ Failed operations, changed journal entries, extra transitions, and invalid count
 Closing requires an unchanged counter after disable.
 A later closing reading must not overlap the previous reading.
 
+## Completed epoch prefixes
+
+`BoundCpuEpochStart.Parse(disabled, enabledSnapshot)` advances a validated session and retains its disabled baseline and enable transition.
+It uses the pre-enable reading. A sample can precede the post-enable reading.
+
+Successful pausable collection completion returns `EpochPrefixes` in source epoch order.
+The sampled payment record exposes this list as `sourceEpochPrefixes`.
+The collection verification record exposes it as `epochPrefixes`.
+One-shot collection and failed collection completion return null for this evidence.
+
+| Field | Meaning |
+| --- | --- |
+| `Start.Epoch` | Source epoch of the successful enable |
+| `Start.DisabledBaseline` | Validated disabled reading before that enable |
+| `Start.Enable` | Successful enable transition with its timestamp bracket |
+| `FirstSampleIndex` | Zero-based index in the complete source sample list, or null for an empty epoch |
+| `FirstSample` | First source sample in that epoch, or null |
+| `EnabledPrefixCpuNanoseconds` | First sample counter minus disabled baseline counter, or null |
+
+The parser requires closed source evidence and every successful epoch.
+Inconsistent prefix evidence causes `Complete()` to throw `InvalidDataException` after source cleanup.
+This adds a collection consistency check. It does not change the sample-credit formula.
+It checks source identity, epoch order, enable records, and cumulative sample counts against adjacent disabled baselines.
+Sample counts can equal a baseline. A zero prefix remains distinct from an empty epoch.
+Earlier accepted session and sample values remain unchanged after prefix construction.
+
+This list covers the completed source, including samples collected after a frozen measurement endpoint.
+`FirstSampleIndex` does not imply acceptance into the experiment ledger.
+The prefix measures enabled CPU. It does not establish selected-method CPU or earn credit.
+The collector still checks owner identity, source loss, final sample totals, and CLR lifetime before completion succeeds.
+The [retained checks](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/epoch-prefix-evidence.md) cover host parsing and Linux collection with selected payment.
+See [the attribution explanation](../Explanations/cpu-counter-attribution.md).
+
 ## Limits
 
 This parser checks evidence. It does not enable, disable, drain, or dispose a source.
