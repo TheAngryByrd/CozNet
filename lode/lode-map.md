@@ -1,5 +1,7 @@
 # Lode index
 
+For the opt-in selected-owner scheduling experiment, read [selected handoff](profiling/selected-handoff.md).
+
 For draft scheduler streams and clock brackets in the bound workload, read [bound scheduler capture](profiling/bound-scheduler.md).
 
 For the internal opt-in atomic phase marker, read [cooperative progress](profiling/cooperative-progress-marker.md).

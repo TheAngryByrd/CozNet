@@ -411,7 +411,27 @@ def verify_peer_progress(record):
             require(all(value == 0 for value in raw.values()), "Unavailable peer progress contains a marker")
 
 
+def verify_selected_handoff(record):
+    enabled = record.get("selectedHandoffEnabled", False)
+    require(type(enabled) is bool, "Selected handoff activation is not Boolean")
+    attempts = count(record["selectedHandoffAttempts"] if enabled else record.get("selectedHandoffAttempts", 0))
+    if enabled:
+        require(record.get("ownerDrainEnabled") is True and record.get("schemaVersion") == 4
+                and record.get("selectedPaymentEnabled") is True,
+                "Selected handoff requires owner draining and selected cadence")
+    else:
+        require(attempts == 0, "Disabled selected handoff contains attempts")
+    require(record["percent"] != 0 or attempts == 0, "Zero-speedup handoff contains attempts")
+    if attempts:
+        require(record.get("peerPeak") is not None and count(record["peerPeak"]["Peer"]) >= 500000,
+                "Selected handoff has no qualifying peer debt")
+        require(record["payments"] or record.get("pending") is not None,
+                "Selected handoff has no submitted peer request")
+    return dict(enabled=enabled, attempts=attempts)
+
+
 def verify_record(record):
+    handoff = verify_selected_handoff(record)
     scheduler = verify_bound_scheduler(record)
     verify_peer_progress(record)
     verify_dispatch_timing(record)
@@ -532,7 +552,8 @@ def verify_record(record):
                 and record["pauses"][-1]["Resumed"] is None, "Expected selected invalidation was not verified")
     return dict(samples=len(record["sourceSamples"]), credit=credit, paid=paid, selectedPaid=selected_paid,
                 selectedPayments=len(record["selectedPayments"]), pauses=len(record["pauses"]),
-                completed=record["completed"], casePassed=record["passed"], childCpu=child_cpu, scheduler=scheduler)
+                completed=record["completed"], casePassed=record["passed"], childCpu=child_cpu, scheduler=scheduler,
+                selectedHandoff=handoff)
 
 
 def verify_case(record, name):

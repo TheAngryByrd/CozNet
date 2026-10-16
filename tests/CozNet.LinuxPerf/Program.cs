@@ -26,6 +26,7 @@ if (args is ["--verify-bound-cooperative-managed"])
 {
     SchedulerCaptureGroupChecks.Run();
     BoundSchedulerCaptureChecks.Run();
+    BoundSelectedHandoffChecks.Run();
     BoundSamplePublicationChecks.Run();
     BoundReceiptReadinessChecks.Run();
     CooperativeDispatchTimingChecks.Run();

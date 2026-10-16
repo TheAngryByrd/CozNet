@@ -1,5 +1,9 @@
 # Project scope
 
+An opt-in [selected scheduling handoff](profiling/selected-handoff.md) preserves debt accounting and attempts one yield at a qualifying selected checkpoint.
+Its first CPU 0 treatment fails the handler bound while its control passes.
+The policy remains disabled by default. It does not establish a capacity or prediction fix.
+
 Opt-in [bound scheduler capture](profiling/bound-scheduler.md) now correlates peer progress with three owner-bound scheduler streams.
 One constrained treatment fails peer debt while its request-to-debt window lies inside an observed peer switch-out interval.
 Clock assumptions remain explicit. Accounting limits remain unchanged, and stable capacity is unverified.

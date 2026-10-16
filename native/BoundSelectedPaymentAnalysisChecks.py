@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from AnalyzeBoundSelectedPayment import main, verify_case, verify_record, verify_pause_timing, PAUSE_TIMING_FIELDS, verify_peer_progress
+from AnalyzeBoundSelectedPayment import verify_selected_handoff
 
 
 def payment(worker, ordinal, budget, waited, managed, native):
@@ -846,6 +847,50 @@ class PeerProgressChecks(unittest.TestCase):
         record["peerDebtProgress"] = copy.deepcopy(record["peerSubmitProgress"])
         with self.assertRaises((ValueError, AssertionError)):
             verify_record(record)
+
+
+class SelectedHandoffAnalysisChecks(unittest.TestCase):
+    def test_full_replay_accepts_enabled_no_attempts_and_legacy_disabled(self):
+        record = SelectedPaymentAnalysisChecks().cadence_record()
+        record.update(ownerDrainEnabled=True, selectedHandoffEnabled=True, selectedHandoffAttempts=0)
+        self.assertEqual(verify_record(record)['selectedHandoff'], dict(enabled=True, attempts=0))
+        self.assertEqual(verify_record(valid_record())['selectedHandoff'], dict(enabled=False, attempts=0))
+        self.assertFalse(verify_record(failed_record())['casePassed'])
+
+    def test_attempts_require_enabled_owner_cadence_and_strict_counts(self):
+        for mutate in (lambda r: r.update(selectedHandoffEnabled=1),
+                       lambda r: r.update(selectedHandoffEnabled=False, selectedHandoffAttempts=1),
+                       lambda r: r.update(selectedHandoffAttempts=True),
+                       lambda r: r.update(selectedHandoffAttempts=-1),
+                       lambda r: r.update(ownerDrainEnabled=False),
+                       lambda r: r.update(schemaVersion=3),
+                       lambda r: r.pop('selectedHandoffAttempts')):
+            record = SelectedPaymentAnalysisChecks().cadence_record()
+            record.update(ownerDrainEnabled=True, selectedHandoffEnabled=True, selectedHandoffAttempts=0)
+            mutate(record)
+            with self.subTest(record=record), self.assertRaises((ValueError, KeyError)):
+                verify_record(record)
+
+    def test_positive_attempt_counter_requires_peak_and_submission(self):
+        record = SelectedPaymentAnalysisChecks().cadence_record()
+        record.update(ownerDrainEnabled=True, selectedHandoffEnabled=True, selectedHandoffAttempts=3)
+        record['peerPeak']['Peer'] = 500000
+        self.assertEqual(verify_selected_handoff(record), dict(enabled=True, attempts=3))
+        record['peerPeak']['Peer'] = 499999
+        with self.assertRaisesRegex(ValueError, 'no qualifying peer debt'):
+            verify_selected_handoff(record)
+        record['peerPeak']['Peer'] = 500000
+        record['payments'] = []
+        with self.assertRaisesRegex(ValueError, 'no submitted peer request'):
+            verify_selected_handoff(record)
+        record['pending'] = dict(command=1)
+        self.assertEqual(verify_selected_handoff(record)['attempts'], 3)
+
+    def test_zero_speedup_cannot_hide_handoff_overhead(self):
+        record = SelectedPaymentAnalysisChecks().cadence_record()
+        record.update(ownerDrainEnabled=True, selectedHandoffEnabled=True, selectedHandoffAttempts=1, percent=0)
+        with self.assertRaisesRegex(ValueError, 'Zero-speedup handoff contains attempts'):
+            verify_selected_handoff(record)
 
 
 if __name__ == "__main__":

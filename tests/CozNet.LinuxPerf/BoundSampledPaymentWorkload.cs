@@ -77,6 +77,9 @@ static class BoundSampledPaymentWorkload
         };
         Require(!ownerDrainEnabled || selectedPaymentEnabled && cadencePlan is not null,
             "Owner draining requires selected payment with an explicit cadence.");
+        var handoff = BoundSelectedHandoff.Parse(Environment.GetEnvironmentVariable("COZNET_SELECTED_HANDOFF"),
+            new ThreadYieldHandoffBackend());
+        Require(!handoff.Enabled || ownerDrainEnabled, "Selected handoff requires owner draining and an explicit cadence.");
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
             "Selected-payment invalidation requires a pausable source factory.");
@@ -217,6 +220,13 @@ static class BoundSampledPaymentWorkload
                 if (collection!.LiveSamples > samples.Count)
                     PublishEpochs(collection.ReadEpochProvisional(samples.Count));
                 Service();
+                if (handoff.Enabled && handoff.TryHandoff(ObserveDebt().Peer, pending is not null))
+                {
+                    collection.DrainOnOwner();
+                    if (collection.LiveSamples > samples.Count)
+                        PublishEpochs(collection.ReadEpochProvisional(samples.Count));
+                    Service();
+                }
                 bool admitted = cadence.TryCheck(out var candidate);
                 if (!admitted || ObserveDebt().Selected == 0) return;
                 admission = candidate;
@@ -585,6 +595,7 @@ static class BoundSampledPaymentWorkload
             dispatchTimingEnabled = dispatchTiming is not null, dispatchTiming,
             directReceiptReadyEnabled = receiptReadiness.DirectEnabled, receiptReadyCalls = receiptReadiness.Calls,
             peerProgressEnabled, peerOwner, peerOwnerFailure, peerSubmitProgress, peerDebtProgress,
+            selectedHandoffEnabled = handoff.Enabled, selectedHandoffAttempts = handoff.Attempts,
             schedulerTiming = scheduling is not null, schedulerCapture,
             schedulerOwners = scheduling is null ? null : new[] { schedulerControllerOwner, selectedOwner, peerOwner },
             binding = bindingEvidence is null ? null : new { bindingEvidence.Generation, Module = (ulong)bindingEvidence.Module,

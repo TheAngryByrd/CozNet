@@ -10,6 +10,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Compare selected scheduling handoff](How_Tos/compare-selected-handoff.md).
+
 - [Capture bound scheduler evidence](How_Tos/capture-bound-scheduler.md).
 
 - [Analyze cooperative peer progress](How_Tos/analyze-cooperative-peer-progress.md).
@@ -38,6 +40,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Selected scheduling handoff](Reference/selected-handoff.md): bounded attempts, unchanged accounting, and prediction limits.
 
 - [Bound scheduler capture](Reference/bound-scheduler-capture.md): owner identities, clock bounds, and observed switch-out overlap.
 

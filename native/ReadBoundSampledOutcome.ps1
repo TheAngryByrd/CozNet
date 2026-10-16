@@ -2,12 +2,13 @@ function Read-BoundSampledOutcome {
     param([string]$Path, [string]$Case, [int]$ExitCode,
         [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
         [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null, [Nullable[bool]]$ExpectedChildCpu = $null, [Nullable[bool]]$ExpectedOwnerDrain = $null,
-        [Nullable[int]]$ExpectedReceiptCaptureVersion = $null, [Nullable[bool]]$ExpectedBatchService = $null, [Nullable[bool]]$ExpectedDispatchTiming = $null, [Nullable[bool]]$ExpectedDirectReceiptReady = $null, [Nullable[bool]]$ExpectedPeerProgress = $null, [Nullable[bool]]$ExpectedScheduler = $null)
+        [Nullable[int]]$ExpectedReceiptCaptureVersion = $null, [Nullable[bool]]$ExpectedBatchService = $null, [Nullable[bool]]$ExpectedDispatchTiming = $null, [Nullable[bool]]$ExpectedDirectReceiptReady = $null, [Nullable[bool]]$ExpectedPeerProgress = $null, [Nullable[bool]]$ExpectedScheduler = $null, [Nullable[bool]]$ExpectedSelectedHandoff = $null)
     $passed = $false
     $recordError = $null
     try {
         $record = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
         if ($record.passed -isnot [bool]) { throw 'The case record lacks a Boolean outcome.' }
+        if ($null -ne $ExpectedSelectedHandoff -and ($record.selectedHandoffEnabled -isnot [bool] -or $record.selectedHandoffEnabled -ne $ExpectedSelectedHandoff)) { throw 'Selected handoff evidence differs from the requested setting.' }
         if ($null -ne $ExpectedScheduler -and ($record.schedulerTiming -isnot [bool] -or $record.schedulerTiming -ne $ExpectedScheduler)) { throw 'Scheduler evidence differs from the requested setting.' }
         if ($null -ne $ExpectedPeerProgress -and ($record.peerProgressEnabled -isnot [bool] -or $record.peerProgressEnabled -ne $ExpectedPeerProgress)) { throw 'Peer progress evidence differs from the requested setting.' }
         if ($null -ne $ExpectedDirectReceiptReady -and ($record.directReceiptReadyEnabled -isnot [bool] -or $record.directReceiptReadyEnabled -ne $ExpectedDirectReceiptReady)) {
