@@ -100,6 +100,7 @@ static class BoundSampledPaymentWorkload
             selectedPaymentEnabled, measurement is not null);
         var serviceTiming = CooperativeServiceTiming.Parse(Environment.GetEnvironmentVariable("COZNET_SERVICE_TIMING"), measurement is not null);
         var componentCpu = CooperativeComponentCpu.Parse(Environment.GetEnvironmentVariable("COZNET_COMPONENT_CPU"), measurement is not null, cpuFactory);
+        var sampleClock = BoundSampleClockCapture.Parse(Environment.GetEnvironmentVariable("COZNET_BOUND_SAMPLE_CLOCK"), measurement is not null);
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan, creditPlan.NominalEvents);
         var selectedCpu = SelectedCpuCapture.Parse(Environment.GetEnvironmentVariable("COZNET_SELECTED_CPU"), cadencePlan is not null && measurement is not null, cpuFactory);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
@@ -476,8 +477,9 @@ static class BoundSampledPaymentWorkload
             collection = new(new ClrProbeLifetime(binding), selectedOwner);
             if (selectedPaymentEnabled)
             {
-                if (ownerDrainEnabled) collection.StartOwnerPausable(selectedPaymentSource!);
-                else collection.StartPausable(selectedPaymentSource!);
+                var sampleSourceFactory = sampleClock?.Wrap(selectedPaymentSource!) ?? selectedPaymentSource!;
+                if (ownerDrainEnabled) collection.StartOwnerPausable(sampleSourceFactory);
+                else collection.StartPausable(sampleSourceFactory);
                 selectedCallback = InjectedProbes.BindBound(PaySelected);
             }
             else collection.Start(createSource);
@@ -508,6 +510,7 @@ static class BoundSampledPaymentWorkload
             selectedCpu?.Finish();
             if (cadencePlan is not null) selectedWorkFinished = Stopwatch.GetTimestamp();
             measurement?.Freeze(ReadMeasurement);
+            sampleClock?.Finish();
             Require(InjectedProbes.Calls - initialCalls == checked(work.SelectedProgress * plan.CallsPerBatch),
                 "The selected workload changed its injected probe count.");
             result = collection.Complete();
@@ -567,6 +570,7 @@ static class BoundSampledPaymentWorkload
         }
         finally
         {
+            sampleClock?.Finish();
             try { selectedCallback?.Dispose(); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             try { collection?.CloseForCleanup(); } catch (Exception error) { cleanupErrors.Add(error.ToString()); }
             work.RequestPeerStop();
@@ -686,6 +690,8 @@ static class BoundSampledPaymentWorkload
             receiptPreparationEnabled = receiptPreparationPlan.Enabled, receiptPreparation = receiptPreparationPlan.LastResult,
             serviceTimingEnabled = serviceTiming is not null, serviceTiming,
             componentCpuEnabled = componentCpu is not null, componentCpuEvidenceVersion = 1, componentCpu,
+            boundSampleClockEnabled = sampleClock is not null, boundSampleClockEvidenceVersion = 1,
+            boundSampleClock = sampleClock?.Describe(measurement?.Window.Start, measurement?.Window.End),
             dispatchTimingEnabled = dispatchTiming is not null, dispatchTiming,
             directReceiptReadyEnabled = receiptReadiness.DirectEnabled, receiptReadyCalls = receiptReadiness.Calls,
             peerProgressEnabled, peerOwner, peerOwnerFailure, peerSubmitProgress, peerDebtProgress,

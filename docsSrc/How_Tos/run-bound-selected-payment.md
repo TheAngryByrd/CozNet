@@ -65,3 +65,21 @@ Inspect `Cpu` in retired raw receipts, failure captures, and cleanup copies.
 Check each reading's status before interpreting its value.
 Retain CPU read errors and inconsistent clocks with the original service failure.
 Use the [CPU API reference](../Reference/cooperative-interop.md#optional-child-cpu-api) to interpret the records and limits.
+
+## Capture sample clock evidence
+
+Build the required binaries with the diagnostic target above.
+
+1. Run one finite capture with clock evidence:
+
+   ```powershell
+   pwsh -NoProfile -File native/VerifyBoundSampledPayment.ps1 -SelectedPayment -OwnerDrain -SelectedCadence qualified-sample -FiniteMeasurement -BoundSampleClock
+   ```
+
+2. Check `boundSampleClockEnabled` in `manifest.json`, `summary.json`, and each case record.
+3. Inspect each case's `boundSampleClock.Status`, raw readings, and `Rejection`.
+4. Inspect `boundSampleClock.status` in each replay result.
+5. Keep diagnostic rejection separate from `casePassed` and `evidenceVerified`.
+
+The runner retains failed cases and checks that activation matches the requested setting.
+See [the clock reference](../Reference/cpu-sample-clock.md#bound-sampled-evidence) for fields and interpretation limits.

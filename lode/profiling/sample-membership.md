@@ -40,3 +40,38 @@ flowchart LR
 ```
 
 See [the reference](../../docsSrc/Reference/sample-membership.md), [measurement boundaries](measurement-boundaries.md), and [sample credits](sample-credits.md).
+
+## Bound sampled capture
+
+`BoundSampleClockCapture` owns optional evidence for the finite bound workload.
+Its source factory wrapper reads after source creation and before enable.
+Completion reads after measurement freeze and before cleanup.
+The portable `ISampleClockEvidenceSource` hook supplies both reads.
+Wrapper ownership and state checks precede source creation.
+Empty backend errors remain diagnostic rejections. Backend exceptions remain terminal evidence. Repeated completion does not retry.
+Unavailable providers and incomplete setup remain distinct states.
+
+```powershell
+pwsh -NoProfile -File native/VerifyBoundSampledPayment.ps1 -SelectedPayment -OwnerDrain -SelectedCadence qualified-sample -FiniteMeasurement -BoundSampleClock
+python native/BoundSampleClockEvidenceChecks.py
+```
+
+`BoundSampleClockEvidence.py` replays raw consistency in both bound analyzers.
+Legacy records remain readable. Partial declarations and false consistency claims fail replay.
+Diagnostic rejection does not change workload outcome, payment, credit, or qualification.
+The final read can add diagnostic source-tail samples after the frozen endpoint.
+Consistent brackets do not establish source membership or exact CPU attribution.
+
+```mermaid
+flowchart LR
+    Created[Source created] --> First[First clock read] --> Enable[Source enabled]
+    Enable --> Freeze[Measurement frozen] --> Last[Last clock read] --> Cleanup
+    First --> Replay[Consistency replay]
+    Last --> Replay
+```
+
+See [the clock reference](../../docsSrc/Reference/cpu-sample-clock.md#bound-sampled-evidence) and [bound sampled payment](bound-sampled-payment.md).
+
+The first read runs under the existing CLR lifetime guard, outside measurement.
+This fixed setup cost is accepted for the opt-in diagnostic.
+See [the Linux capture](../../reliability/features/native-signal/bound-sample-clock.md).

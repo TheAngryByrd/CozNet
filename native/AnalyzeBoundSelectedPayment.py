@@ -5,6 +5,7 @@ from BoundSchedulerEvidence import verify_bound_scheduler
 from AnalyzeBoundSampledPayment import verify_probe_interval
 from CooperativeMeasurementEvidence import verify_measurement
 from SelectedCpuEvidence import verify_selected_cpu
+from BoundSampleClockEvidence import verify_bound_sample_clock
 
 from AnalyzeBoundSampledPayment import count, require, signed_count, verify_payments, verify_receipt_interval, verify_rejected_receipt_interval, verify_sample_publication, verify_dispatch_timing, verify_receipt_preparation
 from AnalyzeBoundSampledPayment import verify_service_timing, verify_sample_credit_policy, verify_component_cpu
@@ -539,6 +540,7 @@ def verify_epoch_prefixes(record, last_cpu, payment_pauses):
 
 
 def verify_record(record):
+    sample_clock = verify_bound_sample_clock(record)
     verify_selected_cpu(record)
     verify_service_timing(record)
     verify_component_cpu(record)
@@ -670,7 +672,7 @@ def verify_record(record):
                 selectedPayments=len(record["selectedPayments"]), pauses=len(record["pauses"]),
                 completed=record["completed"], casePassed=record["passed"], childCpu=child_cpu, scheduler=scheduler,
                 selectedHandoff=handoff, measurement=measurement, ownerControllerEnabled=owner_controller,
-                epochPrefixes=epoch_prefixes)
+                epochPrefixes=epoch_prefixes, boundSampleClock=sample_clock)
 
 
 def verify_case(record, name):

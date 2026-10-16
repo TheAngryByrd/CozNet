@@ -1,6 +1,7 @@
 import json
 import pathlib
 import sys
+from BoundSampleClockEvidence import verify_bound_sample_clock
 
 
 def require(condition, message):
@@ -434,6 +435,7 @@ def verify_payments(payments, binding, worker):
 
 
 def verify_record(record):
+    sample_clock = verify_bound_sample_clock(record)
     require(not verify_sample_credit_policy(record), "Peer-only replay does not support nominal event credit")
     verify_service_timing(record)
     verify_component_cpu(record)
@@ -530,7 +532,8 @@ def verify_record(record):
                 and paid > 0 and record["verificationFailure"] is None
                 and "The CLR probe lifetime is no longer admitted." in record["failure"], "Expected rejection was not verified")
     return {"samples": len(source), "creditedSamples": len(record["samples"]), "payments": len(record["payments"]),
-            "credit": credit, "paid": paid, "completed": record["completed"], "casePassed": record["passed"]}
+            "credit": credit, "paid": paid, "completed": record["completed"], "casePassed": record["passed"],
+            "boundSampleClock": sample_clock}
 
 
 def verify_case(record, name):

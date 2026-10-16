@@ -25,6 +25,7 @@ static class PausableBoundCollectionChecks
         public bool RegressCounterAfterResume;
         public SampleBatch? DrainOverride;
         public Action? BeforeDrain, AfterDisable, BeforeEnable;
+        public ISampleClockEvidenceSource? ClockEvidence { get; set; }
         public ICpuCounterEvidenceSource CounterEvidence => this;
         private void Owner() => Require(Environment.CurrentManagedThreadId == owner, "A source control operation left its owner thread.");
         public void Enable()
@@ -88,6 +89,7 @@ static class PausableBoundCollectionChecks
 
     public static void Run()
     {
+        ClockCapturePrecedesEnableAndPreservesCleanup();
         OwnerDrainsReuseStableSnapshots();
         OwnerDrainRejectsCleanupReentry();
         OwnerDrainRejectsBackgroundCollection();
@@ -129,6 +131,55 @@ static class PausableBoundCollectionChecks
             Require(collection.Complete().Samples.Count == 2, "Final audit lost a sample after the matching pause.");
         }
         finally { collection.CloseForCleanup(); }
+    }
+
+    private sealed class ObservedClock(Action read) : ISampleClockEvidenceSource
+    {
+        public SampleClockDescription Description => new(SampleClockDomain.Monotonic, 1000000000);
+        public object Metadata => "fixture";
+        public SampleClockReading Read()
+        {
+            read();
+            return new(1, 1, 1, 1000000000, "context", 0, null);
+        }
+    }
+
+    private static void ClockCapturePrecedesEnableAndPreservesCleanup()
+    {
+        foreach (bool fail in new[] { false, true })
+        {
+            var capture = BoundSampleClockCapture.Parse("1", true)!;
+            var collection = Create();
+            Source? source = null;
+            int reads = 0;
+            try
+            {
+                collection.StartOwnerPausable(capture.Wrap((_, sink) =>
+                {
+                    source = new(sink);
+                    source.ClockEvidence = new ObservedClock(() =>
+                    {
+                        reads++;
+                        Require(source.Disposes == 0 && (reads != 1 || source.Enables == 0),
+                            "Clock reads must precede source disposal and the first source enable.");
+                        if (fail) throw new IOException("clock fixture failure");
+                    });
+                    source.BeforeEnable = () => Require(reads == 1, "Source enabled before its first clock read.");
+                    return source;
+                }));
+                Require(source!.Enables == 1, "Clock failure prevented sample source activation.");
+            }
+            finally
+            {
+                capture.Finish();
+                collection.CloseForCleanup();
+            }
+            Require(source!.Disposes == 1 && source.Stops == 1 && reads == (fail ? 1 : 2),
+                "Clock capture changed source cleanup or retried a failed backend.");
+            var evidence = capture.Describe(null, null);
+            Require(evidence.Status == (fail ? "failed" : "complete") && !evidence.ObservedMappingConsistent,
+                "Clock capture lost its terminal state or accepted missing boundaries.");
+        }
     }
 
     private static void PauseRejectsChangedAggregate()

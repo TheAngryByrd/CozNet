@@ -64,5 +64,45 @@ The [observed membership policy](sample-membership.md) compares source timestamp
 Prediction eligibility and kernel clock error bounds remain unresolved.
 Existing captures retain their original clock configuration.
 
+## Bound sampled evidence
+
+`COZNET_BOUND_SAMPLE_CLOCK=1` enables optional clock capture in the finite bound sampled workload.
+Absent values and `0` disable capture. Other values fail configuration parsing.
+The runner exposes `-BoundSampleClock` and requires `-FiniteMeasurement`.
+The source supplies `ISampleClockEvidenceSource` through the same portable `ClockEvidence` hook.
+
+The first reading occurs after source creation and before source enable.
+The second reading occurs after measurement freeze and before source cleanup.
+On workload failure, cleanup attempts the second reading if capture remains active.
+Repeated completion does not repeat a clock read.
+The final read can add source-tail observations after the frozen endpoint.
+
+| Field | Meaning |
+| --- | --- |
+| `boundSampleClockEnabled` | Boolean activation |
+| `boundSampleClockEvidenceVersion` | Format version, currently `1` |
+| `boundSampleClock` | Null when disabled, otherwise the evidence record |
+| `Status` | `not-started`, `started`, `complete`, `failed`, or `unavailable` |
+| `Source`, `Metadata` | Declared clock domain and backend metadata |
+| `Start`, `End` | Retained raw readings, or null before each successful read |
+| `Failure` | First backend exception, or null |
+| `ObservedMappingConsistent` | Complete readings pass the existing consistency parser |
+| `Rejection` | Backend failure or consistency rejection, or null |
+| `ErrorBoundEstablished` | Always false |
+
+`unavailable` means that the source supplied no clock provider.
+`failed` retains a backend exception without retrying.
+`complete` means that both reads returned. Their contents can still fail consistency parsing.
+Diagnostic rejection does not change workload success, sample credit, measured payment, or timing bounds.
+
+Both bound replay analyzers recompute consistency from the raw evidence.
+They accept legacy records with none of the three declaration fields.
+They reject partial declarations, malformed values, and consistency claims that disagree with the raw evidence.
+Their `boundSampleClock` result reports `disabled`, `rejected`, or `consistent`.
+Legacy records produce a null result.
+Consistent observations do not establish sample membership, exact CPU attribution, or prediction accuracy.
+An empty backend error remains a diagnostic rejection with an empty reason.
+
+See [the capture procedure](../How_Tos/run-bound-selected-payment.md#capture-sample-clock-evidence) for runner use.
 See [sample time and measurement time](../Explanations/sample-clock-alignment.md) for the limits.
 See [measurement boundaries](measurement-boundaries.md) for the endpoint contract.

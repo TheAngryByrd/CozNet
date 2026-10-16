@@ -430,5 +430,15 @@ class BoundPaymentAnalysisChecks(unittest.TestCase):
             verify_record(record)
 
 
+class BoundClockIntegrationChecks(unittest.TestCase):
+    def test_clock_declaration_is_checked_and_returned(self):
+        record = valid_record()
+        record.update(boundSampleClockEnabled=False, boundSampleClockEvidenceVersion=1, boundSampleClock=None)
+        self.assertEqual('disabled', verify_record(record)['boundSampleClock']['status'])
+        record['boundSampleClockEvidenceVersion'] = 2
+        with self.assertRaisesRegex(ValueError, 'Unsupported bound sample clock version'):
+            verify_record(record)
+
+
 if __name__ == "__main__":
     unittest.main()

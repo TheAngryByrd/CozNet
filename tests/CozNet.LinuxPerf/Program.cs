@@ -38,6 +38,7 @@ if (args is ["--verify-cooperative-managed"])
 }
 if (args is ["--verify-bound-cooperative-managed"])
 {
+    BoundSampleClockCaptureChecks.Run();
     BoundControllerPlanChecks.Run();
     CooperativeReceiptPreparationChecks.Run();
     CooperativeServiceTimingChecks.Run();
