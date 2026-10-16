@@ -114,7 +114,19 @@ def probe_interval_plan(plan):
     return interval, True
 
 
-def analyze_case(record, mode, batches, exit_code, probe_interval=1024, require_probe_interval=False):
+def receipt_preparation_plan(plan):
+    enabled = plan.get("prepareReceipts", False)
+    if "receiptPreparationEvidenceVersion" not in plan:
+        require(type(enabled) is bool and not enabled, "Legacy plan requires unprepared receipts")
+        return False, False
+    version = plan["receiptPreparationEvidenceVersion"]
+    require(type(version) is int and version == 1, "Unsupported receipt preparation evidence version")
+    require("prepareReceipts" in plan and type(enabled) is bool, "Declared receipt preparation is not Boolean")
+    return enabled, True
+
+
+def analyze_case(record, mode, batches, exit_code, probe_interval=1024, require_probe_interval=False,
+                 prepare_receipts=False, require_preparation=False):
     require(mode in MODES and type(exit_code) is int, "Unknown arm or invalid process exit code")
     require(record["workloadProtocol"] == WORKLOAD, "The case does not use the shared cooperative work")
     if mode.startswith("physical-"):
@@ -124,6 +136,11 @@ def analyze_case(record, mode, batches, exit_code, probe_interval=1024, require_
     actual_interval = record.get("probeInterval", 1024)
     require(type(actual_interval) is int and actual_interval == probe_interval,
             "Sampled probe interval differs from the declared plan")
+    require(not require_preparation or "receiptPreparationEnabled" in record,
+            "Sampled arm lacks declared receipt preparation evidence")
+    actual_preparation = record.get("receiptPreparationEnabled", False)
+    require(type(actual_preparation) is bool and actual_preparation == prepare_receipts,
+            "Sampled receipt preparation differs from the declared plan")
     require(count(record["timestampFrequency"]) > 0, "The sampled clock frequency is zero")
     replay = verify_record(record)
     require(record["finiteMeasurementEnabled"] is True and count(record["percent"]) == (0 if mode == "sampled-zero" else 50)
@@ -189,6 +206,7 @@ def analyze(root):
     plan, manifest, raw_outcomes = (read(root / name) for name in ("plan.json", "manifest.json", "outcomes.json"))
     require(plan["protocol"] == PROTOCOL and plan["order"] == list(MODES), "Comparison order or protocol changed")
     probe_interval, require_probe_interval = probe_interval_plan(plan)
+    prepare_receipts, require_preparation = receipt_preparation_plan(plan)
     batches = count(plan["selectedBatches"])
     require(0 < batches <= 2147483647 and plan["predictionErrorBound"] == 0.02
             and plan["localOptimizationCalibrated"] is False, "Comparison work or accuracy contract changed")
@@ -221,7 +239,7 @@ def analyze(root):
         try:
             require(outcome.executed and outcome.record_exists, "Case was not executed or has no retained result")
             state, reasons, value = analyze_case(read(root / (mode + ".json")), mode, batches, outcome.exit_code,
-                                                probe_interval, require_probe_interval)
+                probe_interval, require_probe_interval, prepare_receipts, require_preparation)
         except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError, ArithmeticError) as error:
             reasons = [str(error)]
         if value is not None:
@@ -232,7 +250,8 @@ def analyze(root):
     complete = not runner_errors and not integrity_errors and len(costs) == 4
     descriptive = compare(costs) if complete else None
     return dict(protocol=PROTOCOL, status="unqualified" if complete else "invalid", collectionComplete=complete,
-                probeInterval=probe_interval, probeIntervalEvidenceVersion=1 if require_probe_interval else None,
+        probeInterval=probe_interval, probeIntervalEvidenceVersion=1 if require_probe_interval else None,
+        prepareReceipts=prepare_receipts, receiptPreparationEvidenceVersion=1 if require_preparation else None,
                 attempted=sum(item.attempted for item in outcomes), completed=len(costs), qualified=0,
                 invalid=sum(item["status"] == "invalid" for item in cases), cases=cases,
                 integrityErrors=integrity_errors, runnerErrors=runner_errors, descriptiveComparison=descriptive,

@@ -28,5 +28,11 @@ The expected runner result is a nonzero exit because prediction accuracy remains
 A nonzero exit alone does not distinguish a collection failure from a complete, unqualified collection.
 Do not retry an unchanged timing failure to obtain a pass.
 
+To prepare managed receipts in both sampled arms, add `-PrepareReceipts` to the runner command.
+Use `-ProbeInterval 8192` to select the lower-density probe option.
+Check `plan.json` for `prepareReceipts=true` and `receiptPreparationEvidenceVersion=1`.
+Both sampled results must report `receiptPreparationEnabled=true` and retain their preparation evidence.
+The physical arms continue to run without profiling or receipt preparation.
+
 See [the reference](../Reference/cooperative-comparison.md) for field contracts
 and [the explanation](../Explanations/cooperative-physical-comparison.md) for comparison limits.

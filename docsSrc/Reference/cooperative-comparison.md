@@ -13,6 +13,7 @@ It preserves pending treatment ownership and source tails. No prediction-accurac
 | `SelectedBatches` | `50000` | Positive `Int32` selected batch count for every arm. |
 | `ProbeInterval` | `1024` | Sampled-arm backedge interval. Accepts `1024` or `8192`. |
 | `PythonCommand` | `python` | Python command for retained checks and analysis. |
+| `PrepareReceipts` | Disabled | Prepare isolated managed receipt paths before both sampled measurements. |
 
 The runner saves the plan and four unexecuted outcomes before preparation.
 It snapshots source files, managed workload files, and the existing Linux profiler.
@@ -72,10 +73,28 @@ Legacy sampled records can omit the interval. Present values must still match 10
 Null, Boolean, floating-point, or unknown version markers reject the plan.
 An unversioned 8192 plan is invalid.
 
+## Receipt preparation contract
+
+New plans contain `receiptPreparationEvidenceVersion=1` and an explicit Boolean `prepareReceipts`.
+Both sampled arms receive the requested `COZNET_PREPARE_RECEIPTS` value.
+Each sampled record must contain a Boolean `receiptPreparationEnabled` equal to the plan.
+A missing or mismatched value invalidates that arm and suppresses the aggregate comparison.
+Full selected-payment replay also checks the preparation result and its premeasurement timing.
+Physical arms do not require preparation metadata and do not run the receipt exercise.
+
+Legacy plans without the version marker permit only unprepared receipts.
+They can omit `prepareReceipts` or set it to false.
+Legacy sampled records can omit the activation field. A present value must be Boolean false.
+Unknown or noninteger versions and non-Boolean plan settings reject the plan.
+Prepared records cannot be used under a legacy unprepared plan.
+
 ## Output
 
 `probeInterval` records the parsed plan interval. `probeIntervalEvidenceVersion` is 1 for the new contract and null for legacy plans.
 The version describes required evidence. It does not prove collection success or callback reach.
+`prepareReceipts` records the parsed preparation mode.
+`receiptPreparationEvidenceVersion` is 1 for the new preparation contract and null for legacy plans.
+Neither field qualifies prediction accuracy.
 
 The CLI writes `analysis.json` and returns `1` while qualification remains unmet.
 `passed` and `predictionAccuracyEstablished` remain `false`. `qualifiedComparison` remains `null`.

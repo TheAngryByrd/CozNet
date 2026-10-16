@@ -1,5 +1,17 @@
 # Cooperative physical work
 
+The four-arm runner accepts opt-in `-PrepareReceipts` for both sampled arms.
+New plans bind Boolean `prepareReceipts` with `receiptPreparationEvidenceVersion=1`.
+Both sampled records must contain matching Boolean activation metadata and pass full preparation replay.
+Physical arms need no preparation metadata. Legacy plans permit only unprepared sampled records.
+Missing or mismatched sampled metadata preserves the other arm results and suppresses the aggregate comparison.
+The switch follows existing parameters, preserving positional calls. The default remains unprepared.
+The [prepared physical block](../../reliability/features/native-signal/prepared-physical-comparison.md) completes all four arms with unchanged inputs.
+Sampled effective elapsed reduction is 9.5244–9.8421%, versus 51.5845–51.5957% physically. Prediction remains unqualified.
+Treatment freezes peer command 203 with budget 499,886 ns and no accepted child.
+Its lifetime service executions are 39,926, versus 231 at zero speedup. These counts are not durations or frozen-window totals.
+Recurring pending-request service cost needs separate investigation. First-use preparation has not resolved the mismatch.
+
 The [8192 comparison](../../reliability/features/native-signal/sparse-probe-comparison.md) completes all four arms with matching interval evidence and unchanged inputs.
 Its descriptive sampled reduction is −14.4322% to −13.9043%, against 46.5633% to 46.5761% physically.
 Treatment freezes pending peer command 231 with budget 499,895 ns. The comparison remains unqualified.

@@ -3,7 +3,8 @@ $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('coz-comparison-runner-' + [Gu
 New-Item -ItemType Directory -Path $testRoot | Out-Null
 $runnerSource = Join-Path $PSScriptRoot 'VerifyCooperativeComparison.ps1'
 
-function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024) {
+function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024, [bool]$PrepareReceipts = $false) {
+    $requestedPreparation = $PrepareReceipts
     $fixtureRoot = Join-Path $testRoot $Scenario
     foreach ($directory in @('native/service', 'native/signal', 'tests/CozNet.LinuxPerf/bin/Release/net10.0',
         'tests/Shared', 'src/CozNet', 'build', 'artifacts/native-linux/integrated')) {
@@ -38,6 +39,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024) {
         $before = @(Get-Content -Raw -LiteralPath (Join-Path $captureRoot 'outcomes.json') | ConvertFrom-Json)
         if ($plan.selectedBatches -ne 5 -or $manifest.runtimeImage -ne ('sha256:' + ('a' * 64))) { throw 'Plan or image was not retained before execution.' }
         if ($plan.probeInterval -ne $ProbeInterval -or $plan.probeIntervalEvidenceVersion -ne 1) { throw 'The declared interval contract differs from the request.' }
+        if ($plan.prepareReceipts -isnot [bool] -or $plan.prepareReceipts -ne $requestedPreparation -or $plan.receiptPreparationEvidenceVersion -ne 1) { throw 'Preparation plan differs from request.' }
         $current = @($before | Where-Object mode -eq $mode)[0]
         if (-not $current.attempted -or $current.executed) { throw 'The pending attempt was not saved before launch.' }
         foreach ($target in @('/workload', '/profiler', '/native')) {
@@ -54,6 +56,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024) {
         if ($mode.StartsWith('sampled-') -and ($args -notcontains "COZNET_PROBE_INTERVAL=$ProbeInterval" -or $current.activation -notcontains "COZNET_PROBE_INTERVAL=$ProbeInterval")) {
             throw 'The sampled process or retained activation changed its probe interval.'
         }
+        if ($mode.StartsWith('sampled-') -and ($args -notcontains ("COZNET_PREPARE_RECEIPTS=" + [int]$requestedPreparation) -or $current.activation -notcontains ("COZNET_PREPARE_RECEIPTS=" + [int]$requestedPreparation))) { throw 'Preparation activation differs from request.' }
         if ($Scenario -eq 'failed-arms' -and $mode -eq 'sampled-zero') { $global:LASTEXITCODE = 137; return }
         @{ mode = $mode } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $armPath 'result.json') -Encoding utf8
         if ($mode -eq 'sampled-half') {
@@ -76,6 +79,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024) {
     $evidence = Join-Path $fixtureRoot 'evidence'
     $failure = $null
     $options = @{}
+    if ($PrepareReceipts) { $options.PrepareReceipts = $true }
     if ($ProbeInterval -ne 1024) { $options.ProbeInterval = $ProbeInterval }
     try {
         if ($Scenario -eq 'positional') {
@@ -104,7 +108,7 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024) {
         if (-not $outcomes[2].executed -or $outcomes[2].exitCode -ne 137 -or $outcomes[2].recordExists) { throw 'The failed process lost its exit code or acquired a result.' }
         if (-not $outcomes[3].executed -or -not $outcomes[3].recordExists -or $errors.Count -ne 1) { throw 'The last arm did not survive earlier failures.' }
     } elseif (@($outcomes | Where-Object { -not $_.executed -or -not $_.recordExists -or $_.exitCode -ne 0 }).Count) {
-        throw 'The controlled successful process lost its result.'
+        throw ("The controlled successful process lost its result: " + ($errors | ConvertTo-Json -Compress))
     }
     if ($Scenario -eq 'changed-snapshot') {
         if ($analyzerCalls.Count -ne 0 -or $analysis.status -ne 'invalid' -or $errors.Count -eq 0) { throw 'The runner executed a changed analyzer.' }
@@ -132,6 +136,8 @@ function Invoke-Fixture([string]$Scenario, [int]$ProbeInterval = 1024) {
 }
 
 try {
+    Invoke-Fixture 'prepared-default' 1024 $true
+    Invoke-Fixture 'prepared-sparse' 8192 $true
     Invoke-Fixture 'sparse-interval' 8192
     Invoke-Fixture 'positional'
     foreach ($scenario in @('complete', 'failed-arms', 'preflight-failure', 'changed-original', 'changed-snapshot')) {

@@ -1,5 +1,25 @@
 # Comparing cooperative work with a physical change
 
+## Comparison with prepared managed receipts
+
+The four-arm runner can prepare isolated managed receipt paths before both sampled measurements.
+Its first prepared block uses probe interval 8192 and completes all four arms with unchanged inputs.
+Both sampled records match the plan's versioned preparation setting.
+
+The sampled effective elapsed reduction is 9.5244% to 9.8421%.
+Effective elapsed time subtracts the frozen global-delay delta from recorded elapsed time.
+The physical elapsed reduction is 51.5845% to 51.5957%.
+Preparation has not resolved the prediction mismatch.
+The earlier unprepared block ran separately, so these blocks do not isolate preparation's performance effect.
+
+Treatment retains a pending peer request at measurement freeze.
+Source membership, instrumentation attribution, residual accounting, and native ownership remain unqualified.
+Recurring service work still needs measurement. Lifetime service-check counts are not durations or measured-window totals.
+The default remains unprepared, and no accuracy claim follows from successful collection.
+
+See [the retained result](../../reliability/features/native-signal/prepared-physical-comparison.md)
+and [the preparation contract](../Reference/cooperative-comparison.md#receipt-preparation-contract).
+
 ## Result at probe interval 8192
 
 The four-arm runner accepts `-ProbeInterval 8192` as an opt-in setting. Its default remains 1024.

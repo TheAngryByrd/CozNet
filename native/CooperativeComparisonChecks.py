@@ -54,7 +54,49 @@ def sampled_record(percent=50):
     return record
 
 
+def preparation_record(percent=50, enabled=True):
+    record = sampled_record(percent)
+    record.update(receiptPreparationEnabled=enabled, receiptPreparation=None)
+    if enabled:
+        record["receiptPreparation"] = dict(Started=0, Observed=0, Accepted=1, Children=10,
+            ConfirmedNanoseconds=500000, Terminal=True, RemainingNanoseconds=0)
+    return record
+
+
 class CooperativeComparisonChecks(unittest.TestCase):
+    def test_preparation_plan_requires_explicit_versioned_boolean(self):
+        self.assertEqual((False, False), subject.receipt_preparation_plan({}))
+        self.assertEqual((False, False), subject.receipt_preparation_plan(dict(prepareReceipts=False)))
+        for enabled in (False, True):
+            self.assertEqual((enabled, True), subject.receipt_preparation_plan(
+                dict(prepareReceipts=enabled, receiptPreparationEvidenceVersion=1)))
+        for plan in (dict(prepareReceipts=True), dict(prepareReceipts=0), dict(receiptPreparationEvidenceVersion=1),
+                     *[dict(prepareReceipts=True, receiptPreparationEvidenceVersion=v) for v in (None, True, "1", 1.0, 0, 2)],
+                     *[dict(prepareReceipts=v, receiptPreparationEvidenceVersion=1) for v in (None, 0, 1, "true")]):
+            with self.subTest(plan=plan), self.assertRaises(ValueError):
+                subject.receipt_preparation_plan(plan)
+
+    def test_preparation_metadata_binds_both_sampled_arms_and_preserves_legacy(self):
+        for mode, percent in (("sampled-zero", 0), ("sampled-half", 50)):
+            for enabled in (False, True):
+                record = preparation_record(percent, enabled)
+                self.assertEqual("unqualified", subject.analyze_case(record, mode, 5, 0,
+                    prepare_receipts=enabled, require_preparation=True)[0])
+                for actual in (None, 0, 1, "true", not enabled):
+                    changed = copy.deepcopy(record)
+                    changed["receiptPreparationEnabled"] = actual
+                    with self.subTest(mode=mode, expected=enabled, actual=actual), self.assertRaisesRegex(ValueError, "preparation differs"):
+                        subject.analyze_case(changed, mode, 5, 0, prepare_receipts=enabled, require_preparation=True)
+                del record["receiptPreparationEnabled"]
+                with self.assertRaisesRegex(ValueError, "lacks declared receipt preparation"):
+                    subject.analyze_case(record, mode, 5, 0, prepare_receipts=enabled, require_preparation=True)
+            self.assertEqual("unqualified", subject.analyze_case(sampled_record(percent), mode, 5, 0)[0])
+            self.assertEqual("unqualified", subject.analyze_case(preparation_record(percent, False), mode, 5, 0)[0])
+            with self.assertRaisesRegex(ValueError, "preparation differs"):
+                subject.analyze_case(preparation_record(percent, True), mode, 5, 0)
+        self.assertEqual("complete", subject.analyze_case(physical_record(), "physical-baseline", 5, 0,
+            prepare_receipts=True, require_preparation=True)[0])
+
     def test_probe_interval_plan_preserves_legacy_and_requires_versioned_sparse_plan(self):
         self.assertEqual((1024, False), subject.probe_interval_plan({}))
         self.assertEqual((1024, False), subject.probe_interval_plan(dict(probeInterval=1024)))
@@ -230,7 +272,7 @@ class ComparisonCollectionChecks(unittest.TestCase):
         (self.root / name).write_text(json.dumps(value), encoding="utf-8")
 
     def analyze_with_parsed_arms(self):
-        def parsed(record, mode, batches, code, probe_interval, require_probe_interval):
+        def parsed(record, mode, batches, code, probe_interval, require_probe_interval, prepare_receipts, require_preparation):
             if code:
                 return "invalid", ["process failed"], None
             return "unqualified", ["fixture"], subject.Cost(Fraction(10), Fraction(12), 5)
@@ -258,7 +300,7 @@ class ComparisonCollectionChecks(unittest.TestCase):
         with patch.object(subject, "analyze_case", return_value=("unqualified", [], subject.Cost(Fraction(10), Fraction(12), 5))) as parsed:
             result = subject.analyze(self.root)
         self.assertEqual(4, parsed.call_count)
-        self.assertEqual([(8192, True)] * 4, [call.args[4:] for call in parsed.call_args_list])
+        self.assertEqual([(8192, True)] * 4, [call.args[4:6] for call in parsed.call_args_list])
         self.assertEqual((8192, 1), (result["probeInterval"], result["probeIntervalEvidenceVersion"]))
         self.assertTrue(result["collectionComplete"])
 
@@ -280,6 +322,30 @@ class ComparisonCollectionChecks(unittest.TestCase):
             self.assertEqual(["complete", "complete", "unqualified", "invalid"], [case["status"] for case in result["cases"]])
             self.assertIn("probe interval", result["cases"][3]["reasons"][0])
             self.assertIsNone(result["descriptiveComparison"])
+
+    def test_preparation_mismatch_preserves_other_arms_and_suppresses_comparison(self):
+        plan = subject.read(self.root / "plan.json")
+        plan.update(prepareReceipts=True, receiptPreparationEvidenceVersion=1)
+        self.save("plan.json", plan)
+        self.manifest["files"]["plan.json"] = hashlib.sha256((self.root / "plan.json").read_bytes()).hexdigest()
+        self.save("manifest.json", self.manifest)
+        self.save("physical-baseline.json", physical_record())
+        self.save("physical-optimized.json", physical_record("optimized"))
+        for target, percent in (("sampled-zero", 0), ("sampled-half", 50)):
+            for missing in (False, True):
+                self.save("sampled-zero.json", preparation_record(0))
+                self.save("sampled-half.json", preparation_record())
+                complete = subject.analyze(self.root)
+                self.assertTrue(complete["collectionComplete"])
+                self.assertEqual((True, 1), (complete["prepareReceipts"], complete["receiptPreparationEvidenceVersion"]))
+                changed = preparation_record(percent, False)
+                if missing:
+                    del changed["receiptPreparationEnabled"]
+                self.save(target + ".json", changed)
+                result = subject.analyze(self.root)
+                self.assertEqual((3, 1), (result["completed"], result["invalid"]))
+                self.assertEqual("invalid", next(case for case in result["cases"] if case["mode"] == target)["status"])
+                self.assertIsNone(result["descriptiveComparison"])
 
     def test_failed_and_unexecuted_arms_remain_in_report(self):
         self.outcomes[1].update(exitCode=137)
