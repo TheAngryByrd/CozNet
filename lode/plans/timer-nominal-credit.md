@@ -3,7 +3,7 @@
 ## Decision
 
 Add an opt-in nominal-event policy to the existing timer workload before another timer prediction series.
-The cooperative path already supports this rule. The timer path still synthesizes cumulative periods and excludes the first accepted event in each epoch.
+Both paths support this rule. The timer default still uses cumulative periods and excludes the first accepted event in each epoch.
 Native Coz credits the selected event's nominal period, including first events. This is a semantic mismatch, not proof of the timer prediction gap's cause.
 The timer actuator avoids IL loop probes but retains its separate CLR safety, scheduling, ownership, and capacity limits.
 
@@ -21,7 +21,7 @@ At 50% speedup, their excluded event weights are 13.5, 11.5, and 18 ms.
 The other six cases retain workload failures. No subset prediction or alternative execution is inferred.
 This accounting audit does not replay source counters or establish source-time membership.
 
-## Required implementation
+## Implementation contract
 
 1. Parse the policy before setup effects. Keep interval behavior as the default and reject unsupported declarations.
 2. Reuse the existing nominal stream and ledger APIs. Keep a fixed 1,000,000 ns live period and reject mismatched observations.
@@ -50,5 +50,11 @@ flowchart LR
 
 Keep measured wall-time payment and all debt, lease, child, handler, and receipt bounds unchanged.
 Do not replace recorded credit with retrospective alternate weights or claim that nominal credit will fix capacity or accuracy.
-The feature is not implemented yet.
+The implementation supplies the policy, cadence, synthetic reset, and policy-bound replay.
+Managed checks, counter replay, membership replay, and matched-plan rejection checks pass.
+Both adversarial reviews clear the fixed live-period declaration. Injected preparation failure remains an accepted test gap.
+The [declared capture](../../reliability/features/native-signal/timer-nominal-credit.md) passes both replays but retains a 2,361,731 ns treatment peer-debt failure.
+Successful preparation and live reset are verified on Linux x64. Native safety, stable capacity, and prediction accuracy remain unverified.
+Investigate the retained failure before another matched series. Do not retry the unchanged capture.
+The matched timer protocol remains interval-only.
 See [nominal credit](../profiling/nominal-event-credit.md), [sampled timers](../profiling/timer-sampled.md), and [the roadmap](roadmap.md).

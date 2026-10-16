@@ -6,7 +6,7 @@ import statistics
 import sys
 from dataclasses import dataclass
 from fractions import Fraction
-from AnalyzeCpuCounters import analyze_counter_capture, analyze_sample_credits
+from AnalyzeCpuCounters import analyze_counter_capture, analyze_sample_credits, parse_sample_credit_policy
 from AnalyzeSampleMembership import analyze_membership, finite_float, reject_constant
 from AnalyzeTimerPrefixes import analyze_prefixes
 from AnalyzeTimerWaitMembership import analyze_timer_waits
@@ -181,6 +181,8 @@ def _analyze_case(data, mode, exit_code):
             require(data["expectedChecksum"] == 49995000 and data["measurementMilliseconds"] == 2000,
                     "Physical workload contract differs")
         else:
+            require(parse_sample_credit_policy(data).name == "same-epoch-interval-v1",
+                    "The matched timer plan requires interval sample credit")
             require(type(data["percent"]) is int and data["percent"] == (0 if mode == "profile-zero" else 50), "Profile percentage differs")
             require(data["closed"] is True and data["stableMap"] is True, "Native cleanup or method map failed")
             require(data["forceGc"] is False and data["schedulerTiming"] is False

@@ -51,13 +51,20 @@ See [the retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/r
 
 ## Timer comparison
 
-The timer workload still uses interval credit and excludes first events. Its intervention mechanism does not need inline loop probes.
-Comparing it with nominal-event cooperative results therefore mixes a credit-policy difference with an intervention-mechanism difference.
+The timer workload defaults to interval credit and excludes first events. Its intervention mechanism does not need inline loop probes.
+Comparing interval timer results with nominal cooperative results mixes a credit-policy difference with an intervention-mechanism difference.
+The opt-in nominal timer policy removes this estimator difference. It does not remove scheduling or CLR safety limits.
 
 An accounting replay of nine retained timer treatments confirms that their recorded credit follows the interval rule.
 The three completed treatments exclude 11.5–18 ms of selected first-event weight at 50% speedup.
 The other six workloads remain failed. Alternate event weights do not simulate how a nominal policy would change execution.
-An opt-in nominal timer policy is the next planned comparison step. It is not implemented yet.
+A declared Linux x64 nominal timer capture now passes counter and credit replay in both cases.
+The zero-speedup workload completes. The 50% workload fails the unchanged 2 ms debt bound at 2.361731 ms peer debt.
+Both cases complete native cleanup. The capture verifies synthetic preparation and a fresh live stream with the declared period.
+The treatment credits 1,026 selected events across 18 recorded epochs, with no first-event exclusion.
+This removes the event-rule difference but does not establish timer capacity or prediction accuracy.
+The retained debt failure needs investigation before another matched series.
+See [the nominal timer evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/timer-nominal-credit.md).
 See [the retained audit](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/timer-estimator-audit.md) for all cases and replay limits.
 
 ## Primary sources

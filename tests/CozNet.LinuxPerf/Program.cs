@@ -219,6 +219,8 @@ if (args is ["--verify-timer-layout"])
     TargetLeaseReceiptsChecks.Run();
     TimerAccountingAdapterChecks.Run();
     TimerServiceControllerChecks.Run();
+    SelectedSignalCadenceChecks.Run();
+    BoundSelectedCadenceChecks.Run();
     ControllerPhaseCaptureChecks.Run();
     TimerGcReachChecks.Run();
     TimerWorkloadPlanChecks.Run();

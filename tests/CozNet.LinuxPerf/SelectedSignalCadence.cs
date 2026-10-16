@@ -1,4 +1,4 @@
-enum SelectedSignalCadenceMode { Continuous, QualifiedSample }
+enum SelectedSignalCadenceMode { Continuous, QualifiedSample, NominalSample }
 
 sealed class SelectedSignalCadence
 {
@@ -11,7 +11,7 @@ sealed class SelectedSignalCadence
     public void Observe(ulong epoch)
     {
         if (epoch < previousEpoch) throw new InvalidOperationException("The selected sampling epoch decreased.");
-        due = epoch == previousEpoch;
+        due = mode == SelectedSignalCadenceMode.NominalSample || epoch == previousEpoch;
         previousEpoch = epoch;
     }
 

@@ -1,5 +1,8 @@
-param([string]$EvidenceDirectory, [switch]$ManagedWorkload, [switch]$ForceGc, [switch]$TransitionMatrix, [switch]$SampledTimer, [switch]$ControllerPhases, [switch]$InitializeManagedPaths, [switch]$InitializeNativeTransport, [switch]$ShortInitialInterval, [switch]$SampledGc, [switch]$SchedulerCapture, [switch]$SchedulerCost)
+param([string]$EvidenceDirectory, [switch]$ManagedWorkload, [switch]$ForceGc, [switch]$TransitionMatrix, [switch]$SampledTimer, [switch]$ControllerPhases, [switch]$InitializeManagedPaths, [switch]$InitializeNativeTransport, [switch]$ShortInitialInterval, [switch]$SampledGc, [switch]$SchedulerCapture, [switch]$SchedulerCost, [switch]$NominalSampleCredit)
 $ErrorActionPreference = 'Stop'
+if ($NominalSampleCredit -and -not $SampledTimer) { throw 'NominalSampleCredit requires SampledTimer.' }
+$creditPolicy = if ($NominalSampleCredit) { 'nominal-event-v1' } else { 'same-epoch-interval-v1' }
+$nominalPeriod = if ($NominalSampleCredit) { 1000000 } else { $null }
 if ($SchedulerCost -and (-not $SampledTimer -or -not $SampledGc -or $SchedulerCapture)) { throw 'SchedulerCost requires sampled GC capacity mode without SchedulerCapture.' }
 if ($SchedulerCapture -and (-not $SampledTimer -or -not $InitializeNativeTransport -or $ControllerPhases -or -not $ShortInitialInterval)) { throw 'SchedulerCapture requires prepared short-interval sampled capacity mode.' }
 if ($SampledGc -and (-not $InitializeNativeTransport -or $ControllerPhases -or -not $ShortInitialInterval)) { throw 'SampledGc requires prepared short-interval capacity mode.' }
@@ -59,6 +62,9 @@ $sources += 'tests/CozNet.LinuxPerf/PhysicalCalibrationChecks.cs'
 $sources += @('tests/CozNet.LinuxPerf/CalibrationEvidence.cs', 'tests/CozNet.LinuxPerf/CalibrationSegment.cs', 'tests/CozNet.LinuxPerf/InterleavedCalibration.cs', 'tests/CozNet.LinuxPerf/InterleavedCalibrationAnalysis.cs', 'tests/CozNet.LinuxPerf/InterleavedCalibrationChecks.cs')
 $hashes = @{}
 $sources += 'native/service/TimerJournalSnapshot.h'
+$sources += 'src/CozNet/NominalSampleCredits.fs'
+$sources += @('tests/CozNet.LinuxPerf/SampleCreditPlan.cs', 'tests/CozNet.LinuxPerf/SelectedSignalCadenceChecks.cs',
+    'tests/CozNet.LinuxPerf/BoundSelectedCadenceChecks.cs', 'native/AnalyzeCpuCounters.py', 'native/CpuCounterChecks.py')
 $sources += @('tests/CozNet.LinuxPerf/ITimerTransport.cs', 'tests/CozNet.LinuxPerf/TimerServiceController.cs',
     'tests/CozNet.LinuxPerf/TimerServiceControllerChecks.cs', 'tests/CozNet.LinuxPerf/SampledTimerWorkload.cs',
     'tests/CozNet.LinuxPerf/LinuxCpuEventSession.cs', 'tests/CozNet.LinuxPerf/CpuSample.cs',
@@ -72,6 +78,16 @@ if ($TransitionMatrix) {
         'native/signal/CMakeLists.txt', 'native/signal/Workload.LinuxX64.cpp')
 }
 foreach ($name in $sources) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash }
+$replayDirectory = Join-Path $run 'source/native'
+New-Item -ItemType Directory -Force $replayDirectory | Out-Null
+foreach ($file in @('AnalyzeCpuCounters.py', 'CpuCounterChecks.py')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination (Join-Path $replayDirectory $file)
+}
+if ($SampledTimer) {
+    & python (Join-Path $replayDirectory 'CpuCounterChecks.py') *> (Join-Path $run 'credit-checks.log')
+    if ($LASTEXITCODE -ne 0) { throw 'Timer sample credit replay checks failed.' }
+}
+
 & docker @compiler uname -a *> (Join-Path $run 'kernel.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Kernel identity capture failed.' }
 & docker @compiler cmake -S /source/native/service -B /build -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DCOZ_SERVICE_LINUX_SIGNAL=ON *> (Join-Path $run 'configure.log')
@@ -84,7 +100,7 @@ $binaryPaths = @((Join-Path $native 'libCozNet.Timer.so'), (Join-Path $workload 
 $binaries = @{}
 if ($TransitionMatrix) { $binaryPaths += Join-Path $native 'signal/libCozNet.SignalWorkload.so' }
 foreach ($path in $binaryPaths) { $binaries[[IO.Path]::GetFileName($path)] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
-@{ sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage;
+@{ sampleCreditPolicy = $creditPolicy; sampleCreditEvidenceVersion = 1; nominalSamplePeriodNanoseconds = $nominalPeriod; sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage;
     receiptBoundNanoseconds = 100000000; delayedReadMilliseconds = 150; watchdogSeconds = 20;
     managedWorkload = [bool]$ManagedWorkload; forceGc = [bool]$ForceGc; gcCallBoundMilliseconds = 250;
     transitionMatrix = [bool]$TransitionMatrix;
@@ -109,7 +125,7 @@ if ($ManagedWorkload -or $TransitionMatrix -or $SampledTimer) {
         '--mount', "type=bind,source=$run,target=/output", $runtimeImage, 'timeout', '-k', '2s', '20s', 'dotnet', '/work/CozNet.LinuxPerf.dll')
     if ($SampledTimer) {
         $imageIndex = [Array]::IndexOf($managedRuntime, $runtimeImage)
-        $managedRuntime = @($managedRuntime[0..($imageIndex - 1)]) + @('--security-opt', 'seccomp=unconfined') + @($managedRuntime[$imageIndex..($managedRuntime.Count - 1)])
+        $managedRuntime = @($managedRuntime[0..($imageIndex - 1)]) + @('--security-opt', 'seccomp=unconfined', '--env', ('COZNET_SAMPLE_CREDIT=' + $(if ($NominalSampleCredit) { 'nominal-event' } else { 'interval' }))) + @($managedRuntime[$imageIndex..($managedRuntime.Count - 1)])
         $sampledCases = if ($SchedulerCost) {
             $random = [Random]::new(20261014)
             for ($block = 1; $block -le 8; $block++) {
@@ -130,7 +146,14 @@ if ($ManagedWorkload -or $TransitionMatrix -or $SampledTimer) {
             if ($SampledGc) { $workloadArguments += 'gc' }
             elseif ($case.capture) { $workloadArguments += 'no-gc' }
             & docker @managedRuntime @workloadArguments *> (Join-Path $run "$name.log")
-            $outcomes += @{ mode = $name; arguments = $workloadArguments; exitCode = $LASTEXITCODE; recordExists = Test-Path -LiteralPath (Join-Path $run "$name.json") }
+            $workloadExit = $LASTEXITCODE
+            $recordExists = Test-Path -LiteralPath (Join-Path $run "$name.json")
+            $creditReplayExit = $null
+            if ($recordExists) {
+                & python (Join-Path $replayDirectory 'AnalyzeCpuCounters.py') (Join-Path $run "$name.json") (Join-Path $run "$name.credit.json") --sample-credits --expected-policy $creditPolicy *> (Join-Path $run "$name.credit.log")
+                $creditReplayExit = $LASTEXITCODE
+            }
+            $outcomes += @{ mode = $name; arguments = $workloadArguments; exitCode = $workloadExit; recordExists = $recordExists; creditReplayExit = $creditReplayExit }
             $outcomes | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'outcomes.json')
         }
     } elseif ($TransitionMatrix) {
@@ -157,8 +180,11 @@ if ($ManagedWorkload -or $TransitionMatrix -or $SampledTimer) {
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash -eq $hashes[$name] }
 foreach ($path in $binaryPaths) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -eq $binaries[[IO.Path]::GetFileName($path)] }
-$passed = $unchanged -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.recordExists }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; outcomes = $outcomes;
+foreach ($file in @('AnalyzeCpuCounters.py', 'CpuCounterChecks.py')) {
+    $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $replayDirectory $file) -Algorithm SHA256).Hash -eq $hashes["native/$file"]
+}
+$passed = $unchanged -and @($outcomes | Where-Object { $_.exitCode -ne 0 -or -not $_.recordExists -or ($SampledTimer -and $_.creditReplayExit -ne 0) }).Count -eq 0
+@{ sampleCreditPolicy = $creditPolicy; sampleCreditEvidenceVersion = 1; nominalSamplePeriodNanoseconds = $nominalPeriod; passed = $passed; inputsUnchanged = $unchanged; outcomes = $outcomes;
     generalClrSafetyEstablished = $false; sampledCapacityEstablished = $false; predictionAccuracyEstablished = $false
 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run

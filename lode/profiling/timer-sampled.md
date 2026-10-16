@@ -12,7 +12,18 @@ dotnet run --project build/build.fsproj -- -t LinuxFastTimerGc
 ```
 
 Selected service reservations advance the eligibility epoch and disable sampling before native submission.
-Queued samples are excluded. Sampling resumes only after retired release. The next epoch's first sample earns no credit.
+Queued samples are excluded. Sampling resumes only after retired release.
+The default interval policy excludes the next epoch's first sample.
+`COZNET_SAMPLE_CREDIT=nominal-event` instead credits every accepted selected event with a fixed 1,000,000 ns period.
+Nominal cadence permits one check after the first event in each epoch and rejects decreasing epochs.
+The shared `SampleCreditPlan` parser rejects unsupported declarations before setup.
+Timer records declare policy, evidence version 1, and nominal period. Legacy records retain interval semantics.
+`VerifyTimerInterop.ps1 -SampledTimer -NominalSampleCredit` binds replay to the requested policy.
+Its retained analyzer rejects partial metadata and period mismatch, including unaccepted tails.
+The existing matched timer plan rejects nominal records.
+The [declared nominal capture](../../reliability/features/native-signal/timer-nominal-credit.md) passes both policy-bound replays and verifies preparation and reset.
+The zero-speedup case passes. Treatment fails at 2,361,731 ns peer debt and completes native cleanup.
+Nominal credit removes first-event exclusion but does not establish stable capacity or prediction accuracy.
 Observed debt subtracts active confirmed waits for both workers, in addition to committed waits and selected credit.
 Scalar debt checks run every iteration. Boundary snapshots are allocated for periodic capture, new peaks, and failures.
 The 2 ms observed debt bound, 2 ms lease budget, 50 µs requested wait, 5 ms handler bound, and 100 ms receipt bound remain fixed.
@@ -20,6 +31,9 @@ The 2 ms observed debt bound, 2 ms lease budget, 50 µs requested wait, 5 ms han
 Managed initialization runs the actual drain, prepare, and poll closures with a synthetic perf record and timer transport.
 It requires 40,000 ns credit, 70,000 ns peer wait, 30,000 ns selected wait, zero debt, and no pending ownership.
 Live measurement receives fresh accounting, sample stream, counters, and cadence. Synthetic records remain separate under `initialization`.
+Nominal preparation uses an 80,000 ns period and epoch 1. Live reset restores the 1,000,000 ns period and epoch 1.
+Top-level policy metadata always declares the live period, even if preparation fails.
+Failed preparation can retain synthetic rows before reset. Live replay rejects that incomplete record and retains failure details.
 Native setup uses dedicated slot 2 before live workers register in slots 0 and 1.
 It requires one deferred 50,000 ns command with zero wait, then retires, joins, and releases its target.
 The native API permits only one session per process. Setup must not close and reopen it.

@@ -3,8 +3,8 @@
 The implemented scope is a serial experiment prototype. The goal is a .NET implementation of sampled Coz semantics.
 Keep the serial model separate from the proposed sampled engine.
 
-Next, implement [opt-in nominal-event credit for timer intervention](timer-nominal-credit.md).
-The timer path avoids loop probes but still discards first-event weights under its interval policy.
+Next, investigate the retained peer-debt failure with [opt-in nominal timer credit](timer-nominal-credit.md).
+The timer path avoids loop probes. Its default interval policy still discards first-event weights.
 The new callback-reuse comparison completes but retains about ten percentage points of shortfall.
 This directs the next backend comparison; it does not establish a fix for capacity or prediction.
 

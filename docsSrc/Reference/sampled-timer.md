@@ -11,13 +11,16 @@ Measured warmup resets are not implemented here.
 
 The selected worker creates its CPU-event session on its own OS thread.
 The controller owns sample consumption and immutable accounting updates.
-The first sample uses a fresh eligibility epoch and establishes a baseline without credit.
-Selected-method intervals can then earn credit from their reported CPU periods.
+The default interval policy uses the first sample in each eligibility epoch as a baseline without credit.
+Later selected-method intervals can earn credit from their reported CPU periods.
+The opt-in nominal policy credits every accepted selected event, including initial and resumed events.
+It requires a fixed 1,000,000 ns source period, including for unaccepted tail events.
+See [nominal-event credit](nominal-event-credit.md) for the policy metadata and arithmetic.
 
 A selected service reservation advances the eligibility epoch.
 The controller disables sampling and excludes queued samples before submitting that lease.
 It resumes sampling only after retired journal release.
-The first sample in the new epoch establishes another baseline.
+Under interval credit, the first sample in the new epoch establishes another baseline.
 This exclusion can discard eligible CPU periods. It does not prove exact source-line attribution.
 
 Observed selected debt subtracts published sample credit, settled wait, and active confirmed selected wait from global delay.
@@ -51,6 +54,9 @@ Any cleanup error still fails the workload. `closed` reports native close only.
 
 | Field | Meaning |
 | --- | --- |
+| `sampleCreditPolicy` | `same-epoch-interval-v1` or `nominal-event-v1`. |
+| `sampleCreditEvidenceVersion` | Policy declaration version, currently `1`. |
+| `nominalSamplePeriodNanoseconds` | `1000000` for nominal credit, otherwise null. |
 | `samples` | Raw CPU samples, eligibility epoch, acceptance, credit, and controller timestamp. |
 | `boundaries` | Global delay, credit, settled waits, active waits, and remaining debt. |
 | `peaks` | Largest debt observed during measurement for each worker. |

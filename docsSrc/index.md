@@ -43,6 +43,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Compare bound selected cadence](How_Tos/run-bound-selected-cadence.md).
 
 - [Run the sampled timer experiment](How_Tos/run-sampled-timer.md).
+- [Capture nominal timer credit](How_Tos/run-nominal-timer-credit.md).
 - [Run physical CPU calibration](How_Tos/run-physical-calibration.md).
 - [Run interleaved CPU calibration](How_Tos/run-interleaved-calibration.md).
 - [Collect matched prediction diagnostics](How_Tos/run-matched-prediction.md).

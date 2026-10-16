@@ -11,7 +11,7 @@ static class SampledTimerWorkload
     }
     private sealed record SampleRecord(CpuSample Sample, ulong Epoch, bool Accepted, long Credit, long Timestamp);
     private sealed record Boundary(long Timestamp, long Global, long Credit, long[] Waits, long[] ActiveWaits, long[] Debt);
-    private sealed record Initialization(string Source, SampleRecord[] Samples, TimerServiceController.Journal[] Journals, Boundary Boundary);
+    private sealed record Initialization(string Source, SampleRecord[] Samples, TimerServiceController.Journal[] Journals, Boundary Boundary, string SampleCreditPolicy, ulong? NominalSamplePeriodNanoseconds);
 
     public static int Run(string path, int percent, Func<ICpuSampleSink, ICpuEventSession> sessionFactory,
         IThreadCpuClock? phaseClock = null, bool initializeManagedPaths = false, bool initializeNativeTransport = false,
@@ -19,6 +19,8 @@ static class SampledTimerWorkload
         Func<ISchedulerEventSession>? schedulerFactory = null)
     {
         if (percent is not (0 or 50)) throw new ArgumentOutOfRangeException(nameof(percent));
+        var creditPlan = SampleCreditPlan.Parse(Environment.GetEnvironmentVariable("COZNET_SAMPLE_CREDIT"), true);
+        ulong nominalPeriod = SampleCreditPlan.NominalPeriodNanoseconds;
         var failures = new List<Exception>();
         var phases = phaseClock is null ? null : new ControllerPhaseCapture(phaseClock, retainRecent: true);
         var samples = new List<SampleRecord>();
@@ -38,12 +40,14 @@ static class SampledTimerWorkload
         long credit = 0;
         string stage = "setup";
         var state = SignalAccountingModule.create();
-        var selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(percent), state));
+        var selected = creditPlan.NominalEvents
+            ? Parsed(SignalAccountingModule.registerNominal(percent, nominalPeriod, state))
+            : Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(percent), state));
         var peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
         state = peer.Item2;
         LedgerThread[] handles = [selected.Item1, peer.Item1];
         Guid stream = Parsed(SignalAccountingModule.sampleIdentity(handles[0], state));
-        var cadence = new SelectedSignalCadence(SelectedSignalCadenceMode.QualifiedSample);
+        var cadence = new SelectedSignalCadence(creditPlan.NominalEvents ? SelectedSignalCadenceMode.NominalSample : SelectedSignalCadenceMode.QualifiedSample);
         ulong begin = 0, size = 0;
         Boundary? failureBoundary = null;
         string? failureStage = null;
@@ -99,15 +103,20 @@ static class SampledTimerWorkload
         {
             Require(samples.Count < 20000, "The sampled timer record limit was exceeded.");
             long amount = 0;
+            Require(!creditPlan.NominalEvents || sample.PeriodNanoseconds == nominalPeriod, "The timer sample period differs from its nominal credit stream.");
             if (accept)
             {
                 sequence = checked(sequence + 1);
                 represented = checked(represented + sample.PeriodNanoseconds);
                 var location = sample.Method == OverheadWorkload.SelectedSymbol ? SampleLocation.Selected
                     : sample.Method is null ? SampleLocation.Unmapped : SampleLocation.Other;
-                var observation = Parsed(CpuSampleObservationModule.tryCreate(stream, sequence, represented,
-                    epoch, SampleThreadState.Runnable, location));
-                var observed = Parsed(SignalAccountingModule.observe(handles[0], observation, state));
+                var observed = creditPlan.NominalEvents
+                    ? Parsed(SignalAccountingModule.observeNominal(handles[0],
+                        Parsed(NominalSampleObservationModule.tryCreate(stream, sequence, epoch,
+                            sample.PeriodNanoseconds, SampleThreadState.Runnable, location)), state))
+                    : Parsed(SignalAccountingModule.observe(handles[0],
+                        Parsed(CpuSampleObservationModule.tryCreate(stream, sequence, represented,
+                            epoch, SampleThreadState.Runnable, location)), state));
                 state = observed.Item2;
                 amount = DelayTicksModule.value(observed.Item1);
                 credit = checked(credit + amount);
@@ -170,12 +179,15 @@ static class SampledTimerWorkload
         void Initialize()
         {
             stage = "synthetic-initialization";
-            selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(50), SignalAccountingModule.create()));
+            nominalPeriod = 80000;
+            selected = creditPlan.NominalEvents
+                ? Parsed(SignalAccountingModule.registerNominal(50, nominalPeriod, SignalAccountingModule.create()))
+                : Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(50), SignalAccountingModule.create()));
             peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
             state = peer.Item2;
             handles = [selected.Item1, peer.Item1];
             stream = Parsed(SignalAccountingModule.sampleIdentity(handles[0], state));
-            epoch = 0;
+            epoch = creditPlan.NominalEvents ? 1UL : 0;
             using var source = new ServicePathPreparation(new Sink(Publish));
             session = source;
             controller = new(new TimerPathPreparation(), handles[0], handles[1], 100, 20, TimeProvider.System);
@@ -194,8 +206,11 @@ static class SampledTimerWorkload
                 && boundary.Debt.All(debt => debt == 0) && controller.Journals.Count == 2
                 && controller.PendingJournals.Length == 0 && SignalAccountingModule.pendingCount(state) == 0,
                 "Synthetic timer initialization did not settle its fixed credit and waits.");
-            initialization = new("synthetic", samples.ToArray(), controller.Journals.ToArray(), boundary);
-            selected = Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(percent), SignalAccountingModule.create()));
+            initialization = new("synthetic", samples.ToArray(), controller.Journals.ToArray(), boundary, creditPlan.Name, creditPlan.NominalEvents ? nominalPeriod : null);
+            nominalPeriod = SampleCreditPlan.NominalPeriodNanoseconds;
+            selected = creditPlan.NominalEvents
+                ? Parsed(SignalAccountingModule.registerNominal(percent, nominalPeriod, SignalAccountingModule.create()))
+                : Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(percent), SignalAccountingModule.create()));
             peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
             state = peer.Item2;
             handles = [selected.Item1, peer.Item1];
@@ -208,7 +223,7 @@ static class SampledTimerWorkload
             epoch = 1;
             credit = 0;
             accept = enabled = false;
-            cadence = new SelectedSignalCadence(SelectedSignalCadenceMode.QualifiedSample);
+            cadence = new SelectedSignalCadence(creditPlan.NominalEvents ? SelectedSignalCadenceMode.NominalSample : SelectedSignalCadenceMode.QualifiedSample);
             stage = "setup";
         }
         try
@@ -379,6 +394,8 @@ static class SampledTimerWorkload
             measurement.Start, measurement.End);
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
+            sampleCreditPolicy = creditPlan.Name, sampleCreditEvidenceVersion = 1,
+            nominalSamplePeriodNanoseconds = creditPlan.NominalEvents ? SampleCreditPlan.NominalPeriodNanoseconds : (ulong?)null,
             percent, failures = failures.Select(error => error.ToString()), failureStage, failureBoundary, samples, boundaries, peaks, progress = work.SnapshotProgress(), waits = new[] { ReleasedWait(0), ReleasedWait(1) }, credit, records, stableMap, closed,
             lifetimes = lifetimes.Select(lifetime => new { lifetime.Joined, lifetime.Retired, lifetime.Released, error = lifetime.Error?.ToString() }),
             journals = controller?.Journals, pending = controller?.PendingJournals,

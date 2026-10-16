@@ -37,12 +37,12 @@ static class BoundSampledPaymentWorkload
         var dispatchTiming = CooperativeDispatchTiming.Parse(Environment.GetEnvironmentVariable("COZNET_DISPATCH_TIMING"));
         var controllerPlan = BoundControllerPlan.Parse(Environment.GetEnvironmentVariable("COZNET_OWNER_CONTROLLER"),
             selectedPaymentSource is not null, schedulerBackend is not null, dispatchTiming is not null);
-        var creditPlan = BoundSampleCreditPlan.Parse(Environment.GetEnvironmentVariable("COZNET_SAMPLE_CREDIT"), selectedPaymentSource is not null);
+        var creditPlan = SampleCreditPlan.Parse(Environment.GetEnvironmentVariable("COZNET_SAMPLE_CREDIT"), selectedPaymentSource is not null);
         NativeLibrary.SetDllImportResolver(typeof(CooperativeNativeMethods).Assembly,
             (name, _, _) => name == "CozNet.Cooperative" ? NativeLibrary.Load(Path.GetFullPath(library)) : IntPtr.Zero);
         var plan = ProbePlan.Parse("injected", Environment.GetEnvironmentVariable("COZNET_PROBE_INTERVAL"));
         var selected = creditPlan.NominalEvents
-            ? Parsed(SignalAccountingModule.registerNominal(settings.Percent, BoundSampleCreditPlan.NominalPeriodNanoseconds, SignalAccountingModule.create()))
+            ? Parsed(SignalAccountingModule.registerNominal(settings.Percent, SampleCreditPlan.NominalPeriodNanoseconds, SignalAccountingModule.create()))
             : Parsed(SignalAccountingModule.register(FSharpOption<int>.Some(settings.Percent), SignalAccountingModule.create()));
         var peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
         var state = peer.Item2;
@@ -719,7 +719,7 @@ static class BoundSampledPaymentWorkload
             sourceEpochPrefixEvidenceVersion = selectedPaymentEnabled ? 1 : (int?)null,
             sampleCreditPolicy = creditPlan.Name,
             selectedCpuEnabled = selectedCpu is not null, selectedCpuEvidenceVersion = 1, selectedCpu,
-            nominalSamplePeriodNanoseconds = creditPlan.NominalEvents ? BoundSampleCreditPlan.NominalPeriodNanoseconds : (ulong?)null,
+            nominalSamplePeriodNanoseconds = creditPlan.NominalEvents ? SampleCreditPlan.NominalPeriodNanoseconds : (ulong?)null,
             serviceCadence,
             probeInterval = plan.BackedgeInterval,
             selectedPaymentEnabled, pauseTimingEnabled, childCpuEnabled, ownerDrainEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false

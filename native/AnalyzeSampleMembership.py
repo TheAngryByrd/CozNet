@@ -109,6 +109,7 @@ def report_credit_membership(evidence):
         group["recordedCreditNanoseconds"] += credit
         credits[source_membership] += credit
     return {"reconciled": True, "percent": evidence.replay.percent,
+            "sampleCreditPolicy": evidence.replay.policy.name,
             "sampleAccountingGroups": [groups[key] for key in sorted(groups)],
             "recordedCreditBySourceMembership": credits,
             "recordedCreditInObservedWindow": {"lower": credits["Inside"],

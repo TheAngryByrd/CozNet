@@ -1,11 +1,11 @@
-sealed class BoundSampleCreditPlan
+sealed class SampleCreditPlan
 {
     public const ulong NominalPeriodNanoseconds = 1000000;
     public bool NominalEvents { get; }
     public string Name => NominalEvents ? "nominal-event-v1" : "same-epoch-interval-v1";
-    private BoundSampleCreditPlan(bool nominalEvents) => NominalEvents = nominalEvents;
+    private SampleCreditPlan(bool nominalEvents) => NominalEvents = nominalEvents;
 
-    public static BoundSampleCreditPlan Parse(string? value, bool pausableSource)
+    public static SampleCreditPlan Parse(string? value, bool pausableSource)
     {
         bool nominal = value switch
         {

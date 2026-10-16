@@ -266,6 +266,29 @@ def analyze_counter_capture(data):
 
 
 @dataclass(frozen=True)
+class SampleCreditPolicy:
+    name: str
+    period: int | None
+
+    @property
+    def nominal(self):
+        return self.name == "nominal-event-v1"
+
+
+def parse_sample_credit_policy(data):
+    fields = ("sampleCreditPolicy", "sampleCreditEvidenceVersion", "nominalSamplePeriodNanoseconds")
+    if not any(field in data for field in fields):
+        return SampleCreditPolicy("same-epoch-interval-v1", None)
+    require(all(field in data for field in fields), "Incomplete timer sample credit policy")
+    require(type(data[fields[1]]) is int and data[fields[1]] == 1, "Invalid timer sample credit version")
+    name, period = data[fields[0]], data[fields[2]]
+    require(name in ("same-epoch-interval-v1", "nominal-event-v1"), "Unknown timer sample credit policy")
+    require((name == "nominal-event-v1" and type(period) is int and period == 1000000)
+            or (name == "same-epoch-interval-v1" and period is None), "Invalid timer nominal sample period")
+    return SampleCreditPolicy(name, period)
+
+
+@dataclass(frozen=True)
 class SampleCreditEvidence:
     percent: int
     selected_symbol: str
@@ -277,9 +300,11 @@ class SampleCreditEvidence:
     qualified_nominal_nanoseconds: int
     credit_nanoseconds: int
     remainder: int
+    policy: SampleCreditPolicy
 
 
 def parse_sample_credits(data):
+    policy = parse_sample_credit_policy(data)
     capture = parse_capture(data)
     percent = number(data["percent"], "sampled timer percentage")
     require(percent in (0, 50), "Unsupported sampled timer percentage")
@@ -297,10 +322,12 @@ def parse_sample_credits(data):
         require(observed_epoch <= epoch <= final_epoch, "Sample eligibility epochs regress or exceed the frozen endpoint")
         observed_epoch = epoch
         saved_credit = number(raw["Credit"], "sample credit", maximum=9223372036854775807)
+        require(not policy.nominal or raw["Sample"]["PeriodNanoseconds"] == policy.period,
+                "Timer sample period differs from nominal policy")
         amount = 0
         if sample.accepted:
             accepted += 1
-            if epoch != previous_epoch:
+            if not policy.nominal and epoch != previous_epoch:
                 epoch_exclusions += 1
             elif raw["Sample"]["Method"] != selected[0]:
                 location_exclusions += 1
@@ -319,7 +346,7 @@ def parse_sample_credits(data):
             number(end["Credit"], "frozen sample credit", maximum=9223372036854775807) == total,
             "Total or frozen sample credit differs from replay")
     return SampleCreditEvidence(percent, selected[0], accepted, qualified, epoch_exclusions, location_exclusions,
-                                unaccepted, nominal, total, remainder)
+                                unaccepted, nominal, total, remainder, policy)
 
 
 def analyze_sample_credits(data):
@@ -329,6 +356,7 @@ def analyze_sample_credits(data):
     try:
         evidence = parse_sample_credits(data)
         result.update(reconciled=True, percent=evidence.percent, selectedSymbol=evidence.selected_symbol,
+                      sampleCreditPolicy=evidence.policy.name, nominalSamplePeriodNanoseconds=evidence.policy.period,
                       acceptedSamples=evidence.accepted_samples, qualifiedSamples=evidence.qualified_samples,
                       epochExcludedSamples=evidence.epoch_exclusions, locationExcludedSamples=evidence.location_exclusions,
                       unacceptedSamples=evidence.unaccepted_samples,
@@ -344,11 +372,18 @@ def main():
     parser.add_argument("capture", type=pathlib.Path)
     parser.add_argument("output", type=pathlib.Path)
     parser.add_argument("--sample-credits", action="store_true", help="Also reconcile nominal sample credit records.")
+    parser.add_argument("--expected-policy", choices=("same-epoch-interval-v1", "nominal-event-v1"))
     args = parser.parse_args()
+    if args.expected_policy and not args.sample_credits:
+        parser.error("--expected-policy requires --sample-credits")
     content = None
     try:
         content = args.capture.read_bytes()
         data = json.loads(content.decode("utf-8-sig"))
+        if args.expected_policy:
+            require("sampleCreditEvidenceVersion" in data, "Timer result lacks declared sample credit policy")
+            require(parse_sample_credit_policy(data).name == args.expected_policy,
+                    "Timer sample credit policy differs from runner")
         result = analyze_counter_capture(data)
         if args.sample_credits:
             credits = analyze_sample_credits(data)

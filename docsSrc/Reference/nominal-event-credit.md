@@ -1,6 +1,6 @@
 # Nominal-event credit
 
-This internal estimator supports the controlled bound selected-payment workload.
+This internal estimator supports the controlled bound selected-payment and sampled timer workloads.
 It does not change the public serial API.
 Its F# arithmetic and managed policy parser are portable. The current live source uses Linux perf.
 
@@ -20,7 +20,19 @@ Interval records contain a null nominal period.
 Legacy records without policy metadata retain interval semantics.
 The runner requires result policy metadata that matches its requested mode.
 
-The four-arm runner accepts the same switch.
+`VerifyTimerInterop.ps1` requires `-SampledTimer` with `-NominalSampleCredit`.
+Its replay requires all three fields: policy, evidence version `1`, and nominal period.
+Partial declarations, unknown policies, and mismatched periods reject.
+Managed timer preparation uses separate synthetic state with an 80,000 ns nominal period and positive epoch.
+Live state restarts with the 1,000,000 ns period. Synthetic credit does not enter live totals.
+If managed preparation fails before reset, the raw record can retain synthetic samples and failure details.
+Live replay rejects that incomplete record. Its top-level declaration still identifies the requested live policy.
+The timer runner retains workload exits separately from counter and credit replay exits.
+Missing records, failed workloads, failed replay, or changed capture inputs prevent acceptance.
+The existing matched-timer plan rejects nominal credit. Its comparison protocol remains interval-only.
+See [the timer capture procedure](../How_Tos/run-nominal-timer-credit.md).
+
+The cooperative four-arm runner accepts the same switch.
 New plans bind `sampleCreditPolicy` with `sampleCreditEvidenceVersion=1`.
 Both sampled arms require matching policy metadata and full replay.
 Missing or mismatched policy metadata invalidates that arm and suppresses the aggregate comparison.

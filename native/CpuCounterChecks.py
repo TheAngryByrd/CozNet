@@ -56,7 +56,84 @@ def credit_fixture(percent=50):
     return data
 
 
+def nominal_credit_fixture(percent=50):
+    data = credit_fixture(percent)
+    def scale(value):
+        if isinstance(value, dict):
+            for key in value:
+                if key.endswith("CpuNanoseconds") or key == "PeriodNanoseconds":
+                    value[key] *= 100000
+                else:
+                    scale(value[key])
+        elif isinstance(value, list):
+            for item in value:
+                scale(item)
+    scale(data)
+    data["cpuCounters"]["enabledCountRange"] = {"Lower": 8000000, "Upper": 10000000}
+    data.update(sampleCreditPolicy="nominal-event-v1", sampleCreditEvidenceVersion=1,
+                nominalSamplePeriodNanoseconds=1000000, credit=percent * 20000)
+    for index, raw in enumerate(data["samples"]):
+        raw["Credit"] = percent * 10000 if index < 2 else 0
+    data["measurementCapture"]["end"]["Accounting"]["Credit"] = data["credit"]
+    return data
+
+
 class SampleCreditChecks(unittest.TestCase):
+    def test_nominal_policy_credits_first_and_resumed_events(self):
+        for percent in (0, 50):
+            data = nominal_credit_fixture(percent)
+            data["samples"][1]["Epoch"] = data["samples"][2]["Epoch"] = 2
+            data["measurementCapture"]["end"]["Accounting"]["Epoch"] = 2
+            result = analyze_sample_credits(data)
+            self.assertTrue(result["reconciled"], result["reasons"])
+            self.assertEqual((2, 0, percent * 20000),
+                             (result["qualifiedSamples"], result["epochExcludedSamples"], result["creditNanoseconds"]))
+            self.assertEqual("nominal-event-v1", result["sampleCreditPolicy"])
+
+    def test_versioned_interval_preserves_legacy_credit(self):
+        data = credit_fixture()
+        expected = analyze_sample_credits(data)
+        data.update(sampleCreditPolicy="same-epoch-interval-v1", sampleCreditEvidenceVersion=1,
+                    nominalSamplePeriodNanoseconds=None)
+        self.assertEqual(expected, analyze_sample_credits(data))
+
+    def test_nominal_policy_does_not_credit_unmapped_or_unaccepted_events(self):
+        data = nominal_credit_fixture()
+        data["samples"][0]["Sample"].update(Method=None, InstructionPointer=20)
+        data["samples"][0]["Credit"] = 0
+        data["credit"] = data["measurementCapture"]["end"]["Accounting"]["Credit"] = 500000
+        data["records"].update(SelectedMethodSamples=1, UnmappedSamples=2)
+        result = analyze_sample_credits(data)
+        self.assertTrue(result["reconciled"], result["reasons"])
+        self.assertEqual((1, 1, 1, 500000), (result["qualifiedSamples"], result["locationExcludedSamples"],
+                         result["unacceptedSamples"], result["creditNanoseconds"]))
+
+    def test_credit_policy_rejects_partial_and_invalid_declarations(self):
+        fields = ("sampleCreditPolicy", "sampleCreditEvidenceVersion", "nominalSamplePeriodNanoseconds")
+        for field in fields:
+            data = nominal_credit_fixture()
+            del data[field]
+            self.assertEqual(["Incomplete timer sample credit policy"], analyze_sample_credits(data)["reasons"])
+        for field, value, message in (
+            (fields[0], "unknown", "Unknown timer sample credit policy"),
+            (fields[1], True, "Invalid timer sample credit version"),
+            (fields[1], 2, "Invalid timer sample credit version"),
+            (fields[2], True, "Invalid timer nominal sample period"),
+            (fields[2], 80000, "Invalid timer nominal sample period"),
+            (fields[0], "same-epoch-interval-v1", "Invalid timer nominal sample period")):
+            data = nominal_credit_fixture()
+            data[field] = value
+            self.assertEqual([message], analyze_sample_credits(data)["reasons"])
+
+    def test_nominal_policy_rejects_tail_period_mismatch_and_changed_credit(self):
+        data = nominal_credit_fixture()
+        data["samples"][2]["Sample"]["PeriodNanoseconds"] = 80000
+        data["records"]["RepresentedCpuNanoseconds"] = 2080000
+        self.assertEqual(["Timer sample period differs from nominal policy"], analyze_sample_credits(data)["reasons"])
+        data = nominal_credit_fixture()
+        data["samples"][0]["Credit"] = 0
+        self.assertEqual(["Sample credit differs at record 0"], analyze_sample_credits(data)["reasons"])
+
     def test_credit_cli_preserves_failure_evidence_and_rejects_invalid_credit(self):
         script = pathlib.Path(__file__).with_name("AnalyzeCpuCounters.py")
         with tempfile.TemporaryDirectory() as temporary:
@@ -414,6 +491,28 @@ class CpuCounterChecks(unittest.TestCase):
         rejected = analyze_counter_capture(data)
         self.assertFalse(rejected["reconciled"])
         self.assertIn("Final counter reading does not follow disabled source completion", rejected["reasons"])
+
+    def test_cli_binds_declared_policy_to_runner(self):
+        script = pathlib.Path(__file__).with_name("AnalyzeCpuCounters.py")
+        cases = ((nominal_credit_fixture(), "nominal-event-v1", 0, None),
+                 (nominal_credit_fixture(), "same-epoch-interval-v1", 1, "differs from runner"),
+                 (credit_fixture(), "same-epoch-interval-v1", 1, "lacks declared"))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            for index, (data, policy, expected_exit, reason) in enumerate(cases):
+                with self.subTest(policy=policy, index=index):
+                    source, output = root / f"input-{index}.json", root / f"output-{index}.json"
+                    source.write_text(json.dumps(data))
+                    result = subprocess.run([sys.executable, str(script), str(source), str(output),
+                                             "--sample-credits", "--expected-policy", policy],
+                                            capture_output=True, text=True)
+                    self.assertEqual(result.returncode, expected_exit, result.stderr)
+                    report = json.loads(output.read_text())
+                    self.assertEqual(report["reconciled"], expected_exit == 0)
+                    if reason:
+                        self.assertTrue(any(reason in item for item in report["reasons"]), report)
+                    else:
+                        self.assertEqual(report["sampleCreditDiagnostics"]["sampleCreditPolicy"], policy)
 
     def test_cli_pins_input_and_never_overwrites_existing_output(self):
         script = pathlib.Path(__file__).with_name("AnalyzeCpuCounters.py")

@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 from AnalyzeSampleMembership import analyze_membership
-from CpuCounterChecks import fixture as counter_fixture
+from CpuCounterChecks import fixture as counter_fixture, nominal_credit_fixture
 
 
 def fixture():
@@ -49,6 +49,34 @@ def credit_fixture(percent=50):
 
 
 class SampleMembershipChecks(unittest.TestCase):
+    def test_nominal_membership_preserves_failed_workload(self):
+        data = nominal_credit_fixture()
+        clocks = fixture()
+        data["sampleClock"] = clocks["sampleClock"]
+        data["timestampFrequency"] = 1000000000
+        counters = data["cpuCounters"]
+        for name in ("startBefore", "startAfter", "endBefore", "endAfter"):
+            counters[name]["TimestampFrequency"] = 1000000000
+        counters["source"]["LastReading"]["TimestampFrequency"] = 1000000000
+        for transition in counters["source"]["Transitions"]:
+            transition["TimestampFrequency"] = 1000000000
+        for boundary in data["measurementCapture"].values():
+            if isinstance(boundary, dict):
+                boundary["TimestampFrequency"] = 1000000000
+        for sample in data["samples"]:
+            sample["Sample"]["Timestamp"] = 110
+        data.update(failures=["debt exceeded"], closed=False)
+        result = analyze_membership(data, include_credits=True)
+        self.assertTrue(result["comparisonDomainAccepted"], result["reasons"])
+        self.assertEqual(result["recordedWorkloadFailures"], ["debt exceeded"])
+        self.assertFalse(result["nativeSessionClosed"])
+        credit = result["creditMembership"]
+        self.assertEqual(credit["sampleCreditPolicy"], "nominal-event-v1")
+        self.assertEqual(credit["replayedCreditNanoseconds"], 1000000)
+        self.assertEqual(credit["recordedCreditBySourceMembership"],
+                         dict(Before=0, Inside=1000000, After=0, BoundaryAmbiguous=0))
+        self.assertFalse(result["predictionAccuracyEstablished"])
+
     def test_same_group_accumulates_counts_periods_and_multiple_credits(self):
         data = credit_fixture()
         data["samples"][0]["Sample"]["Timestamp"] = 110

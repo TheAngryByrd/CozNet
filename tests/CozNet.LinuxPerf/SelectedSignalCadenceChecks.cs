@@ -12,6 +12,7 @@ static class SelectedSignalCadenceChecks
         NewEpochDiscardsPriorReadiness();
         DecreasingEpochDoesNotChangeReadiness();
         ContinuousModeRemainsExplicit();
+        NominalEventsPermitOneCheckInEveryEpoch();
     }
 
     private static void OneCheckPerQualifiedBatch()
@@ -66,5 +67,22 @@ static class SelectedSignalCadenceChecks
         Require(cadence.TryCheck() && cadence.TryCheck(), "Continuous mode must preserve the original control path.");
         Require(SampledSignalPlan.Parse("50", "qualified-sample").Cadence == SelectedSignalCadenceMode.QualifiedSample,
             "The parsed plan must select sample cadence.");
+    }
+
+    private static void NominalEventsPermitOneCheckInEveryEpoch()
+    {
+        var cadence = new SelectedSignalCadence(SelectedSignalCadenceMode.NominalSample);
+        Require(!cadence.TryCheck(), "Nominal cadence cannot run before an event.");
+        foreach (ulong epoch in new ulong[] { 1, 1, 2, 4 })
+        {
+            cadence.Observe(epoch);
+            Require(cadence.TryCheck(), "Each nominal event must permit a check, including first and resumed events.");
+            Require(!cadence.TryCheck(), "A nominal event must not permit repeated checks.");
+        }
+        cadence.Observe(4);
+        bool rejected = false;
+        try { cadence.Observe(3); }
+        catch (InvalidOperationException) { rejected = true; }
+        Require(rejected && cadence.TryCheck(), "A rejected epoch must preserve the pending nominal check.");
     }
 }

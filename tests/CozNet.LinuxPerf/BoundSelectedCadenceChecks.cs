@@ -17,18 +17,18 @@ static class BoundSelectedCadenceChecks
 
     private static void NominalEventPermission()
     {
-        var policy = BoundSampleCreditPlan.Parse("nominal-event", true);
+        var policy = SampleCreditPlan.Parse("nominal-event", true);
         Require(policy.NominalEvents && policy.Name == "nominal-event-v1", "Nominal settings lost their estimator identity.");
-        Require(!BoundSampleCreditPlan.Parse(null, false).NominalEvents && !BoundSampleCreditPlan.Parse("interval", true).NominalEvents,
+        Require(!SampleCreditPlan.Parse(null, false).NominalEvents && !SampleCreditPlan.Parse("interval", true).NominalEvents,
             "Legacy settings changed estimator.");
         foreach (var value in new[] { "", "1", "nominal", " nominal-event" })
         {
             bool rejected = false;
-            try { BoundSampleCreditPlan.Parse(value, true); } catch (ArgumentException) { rejected = true; }
+            try { SampleCreditPlan.Parse(value, true); } catch (ArgumentException) { rejected = true; }
             Require(rejected, "An invalid sample credit policy was accepted.");
         }
         bool unsupported = false;
-        try { BoundSampleCreditPlan.Parse("nominal-event", false); } catch (ArgumentException) { unsupported = true; }
+        try { SampleCreditPlan.Parse("nominal-event", false); } catch (ArgumentException) { unsupported = true; }
         Require(unsupported, "Nominal credit accepted a source without selected-payment ownership.");
         var cadence = new BoundSelectedCheckCadence(BoundSelectedCadencePlan.Parse("0", "qualified-sample", "5"), policy.NominalEvents);
         Require(!cadence.TryCheck(out _), "An empty nominal stream authorized a check.");

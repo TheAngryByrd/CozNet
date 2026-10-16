@@ -219,6 +219,14 @@ class MatchedPredictionChecks(unittest.TestCase):
                                 for item in result["blocks"] if item["block"] != 3))
             self.assertIsNone(result["predictionSummary"])
 
+    def test_matched_timer_plan_rejects_nominal_policy(self):
+        data = fixture()
+        data.update(sampleCreditPolicy="nominal-event-v1", sampleCreditEvidenceVersion=1,
+                    nominalSamplePeriodNanoseconds=1000000)
+        result = analyze_case(data, "profile-half", 0)
+        self.assertFalse(result["predictionEligible"])
+        self.assertIn("The matched timer plan requires interval sample credit", result["reasons"])
+
     def test_missing_timer_snapshot_rejects_profile_only(self):
         data = fixture("profile-zero")
         del data["measurementCapture"]["end"]["Accounting"]["Timer"]
