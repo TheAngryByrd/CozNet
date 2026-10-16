@@ -1,5 +1,7 @@
 # Lode index
 
+For immutable batch snapshots on repeated pausable drains, read [sample batch snapshots](profiling/sample-batch-snapshots.md).
+
 For selected pause costs, the matched ownership comparison, and retained dispatch limits, read [the phase explanation](../docsSrc/Explanations/cooperative-pause-cost.md).
 For the synchronous mode and controlled managed integration, read [the owner/controller design](../docsSrc/Research/cooperative-owner-controller.md).
 

@@ -91,6 +91,7 @@ sealed class BoundSampleCollection
     private bool pausable, excluding, drainingOnOwner, sourceDisabled = true;
     private bool started, enableAttempted, completed;
     private SampleBatch? finalBatch;
+    private readonly SampleBatchSnapshotCache batchSnapshots = new();
     private ulong cpuNanoseconds;
     private BoundCpuEpoch? epoch;
     private CpuCounterSourceSnapshot? finalCounters;
@@ -186,7 +187,7 @@ sealed class BoundSampleCollection
                         lifetime.Execute((Self: this, Source: source), static value =>
                         {
                             var batch = value.Source.Drain();
-                            Volatile.Write(ref value.Self.finalBatch, batch with { SelectedSymbols = Array.AsReadOnly(batch.SelectedSymbols.ToArray()) });
+                            Volatile.Write(ref value.Self.finalBatch, value.Self.batchSnapshots.Capture(batch));
                             if (batch.LostRecords != 0 || batch.LostSamples != 0 || batch.Throttles != 0)
                                 throw new InvalidDataException("The pausable source reported cumulative loss or throttling.");
                             return true;

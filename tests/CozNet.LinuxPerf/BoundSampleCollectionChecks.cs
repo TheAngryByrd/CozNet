@@ -61,6 +61,7 @@ static class BoundSampleCollectionChecks
     }
     public static void Run()
     {
+        SampleBatchSnapshotCacheChecks.Run();
         FreshEpochAndFinalDrain();
         ProvisionalReadsPreservePrefixes();
         ProvisionalReadsRejectInvalidOffsetsAndLifetime();

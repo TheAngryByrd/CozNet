@@ -23,6 +23,7 @@ static class PausableBoundCollectionChecks
         public bool FailDisable, LateLoss, WrongBatch, FailReadAfterResume, FailReadAfterDisable;
         public bool SkipFirstEnabledDrain;
         public bool RegressCounterAfterResume;
+        public SampleBatch? DrainOverride;
         public Action? BeforeDrain, AfterDisable, BeforeEnable;
         public ICpuCounterEvidenceSource CounterEvidence => this;
         private void Owner() => Require(Environment.CurrentManagedThreadId == owner, "A source control operation left its owner thread.");
@@ -65,7 +66,7 @@ static class PausableBoundCollectionChecks
                 sink.Publish(sample);
                 delivered.Add(sample);
             }
-            return new(delivered.Count + (WrongBatch && Enables > 0 ? 1 : 0), delivered.Count == 0 ? 0 : 1, (ulong)delivered.Count * 1000,
+            return DrainOverride ?? new(delivered.Count + (WrongBatch && Enables > 0 ? 1 : 0), delivered.Count == 0 ? 0 : 1, (ulong)delivered.Count * 1000,
                 LateLoss && Enables > 1 && Volatile.Read(ref cpu) >= 2000 ? 1 : 0, 0, 0, delivered.Count, 0,
                 delivered.Count == 0 ? Array.Empty<string>() : new[] { OverheadWorkload.SelectedSymbol });
         }
@@ -87,6 +88,7 @@ static class PausableBoundCollectionChecks
 
     public static void Run()
     {
+        OwnerDrainsReuseStableSnapshots();
         OwnerDrainRejectsCleanupReentry();
         OwnerDrainRejectsBackgroundCollection();
         OwnerDrainsPreserveExclusionAndEpochs();
@@ -103,6 +105,25 @@ static class PausableBoundCollectionChecks
         InconsistentPausePreventsCallback();
         WrongThreadControlIsRejected();
         EpochReadsPreserveOwnershipAndRejectInvalidOffsets();
+    }
+
+    private static void OwnerDrainsReuseStableSnapshots()
+    {
+        var collection = Create();
+        Source? source = null;
+        collection.StartOwnerPausable((_, sink) => source = new(sink));
+        source!.DrainOverride = new(0, 0, 0, 0, 0, 0, 0, 0, Array.Empty<string>());
+        collection.DrainOnOwner();
+        var first = collection.Latest;
+        collection.DrainOnOwner();
+        Require(first is not null && ReferenceEquals(first, collection.Latest) && collection.LiveSamples == 0,
+            "An unchanged owner drain must retain its frozen snapshot instead of copying it again.");
+        source.DrainOverride = null;
+        var completed = collection.Complete();
+        Require(completed.Samples.Count == 1 && completed.Batch.Samples == 1
+            && completed.Batch.SelectedMethodSamples == 1 && first!.Samples == 0
+            && completed.Cleanup.CollectorJoined && completed.Cleanup.SourceDisposed,
+            "Snapshot reuse must preserve final-drain delivery, old observations, and cleanup.");
     }
 
     private static void OwnerDrainRejectsCleanupReentry()

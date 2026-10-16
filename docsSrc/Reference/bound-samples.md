@@ -137,3 +137,19 @@ They do not establish measurement endpoint membership, clock error bounds, threa
 Per-sample guard overhead remains unmeasured.
 
 See [the verification procedure](../How_Tos/verify-bound-samples.md), [native mapping](probe-identity.md), and [bound payment](bound-cooperative.md).
+
+
+## Pausable batch snapshots
+
+Each pausable drain retains a frozen copy of its batch symbols.
+Repeated drains reuse that snapshot when the source returns the same batch object with the same ordered symbols.
+Symbol comparison uses ordinal equality. Order and case changes require a new snapshot.
+A changed symbol list or a different batch produces a new snapshot.
+Source mutations between drains cannot change previously published snapshots.
+The source must keep the symbol collection stable while the drain captures it.
+
+Source draining, CLR lifetime checks, loss checks, and pause boundaries still execute.
+Snapshot reuse does not change sample admission or payment accounting.
+Final completion retains its existing defensive copy.
+This optimization does not establish prediction accuracy or a full-workload overhead bound.
+The [retained comparison](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/sample-batch-snapshots.md) completes all four arms but remains unqualified.
