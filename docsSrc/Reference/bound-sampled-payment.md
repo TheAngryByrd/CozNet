@@ -93,6 +93,7 @@ Cleanup stops normal peer work before it requests cancellation.
 Failures detected before cleanup produce `failureBoundary`.
 Failures detected during cleanup or final verification keep their separate error fields.
 `LastObservedDebt` is the latest ledger observation, not a new debt calculation at capture time.
+Skipped idle service does not refresh this observation or its timestamp.
 The boundary retains the last command, generation, budget, and request timestamp.
 `Capture.Started` and `Capture.Finished` bracket the diagnostic call with managed timestamps.
 `Capture.TimestampFrequency` gives managed ticks per second. Native timestamps use nanoseconds in a separate clock domain.
@@ -102,6 +103,7 @@ Exception formatting follows capture and does not delay the native snapshot.
 `Capture.Failure` preserves the original workload exception. `CaptureFailure` records a separate diagnostic exception.
 `Capture.Raw` contains the native header, copied child prefix, native clock, and status without receipt acceptance.
 Captured raw evidence can contain a failed native status. State 1 does not mean valid payment evidence.
+
 An active snapshot excludes an executing child's uncommitted wait. The peer can advance during capture.
 This diagnostic does not reduce debt, release ownership, or replace the original failure.
 
@@ -119,6 +121,25 @@ Cleanup attempts cancellation for every native slot, even when an earlier slot f
 An aggregate error retains the original failures in slot order.
 Cleanup polling requires a cancellation call that returned successfully for that slot.
 A later failure does not erase an earlier successful cancellation.
+
+## Idle service cadence
+
+`serviceCadence` contains three counters:
+These diagnostic counters do not authorize payment. Offline replay does not validate them.
+They include service during final draining after measurement freeze and do not measure savings within the frozen window.
+
+| Field | Meaning |
+| --- | --- |
+| `Checks` | Service calls that reached the cadence check. |
+| `Executions` | Calls that entered the service path, including calls that later failed. |
+| `Skipped` | Calls that reused a successful idle completion. Equals `Checks - Executions`. |
+
+A skip requires the exact accounting state object from a successful completion and no pending peer request.
+Equal-valued distinct state objects execute service.
+An executing call clears the previous idle state before receipt handling or debt checks.
+Only a successful debt gate followed by idle completion permits another skip.
+Pending requests retain all timeout and receipt checks.
+The final debt observation executes separately from service cadence.
 
 ## Selected-owner payment draft
 

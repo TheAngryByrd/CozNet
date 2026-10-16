@@ -46,6 +46,44 @@ equal-debt distinct state, foreign-state rejection, and recovery of the previous
 Fresh idle and post-overshoot checks compare cached results with full model preparation and capture using structural equality.
 They protect the required idempotence of idle preparation, including fields outside numeric debt.
 
+## Idle service cadence
+
+`CooperativeServiceCadence` skips service only for the exact immutable state from a successful idle completion.
+The selected owner exclusively owns both cadence and accounting state.
+Pending peer requests always execute service, including receipt timeout checks.
+An executing check clears prior eligibility before any operation can fail.
+Only completion after the debt gate records an idle state. Pending completion records none.
+Source draining, native probe polling, sample publication, and selected payment remain outside this skip.
+New sample states still run their per-sample debt gates and force the next service check.
+Frozen measurement can suppress new requests but cannot suppress service of a pending request.
+
+```csharp
+if (!serviceCadence.ShouldRun(state, pending is not null)) return;
+// Service completion follows the successful debt gate.
+serviceCadence.Completed(state, pending is not null);
+```
+
+```mermaid
+flowchart LR
+    Check --> Match{Same completed state and no pending request?}
+    Match -->|yes| Skip
+    Match -->|no| Clear[Clear idle eligibility]
+    Clear --> Service --> Gate[Debt gate]
+    Gate -->|success and idle| Remember[Remember exact state]
+```
+
+Skipped service does not refresh `lastObservedDebt.Timestamp` or peak timestamps.
+Failure capture retains the latest actual observation. Final debt still has an explicit observation.
+The serialized `serviceCadence` counts checks, executions, and skips. Checks equal executions plus skips.
+These diagnostic counters include final draining after measurement freeze. Replay does not validate them.
+The focused checks cover incomplete service, pending service, failure, equal-valued distinct states, new credit, and counters.
+Host focused checks and all four Linux managed groups pass.
+Capture `artifacts/idle-service-payment/20261016T054616424-5a308ffc` passes zero, 50-percent, and expected-invalidation cases with unchanged inputs and bounds.
+Zero speedup skips 500,000 of 500,350 checks. Treatment skips 423,869 of 500,392 checks.
+The invalidation case skips 1,342 of 1,392 checks and retains its expected CLR lifetime failure.
+These counts do not establish timing benefit or prediction accuracy.
+See [the retained checks and preceding comparison](../../reliability/features/native-signal/idle-service-cadence.md).
+
 The baseline component run `artifacts/accounting-cost/20261015T182853729` retains 672 bytes per debt capture,
 328 bytes per idle preparation, and 1,000 bytes per combined call.
 These isolated measurements do not establish their share of full profiler overhead.

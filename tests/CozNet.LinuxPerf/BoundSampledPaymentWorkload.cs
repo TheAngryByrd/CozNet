@@ -43,6 +43,7 @@ static class BoundSampledPaymentWorkload
         var peer = Parsed(SignalAccountingModule.register(FSharpOption<int>.None, selected.Item2));
         var state = peer.Item2;
         var accounting = new CooperativeAccountingCache(selected.Item1, peer.Item1);
+        var serviceCadence = new CooperativeServiceCadence();
         var stream = Parsed(SignalAccountingModule.sampleIdentity(selected.Item1, state));
         var samples = new List<CreditedSample>();
         var payments = new List<Payment>();
@@ -326,6 +327,7 @@ static class BoundSampledPaymentWorkload
 
         void Service()
         {
+            if (!serviceCadence.ShouldRun(state, pending is not null)) return;
             if (pending is not null)
             {
                 Require(Stopwatch.GetElapsedTime(pendingStarted) <= TimeSpan.FromMilliseconds(100),
@@ -370,6 +372,7 @@ static class BoundSampledPaymentWorkload
                 }
             }
             ObserveDebt();
+            serviceCadence.Completed(state, pending is not null);
         }
 
         try
@@ -652,6 +655,7 @@ static class BoundSampledPaymentWorkload
             sourceEpochSamples = !selectedPaymentEnabled || collection?.Cleanup is null ? null : collection.EpochDiagnostics,
             sourceEpochPrefixes = result?.EpochPrefixes,
             sourceEpochPrefixEvidenceVersion = selectedPaymentEnabled ? 1 : (int?)null,
+            serviceCadence,
             selectedPaymentEnabled, pauseTimingEnabled, childCpuEnabled, ownerDrainEnabled, selectedPaymentSupported = false, predictionAccuracyEstablished = false, profilerCpuExcluded = false
         }, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
         return completed || rejectionVerified ? 0 : 1;

@@ -6,14 +6,44 @@ A zero-speedup run still performs this work, even when it pays no delay.
 
 ## Repeated debt records
 
-Each service check records debt even when accounting state has not changed.
+Each executed service check records debt.
 The reference record allocated 88 bytes per observation in the isolated host check.
 The readonly value record now allocates zero calling-thread bytes for the same construction and nullable retention path.
-It preserves timestamps and earlier observations without caching a stale debt result.
+It preserves timestamps and earlier observations as value copies.
 
 This removes one allocation source from repeated service checks.
 It does not measure the allocation's share of total observer cost or establish a full-workload speedup.
 The [retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/debt-value-observations.md) separates the allocation check from live integration.
+
+## Repeated idle service
+
+The workload skips service when the same immutable accounting state already completed service with no pending peer request.
+The selected owner controls accounting updates, so unchanged state cannot acquire new ledger debt by elapsed time alone.
+A pending request always requires service because its timeout and native receipt can change independently.
+Each new state also requires service, even when its debt values equal the previous values.
+
+Skipped service does not refresh the last debt observation timestamp.
+Failure records retain the latest actual observation, which can precede several skipped checks.
+The final debt observation remains explicit.
+Source draining, native probe polling, and sample publication keep their existing checks.
+
+This change removes repeated idle work. Its full-workload timing benefit remains unverified.
+The controlled Linux run passed zero speedup, 50-percent speedup, and expected invalidation after selected payment.
+Zero speedup skipped 500,000 of 500,350 service checks. The treatment skipped 423,869 of 500,392 checks.
+These counts establish reuse in the workload, not prediction accuracy.
+See [the service cadence reference](../Reference/bound-sampled-payment.md#idle-service-cadence).
+
+## Physical comparison after debt value records
+
+A four-arm comparison before idle service reuse completed all workloads without invalid records or changed inputs.
+Its descriptive sampled elapsed reduction was −6.6192% to −6.5628%.
+The physical elapsed reduction was 48.4659% to 48.4796%.
+The sampled treatment was therefore slower in this block, despite the physical reduction.
+
+The comparison remains unqualified because sample membership, attribution, and ledger residuals remain unresolved.
+It contains one declared block and does not isolate the effect of the value-record change.
+Its ranges are descriptive clock-boundary ranges, not accuracy bounds or confidence intervals.
+See [the retained captures](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/idle-service-cadence.md).
 
 ## Fixed-work reference
 

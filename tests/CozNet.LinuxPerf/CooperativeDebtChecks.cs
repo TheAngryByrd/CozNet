@@ -21,6 +21,7 @@ static class CooperativeDebtChecks
     public static void Run()
     {
         CooperativeAccountingCacheChecks.Run();
+        CooperativeServiceCadenceChecks.Run();
         BoundDebtObservationChecks.Run();
         FreshThreadsHaveNoDebt();
         UnsettledWaitDoesNotReduceLedgerDebt();
