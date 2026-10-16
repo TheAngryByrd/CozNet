@@ -1,5 +1,32 @@
 # Immutable accounting reuse
 
+## Receipt callback reuse
+
+The bound workload creates direct, peer-controller, and selected-controller readiness delegates during setup.
+Every readiness check still reads the current client and native state. No readiness result is cached.
+The peer controller path still requires visibility 3. The selected controller path still accepts visibility at least 3.
+Direct calls retain the readiness counter, and controller calls retain dispatch timing and ownership.
+The pending-service Release IL previously constructed two delegates before every `Ready` call.
+The current IL loads setup fields instead.
+Capture `artifacts/receipt-callback-allocation/20261016T122804812` measures 128 bytes per direct check before reuse and zero afterward.
+It extracts the readiness IL segment and does not measure the whole service method. Controller dispatch still constructs an inner callback.
+The [live direct capture](../../reliability/features/native-signal/receipt-callback-reuse.md#live-direct-mode) passes all three expected cases.
+The fallback treatment fails selected debt after a retained peer-wait overshoot. Its failure remains retained, with no timing retry.
+Callback reuse does not establish stable capacity or prediction accuracy.
+
+```csharp
+receiptReadiness.Ready(0, directReceiptReady, peerReceiptReady);
+```
+
+```mermaid
+flowchart LR
+    Setup[Create callbacks] --> Check[Readiness check]
+    Check --> Current[Read current native state]
+    Current --> Service[Existing receipt and debt checks]
+```
+
+See [receipt readiness](receipt-readiness.md) and [observer overhead](observer-overhead.md).
+
 ## Recurring service timing
 
 `COZNET_SERVICE_TIMING=1` enables the portable `CooperativeServiceTiming` observer in the bound sampled workload.

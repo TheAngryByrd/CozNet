@@ -4,6 +4,22 @@ The bound sampled workload performs profiler work on the selected thread.
 Injected probes check CLR lifetime, poll native requests, publish samples, and inspect debt.
 A zero-speedup run still performs this work, even when it pays no delay.
 
+## Receipt callbacks during pending service
+
+Pending peer service checks receipt readiness on every executed check.
+The compiled path previously constructed two callback delegates before each readiness call, including calls that found no receipt.
+The workload now creates these callbacks during setup and reuses them.
+
+Each call still reads current native state. Reuse does not cache readiness or skip a service check.
+The direct path retains its call counter. Controller paths retain dispatch timing and their separate peer and selected visibility rules.
+This removes construction of the readiness arguments. Controller dispatch can still allocate its inner callback.
+It does not establish the cause of the prediction gap or a full-workload speedup.
+
+An extracted direct-readiness segment allocates 128 bytes per check before reuse and zero afterward in two before/after pairs.
+Live direct-mode checks pass. The controller-fallback treatment fails selected debt after a recorded peer-wait overshoot.
+The failure remains retained. Callback reuse does not establish stable capacity.
+See [the allocation and live evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/receipt-callback-reuse.md).
+
 ## Allocation before selected payment
 
 The selected-probe callback previously contained the captured payment callback after its early-return checks.

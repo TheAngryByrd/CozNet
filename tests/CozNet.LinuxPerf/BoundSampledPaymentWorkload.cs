@@ -144,6 +144,11 @@ static class BoundSampledPaymentWorkload
         var receiptIntervals = new CooperativeReceiptIntervalCapture();
         var publication = BoundSamplePublication.Parse(Environment.GetEnvironmentVariable("COZNET_BATCH_SERVICE"));
         var receiptReadiness = BoundReceiptReadiness.Parse(Environment.GetEnvironmentVariable("COZNET_DIRECT_RECEIPT_READY"));
+        Func<uint, bool> directReceiptReady = slot => client!.ReceiptReady(slot);
+        Func<uint, bool> peerReceiptReady = slot =>
+            OnController(() => client!.CleanupHeader(slot), CooperativeDispatchOperation.PeerHeader).Visibility == 3;
+        Func<uint, bool> selectedReceiptReady = slot =>
+            OnController(() => client!.CleanupHeader(slot), CooperativeDispatchOperation.SelectedHeader).Visibility >= 3;
         Require(!receiptReadiness.DirectEnabled || selectedPaymentEnabled, "Direct receipt readiness requires selected payment.");
 
         Require(dispatchTiming is null || selectedPaymentEnabled, "Dispatch timing requires the selected-payment controller.");
@@ -308,8 +313,7 @@ static class BoundSampledPaymentWorkload
                     selectedGeneration = 0;
                     selectedGeneration = OnController(() => client.Submit(1, selectedCommand, checked((ulong)selectedBudget)), CooperativeDispatchOperation.SelectedSubmit);
                     selectedPending = new(CooperativeAccountingBinding.Parse(selectedLease, selectedGeneration, selectedCommand, selectedSite!));
-                    while (!receiptReadiness.Ready(1, client.ReceiptReady,
-                        slot => OnController(() => client.CleanupHeader(slot), CooperativeDispatchOperation.SelectedHeader).Visibility >= 3))
+                    while (!receiptReadiness.Ready(1, directReceiptReady, selectedReceiptReady))
                     {
                         Require(Stopwatch.GetElapsedTime(selectedStarted) <= TimeSpan.FromMilliseconds(100),
                             "A selected cooperative request exceeded 100 ms.");
@@ -369,8 +373,7 @@ static class BoundSampledPaymentWorkload
                     activity = CooperativeServiceActivity.Pending;
                     Require(Stopwatch.GetElapsedTime(pendingStarted) <= TimeSpan.FromMilliseconds(100),
                         "A sampled cooperative request exceeded 100 ms.");
-                    if (receiptReadiness.Ready(0, slot => client!.ReceiptReady(slot),
-                        slot => OnController(() => client!.CleanupHeader(slot), CooperativeDispatchOperation.PeerHeader).Visibility == 3))
+                    if (receiptReadiness.Ready(0, directReceiptReady, peerReceiptReady))
                     {
                         activity = CooperativeServiceActivity.Receipt;
                         var accepted = OnController(() => client!.ReadAndAccept(0, pending, state), CooperativeDispatchOperation.PeerRead);
