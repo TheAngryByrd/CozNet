@@ -10,6 +10,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## How-to guides
 
+- [Capture drain and service CPU](How_Tos/capture-component-cpu.md).
+
 - [Capture selected-thread CPU](How_Tos/capture-selected-cpu.md).
 
 - [Capture nominal-event credit](How_Tos/run-nominal-event-credit.md).
@@ -54,6 +56,8 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Check timer delivery during runtime transitions](How_Tos/run-timer-transitions.md).
 
 ## Reference
+
+- [Cooperative component CPU](Reference/cooperative-component-cpu.md): drain and service CPU buckets and observer limits.
 
 - [Selected-thread CPU capture](Reference/selected-cpu.md).
 

@@ -99,6 +99,7 @@ static class BoundSampledPaymentWorkload
         var receiptPreparationPlan = CooperativeReceiptPreparation.Parse(Environment.GetEnvironmentVariable("COZNET_PREPARE_RECEIPTS"),
             selectedPaymentEnabled, measurement is not null);
         var serviceTiming = CooperativeServiceTiming.Parse(Environment.GetEnvironmentVariable("COZNET_SERVICE_TIMING"), measurement is not null);
+        var componentCpu = CooperativeComponentCpu.Parse(Environment.GetEnvironmentVariable("COZNET_COMPONENT_CPU"), measurement is not null, cpuFactory);
         var cadence = cadencePlan is null ? null : new BoundSelectedCheckCadence(cadencePlan, creditPlan.NominalEvents);
         var selectedCpu = SelectedCpuCapture.Parse(Environment.GetEnvironmentVariable("COZNET_SELECTED_CPU"), cadencePlan is not null && measurement is not null, cpuFactory);
         Require(!invalidateAfterSelectedPayment || selectedPaymentEnabled,
@@ -248,12 +249,20 @@ static class BoundSampledPaymentWorkload
             publication.Publish(incoming, offset, sample => Process(sample.Sample, sample.EligibilityEpoch), Service);
         }
 
+        void DrainOnOwner()
+        {
+            componentCpu?.Begin(measurement?.Window.Status == MeasurementCaptureStatus.Active);
+            bool failed = true;
+            try { collection!.DrainOnOwner(); failed = false; }
+            finally { componentCpu?.End(CooperativeCpuActivity.Drain, failed); }
+        }
+
         void PaySelected(ulong version, uint point)
         {
             Require(client!.PollFromProbe(1, version, point) == CooperativePollOutcome.Idle,
                 "The selected owner entered a probe with an unexpected native request.");
             if (point != 2) return;
-            if (ownerDrainEnabled) collection!.DrainOnOwner();
+            if (ownerDrainEnabled) DrainOnOwner();
             BoundSelectedAdmission? admission = null;
             if (cadence is not null)
             {
@@ -262,7 +271,7 @@ static class BoundSampledPaymentWorkload
                 Service();
                 if (handoff.Enabled && handoff.TryHandoff(ObserveDebt().Peer, pending is not null))
                 {
-                    collection.DrainOnOwner();
+                    DrainOnOwner();
                     if (collection.LiveSamples > samples.Count)
                         PublishEpochs(collection.ReadEpochProvisional(samples.Count));
                     Service();
@@ -339,6 +348,7 @@ static class BoundSampledPaymentWorkload
 
         void Service()
         {
+            componentCpu?.Begin(measurement?.Window.Status == MeasurementCaptureStatus.Active);
             long started = serviceTiming is null ? 0 : Stopwatch.GetTimestamp();
             bool measured = serviceTiming is not null && measurement?.Window.Status == MeasurementCaptureStatus.Active;
             bool failed = true;
@@ -398,7 +408,12 @@ static class BoundSampledPaymentWorkload
                 serviceCadence.Completed(state, pending is not null);
                 failed = false;
             }
-            finally { serviceTiming?.Record(activity, started, Stopwatch.GetTimestamp(), failed, measured); }
+            finally
+            {
+                long finished = serviceTiming is null ? 0 : Stopwatch.GetTimestamp();
+                componentCpu?.EndService(activity, failed);
+                serviceTiming?.Record(activity, started, finished, failed, measured);
+            }
         }
 
         try
@@ -469,7 +484,7 @@ static class BoundSampledPaymentWorkload
             {
                 Require(!peerLoop.IsCompleted, "The paying peer stopped during sample collection.");
                 work.RunSelected();
-                if (ownerDrainEnabled) collection.DrainOnOwner();
+                if (ownerDrainEnabled) DrainOnOwner();
                 if (collection.LiveSamples > samples.Count)
                 {
                     if (selectedPaymentEnabled) PublishEpochs(collection.ReadEpochProvisional(samples.Count));
@@ -664,6 +679,7 @@ static class BoundSampledPaymentWorkload
             ownerControllerEnabled = controllerPlan.OwnerEnabled,
             receiptPreparationEnabled = receiptPreparationPlan.Enabled, receiptPreparation = receiptPreparationPlan.LastResult,
             serviceTimingEnabled = serviceTiming is not null, serviceTiming,
+            componentCpuEnabled = componentCpu is not null, componentCpuEvidenceVersion = 1, componentCpu,
             dispatchTimingEnabled = dispatchTiming is not null, dispatchTiming,
             directReceiptReadyEnabled = receiptReadiness.DirectEnabled, receiptReadyCalls = receiptReadiness.Calls,
             peerProgressEnabled, peerOwner, peerOwnerFailure, peerSubmitProgress, peerDebtProgress,

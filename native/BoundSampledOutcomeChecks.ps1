@@ -155,6 +155,24 @@ try {
         $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedServiceTiming $expected
         if ($outcome.passed) { throw 'Missing service timing setting cannot pass.' }
     }
+    foreach ($expected in @($false, $true)) {
+        foreach ($mode in @($null, 0, 1, 'true', $false, $true)) {
+            @{ passed = $true; componentCpuEnabled = $mode } | ConvertTo-Json | Set-Content -LiteralPath $path
+            $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedComponentCpu $expected
+            $matches = $mode -is [bool] -and $mode -eq $expected
+            if ($outcome.passed -ne $matches) { throw 'Component CPU setting did not control outcome acceptance.' }
+        }
+        @{ passed = $true } | ConvertTo-Json | Set-Content -LiteralPath $path
+        $outcome = Read-BoundSampledOutcome -Path $path -Case '50' -ExitCode 0 -ExpectedComponentCpu $expected
+        if ($outcome.passed) { throw 'Missing component CPU setting cannot pass.' }
+    }
+    $legacyArguments = @($path, '50', 0, '', 5000) + (@($null) * 14) + @($true, 'nominal-event-v1')
+    @{ passed = $true; serviceTimingEnabled = $true; sampleCreditPolicy = 'nominal-event-v1' } | ConvertTo-Json | Set-Content -LiteralPath $path
+    $outcome = Read-BoundSampledOutcome @legacyArguments
+    if (-not $outcome.passed) { throw 'Legacy positional arguments changed their binding.' }
+    @{ passed = $true; serviceTimingEnabled = $false; sampleCreditPolicy = 'nominal-event-v1' } | ConvertTo-Json | Set-Content -LiteralPath $path
+    $outcome = Read-BoundSampledOutcome @legacyArguments
+    if ($outcome.passed) { throw 'Legacy positional service timing did not control acceptance.' }
     foreach ($expected in @('same-epoch-interval-v1', 'nominal-event-v1')) {
         foreach ($policy in @($null, 0, $true, 'nominal', 'NOMINAL-EVENT-V1', 'same-epoch-interval-v1', 'nominal-event-v1')) {
             @{ passed = $true; sampleCreditPolicy = $policy } | ConvertTo-Json | Set-Content -LiteralPath $path

@@ -66,6 +66,53 @@ def verify_receipt_readiness(record):
                 "Direct receipt readiness retained normal header dispatches")
 
 
+def verify_component_cpu(record):
+    fields = ('componentCpuEnabled', 'componentCpuEvidenceVersion', 'componentCpu')
+    if not any(key in record for key in fields):
+        return
+    require(all(key in record for key in fields), 'Component CPU evidence is incomplete')
+    require(type(record['componentCpuEvidenceVersion']) is int and record['componentCpuEvidenceVersion'] == 1,
+            'Unsupported component CPU version')
+    enabled, capture = record['componentCpuEnabled'], record['componentCpu']
+    require(type(enabled) is bool, 'Component CPU activation is not Boolean')
+    if not enabled:
+        require(capture is None, 'Disabled component CPU has readings')
+        return
+    require(record.get('finiteMeasurementEnabled') is True and isinstance(capture, dict), 'Component CPU requires finite capture')
+    failure = capture['Failure']
+    require(failure is None or isinstance(failure, str) and bool(failure), 'Invalid component CPU failure')
+    require(type(capture['Active']) is bool, 'Invalid component CPU active state')
+    require(failure is not None or not capture['Active'], 'Component CPU region remains open')
+    require(record.get('completed') is not True or failure is None, 'Completed workload has failed component CPU capture')
+    for group in ('All', 'Measurement'):
+        buckets = capture[group]
+        require(isinstance(buckets, list) and len(buckets) == 7, 'Invalid component CPU bucket count')
+        for index, bucket in enumerate(buckets):
+            require(type(bucket['Activity']) is int and bucket['Activity'] == index, 'Invalid component CPU activity order')
+            calls, failures, cpu, maximum = (count(bucket[key]) for key in ('Calls', 'Failures', 'CpuNanoseconds', 'MaximumNanoseconds'))
+            require(max(calls, failures, cpu, maximum) <= 9223372036854775807, 'Component CPU exceeds signed capture range')
+            require(failures <= calls and maximum <= cpu <= calls * maximum, 'Invalid component CPU aggregate')
+            require(record.get('completed') is not True or failures == 0, 'Completed workload has failed component calls')
+            require(calls != 0 or cpu == maximum == 0, 'Empty component CPU bucket has readings')
+    for total, measured in zip(capture['All'], capture['Measurement']):
+        for key in ('Calls', 'Failures', 'CpuNanoseconds', 'MaximumNanoseconds'):
+            require(measured[key] <= total[key], 'Component CPU measurement exceeds lifetime')
+        remaining = total['Calls'] - measured['Calls']
+        delta = total['CpuNanoseconds'] - measured['CpuNanoseconds']
+        require(total['Failures'] - measured['Failures'] <= remaining, 'Component CPU remaining failures exceed calls')
+        require(delta <= remaining * total['MaximumNanoseconds'], 'Component CPU remaining calls cannot explain total')
+        if total['MaximumNanoseconds'] > measured['MaximumNanoseconds']:
+            require(remaining > 0 and delta >= total['MaximumNanoseconds'], 'Component CPU maximum is absent from remaining calls')
+    service_calls = sum(bucket['Calls'] for bucket in capture['All'][1:])
+    checks = count(record['serviceCadence']['Checks'])
+    require(service_calls == checks if failure is None else service_calls <= checks, 'Component CPU service counts differ from cadence')
+    if failure is None:
+        skipped = capture['All'][1]['Calls']
+        require(skipped == count(record['serviceCadence']['Skipped'])
+                and service_calls - skipped == count(record['serviceCadence']['Executions']),
+                'Component CPU service activities differ from cadence')
+
+
 def verify_service_timing(record):
     if "serviceTimingEnabled" not in record:
         require("serviceTiming" not in record, "Service timing has no activation flag")
@@ -389,6 +436,7 @@ def verify_payments(payments, binding, worker):
 def verify_record(record):
     require(not verify_sample_credit_policy(record), "Peer-only replay does not support nominal event credit")
     verify_service_timing(record)
+    verify_component_cpu(record)
     verify_receipt_preparation(record)
     verify_probe_interval(record)
     verify_dispatch_timing(record)

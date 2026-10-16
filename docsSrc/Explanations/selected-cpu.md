@@ -26,6 +26,38 @@ The sampled effective elapsed reduction remains about 21.5%, against about 51.5%
 Recurring probe, drain, and service CPU costs remain candidates for a controlled component comparison.
 See [the retained CPU evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/selected-cpu.md) for exact values and limitations.
 
+## Probe density
+
+Two further captures compare intervals 1024 and 8192 with identical source and managed binary hashes.
+All eight arms complete without invalid records or integrity errors.
+The sparse capture uses 144.7 ms less selected CPU at zero speedup and 158.1 ms less at half speedup.
+The sparse treatment records 32 selected pauses, compared with 189 in the dense treatment.
+
+Probe density changes observation and payment scheduling as well as probe frequency.
+These captures therefore do not isolate the cost of injected instructions or source draining.
+The dense capture ran first, and physical CPU costs differ between captures.
+The results do not establish a repeatable performance improvement.
+
+The sparse sampled effective elapsed reduction is 29.7–30.2%, compared with 44.8% physical elapsed reduction.
+Effective elapsed time subtracts the frozen increase in global delay from raw elapsed time.
+Lower probe density does not resolve the prediction gap.
+Pending-service CPU and source-drain CPU remain separate candidates for measurement at a fixed interval.
+See [the density evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/selected-cpu-density.md) for both retained captures.
+
+## Component observations
+
+An opt-in component capture separates owner drains from service activities at interval 8192.
+Its zero, half-speedup, and expected-invalidation cases pass with unchanged source inputs.
+Treatment records 36.9 ms in drain CPU brackets, 12.9 ms in pending service, and 11.2 ms in receipt handling.
+Both completed cases perform 100,000 explicit drains for 50,000 selected batches.
+
+Each bracket adds two CPU clock reads. These observations can change sample timing and payment scheduling.
+The totals do not measure component costs without the diagnostic.
+They also do not prove that nearby drains are redundant, because samples can arrive between drains.
+Pending service and receipt handling need separate inspection before changing their cadence.
+
+See [the component reference](../Reference/cooperative-component-cpu.md) and [retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/component-cpu.md).
+
 ## Upstream accounting
 
 Linux Coz [subtracts the increase in global delay from elapsed time](https://github.com/plasma-umass/coz/blob/256e3c389424d6a1691ee5d18b5ecb5a6c1001ec/libcoz/profiler.cpp#L359-L391).

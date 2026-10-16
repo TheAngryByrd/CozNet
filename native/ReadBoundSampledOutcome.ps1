@@ -2,7 +2,7 @@ function Read-BoundSampledOutcome {
     param([string]$Path, [string]$Case, [int]$ExitCode,
         [ValidateSet('', 'continuous', 'qualified-sample')][string]$SelectedCadence = '',
         [int]$SelectedBatches = 5000, [Nullable[bool]]$ExpectedPauseTiming = $null, [Nullable[bool]]$ExpectedChildCpu = $null, [Nullable[bool]]$ExpectedOwnerDrain = $null,
-        [Nullable[int]]$ExpectedReceiptCaptureVersion = $null, [Nullable[bool]]$ExpectedBatchService = $null, [Nullable[bool]]$ExpectedDispatchTiming = $null, [Nullable[bool]]$ExpectedDirectReceiptReady = $null, [Nullable[bool]]$ExpectedPeerProgress = $null, [Nullable[bool]]$ExpectedScheduler = $null, [Nullable[bool]]$ExpectedSelectedHandoff = $null, [Nullable[bool]]$ExpectedFiniteMeasurement = $null, [Nullable[bool]]$ExpectedOwnerController = $null, [Nullable[int]]$ExpectedProbeInterval = $null, [Nullable[bool]]$ExpectedReceiptPreparation = $null, [Nullable[bool]]$ExpectedServiceTiming = $null, [ValidateSet('', 'same-epoch-interval-v1', 'nominal-event-v1')][string]$ExpectedSampleCreditPolicy = '')
+        [Nullable[int]]$ExpectedReceiptCaptureVersion = $null, [Nullable[bool]]$ExpectedBatchService = $null, [Nullable[bool]]$ExpectedDispatchTiming = $null, [Nullable[bool]]$ExpectedDirectReceiptReady = $null, [Nullable[bool]]$ExpectedPeerProgress = $null, [Nullable[bool]]$ExpectedScheduler = $null, [Nullable[bool]]$ExpectedSelectedHandoff = $null, [Nullable[bool]]$ExpectedFiniteMeasurement = $null, [Nullable[bool]]$ExpectedOwnerController = $null, [Nullable[int]]$ExpectedProbeInterval = $null, [Nullable[bool]]$ExpectedReceiptPreparation = $null, [Nullable[bool]]$ExpectedServiceTiming = $null, [ValidateSet('', 'same-epoch-interval-v1', 'nominal-event-v1')][string]$ExpectedSampleCreditPolicy = '', [Nullable[bool]]$ExpectedComponentCpu = $null)
     $passed = $false
     $recordError = $null
     try {
@@ -10,6 +10,7 @@ function Read-BoundSampledOutcome {
         if ($ExpectedSampleCreditPolicy -and ($record.sampleCreditPolicy -isnot [string] -or $record.sampleCreditPolicy -cne $ExpectedSampleCreditPolicy)) {
             throw 'Sample credit policy differs from the requested setting.'
         }
+        if ($null -ne $ExpectedComponentCpu -and ($record.componentCpuEnabled -isnot [bool] -or $record.componentCpuEnabled -ne $ExpectedComponentCpu)) { throw 'Component CPU evidence differs from the requested setting.' }
         if ($null -ne $ExpectedServiceTiming -and ($record.serviceTimingEnabled -isnot [bool] -or $record.serviceTimingEnabled -ne $ExpectedServiceTiming)) {
             throw 'Service timing evidence differs from the requested setting.'
         }
