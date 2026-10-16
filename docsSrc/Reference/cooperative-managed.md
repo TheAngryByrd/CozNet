@@ -154,6 +154,29 @@ Controlled checks cover the capture helper and replay rules.
 They do not force rejection through either workload call site or verify its ledger assignment order at runtime.
 The retained live captures contain no parser rejection.
 
+## Controlled receipt cost diagnostic
+
+`--measure-cooperative-receipt-cost <outputPath>` runs 32 sequential iterations in the managed workload executable.
+Each iteration creates a fresh ledger reservation, receipt tracker, and accounting adapter before timing starts.
+The synthetic terminal journal contains ten eligible 50,000 ns children for a 500,000 ns lease.
+It calls the real `CooperativeReceipts.Observe` and `CooperativeAccountingAdapter.Accept` methods.
+It does not invoke native transport, controller dispatch, or sampling.
+
+The output contains runtime, operating system, architecture, `timestampFrequency`, and `schemaVersion=1`.
+`syntheticReceipt` is true and `nativeTransportMeasured` is false.
+`runtimeEnvironment` records the raw `DOTNET_` and `COMPlus_` values for `TieredCompilation` and `ReadyToRun`.
+Null means the environment variable is absent. These values do not report the effective runtime configuration.
+`requestedIterations` is 32. `observations` retains completed iteration brackets and settlement results.
+Each record contains `Iteration`, `Started`, `Observed`, `Accepted`, `Children`, `ConfirmedNanoseconds`, `Terminal`, and `RemainingNanoseconds`.
+All three timestamps use `Stopwatch`. Synthetic receipt timestamps are separate inputs and are not timing measurements.
+
+`passed` requires 32 completed iterations without an exception. A failure produces a nonzero exit and an exception in `failure`.
+Completed records remain in the output after a workload failure.
+An output-file write failure prevents evidence publication and propagates to the caller.
+There is no elapsed-time threshold. Settlement checks require ten children, 500,000 ns, terminal state, and zero remaining peer debt.
+
+See [the procedure](../How_Tos/measure-cooperative-receipt-cost.md).
+
 ## Controller dispatch timing
 
 `COZNET_DISPATCH_TIMING` accepts `0` or `1`. An absent value disables timing.

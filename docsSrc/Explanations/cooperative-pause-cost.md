@@ -94,6 +94,38 @@ This supports a focused receipt-path diagnostic, rather than a claim that contro
 
 The [retained evidence](../../reliability/features/native-signal/sparse-first-receipt-timing.md) gives the settings and exact brackets.
 
+## Controlled managed receipt cost
+
+A separate diagnostic measures receipt observation and accounting acceptance with a fixed synthetic journal.
+Three fresh Windows processes and three fresh Linux processes each settle 32 leases exactly.
+Every first-call bracket exceeds the median later-call bracket for the same component and process.
+
+In the initial Linux series, first observation brackets range from 2.748078 to 5.704353 ms.
+First acceptance brackets range from 3.421925 to 4.729398 ms.
+Later per-process medians are below 0.002 ms for observation and below 0.010 ms for acceptance.
+These are observed ranges, not confidence intervals.
+
+The initial series does not record compilation settings and does not request the live runner's settings.
+A separate three-process Linux series explicitly requests `DOTNET_TieredCompilation=0` and `DOTNET_ReadyToRun=0`.
+All 96 leases settle exactly. The DLL hashes remain unchanged across that series.
+First acceptance brackets range from 9.161252 to 13.760920 ms. Later acceptance medians remain below 0.007 ms.
+Those processes retain the same first-call pattern. The series does not isolate compilation cost from other startup effects.
+
+This supports investigation of preparing the managed receipt path before measurement.
+It does not establish that either component explains the live read action's full cost.
+The diagnostic uses ten fixed children, fresh accounting state, and no native snapshot or controller dispatch.
+The live prefix capture uses seven children and a concurrent sampled workload.
+Setup can initialize shared runtime paths before either timed call.
+Later calls can also differ because of compilation, caches, allocation, or scheduling.
+The diagnostic does not identify a specific cause for the first-call difference.
+
+The Windows capture uses .NET 10.0.13. The Linux capture uses .NET 10.0.0.
+Their timings do not isolate an operating-system difference.
+No live warmup policy or payment rule changes as a result of this diagnostic.
+
+See [the retained results](../../reliability/features/native-signal/cooperative-receipt-cost.md)
+and [the diagnostic procedure](../How_Tos/measure-cooperative-receipt-cost.md).
+
 ## Measurement limits
 
 Both completed cases remain unqualified for attribution, sample boundaries, and source tails.

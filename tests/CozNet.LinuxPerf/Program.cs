@@ -4,6 +4,9 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 
+if (args is ["--measure-cooperative-receipt-cost", var receiptCostPath])
+    return CooperativeReceiptCostWorkload.Run(receiptCostPath);
+
 if (args is ["--cooperative-physical", var cooperativePhysicalPath, var cooperativePhysicalMode, var cooperativePhysicalBatches])
     return CooperativePhysicalWorkload.Run(cooperativePhysicalPath,
         CooperativeWorkPlan.Parse(PhysicalWorkMode.Parse(cooperativePhysicalMode), cooperativePhysicalBatches));

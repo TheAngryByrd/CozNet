@@ -65,6 +65,14 @@ Later first-request phases still require a controlled component diagnostic or an
 The follow-up capture retains command 1 in prefix sequences 2–4, with 759 total calls.
 Its first request lasts 22.820403 ms. The peer read action bracket lasts 10.731190 ms.
 Receipt observation and accounting acceptance need separate measurement. Descheduling remains inside the action bracket.
+The [controlled receipt workload](../../docsSrc/Reference/cooperative-managed.md#controlled-receipt-cost-diagnostic) now measures those managed components separately.
+Six fresh Windows/Linux processes each settle 32 synthetic ten-child leases exactly.
+Three additional Linux processes request the live runner's disabled tiering and ReadyToRun settings.
+Their first acceptance brackets span 9.161252–13.760920 ms, with later medians below 0.007 ms.
+All 96 configured leases settle exactly, with unchanged DLL hashes across the series.
+Every first component bracket exceeds its later per-process median. Native snapshot and concurrent-workload costs remain excluded.
+See [the results](../../reliability/features/native-signal/cooperative-receipt-cost.md).
+Managed-path preparation before measurement is a candidate experiment, not current live behavior.
 `FirstManagedReceiptUpper` uses the native clock. Request and dispatch brackets use `Stopwatch`.
 Do not subtract their absolute timestamps without a verified clock mapping.
 
