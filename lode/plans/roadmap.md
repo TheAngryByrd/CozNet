@@ -12,7 +12,8 @@ The earlier arithmetic calibration uses unchanged method source but does not qua
 Next, investigate profiler overhead and sampled attribution. Repeating boundary preparation cannot resolve that mismatch.
 The [idle-service comparison](../../reliability/features/native-signal/idle-service-cadence.md#four-arm-comparison-with-idle-reuse) completes four arms but retains a sampled slowdown of approximately 5.2% versus a physical reduction of approximately 49.8%.
 Repeated idle service is removed from most checks. Owner draining and publication still precede the guard.
-Measure those remaining probe components before selecting another overhead change.
+The [owner-drain diagnostic](../../reliability/features/native-signal/owner-drain-cost.md) measures a median paired 38.414 ms across 500,000 calls without application work or a peer.
+It does not isolate the full-workload cost. Investigate lower probe density with explicit interval parsing, probe reach, lifetime rejection, and unchanged payment bounds.
 Source membership and instrumentation attribution require separate contracts before prediction qualification.
 Do not repeat the unchanged controller comparison as a substitute for those contracts.
 

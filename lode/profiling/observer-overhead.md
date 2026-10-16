@@ -1,5 +1,39 @@
 # Bound observer overhead
 
+## Owner-drain diagnostic
+
+The retained component capture is `artifacts/owner-drain-cost/20261016T060212259`.
+Six shuffled blocks compare an empty callback, a disabled real perf ring, and an active bound owner collection.
+Each fresh process warms 2,000 calls and measures 500,000 calls without checksum work, peer contention, or debt payment.
+All eighteen cases complete with unchanged inputs. Active collection validates source and cleanup evidence after timing.
+Median per-call costs are 1.312, 10.809, and 78.245 ns respectively.
+The median paired owner-minus-baseline duration is 38.414 ms. Ring-minus-baseline is 4.749 ms.
+Active cases publish 38–42 samples and allocate 18,536–21,640 calling-thread bytes during timing.
+At least 499,958 active calls publish no sample. Disabled-ring and baseline allocation is zero.
+These results do not isolate one lifetime check or establish full-workload savings.
+The earlier `20261016T060101303` capture retains six active serialization failures and supplies no active timing result.
+The scratch harness now omits the unsupported native binding object from JSON.
+The next candidate is lower probe density, with explicit managed/native interval parsing and unchanged service bounds.
+Current parsers accept only 1, 64, 256, and 1024.
+
+```csharp
+collection.DrainOnOwner();
+```
+
+This call still precedes idle service reuse in the selected probe path.
+
+```mermaid
+flowchart LR
+    Probe --> Drain[Owner and lifetime checks plus source drain]
+    Drain --> Publish[Publish new samples]
+    Publish --> Service[Execute or reuse idle service]
+```
+
+See [the diagnostic evidence](../../reliability/features/native-signal/owner-drain-cost.md)
+and [the explanation](../../docsSrc/Explanations/bound-observer-overhead.md#owner-drain-component-cost).
+
+## Fixed-work reference
+
 The bound selected workload performs sampling, probe checks, and accounting at zero speedup.
 The fixed-work reference uses the existing arithmetic and dedicated worker but a separate scratch outer loop.
 It calls arithmetic through a compiled delegate, with profiling disabled.

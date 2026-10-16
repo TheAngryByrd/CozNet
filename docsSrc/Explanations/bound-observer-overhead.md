@@ -45,6 +45,25 @@ It contains one declared block and does not isolate the effect of the value-reco
 Its ranges are descriptive clock-boundary ranges, not accuracy bounds or confidence intervals.
 See [the retained captures](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/idle-service-cadence.md).
 
+## Owner-drain component cost
+
+Owner draining remains on the selected probe path before idle service reuse.
+It checks source ownership and CLR lifetime, drains the perf ring, and retains the current batch snapshot.
+
+A separate Linux diagnostic compares an empty callback, a disabled empty ring, and active owner draining.
+Six shuffled blocks run 500,000 calls per case in fresh processes.
+Median costs are 1.312, 10.809, and 78.245 ns per call, respectively.
+The median paired owner-drain cost above the empty callback is 38.414 ms across those calls.
+
+Active cases publish only 38–42 samples during the measured loops.
+Most calls therefore find no new sample, but the active measurement also includes sample handling and lifetime checks.
+The diagnostic omits checksum work, peer contention, and debt payment.
+Its differences cannot isolate individual checks or establish savings in the full workload.
+
+Fewer probe callbacks are a candidate for the next experiment.
+A larger interval must still reach peer service and detect invalid CLR lifetime within the existing contracts.
+See [the retained diagnostic and failed harness capture](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/owner-drain-cost.md).
+
 ## Fixed-work reference
 
 The fixed-work reference compares the same checksum arithmetic and 5,000 selected batches.
