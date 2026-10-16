@@ -4,6 +4,27 @@ The bound sampled workload performs profiler work on the selected thread.
 Injected probes check CLR lifetime, poll native requests, publish samples, and inspect debt.
 A zero-speedup run still performs this work, even when it pays no delay.
 
+## Allocation before selected payment
+
+The selected-probe callback previously contained the captured payment callback after its early-return checks.
+The Release compiler allocated that closure at method entry, including probes that required no payment.
+The allocation therefore occurred on entry-site probes as well as loop-site probes.
+
+The payment body now has a separate local helper.
+Only an admitted payment reaches that helper and creates its captured callback.
+Native polling, sample draining, service, cadence, and debt checks retain their order before payment.
+The payment body retains its source exclusion, receipt validation, and resume sequence.
+
+An isolated Linux check calls the real entry-site callback 500,000 times per process.
+Both baseline processes allocate 48 bytes per call. Both changed processes allocate zero bytes on the calling thread.
+The live zero, half-speedup, and expected-invalidation cases also pass with unchanged inputs.
+This change removes an allocation source from probes that require no payment.
+It does not establish whole-workload savings or resolve the prediction gap.
+A later 500,000-batch comparison completes all four arms but remains unqualified.
+Its sampled reduction is about 39.25%, against 52.93% physical reduction.
+The separate runs do not isolate the refactor's effect on elapsed time.
+See [the allocation and integration evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/probe-closure.md).
+
 ## Sample history at pause boundaries
 
 Each selected pause previously copied and rescanned the full sample history to check source accounting.
@@ -203,6 +224,28 @@ This result does not measure the candidate inside the full sampled workload.
 It also does not exercise invalidation during a native wait or prove all concurrent schedules.
 The runtime retains full identity checks because the measured benefit does not yet justify a new admission contract.
 The next investigation should address sample coverage and physical prediction, which remain unmet requirements.
+
+## Why GC transition suppression remains deferred
+
+The binding guard uses an ordinary P/Invoke transition for each full identity query.
+A scratch comparison applied `SuppressGCTransition` to a separate import of the same export.
+Both paths compared every binding field and retained the existing lifetime guard.
+
+Eight shuffled Linux x64 pairs each completed 50,000 batches and 500,000 probes.
+All 16 cases rejected duplicate-module invalidation after measurement.
+The median paired elapsed reduction was 4.21 ms, or 2.14%.
+Two pairs favored the ordinary import. Both paths allocated zero bytes on the calling thread.
+These measurements include checksum work and guard execution. They do not isolate native-call duration or establish full-workload savings.
+
+The [.NET contract](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/libraries/System.Private.CoreLib/src/System/Runtime/InteropServices/SuppressGCTransitionAttribute.cs) requires trivial native work below one microsecond.
+It also excludes blocking, callbacks, exceptions, and manipulation of locks or other concurrency primitives.
+The binding query uses fixed lock-free atomic reads. The contract gives no explicit exception for those reads.
+Suppression also changes native-library loading and debugging behavior.
+
+The ordinary import remains in use.
+Release disassembly, concurrent GC progress, missing-library behavior, unload behavior, and Windows execution remain unverified for the suppressed import.
+The timing result does not resolve these constraints or qualify causal prediction.
+See [the retained comparison](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/binding-transition-cost.md).
 
 ## Coverage and pause cost
 

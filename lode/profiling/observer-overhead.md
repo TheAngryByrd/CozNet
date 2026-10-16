@@ -1,5 +1,36 @@
 # Bound observer overhead
 
+## Selected payment closure
+
+`PaySelected` performs polling, draining, publication, service, cadence, and debt checks before calling `ExecuteSelectedPayment`.
+The helper owns the captured payment callback. Its allocation occurs only after the payment checks admit work.
+Before extraction, Release IL allocated the display class at `PaySelected` entry, before the entry-site return.
+The helper preserves the payment body, exclusion boundaries, and failure behavior.
+The real entry callback allocates 48 bytes per call before extraction and zero afterward in `artifacts/probe-entry-cost/20261016T104143706`.
+The before/after/after/before capture retains four successful 500,000-call processes and unchanged inputs. It measures entry-site returns only.
+The live Linux capture `artifacts/probe-closure-live/20261016T103945442-bd573a2a` passes zero, half, and expected-invalidation cases.
+All four managed preflight groups and replay pass with unchanged inputs.
+Full-workload savings and prediction accuracy remain unverified.
+The four-arm capture `artifacts/probe-closure-comparison/20261016T104424164-d8d7dd522fd848ccab14dae53bf00543` completes 500,000 batches per arm.
+Prediction remains unqualified, with a descriptive shortfall of 13.6732–13.6890 percentage points. Separate runs do not isolate the refactor's effect.
+Accepted review limits: no automated allocation-regression gate, compiler-name dependence in the scratch harness, and an added helper frame with possible first-use timing changes.
+Functional integration and measured entry allocation support this refactor. They do not prove every interleaving or stable capacity.
+See [the explanation](../../docsSrc/Explanations/bound-observer-overhead.md#allocation-before-selected-payment)
+and [the retained evidence](../../reliability/features/native-signal/probe-closure.md).
+
+## Binding transition decision
+
+The runtime retains ordinary P/Invoke transitions for full binding queries.
+The isolated comparison retains all identity fields and the existing lifetime guard.
+Capture `artifacts/binding-transition-cost/20261016T103215952` passes all sixteen cases with unchanged inputs and post-measurement duplicate-module rejection.
+Its median paired reduction is 4.2063015 ms, or 2.1402338%, across 500,000 probes per case.
+Two pairs favor the ordinary import. Neither path allocates calling-thread bytes during measurement.
+This does not establish isolated call duration, live sampled savings, GC safety, or portability.
+The runtime contract does not explicitly exempt fixed atomic reads from its concurrency-primitives restriction.
+Suppression remains deferred pending a stronger benefit and resolution of the runtime contract and platform checks.
+See [the human explanation](../../docsSrc/Explanations/bound-observer-overhead.md#why-gc-transition-suppression-remains-deferred)
+and [the evidence](../../reliability/features/native-signal/binding-transition-cost.md).
+
 ## Owner-drain diagnostic
 
 The retained component capture is `artifacts/owner-drain-cost/20261016T060212259`.

@@ -281,6 +281,12 @@ static class BoundSampledPaymentWorkload
                 admission = candidate;
             }
             else if (accounting.Observe(state).Selected == 0) return;
+
+            ExecuteSelectedPayment(version, point, admission);
+        }
+
+        void ExecuteSelectedPayment(ulong version, uint point, BoundSelectedAdmission? admission)
+        {
             int pauseIndex = pauses.Count;
             var timing = pauseTimingEnabled ? new BoundPauseTiming() : null;
             pauses.Add(new(Stopwatch.GetTimestamp(), samples.Count, Admission: admission, Timing: timing));
