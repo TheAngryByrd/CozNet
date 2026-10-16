@@ -58,6 +58,31 @@ Pending service and receipt handling need separate inspection before changing th
 
 See [the component reference](../Reference/cooperative-component-cpu.md) and [retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/component-cpu.md).
 
+## Remaining gap in the longer workload
+
+A 500,000-batch comparison records 141.5 ms more selected-thread CPU in treatment than at zero speedup.
+Its sampled reduction is about 39.25%, against 52.93% physically.
+Extra treatment work and sample attribution remain separate questions.
+
+A fixed-record sensitivity calculation replaces sample credit with half of all measured selected CPU.
+It preserves recorded durations, progress, and the global-delay contribution above sample credit.
+This gives 46.86–46.87% reduction and still leaves about six percentage points of shortfall.
+The substitution includes profiler and selected-payment CPU. It is not a replacement estimator or an accuracy bound.
+It does not simulate how changed credit would affect execution.
+
+The longer component capture fails the peer-debt bound after 192,529 batches.
+It retains drain and service CPU observations, but provides no complete paired component result.
+Diagnostic clock cost also remains in those observations.
+
+A separate scratch candidate moves the controlled method's loop probe to entry and removes the repeated loop countdown.
+Eight component pairs retain a median 11.26% elapsed reduction with the same callback count and full binding guard.
+The comparison also changes callback placement, so it does not isolate one instruction's cost.
+Its subsequent four-arm comparison completes but reports about 31.00% sampled reduction against 49.95% physically.
+The separate runs cannot isolate a placement regression or improvement.
+The candidate has not resolved prediction, despite the component speedup.
+Entry-only probes cannot cover a long-running invocation. The normal countdown profiler remains in use.
+See [the retained diagnostics and failure](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/prediction-gap-diagnostics.md).
+
 ## Upstream accounting
 
 Linux Coz [subtracts the increase in global delay from elapsed time](https://github.com/plasma-umass/coz/blob/256e3c389424d6a1691ee5d18b5ecb5a6c1001ec/libcoz/profiler.cpp#L359-L391).

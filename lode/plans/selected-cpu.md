@@ -1,5 +1,21 @@
 # Selected CPU measurement
 
+The [long diagnostics](../../reliability/features/native-signal/prediction-gap-diagnostics.md) separate fixed-record credit sensitivity from component timing.
+The 500,000-batch closure comparison uses 141.5388 ms more selected CPU in treatment than at zero speedup.
+Replacing sample credit with half of recorded treatment selected-thread CPU still leaves 6.0547–6.0703 percentage points of descriptive shortfall.
+That hypothetical substitution includes profiler and payment CPU and does not simulate changed execution. It is not an estimator or an accuracy bound.
+The longer component capture fails peer debt at 2,499,837 ns after 192,529 batches. Its partial component totals cannot establish a paired result.
+No timing retry replaces that failure. The diagnostic has no call timestamps for its maxima and cannot locate the failing call from them.
+
+A scratch native candidate moves both probes to entry for the controlled short method and omits the loop countdown.
+Sixteen component cases pass with unchanged inputs and duplicate-module rejection. The median paired elapsed reduction is 11.2602%.
+Callback placement also changes. This does not isolate individual instruction cost or establish a safe policy for long-running methods.
+The entry candidate's four-arm comparison completes at 500,000 batches with no invalid arms or integrity errors.
+Its descriptive shortfall is 18.9582–18.9757 percentage points. The runner exits 1 because prediction remains unqualified.
+The plan records the diagnostic placement, and snapshots retain the actual candidate source, binary, and runner.
+Generic replay checks accounting, not this candidate's loop-coverage policy. The normal countdown profiler remains unchanged.
+Do not promote the isolated component speedup into a prediction or general coverage claim.
+
 The optional diagnostic records selected-thread CPU around fixed selected work in all four comparison arms.
 It uses the existing `IThreadCpuClock` platform hook and managed timestamp brackets.
 The Linux command supplies `LinuxThreadCpuClock`. Shared capture and replay remain portable.
