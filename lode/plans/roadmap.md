@@ -3,6 +3,11 @@
 The implemented scope is a serial experiment prototype. The goal is a .NET implementation of sampled Coz semantics.
 Keep the serial model separate from the proposed sampled engine.
 
+Next, implement [opt-in nominal-event credit for timer intervention](timer-nominal-credit.md).
+The timer path avoids loop probes but still discards first-event weights under its interval policy.
+The new callback-reuse comparison completes but retains about ten percentage points of shortfall.
+This directs the next backend comparison; it does not establish a fix for capacity or prediction.
+
 The [clock-backed matched block](../../reliability/features/native-signal/matched-sample-membership.md) checks retained source membership without changing recorded credit.
 All treatment credit is source-inside, but sampled reduction remains 12.73–12.76 percentage points below physical reduction.
 Next, investigate recurring execution cost and inline instrumentation attribution at fixed probe density.

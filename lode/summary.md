@@ -1,5 +1,10 @@
 # Project scope
 
+The callback-reuse comparison completes but retains a 9.9977–10.0364 percentage-point prediction shortfall.
+All recorded treatment credit is source-inside. Allocation reuse does not resolve instrumentation attribution or extra treatment CPU.
+The next implementation is [nominal-event credit for timer intervention](plans/timer-nominal-credit.md), which avoids IL loop probes.
+That policy is not implemented in the timer workload. Existing timer capacity and CLR safety limits remain.
+
 Optional clock capture now binds both sampled arms to the [matched comparison plan](profiling/sample-membership.md#matched-comparison-activation).
 The retained 500,000-batch block places all recorded treatment credit inside the observed source window and frozen prefix.
 Its sampled reduction is 33.28–33.32%, versus 46.04% physically. Treatment consumes 324.9 ms more selected-thread CPU.

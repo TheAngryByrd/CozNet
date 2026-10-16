@@ -18,6 +18,8 @@ It does not establish the cause of the prediction gap or a full-workload speedup
 An extracted direct-readiness segment allocates 128 bytes per check before reuse and zero afterward in two before/after pairs.
 Live direct-mode checks pass. The controller-fallback treatment fails selected debt after a recorded peer-wait overshoot.
 The failure remains retained. Callback reuse does not establish stable capacity.
+A later 500,000-batch comparison completes, but sampled reduction remains about 37.1% versus 47.1% physically.
+All recorded treatment credit is source-inside in that block. The separate execution does not isolate the effect of callback reuse.
 See [the allocation and live evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/receipt-callback-reuse.md).
 
 ## Allocation before selected payment

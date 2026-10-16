@@ -49,6 +49,17 @@ Matching the upstream event rule therefore does not establish measurement accura
 The policy remains opt-in. Observer cost, sample attribution, and finite measurement boundaries still need investigation.
 See [the retained evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/nominal-event-credit.md) for exact ranges and limits.
 
+## Timer comparison
+
+The timer workload still uses interval credit and excludes first events. Its intervention mechanism does not need inline loop probes.
+Comparing it with nominal-event cooperative results therefore mixes a credit-policy difference with an intervention-mechanism difference.
+
+An accounting replay of nine retained timer treatments confirms that their recorded credit follows the interval rule.
+The three completed treatments exclude 11.5–18 ms of selected first-event weight at 50% speedup.
+The other six workloads remain failed. Alternate event weights do not simulate how a nominal policy would change execution.
+An opt-in nominal timer policy is the next planned comparison step. It is not implemented yet.
+See [the retained audit](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/timer-estimator-audit.md) for all cases and replay limits.
+
 ## Primary sources
 
 - [Coz delay calculation](https://github.com/plasma-umass/coz/blob/256e3c389424d6a1691ee5d18b5ecb5a6c1001ec/libcoz/profiler.cpp#L155-L165) uses nominal period and requested speedup.

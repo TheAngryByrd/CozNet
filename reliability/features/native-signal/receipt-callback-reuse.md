@@ -73,6 +73,24 @@ All four managed preflight groups pass. Inputs remain unchanged, workers join, a
 The fallback path reaches both receipt types, but the complete treatment does not pass capacity.
 No unchanged timing retry replaces this failure. The separate direct capture does not isolate the cause of the fallback failure.
 
+## Matched physical comparison
+
+Capture: `artifacts/receipt-callback-comparison/20261016T123610158-dbe4980fb9e84ced914b7e5587aa6ba8`.
+The declared block uses 500,000 batches, interval 8192, prepared receipts, owner/controller mode, nominal credit, selected CPU, and sample-clock capture.
+All four arms complete with exit zero. Analysis reports no invalid arms, integrity errors, or runner errors.
+Input hashes remain unchanged. Both sampled clocks are consistent.
+
+Sampled effective elapsed reduction is 37.0712–37.1088%. Physical reduction is 47.1064–47.1076%.
+The descriptive shortfall is 9.9977–10.0364 percentage points.
+Selected CPU is 2,160.2897 ms at zero speedup and 2,353.8143 ms in treatment, a difference of 193.5246 ms.
+This separate block does not isolate callback reuse or establish improvement over previous captures.
+The runner exits 1 because prediction remains unqualified.
+
+The retained analyzer produces membership reports in `artifacts/receipt-callback-membership/20261016T124045539`.
+Both comparison domains pass. All 1,988 selected treatment samples are source-inside and accepted.
+All 994,000,000 ns of treatment credit is source-inside. Unreceived events and exact CPU attribution remain unbounded.
+Frozen ownership, ledger residuals, instrumentation attribution, calibration, and the single-block protocol still prevent qualification.
+
 ## Review limits
 
 Compiled IL and the allocation fixture detect the removed construction.

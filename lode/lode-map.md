@@ -1,5 +1,7 @@
 # Lode index
 
+For the next uninstrumented-backend experiment and its estimator mismatch, read [timer nominal credit](plans/timer-nominal-credit.md).
+
 For bound source-time membership and unchanged recorded credit, read [sample membership](profiling/sample-membership.md#bound-source-membership).
 
 For incremental sample totals at selected pauses and the retained long-run failure, read [pause accounting](profiling/sample-batch-snapshots.md#pause-accounting).
