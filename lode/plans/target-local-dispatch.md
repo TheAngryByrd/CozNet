@@ -93,6 +93,6 @@ See [the dispatch capture](../../reliability/features/native-signal/target-dispa
 
 
 [Target-local credit](target-local-credit.md) supplies the credit sink. The session settles after each dispatch.
-Signal-handler execution inside CLR-managed code remains unverified.
+[Target-local prediction](target-local-prediction.md) runs the handler inside managed threads in the qualified model. General CLR safety stays unverified.
 
 See [the sample plan](target-local-samples.md), [target leases](target-local-lease.md), and [the decoder reference](../../docsSrc/Reference/native-perf-decoder.md).

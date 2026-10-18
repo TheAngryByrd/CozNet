@@ -74,7 +74,7 @@ A publish takes its sequence after its swap, so a replay takes global delay as t
 `TargetCreditWorkload` runs two native threads at 0% and 50%. The 50% run credits about 150 ms, and the peer pays it with valid replay.
 See [the credit capture](../../reliability/features/native-signal/target-credit.md).
 
-The replay currently runs in native code. A managed replay of the same journal comes with CLR integration.
+`TargetLocalReplay.replay` replays the same journal in managed code for CLR runs. The native credit workload keeps its own native replay.
 Spin payment consumes thread CPU. Workloads must count work, not thread CPU, to see payment in wall time.
 
 ```cpp

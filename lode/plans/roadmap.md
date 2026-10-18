@@ -52,6 +52,7 @@ Do not repeat the unchanged controller comparison as a substitute for those cont
 3. Test long-loop probe coverage, disabled-probe overhead, zero-speedup overhead, and JIT effects.
 4. Combine CPU sampling with cooperative delay checks. Keep platform sampling constraints explicit.
 5. Compare sampled predictions with real CPU optimizations. Preserve raw observations and failed predictions.
+   Done for the [target-local fork/join model](target-local-prediction.md). Other workloads remain open.
 6. Support named synchronization primitives only after dependency-wake and timeout accounting pass.
 7. Add ReJIT and verify active-frame, inlining, source-map, and compilation-settling constraints.
 8. Separate request lifetime from CPU execution before async support.

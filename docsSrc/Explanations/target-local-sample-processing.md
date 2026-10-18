@@ -77,16 +77,14 @@ The first dispatch after the mask then finds many samples, and the queued notifi
 Each dispatch therefore has record and elapsed budgets. A budget stop reports remaining backlog instead of a completed drain.
 See [the dispatch evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/target-dispatch.md).
 
-## What remains
+## How the path connects
 
-Moving decoding alone does not move credit or payment ownership.
-The existing timer backend still requires managed reservations for finite native leases.
+Moving decoding alone does not move credit or payment ownership. The target-local path moves all three onto the sampled thread.
 The [dispatch reference](../Reference/target-sample-dispatch.md) covers bounded notification, source disable and final drain, epoch continuity, and native retirement.
-Code invalidation and CLR execution remain open.
-Native accounting also needs exact-once reconciliation with managed evidence and measured wall-time payment.
+The [ledger reference](../Reference/target-delay-ledger.md) covers credit, publication, and measured wall-time payment in the handler.
+The [API reference](../Reference/target-local-api.md) covers the managed entry point and the exact-once managed replay of every journal.
 Unread backlog cannot become silently dropped credit or a retrospective change to the experiment.
 
-These contracts must precede a live target-local backend.
-The decoder and Linux adapter do not establish CLR safety, stable capacity, or prediction accuracy.
-IL rewriting remains a separate cooperative intervention option with its own coverage and observer-cost tradeoffs.
-Target-local native processing is not yet evidence that those tradeoffs can be avoided in a general .NET application.
+Managed threads run this path in the qualified fork/join model. See [target-local prediction](target-local-prediction.md) for its evidence and support boundary.
+Code invalidation, blocking, GC-heavy work, and general CLR safety stay outside that model.
+The older timer backend still requires managed reservations for finite native leases. It is a separate path.

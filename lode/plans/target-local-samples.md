@@ -73,7 +73,7 @@ The managed `tests/CozNet.LinuxPerf` path uses `read_format = 0` and does not co
 ## Remaining contracts
 
 [Target-local dispatch](target-local-dispatch.md) defines notification, bounded dispatch, and epochs over this adapter.
-Next, add native credit publication, bounded target payment, and exact-once managed reconciliation.
+[Target-local credit](target-local-credit.md) adds native credit and bounded payment. [Target-local prediction](target-local-prediction.md) adds managed replay and the CLR qualification.
 Retain cancellation, code revocation, delivery quiescence, first receipt, and failed-prefix evidence.
 Keep the 2 ms debt, 2 ms lease, 50 us requested child, 5 ms handler, and 100 ms receipt bounds unchanged.
 Do not divide retrospective credit or claim that target-local sampling alone fixes capacity.
