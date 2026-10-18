@@ -25,6 +25,7 @@
         <Compile Include="TargetLocalReplayTests.fs" />
         <Compile Include="PerfMapTests.fs" />
         <Compile Include="TargetBarrierTests.fs" />
+        <Compile Include="CodeBindingTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>

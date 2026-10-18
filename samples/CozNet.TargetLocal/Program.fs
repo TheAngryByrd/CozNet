@@ -43,14 +43,27 @@ let private plain selectedRounds peerRounds (output: string) =
                     startedTicks = started; finishedTicks = finished; passed = true |}
     0
 
-let private range symbol =
-    PerfMap.tryRange (File.ReadAllLines(PerfMap.currentProcess ())) symbol |> Result.defaultWith failwith
-
-let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (output: string) =
+let private bind () =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
-    let selectedRange = range Work.selectedName
-    let peerRange = range Work.peerName
+    CodeBinding.tryCapture (File.ReadAllLines(PerfMap.currentProcess ())) [| Work.selectedName; Work.peerName |]
+    |> Result.defaultWith failwith
+
+let private boundRun binding speedup workers monitor =
+    TargetLocalProfiler.runBound binding speedup period [| Work.selectedName |] [| Work.selectedName; Work.peerName |] journalCapacity workers monitor
+
+let private maxSampleGap (events: TargetLedgerEvent array) worker =
+    events
+    |> Array.filter (fun e -> e.Worker = worker && e.Kind = TargetLedgerEventKind.Sample)
+    |> Array.map _.Time
+    |> Array.sort
+    |> Array.pairwise
+    |> Array.fold (fun gap (a, b) -> max gap (b - a)) 0UL
+
+let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
     let workers = [|
         { Work = (fun () -> Work.selected selectedRounds |> ignore); PaymentIp = fst selectedRange }
         { Work = (fun () -> Work.peer peerRounds |> ignore); PaymentIp = fst peerRange }
@@ -67,7 +80,7 @@ let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (outpu
                     GC.Collect(2, GCCollectionMode.Forced, true)
                     forced[0] <- forced[0] + 1
     let result =
-        TargetLocalProfiler.run speedup period [| selectedRange |] [| selectedRange; peerRange |] journalCapacity workers monitor
+        boundRun binding speedup workers monitor
     let gen2 = GC.CollectionCount 2 - collections
     let replayError, summary =
         match result.Replay with
@@ -96,6 +109,8 @@ let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (outpu
         foreignSignals = closed.ForeignSignals
         sigioFallbacks = closed.SigioFallbacks
         replayError = replayError
+        bindingError = result.BindingError
+        maxSampleGapNs = [| maxSampleGap result.Events 0; maxSampleGap result.Events 1 |]
         replay = summary
         threads =
             result.Threads
@@ -109,8 +124,8 @@ let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (outpu
                    closeOutcome = r.CloseOutcome; lifecycleError = r.LifecycleError; retireError = r.RetireError; quiescent = r.Quiescent |})
         events =
             result.Events
-            |> Array.map (fun e -> [| uint64 e.Worker; e.Sequence; uint64 e.Kind; e.ObservedGlobal; e.LocalBefore; e.Amount; e.Requested; e.Ip; uint64 e.Detail |])
-        eventFields = [| "worker"; "sequence"; "kind"; "observedGlobal"; "localBefore"; "amount"; "requested"; "ip"; "detail" |]
+            |> Array.map (fun e -> [| uint64 e.Worker; e.Sequence; uint64 e.Kind; e.ObservedGlobal; e.LocalBefore; e.Amount; e.Requested; e.Ip; uint64 e.Detail; e.Time |])
+        eventFields = [| "worker"; "sequence"; "kind"; "observedGlobal"; "localBefore"; "amount"; "requested"; "ip"; "detail"; "time" |]
         passed = result.Passed
     |}
     if result.Passed then 0 else 1
@@ -153,17 +168,16 @@ let private plainPhases pattern (selectedPercent: uint64) (output: string) =
     0
 
 let private profilePhases speedup pattern (output: string) =
-    Work.selected 1UL |> ignore
-    Work.peer 1UL |> ignore
-    let selectedRange = range Work.selectedName
-    let peerRange = range Work.peerName
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
     let plan = phases pattern
     let barrier = TargetBarrier 2
     let workers = [|
         { Work = phaseWork barrier (plan |> Array.map fst) Work.selected; PaymentIp = fst selectedRange }
         { Work = phaseWork barrier (plan |> Array.map snd) Work.peer; PaymentIp = fst peerRange }
     |]
-    let result = TargetLocalProfiler.run speedup period [| selectedRange |] [| selectedRange; peerRange |] journalCapacity workers ignore
+    let result = boundRun binding speedup workers ignore
     let replayError, summary =
         match result.Replay with
         | Ok value -> "", Some value
@@ -182,6 +196,8 @@ let private profilePhases speedup pattern (output: string) =
         sequences = closed.Sequences
         ledgerFailure = closed.Failure
         replayError = replayError
+        bindingError = result.BindingError
+        maxSampleGapNs = [| maxSampleGap result.Events 0; maxSampleGap result.Events 1 |]
         replay = summary
         threads =
             result.Threads
@@ -192,17 +208,16 @@ let private profilePhases speedup pattern (output: string) =
                    cpuNs = r.Value; wallNs = uint64 (Stopwatch.GetElapsedTime(outcome.StartedTicks, outcome.FinishedTicks).TotalNanoseconds); runDelayNs = outcome.RunDelayNs |})
         events =
             result.Events
-            |> Array.map (fun e -> [| uint64 e.Worker; e.Sequence; uint64 e.Kind; e.ObservedGlobal; e.LocalBefore; e.Amount; e.Requested; e.Ip; uint64 e.Detail |])
-        eventFields = [| "worker"; "sequence"; "kind"; "observedGlobal"; "localBefore"; "amount"; "requested"; "ip"; "detail" |]
+            |> Array.map (fun e -> [| uint64 e.Worker; e.Sequence; uint64 e.Kind; e.ObservedGlobal; e.LocalBefore; e.Amount; e.Requested; e.Ip; uint64 e.Detail; e.Time |])
+        eventFields = [| "worker"; "sequence"; "kind"; "observedGlobal"; "localBefore"; "amount"; "requested"; "ip"; "detail"; "time" |]
         passed = passed
     |}
     if passed then 0 else 1
 
 let private barrierAbort (output: string) =
-    Work.selected 1UL |> ignore
-    Work.peer 1UL |> ignore
-    let selectedRange = range Work.selectedName
-    let peerRange = range Work.peerName
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
     let barrier = TargetBarrier 2
     let failing () =
         Work.selected 300UL |> ignore
@@ -213,9 +228,9 @@ let private barrierAbort (output: string) =
         { Work = phaseWork barrier (Array.create 3 300UL) Work.peer; PaymentIp = fst peerRange }
     |]
     let watch = Stopwatch.StartNew()
-    let result = TargetLocalProfiler.run 50u period [| selectedRange |] [| selectedRange; peerRange |] journalCapacity workers ignore
+    let result = boundRun binding 50u workers ignore
     let seconds = watch.Elapsed.TotalSeconds
-    let second = TargetLocalProfiler.run 50u period [| selectedRange |] [| selectedRange; peerRange |] journalCapacity
+    let second = boundRun binding 50u
                      [| { Work = (fun () -> Work.selected 300UL |> ignore); PaymentIp = fst selectedRange }
                         { Work = (fun () -> Work.peer 300UL |> ignore); PaymentIp = fst peerRange } |] ignore
     let failedWorker = result.Threads |> Array.exists (fun outcome -> outcome.Error.Contains "worker failure")
@@ -224,16 +239,57 @@ let private barrierAbort (output: string) =
                     secondRunPassed = second.Passed; passed = passed |}
     if passed then 0 else 1
 
-let private cleanup (output: string) =
+let private bindingCheck (output: string) =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
-    let selectedRange = range Work.selectedName
-    let peerRange = range Work.peerName
+    let configuration = CodeBinding.configurationErrors ()
+    let capture = CodeBinding.tryCapture (File.ReadAllLines(PerfMap.currentProcess ())) [| Work.selectedName; Work.peerName |]
+    let verified =
+        match capture with
+        | Ok binding ->
+            Work.selected 6000UL |> ignore
+            Work.peer 6000UL |> ignore
+            match CodeBinding.verify (File.ReadAllLines(PerfMap.currentProcess ())) binding with
+            | Ok() -> ""
+            | Error message -> message
+        | Error message -> message
+    let tiered = Environment.GetEnvironmentVariable "DOTNET_TieredCompilation" = "1"
+    let passed =
+        if tiered then not configuration.IsEmpty && Result.isError capture
+        else configuration.IsEmpty && Result.isOk capture && verified = ""
+    write output {| mode = "binding"; tiered = tiered; configurationErrors = configuration; captureError = (match capture with Error e -> e | Ok _ -> "")
+                    verifyError = verified; perfMap = File.ReadAllLines(PerfMap.currentProcess ()) |> Array.filter (fun line -> line.Contains "TargetLocal.Work::")
+                    passed = passed |}
+    if passed then 0 else 1
+
+let private shutdown (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
+    let workers = [|
+        { Work = (fun () -> Work.selected 6000UL |> ignore); PaymentIp = fst selectedRange }
+        { Work = (fun () -> Work.peer 6000UL |> ignore); PaymentIp = fst peerRange }
+    |]
+    let monitor (state: TargetRunState) =
+        while not state.Working do
+            Thread.SpinWait 100
+        Thread.Sleep 30
+        let working = state.Working
+        File.WriteAllText(output + ".marker", JsonSerializer.Serialize {| working = working; running = state.Running; ticks = Stopwatch.GetTimestamp() |})
+        Environment.Exit(if working then 0 else 3)
+    boundRun binding 50u workers monitor |> ignore
+    write output {| mode = "shutdown"; passed = false |}
+    1
+
+let private cleanup (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
     let workers = [|
         { Work = (fun () -> Work.selected 300UL |> ignore); PaymentIp = fst selectedRange }
         { Work = (fun () -> Work.peer 300UL |> ignore); PaymentIp = fst peerRange }
     |]
-    let run monitor = TargetLocalProfiler.run 50u period [| selectedRange |] [| selectedRange; peerRange |] journalCapacity workers monitor
+    let run monitor = boundRun binding 50u workers monitor
     let failed =
         try
             run (fun state ->
@@ -255,6 +311,8 @@ let main argv =
     match argv with
     | [| "calibrate"; output |] -> calibrate output
     | [| "cleanup"; output |] -> cleanup output
+    | [| "binding"; output |] -> bindingCheck output
+    | [| "shutdown"; output |] -> shutdown output
     | [| "barrier-abort"; output |] -> barrierAbort output
     | [| "plain-phases"; pattern; selectedPercent; output |] -> plainPhases pattern (UInt64.Parse selectedPercent) output
     | [| "profile-phases"; speedup; pattern; output |] -> profilePhases (UInt32.Parse speedup) pattern output

@@ -19,7 +19,11 @@ PREDICTION_HISTORY = [
     ("20261018T183034093-0968049a", "Same", "Per-thread CPU and wall time diagnostics", "Pass"),
     ("20261018T190000743-76bbee08", "Same", "Barrier abort, post race, and token bound", "Pass"),
     ("20261018T191125911-68e03b4b", "Same", "Barrier errors cancel the run", "Pass"),
-    ("20261018T192337237-ab4134f4", "Same", "Run-queue delay diagnostic", "Pass"),
+    ("20261018T192337237-ab4134f4", "Same", "Run-queue delay diagnostic", "Pass. Median overhead ratio rose to about 1.05."),
+    ("20261018T193237454-cc14a621", "Same", "Run-queue delay excludes failed reads", "Pass. Median overhead ratio about 1.06 to 1.08."),
+    ("20261018T202523516-b9c53a5a", "Same", "Code binding enforced in every profile mode", "Pass. Median overhead ratio about 1.05 to 1.09."),
+    ("20261018T203002656-dab28501", "Same", "Run-queue reads outside the timed window", "Pass. Median overhead ratio about 0.99 to 1.02."),
+    ("20261018T204012284-1a60b3d6", "Same", "SMT diagnostic note in the plan", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -33,6 +37,9 @@ TRANSITION_HISTORY = [
     ("20261018T183151879-34460604", "Per-thread CPU and wall time diagnostics", "Pass, 10 of 10"),
     ("20261018T190118893-b2109c5d", "Barrier abort, post race, and token bound", "Fail. Run 8: 2 ms debt bound."),
     ("20261018T191244704-9849fce2", "Barrier errors cancel the run", "Pass, 10 of 10"),
+    ("20261018T192454148-24d37dd2", "Run-queue delay diagnostic", "Pass, 10 of 10"),
+    ("20261018T202431027-b539e1a4", "Code binding, tiered rejection, and shutdown checks", "Pass, 10 of 10"),
+    ("20261018T203245961-56927b66", "Run-queue reads outside the timed window", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -42,6 +49,13 @@ BARRIER_HISTORY = [
     ("20261018T191852956-237f7bf8", "Blocking plan rows match the implementation",
      "Fail. `peer-bound` block 5: the peer accepted no sample for five selected samples and broke the 2 ms debt bound. No forced GC runs here."),
     ("20261018T192211666-aeadc5b5", "Run-queue delay diagnostic", "Pass"),
+    ("20261018T193110908-a2f5b436", "Run-queue delay excludes failed reads",
+     "Fail. `barrier-alternating` blocks 4 and 5 differ by +11.73 and -10.77 points, with 81.3 ms and 17.1 ms of run-queue delay in one arm each."),
+    ("20261018T202640118-21860ac2", "Code binding enforced in every profile mode",
+     "Fail. `peer-bound` blocks 4 and 5 differ by +12.29 and +7.85 points. The run-queue diagnostic read inside the timed window raised overhead."),
+    ("20261018T203120679-31605bcf", "Run-queue reads outside the timed window",
+     "Fail. `peer-bound` median 5.28 pp, with every difference positive."),
+    ("20261018T204129945-675e5b4b", "SMT diagnostic note in the prediction plan and the `-CpuSet` option", "Pass"),
 ]
 
 
@@ -61,29 +75,51 @@ def check_history(root, kind, known, run):
         raise SystemExit(f"The {kind} history differs from the retained runs: {sorted(set(present) ^ set(listed))}")
 
 
+def pct(value, digits=2, suffix="%"):
+    return "n/a" if value is None else f"{value*100:.{digits}f}{suffix}"
+
+
 def prediction(root, run, change):
     directory = root / "artifacts/target-local-prediction" / run
     summary, manifest = load(directory / "summary.json"), load(directory / "manifest.json")
-    if not summary["passed"] or not summary["inputsUnchanged"]:
-        raise SystemExit("The prediction run did not pass.")
+    if not summary["inputsUnchanged"]:
+        raise SystemExit("The prediction run changed its inputs.")
     check_history(root, "target-local-prediction", PREDICTION_HISTORY, run)
     kernel, cpus = host(directory)
     rows, blocks, longest = [], [], 0
     for c in summary["configurations"]:
-        rows.append(f"| `{c['name']}` | {c['selectedRounds']} | {c['peerRounds']} | {c['validBlocks']} / 5 | {c['medianPredicted']*100:.2f}% | "
-                    f"{c['medianActual']*100:.2f}% | {c['medianAbsoluteDifference']*100:.2f} pp | {c['maxAbsoluteDifference']*100:.2f} pp | Pass |")
+        rows.append(f"| `{c['name']}` | {c['selectedRounds']} | {c['peerRounds']} | {c['validBlocks']} / 5 | {pct(c.get('medianPredicted'))} | "
+                    f"{pct(c.get('medianActual'))} | {pct(c.get('medianAbsoluteDifference'), suffix=' pp')} | {pct(c.get('maxAbsoluteDifference'), suffix=' pp')} | {'Pass' if c['passed'] else 'Fail'} |")
         for b in c["blocks"]:
+            if not b["valid"]:
+                blocks.append(f"| `{c['name']}` | {b['block']} | invalid: {', '.join(b.get('reasons') or [])} | | | | | |")
+                continue
             longest = max(longest, b["maxHandlerNs"])
             blocks.append(f"| `{c['name']}` | {b['block']} | {b['predicted']*100:.2f}% | {b['actual']*100:.2f}% | {b['difference']*100:+.2f} pp | "
                           f"{b['overhead']:.4f} | {b['zeroHandlerShare']*100:.3f}% | {b['profileSpeedupGlobalNs']:,} |")
-    overhead = [c["medianOverhead"] for c in summary["configurations"]]
-    share = [c["medianZeroHandlerShare"] for c in summary["configurations"]]
-    speed_share = [c["medianSpeedupHandlerShare"] for c in summary["configurations"]]
-    dominant_blocks = summary["configurations"][2]["blocks"]
-    dominant_max = max(b["predicted"] for b in dominant_blocks) * 100
-    positive = ", ".join(f"`{c['name']}` {sum(1 for b in c['blocks'] if b['difference'] > 0)} of 5" for c in summary["configurations"])
-    history = "\n".join(f"| `{r}` | {k} | {ch} | {res} |" for r, k, ch, res in PREDICTION_HISTORY + [(run, "Same", change, "Pass")])
-    dominant = summary["configurations"][2]["medianPredicted"] * 100
+    overhead = [c["medianOverhead"] for c in summary["configurations"] if c.get("medianOverhead") is not None] or [float("nan")]
+    share = [c["medianZeroHandlerShare"] for c in summary["configurations"] if c.get("medianZeroHandlerShare") is not None] or [float("nan")]
+    speed_share = [c["medianSpeedupHandlerShare"] for c in summary["configurations"] if c.get("medianSpeedupHandlerShare") is not None] or [float("nan")]
+    dominant_blocks = [b for b in summary["configurations"][2]["blocks"] if b["valid"]]
+    dominant_max = max((b["predicted"] for b in dominant_blocks), default=float("nan")) * 100
+    positive = ", ".join(f"`{c['name']}` {sum(1 for b in c['blocks'] if b['valid'] and b['difference'] > 0)} of {c['validBlocks']}" for c in summary["configurations"])
+    failed = [c for c in summary["configurations"] if not c["passed"]]
+    if failed:
+        detail = "; ".join(f"`{c['name']}` {c['validBlocks']} valid blocks, median {pct(c.get('medianAbsoluteDifference'), suffix=' pp')}, block differences "
+                           + ", ".join(f"{b['difference']*100:+.1f}" if b["valid"] else f"invalid ({', '.join(b.get('reasons') or [])})" for b in c["blocks"])
+                           for c in failed)
+        current = f"Fail. {detail}."
+        verdict = f"**Result: the current run fails.** {detail}. The run is kept, and no rerun replaces it."
+        if all(c["validBlocks"] == 5 for c in summary["configurations"]):
+            verdict += ("\nEvery profile run still has complete epochs, zero loss, a valid managed replay, "
+                        "matching global delay and event count, and no ledger failure.")
+    else:
+        current = "Pass"
+        verdict = ("All three configurations pass. Every profile run has complete epochs, zero loss, a valid managed replay, "
+                   "matching global delay and event count, and no ledger failure.")
+    history = "\n".join(f"| `{r}` | {k} | {ch} | {res} |" for r, k, ch, res in PREDICTION_HISTORY + [(run, "Same", change, current)])
+    dominant_median = summary["configurations"][2].get("medianPredicted")
+    dominant = (float("nan") if dominant_median is None else dominant_median) * 100
     return f"""# Target-local prediction qualification
 
 Evidence: `artifacts/target-local-prediction/{run}`.
@@ -92,7 +128,7 @@ Evidence: `artifacts/target-local-prediction/{run}`.
 The container drops all capabilities, has no network, and uses `seccomp=unconfined`.
 The acceptance criteria are in [the prediction plan](../../../lode/plans/target-local-prediction.md). The runner hashes that file with the sources.
 All {len(manifest['sources'])} source hashes and {len(manifest['binaries'])} binary hashes stay unchanged during the run.
-The sample runs through the library entry point `TargetLocalProfiler.run`. `native/WriteTargetLocalEvidence.py` writes this page.
+The sample runs through the checked library entry point `TargetLocalProfiler.runBound` with a `CodeBinding`. `native/WriteTargetLocalEvidence.py` writes this page.
 
 Each block runs `profile-zero`, `profile-speedup` at 50%, `original`, and `optimized` in a random order.
 The prediction is `1 - Es / E0` from effective durations. The actual reduction is `1 - Toptimized / Toriginal`.
@@ -106,11 +142,11 @@ The prediction is `1 - Es / E0` from effective durations. The actual reduction i
 {chr(10).join(blocks)}
 
 The pass rule requires 5 valid blocks in each of the three configurations, a median absolute difference of at most 5 percentage points, and every block within 10.
-All three configurations pass. Every profile run has complete epochs, zero loss, a valid managed replay, matching global delay and event count, and no ledger failure.
-The longest handler interval in any profile run is {longest:,} ns.
+{verdict}
+The longest handler interval in any profile run of a valid block is {longest:,} ns.
 
 In `selected-dominant`, a 50% optimization leaves the selected thread longer than the peer. Over-credit would show as a prediction above 50%.
-The median prediction is {dominant:.2f}%. The highest block prediction is {dominant_max:.2f}%, inside the block limit.
+The median prediction is {dominant:.2f}%. The highest block prediction is {dominant_max:.2f}%.{' Every block is inside the block limit.' if all(abs(b['difference']) <= 0.10 for b in dominant_blocks) and len(dominant_blocks) == 5 else ' At least one block is invalid or outside the block limit.'}
 {"A median above 50% is the over-credit signature. This run shows it, and five blocks cannot separate it from variation." if dominant > 50 else "The median does not show the over-credit signature."}
 
 ## Overhead
@@ -181,7 +217,9 @@ def transitions(root, run, change):
                 reasons.append("incomplete epoch or loss")
             failed_runs.append((o["run"], ", ".join(reasons) or "unclassified"))
         rows.append(f"| {o['run']} | {'Yes' if run_ok else 'No'} | {failure} | {debt} | {o['forcedCollections']} | {int(o['maxHandlerNs']):,} | {gap:.1f} | {'Yes' if complete else 'No'} |")
-    failed_text = "; ".join(f"run {r}: {why}" for r, why in failed_runs)
+    lifecycle = summary.get("lifecycle", {})
+    lifecycle_failed = [k[:-len("Passed")] for k, v in lifecycle.items() if k.endswith("Passed") and not v]
+    failed_text = "; ".join([f"run {r}: {why}" for r, why in failed_runs] + [f"lifecycle check {k}" for k in lifecycle_failed])
     current = "Pass, 10 of 10" if summary["passed"] else f"Fail. {failed_text}."
     total = 10 * sum(1 for _, _, result in TRANSITION_HISTORY + [(run, change, current)] if result.startswith("Pass"))
     history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in TRANSITION_HISTORY + [(run, change, current)])
@@ -201,7 +239,7 @@ Evidence: `artifacts/target-local-transitions/{run}`.
 The run records kernel `{kernel}`, x64, with {cpus} CPUs. Earlier transition runs did not record the host.
 While at least one profiled thread is in its work phase, the main thread forces a blocking gen-2 GC every 5 ms.
 The criteria are in [the transition plan](../../../lode/plans/target-local-transitions.md). The runner hashes that file, and all source hashes stay unchanged.
-The sample runs through the library entry point `TargetLocalProfiler.run`. `native/WriteTargetLocalEvidence.py` writes this page.
+The sample runs through the checked library entry point `TargetLocalProfiler.runBound` with a `CodeBinding`. `native/WriteTargetLocalEvidence.py` writes this page.
 
 {verdict}
 
@@ -244,10 +282,68 @@ GC-heavy workloads stay outside the supported model. The debt bound stays unchan
 
 The current runner requires exactly 10 runs. The first run used an earlier runner revision with 10 runs.
 A forced collection starts only while a worker reports that it is working. The count does not show how long each collection overlaps the work.
-The checks do not measure prediction accuracy under GC. They do not cover JIT, tiering, ReJIT, thread abort, or process exit.
+The checks do not measure prediction accuracy under GC.
+
+## Lifecycle checks
+
+{chr(10).join(f"- `{k}`: {'pass' if v else 'fail'}" for k, v in lifecycle.items() if k.endswith("Passed"))}
+
+`bindingTiered` runs with tiering on and requires both a configuration error and a rejected capture. `bindingDefault` requires a capture that still verifies after 100 ms of work.
+`shutdown` requires an exit through `Environment.Exit` while a worker is still working. In this run the exit code is {lifecycle.get('shutdownExitCode')}. The check does not show that a handler was inside a payment spin at the exit.
+The checks do not cover ReJIT or thread abort. See [the lifecycle plan](../../../lode/plans/target-local-lifecycle.md).
 
 See [the support boundary](../../../docsSrc/Explanations/target-local-prediction.md) and [the prediction qualification](prediction.md).
 """
+
+
+CPUSET_RUN = "20261018T203443644-3be38dc4"
+
+
+def ms(value):
+    return "unknown" if value is None or value < 0 else f"{value/1e6:.1f} ms"
+
+
+def invalid_arms(directory, name, block):
+    delays, failures = {}, []
+    for arm in ("zero", "speedup"):
+        path = directory / f"{name}-{block}-profile-{arm}.json"
+        if not path.exists():
+            continue
+        record = load(path)
+        values = [t.get("runDelayNs") for t in record.get("threads", [])]
+        delays[arm] = None if any(v is None or v < 0 for v in values) else max(values, default=0)
+        if record.get("ledgerFailure"):
+            failures.append(f"ledger failure {record['ledgerFailure']} in the {'0%' if arm == 'zero' else '50%'} arm")
+    return delays, failures
+
+
+def cpuset_section(root):
+    directory = root / "artifacts/target-local-barrier-cpuset" / CPUSET_RUN
+    if not directory.exists():
+        return f"The diagnostic run directory `artifacts/target-local-barrier-cpuset/{CPUSET_RUN}` is not present, so this section is not generated."
+    summary, manifest = load(directory / "summary.json"), load(directory / "manifest.json")
+    peer = next(c for c in summary["configurations"] if c["name"] == "barrier-peer-bound")
+    diffs = ", ".join(f"{b['difference']*100:+.1f}" for b in peer["blocks"] if b["valid"])
+    failed = load(directory / "barrier-selected-dominant-3-profile-speedup.json")
+    events = sorted(failed["events"], key=lambda e: e[1])
+    failure = next(e for e in events if e[2] == 4)
+    wake = next(e for e in reversed(events[:events.index(failure)]) if e[0] == failure[0] and e[2] == 6)
+    post = next(e for e in events if e[2] == 7 and e[5] == wake[6])
+    credit = sum(e[5] for e in events if e[0] != failure[0] and e[2] == 0 and post[9] < e[9] < wake[9])
+    delay = failed["threads"][failure[0]]["runDelayNs"]
+    return f"""Diagnostic run: `artifacts/target-local-barrier-cpuset/{CPUSET_RUN}`, with `--cpuset-cpus {manifest['cpuSet']}`. It does not replace any qualification run.
+The host CPUs 0-1 and 2-3 are SMT pairs, so that run puts one thread on each physical core.
+
+In qualification run `20261018T203120679-31605bcf`, the `peer-bound` differences are all positive. With one thread per physical core, they are {diffs} points, with no sign bias.
+The outlying block in that run comes from a slow plain `optimized` arm, not from a profiled arm.
+This is consistent with the hypothesis that SMT contention changes while a thread spins to pay delay. The cpuset also halves the CPU count, so the run does not isolate SMT.
+The later unrestricted qualification run also shows no sign bias in `peer-bound`. The hypothesis stays open.
+
+The same run captures one debt failure with a run-queue correlation. In `selected-dominant` block 3, the selected thread posts a token and releases the peer.
+The peer's wake runs {(wake[9] - post[9])/1e6:.3f} ms later. In that interval, the selected thread publishes {credit/1e6:.1f} ms of credit, so the woken peer owes {failure[5]/1e6:.1f} ms.
+The peer's run-queue delay across the whole run is {delay/1e6:.3f} ms, close to the length of that interval. The diagnostic has no interval times, so it cannot place the delay.
+A runnable peer that waited for a CPU in that interval would explain the failure.
+If so, the wake rule is correct here: the credit after the post belongs to time when the peer was runnable, and a thread that does not run cannot pay."""
 
 
 def barrier(root, run, change):
@@ -275,17 +371,30 @@ def barrier(root, run, change):
                           f"{b['profileSpeedupGlobalNs']/1e6:.1f} | {b['skippedNs']/1e6:.1f} | {b['zeroHandlerShare']*100:.3f}% | "
                           f"{(b.get('zeroMaxRunDelayNs') or 0)/1e6:.2f} | {(b.get('speedupMaxRunDelayNs') or 0)/1e6:.2f} |")
             longest = max(longest, b["maxHandlerNs"])
+    for c in summary["configurations"]:
+        for b in c["blocks"]:
+            if not b["valid"]:
+                delays, b["ledgerFailures"] = invalid_arms(directory, c["name"], b["block"])
+                for key, arm in (("zeroMaxRunDelayNs", "zero"), ("speedupMaxRunDelayNs", "speedup")):
+                    if b.get(key) is None:
+                        b[key] = delays.get(arm)
+                    if b[key] is None:
+                        b["runDelayMissing"] = True
     failing = [(c["name"], b) for c in summary["configurations"] for b in c["blocks"] if not b["valid"] or abs(b["difference"]) > 0.10]
     failed_configs = [c["name"] for c in summary["configurations"] if not c["passed"]]
     if summary["passed"]:
         verdict = "**Result: the current run passes.**"
         current = "Pass"
     else:
-        parts = [f"`{name}` block {b['block']}" + ("" if b["valid"] else " invalid") +
+        parts = [f"`{name}` block {b['block']}" + ("" if b["valid"] else f" invalid ({', '.join((b.get('reasons') or []) + b.get('ledgerFailures', []))}; "
+                 f"run-queue delay {ms(b.get('zeroMaxRunDelayNs'))} at 0% and {ms(b.get('speedupMaxRunDelayNs'))} at 50%)") +
                  (f" ({b['difference']*100:+.2f} pp; run-queue delay {(b.get('zeroMaxRunDelayNs') or 0)/1e6:.1f} ms at 0% and {(b.get('speedupMaxRunDelayNs') or 0)/1e6:.1f} ms at 50%)" if b["valid"] else "")
                  for name, b in failing]
-        verdict = f"**Result: the current run fails** in {', '.join(f'`{n}`' for n in failed_configs)}. Failing blocks: {'; '.join(parts)}."
-        current = f"Fail. {'; '.join(parts)}."
+        medians = "; ".join(f"`{c['name']}` median {c['medianAbsoluteDifference']*100:.2f} pp" for c in summary["configurations"]
+                            if not c["passed"] and c["medianAbsoluteDifference"] is not None and c["medianAbsoluteDifference"] > 0.05)
+        detail = "; ".join(x for x in [medians, "; ".join(parts)] if x)
+        verdict = f"**Result: the current run fails** in {', '.join(f'`{n}`' for n in failed_configs)}. Failed criteria: {detail}."
+        current = f"Fail. {detail}."
     history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in BARRIER_HISTORY + [(run, change, current)])
     all_blocks = [b for c in summary["configurations"] for b in c["blocks"]]
     treatment_delay = max(b.get("speedupMaxRunDelayNs") or 0 for b in all_blocks)
@@ -323,6 +432,10 @@ Each wake skips only to the token that the selected thread posted at the barrier
 Without the wake rule, the peer would owe that delay after each wake.
 In `peer-bound`, the selected thread waits instead. Its wakes skip only the peer's published payment overshoot, a few hundred nanoseconds, and the prediction stays near 0%.
 In `alternating`, the critical thread changes in every phase. The prediction follows the real gain of about 40%.
+
+## SMT and run-queue diagnostic
+
+{cpuset_section(root)}
 
 ## Run history
 

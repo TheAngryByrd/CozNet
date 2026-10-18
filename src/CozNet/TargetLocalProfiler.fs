@@ -126,6 +126,82 @@ module PerfMap =
     let currentProcess () =
         $"/tmp/perf-{Environment.ProcessId}.map"
 
+    let internal entries (lines: string seq) (symbol: string) =
+        lines
+        |> Seq.choose parse
+        |> Seq.filter (fun (_, _, name) -> name.Contains(symbol, StringComparison.Ordinal))
+        |> Seq.toArray
+
+type CodeBinding = private {
+    BoundSymbols: string array
+    BoundRanges: (uint64 * uint64) array
+} with
+
+    member this.Symbols = Array.copy this.BoundSymbols
+    member this.Ranges = Array.copy this.BoundRanges
+
+    member this.Range(symbol: string) =
+        match Array.tryFindIndex ((=) symbol) this.BoundSymbols with
+        | Some index -> this.BoundRanges[index]
+        | None -> raise (ArgumentException $"The binding has no symbol {symbol}.")
+
+[<RequireQualifiedAccess>]
+module CodeBinding =
+    let private setting (read: string -> string) (name: string) =
+        match read $"DOTNET_{name}" with
+        | null -> read $"COMPlus_{name}"
+        | value -> value
+
+    let internal configurationErrorsWith (read: string -> string) (tieringSwitch: bool option) =
+        [
+            match setting read "TieredCompilation", tieringSwitch with
+            | "0", _ -> ()
+            | null, Some false -> ()
+            | null, _ -> "Tiered compilation must be off. Set DOTNET_TieredCompilation=0 or System.Runtime.TieredCompilation=false."
+            | value, _ -> $"Tiered compilation must be off, but DOTNET_TieredCompilation is {value}."
+
+            if setting read "ReadyToRun" <> "0" then
+                "ReadyToRun must be off. Set DOTNET_ReadyToRun=0."
+
+            match setting read "PerfMapEnabled" with
+            | "1"
+            | "3" -> ()
+            | null -> "The perf map must be on. Set DOTNET_PerfMapEnabled=3."
+            | value -> $"The perf map must be on, but DOTNET_PerfMapEnabled is {value}. Set DOTNET_PerfMapEnabled=3."
+        ]
+
+    let configurationErrors () =
+        let switch =
+            match AppContext.TryGetSwitch "System.Runtime.TieredCompilation" with
+            | true, value -> Some value
+            | false, _ -> None
+
+        configurationErrorsWith Environment.GetEnvironmentVariable switch
+
+    let private bind (lines: string array) (symbol: string) =
+        match PerfMap.entries lines symbol with
+        | [| first, last, name |] when name.EndsWith("[Optimized]", StringComparison.Ordinal) -> Ok(first, last)
+        | [| _, _, name |] -> Error $"{symbol} has one perf-map entry, but its tier is not [Optimized]: {name}"
+        | found -> Error $"{symbol} must have exactly one perf-map entry, but it has {found.Length}."
+
+    let tryCapture (lines: string seq) (symbols: string array) =
+        let lines = Seq.toArray lines
+
+        if symbols.Length = 0 || symbols |> Array.distinct |> Array.length <> symbols.Length then
+            Error "A binding requires distinct symbols."
+        else
+            let results = symbols |> Array.map (bind lines)
+
+            match results |> Array.choose (function Error message -> Some message | Ok _ -> None) with
+            | [||] -> Ok { BoundSymbols = Array.copy symbols; BoundRanges = results |> Array.map (function Ok range -> range | Error _ -> 0UL, 0UL) }
+            | errors -> Error(String.Join(" ", errors))
+
+    let verify (lines: string seq) (binding: CodeBinding) =
+        match tryCapture lines binding.BoundSymbols with
+        | Error message -> Error message
+        | Ok current when current.BoundRanges <> binding.BoundRanges -> Error "A bound method moved to another native range during the run."
+        | Ok _ -> Ok()
+
 type internal TargetCurrent() =
     [<ThreadStatic; DefaultValue>]
     static val mutable private handle: nativeint
@@ -253,6 +329,7 @@ type TargetProfileResult = {
     Threads: TargetThreadOutcome array
     Events: TargetLedgerEvent array
     Replay: Result<TargetReplaySummary, string>
+    BindingError: string option
     Passed: bool
 }
 
@@ -281,6 +358,7 @@ module TargetLocalProfiler =
         Requested = event.Requested
         Ip = event.Ip
         Detail = event.Detail
+        Time = event.Time
     }
 
     let private span (first, last) = { Begin = first; End = last }
@@ -321,6 +399,7 @@ module TargetLocalProfiler =
             Thread(fun () ->
                 let mutable handle = 0n
                 let registered = TargetLocalNative.Register(experiment, journalCapacity, &handle)
+                runDelay () |> ignore
                 ready.SignalAndWait()
 
                 if registered <> 0 then
@@ -331,9 +410,9 @@ module TargetLocalProfiler =
                     let started = TargetLocalNative.Start handle
                     TargetCurrent.Set(handle, worker.PaymentIp, abort)
                     if started <> 0 then abort.Cancel()
+                    let delayBefore = runDelay ()
                     ready.SignalAndWait()
                     let startedTicks = Stopwatch.GetTimestamp()
-                    let delayBefore = runDelay ()
                     let workError =
                         if started <> 0 then
                             ""
@@ -348,13 +427,13 @@ module TargetLocalProfiler =
                                     $"work {error}"
                             finally
                                 Interlocked.Decrement(&working[0]) |> ignore
-                    let delayAfter = runDelay ()
                     let barrierError = TargetCurrent.Error
                     TargetCurrent.Set(0n, 0UL, CancellationToken.None)
                     if barrierError <> 0 then abort.Cancel()
                     let mutable result = TargetThreadResult()
                     let code = TargetLocalNative.Finish(handle, worker.PaymentIp, &result)
                     let finishedTicks = Stopwatch.GetTimestamp()
+                    let delayAfter = runDelay ()
                     let buffer = Array.zeroCreate<NativeEvent> (int result.Events)
                     let mutable count = 0u
                     let read = TargetLocalNative.Events(handle, buffer, uint32 buffer.Length, &count)
@@ -436,7 +515,35 @@ module TargetLocalProfiler =
             Threads = outcomes
             Events = events
             Replay = replay
+            BindingError = None
             Passed =
                 threadsValid && closeCode = 0 && closed.Failure = 0u && closed.ForeignSignals = 0UL
                 && closed.SigioFallbacks = 0UL && replayMatches
         }
+
+    let internal checkedRun (configuration: string list) (readMap: unit -> string array) (binding: CodeBinding)
+        (selected: string array) (eligible: string array) (runRanges: (uint64 * uint64) array -> (uint64 * uint64) array -> 'result) =
+        let refused message = raise (InvalidOperationException message)
+
+        match configuration with
+        | [] -> ()
+        | errors -> refused (String.Join(" ", errors))
+
+        match CodeBinding.verify (readMap ()) binding with
+        | Error message -> refused $"The code binding is not valid before the run. {message}"
+        | Ok() -> ()
+
+        let result = runRanges (selected |> Array.map binding.Range) (eligible |> Array.map binding.Range)
+
+        match CodeBinding.verify (readMap ()) binding with
+        | Ok() -> result, None
+        | Error message -> result, Some message
+
+    let runBound (binding: CodeBinding) (speedup: uint32) (period: uint64) (selected: string array) (eligible: string array)
+        (journalCapacity: uint32) (workers: TargetWorker array) (monitor: TargetRunState -> unit) =
+        let readMap () = File.ReadAllLines(PerfMap.currentProcess ())
+
+        match checkedRun (CodeBinding.configurationErrors ()) readMap binding selected eligible (fun selectedRanges eligibleRanges ->
+            run speedup period selectedRanges eligibleRanges journalCapacity workers monitor) with
+        | result, None -> result
+        | result, Some message -> { result with BindingError = Some message; Passed = false }

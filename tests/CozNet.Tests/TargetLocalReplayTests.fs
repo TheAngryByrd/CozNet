@@ -21,6 +21,7 @@ module TargetLocalReplayTests =
         Requested = requested
         Ip = ip
         Detail = detail
+        Time = 0UL
     }
 
     let private journal = [|

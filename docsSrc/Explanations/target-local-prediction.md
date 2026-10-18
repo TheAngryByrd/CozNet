@@ -37,10 +37,10 @@ The qualified model is narrow. It is a model of what CozNet can predict today, n
 | Linux x64, kernel with `PERF_FORMAT_LOST` | Windows, macOS, Linux ARM64 |
 | CPU-bound managed threads that register through the CozNet ABI | Threads that do not register, the thread pool, tasks, and async |
 | No waits before the final join, or waits through `TargetBarrier` | Locks, `Monitor`, `System.Threading.Barrier`, I/O, and any other blocking |
-| Tiered compilation and ReadyToRun disabled | Tiered code replacement and ReadyToRun images |
+| Tiered compilation and ReadyToRun disabled, checked by `CodeBinding` | Tiered code replacement, OSR, and ReadyToRun images, which `runBound` rejects. ReJIT, which no check exercises. |
 | Selected code as named method ranges from the perf map | Source lines, inlined callees, and code that the JIT moves |
 | Workloads with little allocation | GC-heavy workloads. Three forced-GC checks each broke the 2 ms debt bound in 1 of 10 runs. |
-| Hosts with spare CPUs | Loaded hosts. A runnable thread that waits in the kernel run queue adds wall time that the profiler cannot remove. One barrier run had blocks off by 11 points with 17 to 81 ms of run-queue delay. Another broke the 2 ms debt bound with no forced GC. |
+| One profiled thread for each physical core, on hosts with spare CPUs | Loaded hosts. A runnable thread that waits in the kernel run queue adds wall time that the profiler cannot remove. One barrier run had blocks off by 11 points with 17 to 81 ms of run-queue delay. Another broke the 2 ms debt bound with no forced GC. |
 
 ## Why a woken thread skips only to the release token
 
@@ -53,7 +53,16 @@ The handler pays delay with a spin at managed instruction addresses inside the w
 Forced-GC checks run ten profiled runs each, with a blocking gen-2 GC every 5 ms of work. No run crashes or loses samples.
 Three checks each fail 1 of 10 runs by the 2 ms debt bound, for an unknown reason. The others pass 10 of 10.
 One barrier run with no forced GC broke the same bound, so forced GC is not the only trigger. See [the transition evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/target-local/transitions.md).
-JIT, tiering, ReJIT, thread abort, and process exit during payment are not checked. CLR safety outside the qualified workload is not established.
+`runBound` rejects tiered compilation before the run and detects a moved code range after it. A checked run with tiering on rejects both ways.
+`Environment.Exit` during the profiled work exits with code 0. The check does not show that a handler was inside a payment spin at the exit. Thread abort and ReJIT are not checked.
+
+## How SMT and the run queue can bias the prediction
+
+A thread that pays delay spins. On a core shared with another profiled thread through SMT, the spin changes how much the two threads slow each other.
+In one `peer-bound` barrier run, every block predicted a small gain that did not exist.
+A diagnostic run with one thread per physical core showed no sign bias. It also halved the CPU count, and a later unrestricted run showed no bias either, so SMT is a hypothesis.
+A runnable thread that waits for a CPU also cannot pay. In the diagnostic run, a woken peer started 8.7 ms after its release and broke the 2 ms debt bound.
+Its whole-run run-queue delay was 8.6 ms, which is consistent with that wait but does not place it. CLR safety outside the qualified workload is not established.
 
 ## IL rewriting compared with native intervention
 

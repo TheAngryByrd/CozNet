@@ -5,10 +5,11 @@ Keep the serial model separate from the proposed sampled engine.
 
 The [target-local sample plan](target-local-samples.md) has a portable decoder, a Linux ring adapter, and [bounded dispatch](target-local-dispatch.md).
 The [native ledger](target-local-credit.md) credits and pays target-locally in a native two-thread run.
-The [CLR fork/join qualification](target-local-prediction.md) passes its fixed criteria with managed replay.
+The [CLR fork/join qualification](target-local-prediction.md) passes its fixed criteria with managed replay in most runs. The latest run fails `peer-longer` by a negative sign bias.
 The [forced-GC check](target-local-transitions.md) passes 10 of 10 after an earlier flawed check failed 1 of 10.
-The [Coz wake rule](target-local-blocking.md) works for `TargetBarrier`. Four barrier qualification runs pass. The latest fails on measured host run-queue delay.
-Next, explain the debt failures where one thread accepts no samples, then cover JIT, tiering, ReJIT, and shutdown during payment.
+The [Coz wake rule](target-local-blocking.md) works for `TargetBarrier`. Six of the eleven barrier qualification runs pass. The latest fails by a debt failure, with 82.9 ms of whole-run run-queue delay in that thread.
+[Code binding and shutdown](target-local-lifecycle.md) are enforced and checked. Run-queue delay and possible SMT contention correlate with the latest failures.
+Next, decide how the profiler should treat a woken thread that waits for a CPU, and qualify with one thread per physical core.
 The managed drain dependency remains in the live backend exposed by [nominal timer diagnostics](timer-nominal-credit.md).
 The timer path avoids loop probes. Its default interval policy still discards first-event weights.
 The new callback-reuse comparison completes but retains about ten percentage points of shortfall.

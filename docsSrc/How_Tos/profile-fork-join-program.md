@@ -14,19 +14,20 @@ Your program must match the [supported model](../Explanations/target-local-predi
    open System.IO
    open CozNet
 
-   let lines = File.ReadAllLines(PerfMap.currentProcess ())
-   let candidate = PerfMap.tryRange lines "MyApp.Work::parse(int32)" |> Result.defaultWith failwith
-   let other = PerfMap.tryRange lines "MyApp.Work::index(int32)" |> Result.defaultWith failwith
+   let parse, index = "MyApp.Work::parse(int32)", "MyApp.Work::index(int32)"
+   let binding =
+       CodeBinding.tryCapture (File.ReadAllLines(PerfMap.currentProcess ())) [| parse; index |]
+       |> Result.defaultWith failwith
    let workers = [|
-       { Work = (fun () -> Work.parse 1000 |> ignore); PaymentIp = fst candidate }
-       { Work = (fun () -> Work.index 1000 |> ignore); PaymentIp = fst other }
+       { Work = (fun () -> Work.parse 1000 |> ignore); PaymentIp = fst (binding.Range parse) }
+       { Work = (fun () -> Work.index 1000 |> ignore); PaymentIp = fst (binding.Range index) }
    |]
    let run speedup =
-       TargetLocalProfiler.run speedup 1000000UL [| candidate |] [| candidate; other |] (1u <<< 20) workers ignore
+       TargetLocalProfiler.runBound binding speedup 1000000UL [| parse |] [| parse; index |] (1u <<< 20) workers ignore
    let zero, half = run 0u, run 50u
    ```
 
-7. Check that `zero.Passed` and `half.Passed` are true. Do not use a result that did not pass.
+7. Check that `zero.Passed` and `half.Passed` are true. Do not use a result that did not pass. A `BindingError` means that the code moved during the run.
 8. Compute the predicted reduction as `1.0 - float half.EffectiveNs / float zero.EffectiveNs`.
 
 For a phased program, create one `TargetBarrier` with one participant for each worker. Call `barrier.SignalAndWait()` at the end of each phase inside `Work`.
@@ -38,6 +39,8 @@ The run requires the signals `SIGRTMIN + 8` and `SIGIO` to have their default di
 Each journal entry uses about 144 bytes in native memory, for the ledger event and the dispatch log together. A capacity of 2^20 uses about 150 MB for each thread.
 Size it from the expected samples: one entry for each sample, plus up to 41 for each payment settlement. A full journal fails the run.
 The sample runs the qualified speedups in separate processes. The `cleanup` check runs two profiles in one process, the first with a failing monitor.
+
+Give each profiled thread its own physical core when you can. SMT siblings and a full run queue both bias the result.
 
 Repeat each speedup several times and compare the spread. One pair of runs cannot separate a small effect from noise.
 See [the API reference](../Reference/target-local-api.md) and [the tutorial](../Tutorials/Target_Local_Prediction.md).

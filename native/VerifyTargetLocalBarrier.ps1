@@ -1,4 +1,4 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/target-local-barrier'), [int]$Blocks = 5, [int]$Seed = 20261018,
+param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/target-local-barrier'), [int]$Blocks = 5, [int]$Seed = 20261018, [string]$CpuSet = '',
     [string]$PythonCommand = $(if ($env:COZNET_PYTHON) { $env:COZNET_PYTHON } elseif ($IsWindows) { 'py' } else { 'python3' }))
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -28,7 +28,9 @@ foreach ($name in @('libCozNet.TargetLocal.so', 'CozNet.TargetLocal.dll', 'CozNe
 $container = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only', '--security-opt', 'seccomp=unconfined',
     '--tmpfs', '/tmp:rw,nosuid,size=64m', '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0',
     '--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1', '--env', 'DOTNET_CLI_TELEMETRY_OPTOUT=1',
-    '--mount', "type=bind,source=$app,target=/app,readonly", '--mount', "type=bind,source=$run,target=/out", $runtimeImage)
+    '--mount', "type=bind,source=$app,target=/app,readonly", '--mount', "type=bind,source=$run,target=/out")
+if ($CpuSet) { $container += @('--cpuset-cpus', $CpuSet) }
+$container += $runtimeImage
 & docker @container sh -c 'uname -a > /out/kernel.txt && nproc > /out/cpus.txt'
 $configurations = @(
     @{ name = 'barrier-alternating'; pattern = 'alternating' },
@@ -56,7 +58,7 @@ foreach ($configuration in $configurations) {
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash -eq $hashes[$name] }
 foreach ($name in $binaries.Keys) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $app $name) -Algorithm SHA256).Hash -eq $binaries[$name] }
-@{ suite = 'barrier'; sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage; seed = $Seed; blocks = $Blocks
+@{ suite = 'barrier'; cpuSet = $CpuSet; sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage; seed = $Seed; blocks = $Blocks
     speedup = $speedup; configurations = $configurations; runs = $runs; inputsUnchanged = $unchanged } |
     ConvertTo-Json -Depth 6 | Set-Content (Join-Path $run 'manifest.json')
 & $PythonCommand -I (Join-Path $PSScriptRoot 'AnalyzeTargetPrediction.py') $run

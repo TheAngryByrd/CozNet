@@ -24,6 +24,7 @@ type TargetLedgerEvent = {
     Requested: uint64
     Ip: uint64
     Detail: uint32
+    Time: uint64
 }
 
 type TargetReplayPlan = private {

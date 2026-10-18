@@ -81,12 +81,39 @@ It ignores entries with a zero size, an overflow, or a field that is not hexadec
 5. It joins the threads, closes the experiment, and replays every journal with `TargetLocalReplay.replay`.
    If `monitor` throws, a thread cannot start, or the caller is interrupted during the join, it releases the barrier, joins the started threads, and closes the experiment before it raises `AggregateException`.
 
-`TargetThreadOutcome.RunDelayNs` is the change in kernel run-queue delay (`/proc/thread-self/schedstat`, field 2) across `Work`. It is -1 when the file cannot be read.
+`TargetThreadOutcome.RunDelayNs` is the change in kernel run-queue delay (`/proc/thread-self/schedstat`, field 2) from the release of the start barrier to the finish, so it includes the wake latency at that barrier. It is -1 when the file cannot be read.
+Each worker reads the file once at registration, so the read code is compiled outside the timed work.
+`TargetLedgerEvent.Time` is the native event time. For a sample, it is the perf sample time.
 
 `TargetProfileResult` holds `ElapsedNs`, `GlobalNs`, `EffectiveNs`, the experiment result, each thread outcome, all events, the replay result, and `Passed`.
 `Passed` is true only when every thread completes with zero loss and quiescence, every handler interval is below 5 ms, no ledger failure or foreign signal occurs,
 and the replay is valid with the native global delay and event count. An exception in `Work` makes the run fail.
 See [the how-to](../How_Tos/profile-fork-join-program.md).
+
+## Code binding
+
+`CodeBinding` checks that the selected and eligible code stays at one native range during a run.
+
+| Function | Result |
+| --- | --- |
+| `CodeBinding.configurationErrors ()` | A list of errors. It is empty only when tiered compilation is off, ReadyToRun is off, and the perf-map setting is `1` or `3`. |
+| `CodeBinding.tryCapture lines symbols` | `Ok binding` when each symbol has exactly one perf-map entry, and that entry is `[Optimized]`. |
+| `CodeBinding.verify lines binding` | `Ok ()` when a new capture gives the same ranges. |
+| `binding.Range symbol` | The bound `(begin, end)` range. |
+
+Tiering is off when `DOTNET_TieredCompilation` or `COMPlus_TieredCompilation` is `0`.
+When neither is set, the `System.Runtime.TieredCompilation` switch must be false. An environment value overrides the switch.
+A `[QuickJitted]`, `[OptimizedTier1]`, `[OptimizedTier1OSR]`, or second entry for a symbol rejects the capture.
+
+`TargetLocalProfiler.runBound binding speedup period selectedSymbols eligibleSymbols journalCapacity workers monitor` is the checked entry point.
+It raises `InvalidOperationException` when the configuration or the binding is not valid before the run.
+After the run it verifies the binding again. A change sets `BindingError` and makes `Passed` false.
+`TargetLocalProfiler.run` takes ranges and does not check the binding.
+
+## Shutdown
+
+`Environment.Exit` during a profile is a supported exit. The process exits, and the kernel releases the event, mapping, and signal state.
+No CozNet cleanup runs, and `run` returns no result.
 
 ## Barrier
 
@@ -117,11 +144,13 @@ No `publish`, `child`, or `deferred` event can belong to a blocked worker, and n
 | `plain <selectedRounds> <peerRounds> <out>` | Elapsed time without the profiler |
 | `profile <speedup> <selectedRounds> <peerRounds> <out>` | Elapsed, global, and effective time, thread results, replay summary, and all events |
 | `plain-phases <pattern> <selectedPercent> <out>` | Elapsed time of 10 barrier phases without the profiler, with selected work scaled to `selectedPercent` |
+| `binding <out>` | The configuration errors, the capture result, and the verify result after 100 ms of work, with the perf-map entries |
+| `shutdown <out>` | Writes the work state to `<out>.marker` 30 ms after the work starts, then calls `Environment.Exit`. The exit code is 0 only when a worker is still working. |
 | `profile-phases <speedup> <pattern> <out>` | The profile result for 10 barrier phases. Patterns are `alternating`, `selected-dominant`, and `peer-bound`. |
 | `profile-gc <speedup> <selectedRounds> <peerRounds> <intervalMs> <out>` | The profile result, with a forced blocking gen-2 GC every `intervalMs` from the main thread |
 
 The profile mode requires `DOTNET_TieredCompilation=0`, `DOTNET_ReadyToRun=0`, `DOTNET_PerfMapEnabled=3`, and `DOTNET_PerfMapShowOptimizationTiers=1`.
-It uses `TargetLocalProfiler.run` and reads the optimized method ranges with `PerfMap.tryRange`.
+It uses `TargetLocalProfiler.runBound` and gets the optimized method ranges from a `CodeBinding`.
 A profile result passes only when both epochs are complete with zero loss, the replay is valid, its global delay and event count equal the native values, no ledger failure occurred, and every handler interval is below 5 ms.
 Both modes measure elapsed time from the earlier thread start after a shared barrier to the later thread finish. Each result records both threads' timestamps.
 The profile mode finishes each thread after `coz_target_finish`, so the closing payment is inside the measurement.

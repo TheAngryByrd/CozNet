@@ -77,6 +77,16 @@ Hypothesis: the host scheduler leaves the runnable peer off CPU. Each worker now
 (`/proc/thread-self/schedstat`, field 2) across its work. A failure with a run-queue delay near the sample gap supports the hypothesis.
 The pass rules do not change.
 
+## SMT diagnostic
+
+Barrier run `20261018T203120679-31605bcf` fails `peer-bound` with all five differences positive (+3.0 to +7.3 points) and a median overhead ratio of 1.006.
+The positive sign holds in every block, but the arm durations do not order the same way in every block. The peer is the critical thread.
+The host has two physical cores with two SMT threads each (CPUs 0-1 and 2-3).
+Hypothesis: while the peer spins to pay delay, it competes less for its SMT sibling, so its work runs faster than in the plain run.
+Test: run the same barrier suite once with `-CpuSet 0,2 -EvidenceDirectory artifacts/target-local-barrier-cpuset`, one thread per physical core.
+The hypothesis predicts that `peer-bound` differences lose their positive sign bias. The pass rules do not change, and this run does not replace the failure.
+Revision: after review, the second sentence was corrected to match the block records. The hypothesis and the test are unchanged.
+
 ## Barrier qualification
 
 These criteria are fixed before the first barrier qualification run. The runner is `TargetLocalBarrierVerify`.
