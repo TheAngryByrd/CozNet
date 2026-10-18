@@ -7,7 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/CozNet/CozNet.fsproj" />
-    <Compile Include="Native.fs" />
     <Compile Include="Work.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

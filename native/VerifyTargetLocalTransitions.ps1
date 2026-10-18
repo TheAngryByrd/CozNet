@@ -10,7 +10,7 @@ $runtimeImage = & docker image inspect mcr.microsoft.com/dotnet/sdk:10.0.100 --f
 if ($LASTEXITCODE -ne 0) { throw 'The Linux SDK image is unavailable.' }
 $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.Linux.cpp', 'native/service/TargetSampleSession.Linux.h',
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'src/CozNet/TargetLocalReplay.fs',
-    'samples/CozNet.TargetLocal/Native.fs', 'samples/CozNet.TargetLocal/Work.fs', 'samples/CozNet.TargetLocal/Program.fs',
+    'src/CozNet/TargetLocalProfiler.fs', 'samples/CozNet.TargetLocal/Work.fs', 'samples/CozNet.TargetLocal/Program.fs',
     'native/VerifyTargetLocalTransitions.ps1', 'lode/plans/target-local-transitions.md')
 $hashes = @{}
 foreach ($name in $sources) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash }
@@ -25,6 +25,7 @@ $container = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-dro
     '--tmpfs', '/tmp:rw,nosuid,size=64m', '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0',
     '--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1', '--env', 'DOTNET_CLI_TELEMETRY_OPTOUT=1',
     '--mount', "type=bind,source=$app,target=/app,readonly", '--mount', "type=bind,source=$run,target=/out", $runtimeImage)
+& docker @container sh -c 'uname -a > /out/kernel.txt && nproc > /out/cpus.txt'
 $outcomes = @()
 for ($index = 1; $index -le $Runs; $index++) {
     $file = "gc-$index.json"
@@ -36,11 +37,14 @@ for ($index = 1; $index -le $Runs; $index++) {
         maxHandlerNs = if ($record) { ($record.threads | Measure-Object -Property maxHandlerNs -Maximum).Maximum } else { $null }
         replayError = $record.replayError }
 }
+& docker @container sh -c "cd /app && timeout -k 2s 60s dotnet CozNet.TargetLocal.dll cleanup /out/cleanup.json" *> (Join-Path $run 'cleanup.json.log')
+$cleanupExit = $LASTEXITCODE
+$cleanup = if (Test-Path -LiteralPath (Join-Path $run 'cleanup.json')) { Get-Content (Join-Path $run 'cleanup.json') -Raw | ConvertFrom-Json } else { $null }
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash -eq $hashes[$name] }
-$passed = $unchanged -and $Runs -eq 10 -and @($outcomes).Count -eq 10 -and @($outcomes | Where-Object {
+$passed = $unchanged -and $cleanupExit -eq 0 -and $null -ne $cleanup -and $cleanup.passed -and $Runs -eq 10 -and @($outcomes).Count -eq 10 -and @($outcomes | Where-Object {
     $_.exitCode -ne 0 -or -not $_.recordExists -or -not $_.passed -or $_.forcedCollections -lt 10 -or $_.maxHandlerNs -ge 5000000 }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; sources = $hashes; runs = $Runs; outcomes = $outcomes
+@{ passed = $passed; inputsUnchanged = $unchanged; cleanupExitCode = $cleanupExit; cleanupPassed = [bool]$cleanup.passed; sources = $hashes; runs = $Runs; outcomes = $outcomes
     compilerImage = $compilerImage; runtimeImage = $runtimeImage; generalClrSafetyEstablished = $false } |
     ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run

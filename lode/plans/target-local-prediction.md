@@ -29,6 +29,7 @@ flowchart LR
 ## Integration
 
 - `native/service/TargetLocalApi.Linux.cpp` exports a C ABI over `LinuxTargetSession<TargetCreditSink>`.
+- `src/CozNet/TargetLocalProfiler.fs` binds the ABI, resolves perf-map ranges, and runs a fork/join profile with managed replay. The sample uses it.
 - The managed program reads method ranges from the runtime perf map, with tiering and ReadyToRun disabled.
   The selected span is the selected method. The eligible spans are both work methods.
 - Each worker thread registers itself, runs, closes its epoch, settles, retires, and copies its own journal. The main thread replays all journals.
@@ -46,7 +47,8 @@ These criteria are fixed before any qualification run.
 4. A block is valid only if every run has a complete epoch, zero loss, a valid managed replay, no ledger failure, and handler time below 5 ms.
 5. The predicted reduction is `1 - Es / E0`. The actual reduction is `1 - Topt / Torig`.
 6. Pass: in each configuration, the median of the 5 differences is within 5 percentage points, and every valid block is within 10.
-7. Overhead: report the ratio of the speedup 0 elapsed time to the original program elapsed time. It is reported, not gated.
+7. Overhead: report the ratio of the speedup 0 elapsed time to the original program elapsed time.
+   Also report the handler share: the sum of all handler intervals divided by elapsed time, in both profile arms. Both are reported, not gated.
 8. Any invalid block fails the qualification. Do not rerun an unchanged block to replace it.
 9. The analyzer requires exactly 5 blocks, the three named configurations with their round counts, speedup 50, one record per arm,
    the expected arguments for each arm, matching fields in each result, and no record outside the known blocks.
@@ -56,6 +58,7 @@ These criteria are fixed before any qualification run.
 
 Revision: criterion 1 gained `selected-dominant`, and criteria 9 and 10 were added after review of the first run.
 Criterion 10 then changed from the later to the earlier thread start after the second review, before the third run.
+Criterion 7 gained the handler share before the run that follows the move of the profiler into `src/CozNet/TargetLocalProfiler.fs`.
 The first run used the two-configuration criteria and is kept as superseded evidence. The runner hashes this file.
 
 ## Verified state

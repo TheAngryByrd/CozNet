@@ -71,6 +71,8 @@ def main():
                 record.update({
                     "predicted": predicted, "actual": actual, "difference": predicted - actual,
                     "overhead": zero["elapsedNs"] / original["elapsedNs"],
+                    "zeroHandlerShare": zero.get("totalHandlerNs", 0) / zero["elapsedNs"] if "totalHandlerNs" in zero else None,
+                    "speedupHandlerShare": speed.get("totalHandlerNs", 0) / speed["elapsedNs"] if "totalHandlerNs" in speed else None,
                     "profileZeroElapsedNs": zero["elapsedNs"], "profileSpeedupElapsedNs": speed["elapsedNs"],
                     "profileSpeedupGlobalNs": speed["globalNs"], "originalElapsedNs": original["elapsedNs"],
                     "optimizedElapsedNs": optimized["elapsedNs"],
@@ -90,6 +92,8 @@ def main():
             "medianPredicted": statistics.median(b["predicted"] for b in valid) if valid else None,
             "medianActual": statistics.median(b["actual"] for b in valid) if valid else None,
             "medianOverhead": statistics.median(b["overhead"] for b in valid) if valid else None,
+            "medianZeroHandlerShare": statistics.median(b["zeroHandlerShare"] for b in valid) if valid and all(b["zeroHandlerShare"] is not None for b in valid) else None,
+            "medianSpeedupHandlerShare": statistics.median(b["speedupHandlerShare"] for b in valid) if valid and all(b["speedupHandlerShare"] is not None for b in valid) else None,
             "passed": configuration_passed,
         })
     summary = {"passed": passed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT,

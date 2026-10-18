@@ -10,7 +10,7 @@ using namespace coz::service;
 namespace {
 static_assert(sizeof(CozTargetSpan) == 16);
 static_assert(sizeof(CozTargetEvent) == 64 && offsetof(CozTargetEvent, kind) == 56);
-static_assert(sizeof(CozTargetThreadResult) == 136);
+static_assert(sizeof(CozTargetThreadResult) == 144);
 static_assert(sizeof(CozTargetExperimentResult) == 40);
 using Sink = TargetCreditSink<LinuxMonotonicClock, LinuxSpinWaiter>;
 using Session = LinuxTargetSession<Sink>;
@@ -42,6 +42,16 @@ struct CozTargetThread {
     std::atomic<bool> finished{};
     CozTargetThread(CozTargetExperiment& value, uint32_t capacity) : experiment(value), events(capacity), log(capacity) {}
 };
+
+extern "C" uint32_t coz_target_layout(uint32_t which) {
+    switch (which) {
+    case 0: return sizeof(CozTargetSpan);
+    case 1: return sizeof(CozTargetEvent);
+    case 2: return sizeof(CozTargetThreadResult);
+    case 3: return sizeof(CozTargetExperimentResult);
+    default: return 0;
+    }
+}
 
 extern "C" int32_t coz_target_open(uint32_t speedup, uint64_t period, const CozTargetSpan* selected, uint32_t selected_count,
     const CozTargetSpan* eligible, uint32_t eligible_count, CozTargetExperiment** experiment) {
@@ -111,21 +121,22 @@ extern "C" int32_t coz_target_finish(CozTargetThread* thread, uint64_t payment_i
     }
     const auto finished = thread->clock.now();
     const auto& epoch = session.dispatcher().epoch();
-    uint64_t max_handler = 0, dispatches = 0;
+    uint64_t max_handler = 0, total_handler = 0, dispatches = 0;
     for (const auto& entry : session.log().entries()) {
         const auto duration = entry.handler_finished - entry.handler_started;
         if (duration > max_handler) max_handler = duration;
+        total_handler += duration;
         ++dispatches;
     }
     *result = {epoch.generation, epoch.accepted, epoch.last_cumulative_cpu, epoch.value, epoch.lost, epoch.close_steps,
-        session.deliveries(), dispatches, max_handler, thread->account->local(), thread->account->events().size(),
+        session.deliveries(), dispatches, max_handler, total_handler, thread->account->local(), thread->account->events().size(),
         thread->started, finished, thread->sink->last().debt_after, epoch.complete ? 1 : 0, int32_t(epoch.failure), int32_t(closure.outcome),
         session.lifecycleError(), 0, 0};
     const auto& retirement = session.retire();
     result->retire_error = retirement.error;
     result->quiescent = retirement.quiescent ? 1 : 0;
     thread->finished.store(true, std::memory_order_release);
-    return epoch.complete && retirement.error == 0 ? 0 : EIO;
+    return epoch.complete && retirement.error == 0 && session.log().dropped() == 0 ? 0 : EIO;
 }
 
 extern "C" int32_t coz_target_events(CozTargetThread* thread, CozTargetEvent* events, uint32_t capacity, uint32_t* count) {

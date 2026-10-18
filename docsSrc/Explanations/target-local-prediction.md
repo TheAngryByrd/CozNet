@@ -43,7 +43,7 @@ The qualified model is narrow. It is a model of what CozNet can predict today, n
 
 A blocked thread needs the Coz wake rule, so that it skips delay inserted while it waited. The native ledger does not implement that rule yet.
 The handler pays delay with a spin at managed instruction addresses inside the work methods. Other addresses defer payment.
-A forced-GC check runs ten profiled runs with a blocking gen-2 GC every 5 ms of work. All ten pass with no crash, loss, or ledger failure.
+Four forced-GC checks each run ten profiled runs with a blocking gen-2 GC every 5 ms of work. All forty pass with no crash, loss, or ledger failure.
 An earlier check with a flawed collection count failed the 2 ms debt bound in 1 of 10 runs, for an unknown reason. See [the transition evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/target-local/transitions.md).
 JIT, tiering, ReJIT, thread abort, and process exit during payment are not checked. CLR safety outside the qualified workload is not established.
 
@@ -59,8 +59,8 @@ and [the callback-reuse comparison](https://github.com/TheAngryByrd/CozNet/blob/
 | Measure | IL probes with a managed controller | Target-local native handler |
 | --- | --- | --- |
 | Coverage | Probe sites inside rewritten methods | Any sampled instruction. Payment needs an eligible address. |
-| Profile-zero overhead | Not isolated. Probe cost was the largest measured stage. | Median ratio 0.98 to 1.02, inside run-to-run variation |
-| Runtime safety | Managed controller with native requests. Controller preemption broke the debt bound. | Native handler at managed addresses. Forced GC passes 10 of 10. An earlier check failed 1 of 10. |
+| Profile-zero overhead | Not isolated. Probe cost was the largest measured stage. | Handler share about 0.1% of elapsed time. Elapsed ratio medians from about 0.96 to 1.04. |
+| Runtime safety | Managed controller with native requests. Controller preemption broke the debt bound. | Native handler at managed addresses. Forced-GC checks pass 40 of 40. An earlier check failed 1 of 10. |
 | Prediction error | About 10 to 30 points of shortfall | Median absolute difference about 1 to 3 points in the qualified model |
 
 The comparison does not use the same workload. The target-local path removes the managed controller from each sample and payment.

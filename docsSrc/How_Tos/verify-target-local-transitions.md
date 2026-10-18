@@ -14,7 +14,8 @@ It requires the .NET 10 SDK, PowerShell 7, Docker, and the images `coznet-native
 4. For each entry in `outcomes`, check that `exitCode` is 0 and `passed` is true.
 5. Check that each `forcedCollections` value is at least 10. It counts collections that start while a worker is working.
 6. Check that each `maxHandlerNs` value is less than 5,000,000.
-7. For a failed run, open `gc-<run>.json`. Read `ledgerFailure`, `replayError`, and the events before the failure.
+7. Check that `cleanupPassed` is true. It shows that a run whose monitor throws still closes its experiment.
+8. For a failed run, open `gc-<run>.json`. Read `ledgerFailure`, `replayError`, and the events before the failure.
 
 Ledger failure 1 is `debt_exceeded`. It means that a thread observed more than 2 ms of debt.
 Do not repeat an unchanged run to obtain a pass. Keep the failed run as evidence.

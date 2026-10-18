@@ -62,6 +62,8 @@ Open `selected-longer-1-profile-speedup.json`.
 - `globalNs` is the delay that the profiler inserted. Each selected sample earned 500,000 ns of credit.
 - The peer thread paid that delay in its own signal handler. Each wait requested at most 50 microseconds. A preempted wait can measure more.
 - `effectiveNs` is `elapsedNs` minus `globalNs`. The prediction compares it with the `profile-zero` run.
+- `totalHandlerNs` is the sum of the measured handler intervals. In a `profile-zero` run it is about 0.1% of `elapsedNs`.
+  The interval excludes signal entry, exit, and kernel work, and it can include descheduling. It does not bound the elapsed overhead.
 - `replay` shows the managed check of every native ledger event. An empty `replayError` means that the journal matches the ledger rules.
 
 ## What you did

@@ -23,6 +23,7 @@
         <Compile Include="NominalSampleCreditTests.fs" />
         <Compile Include="SignalAccountingTests.fs" />
         <Compile Include="TargetLocalReplayTests.fs" />
+        <Compile Include="PerfMapTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>

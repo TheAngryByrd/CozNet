@@ -11,7 +11,7 @@ $runtimeImage = & docker image inspect mcr.microsoft.com/dotnet/sdk:10.0.100 --f
 if ($LASTEXITCODE -ne 0) { throw 'The Linux SDK image is unavailable.' }
 $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.Linux.cpp', 'native/service/TargetSampleSession.Linux.h',
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'native/service/PerfRing.Linux.h', 'native/service/PerfSampleRing.h',
-    'src/CozNet/TargetLocalReplay.fs', 'samples/CozNet.TargetLocal/Native.fs', 'samples/CozNet.TargetLocal/Work.fs',
+    'src/CozNet/TargetLocalReplay.fs', 'src/CozNet/TargetLocalProfiler.fs', 'samples/CozNet.TargetLocal/Work.fs',
     'samples/CozNet.TargetLocal/Program.fs', 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj',
     'native/VerifyTargetLocalPrediction.ps1', 'native/AnalyzeTargetPrediction.py', 'lode/plans/target-local-prediction.md', 'build/build.fs')
 $hashes = @{}
