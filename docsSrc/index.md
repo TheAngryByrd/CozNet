@@ -51,6 +51,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Verify the deterministic contract](How_Tos/verify-the-contract.md).
 - [Inspect measurement evidence](How_Tos/inspect-measurements.md).
 - [Verify native service accounting](How_Tos/verify-native-service.md).
+- [Verify the Linux perf ring adapter](How_Tos/verify-perf-ring.md).
 - [Run the native sampled service experiment](How_Tos/run-native-sampled-service.md).
 - [Check target-local timer delivery](How_Tos/run-target-lease-delivery.md).
 - [Check target-local timer reuse](How_Tos/run-target-lease-reuse.md).
@@ -60,7 +61,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Reference
 
-- [Native perf sample decoder](Reference/native-perf-decoder.md): record layout, terminal errors, and platform ownership.
+- [Native perf sample decoder](Reference/native-perf-decoder.md): record layouts, terminal errors, and the Linux ring adapter.
 
 - [Bound sample membership](Reference/bound-sample-membership.md).
 
@@ -126,7 +127,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 ## Explanation
 
-- [Target-local sample processing](Explanations/target-local-sample-processing.md): upstream designs and remaining runtime contracts.
+- [Target-local sample processing](Explanations/target-local-sample-processing.md): upstream designs, final loss evidence, and remaining runtime contracts.
 
 - [CPU time and the prediction gap](Explanations/selected-cpu.md).
 

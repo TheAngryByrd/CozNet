@@ -12,23 +12,26 @@ void require(bool condition, const char* message) {
 
 struct Fixture {
     std::array<std::byte, 128> bytes{};
+    PerfSampleReadFormat format{PerfSampleReadFormat::count};
+    uint64_t length() const { return format == PerfSampleReadFormat::count ? 48 : 56; }
     void put(uint64_t position, uint64_t value, size_t count) {
         for (size_t index = 0; index < count; ++index)
             bytes[static_cast<size_t>((position + index) & 127)] = std::byte((value >> (index * 8)) & 255);
     }
-    void sample(uint64_t position, uint64_t timestamp = 100, uint64_t cpu = 1000000) {
+    void sample(uint64_t position, uint64_t timestamp = 100, uint64_t cpu = 1000000, uint64_t lost = 0) {
         put(position, 9, 4);
         put(position + 4, 2, 2);
-        put(position + 6, 48, 2);
+        put(position + 6, length(), 2);
         put(position + 8, 4096, 8);
         put(position + 16, 7, 4);
         put(position + 20, 14, 4);
         put(position + 24, timestamp, 8);
         put(position + 32, 1000000, 8);
         put(position + 40, cpu, 8);
+        if (format == PerfSampleReadFormat::count_and_loss) put(position + 48, lost, 8);
     }
     PerfSampleRingPlan plan() {
-        auto parsed = PerfSampleRingPlan::parse(bytes, 7, 14, 1000000);
+        auto parsed = PerfSampleRingPlan::parse(bytes, 7, 14, 1000000, format);
         require(parsed.has_value(), "The valid fixture plan did not parse.");
         return *parsed;
     }
@@ -36,14 +39,18 @@ struct Fixture {
 
 void plansRejectInvalidInputs() {
     Fixture fixture;
-    require(!PerfSampleRingPlan::parse({}, 7, 14, 1), "An empty ring was accepted.");
-    require(!PerfSampleRingPlan::parse(std::span(fixture.bytes).first(32), 7, 14, 1), "A ring smaller than one sample was accepted.");
-    require(!PerfSampleRingPlan::parse(std::span(fixture.bytes).first(96), 7, 14, 1), "A non-power-of-two ring was accepted.");
-    require(!PerfSampleRingPlan::parse(fixture.bytes, 0, 14, 1), "A zero process identity was accepted.");
-    require(!PerfSampleRingPlan::parse(fixture.bytes, 7, 0, 1), "A zero thread identity was accepted.");
-    require(!PerfSampleRingPlan::parse(fixture.bytes, 7, 14, 0), "A zero period was accepted.");
-    require(PerfSampleRingPlan::parse(std::span(fixture.bytes).first(64), 7, 14, 80000).has_value(),
+    require(!PerfSampleRingPlan::parse({}, 7, 14, 1, PerfSampleReadFormat::count), "An empty ring was accepted.");
+    require(!PerfSampleRingPlan::parse(std::span(fixture.bytes).first(32), 7, 14, 1, PerfSampleReadFormat::count), "A ring smaller than one sample was accepted.");
+    require(!PerfSampleRingPlan::parse(std::span(fixture.bytes).first(96), 7, 14, 1, PerfSampleReadFormat::count), "A non-power-of-two ring was accepted.");
+    require(!PerfSampleRingPlan::parse(fixture.bytes, 0, 14, 1, PerfSampleReadFormat::count), "A zero process identity was accepted.");
+    require(!PerfSampleRingPlan::parse(fixture.bytes, 7, 0, 1, PerfSampleReadFormat::count), "A zero thread identity was accepted.");
+    require(!PerfSampleRingPlan::parse(fixture.bytes, 7, 14, 0, PerfSampleReadFormat::count), "A zero period was accepted.");
+    require(PerfSampleRingPlan::parse(std::span(fixture.bytes).first(64), 7, 14, 80000, PerfSampleReadFormat::count).has_value(),
         "The minimum ring and explicit synthetic period must parse.");
+    require(PerfSampleRingPlan::parse(std::span(fixture.bytes).first(64), 7, 14, 1, PerfSampleReadFormat::count_and_loss).has_value(),
+        "The minimum ring must admit one count-and-loss sample.");
+    require(!PerfSampleRingPlan::parse(fixture.bytes, 7, 14, 1, static_cast<PerfSampleReadFormat>(2)),
+        "An unnamed read format was accepted.");
 }
 
 void everyWrapPositionDecodesOwnedValues() {
@@ -99,6 +106,38 @@ void fullWidthFieldsAndLostRecords() {
         auto record = failed.read(type == 2 ? 24 : 32);
         require(!record.sample && record.error == (type == 2 ? PerfSampleRingError::lost_records : PerfSampleRingError::throttled)
             && failed.acceptedTail() == 0, "A valid loss or throttle record must terminate source acceptance.");
+    }
+}
+
+void countAndLossLayoutIsExplicit() {
+    for (uint64_t position = 0; position < 128; ++position) {
+        Fixture fixture;
+        fixture.format = PerfSampleReadFormat::count_and_loss;
+        fixture.sample(position);
+        PerfSampleRingReader reader(fixture.plan(), position);
+        auto result = reader.read(position + 56);
+        require(result.error == PerfSampleRingError::none && result.sample == PerfCpuSample{4096, 100, 1000000, 1000000, 7, 14}
+            && reader.acceptedTail() == position + 56, "A wrapped count-and-loss sample must decode and advance by 56 bytes.");
+    }
+    for (bool count_record_in_loss_plan : {false, true}) {
+        Fixture fixture;
+        fixture.format = count_record_in_loss_plan ? PerfSampleReadFormat::count : PerfSampleReadFormat::count_and_loss;
+        fixture.sample(0);
+        fixture.format = count_record_in_loss_plan ? PerfSampleReadFormat::count_and_loss : PerfSampleReadFormat::count;
+        PerfSampleRingReader reader(fixture.plan(), 0);
+        require(reader.read(64).error == PerfSampleRingError::sample_layout && reader.acceptedTail() == 0,
+            "A record length from the other read format must fail before acceptance.");
+    }
+    for (uint64_t lost : {1ULL, 1ULL << 63}) {
+        Fixture fixture;
+        fixture.format = PerfSampleReadFormat::count_and_loss;
+        fixture.sample(100, 100, 1000000, lost);
+        PerfSampleRingReader reader(fixture.plan(), 100);
+        require(reader.read(156).error == PerfSampleRingError::lost_records && reader.acceptedTail() == 100,
+            "A wrapped nonzero embedded loss counter must fail before acceptance.");
+        fixture.sample(100);
+        require(reader.read(156).error == PerfSampleRingError::lost_records && reader.acceptedTail() == 100,
+            "Clearing an embedded loss counter cannot repair a terminal loss failure.");
     }
 }
 
@@ -194,6 +233,7 @@ int main() {
     everyWrapPositionDecodesOwnedValues();
     oneRecordPerCallAndProducerAdvance();
     fullWidthFieldsAndLostRecords();
+    countAndLossLayoutIsExplicit();
     malformedRecordsFailBeforeAcceptance();
     monotonicityFailurePreservesAcceptedPrefix();
     headBoundsAndTruncatedHeadersReject();

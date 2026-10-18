@@ -5,22 +5,27 @@
 #include <span>
 
 namespace coz::service {
+enum class PerfSampleReadFormat { count, count_and_loss };
+
 class PerfSampleRingPlan {
 public:
     static std::optional<PerfSampleRingPlan> parse(std::span<const std::byte> bytes,
-        uint32_t process, uint32_t thread, uint64_t period) noexcept {
+        uint32_t process, uint32_t thread, uint64_t period, PerfSampleReadFormat format) noexcept {
         const auto size = bytes.size();
         if (size < 64 || (size & (size - 1)) != 0 || process == 0 || thread == 0 || period == 0)
             return std::nullopt;
-        return PerfSampleRingPlan(bytes, process, thread, period);
+        if (format != PerfSampleReadFormat::count && format != PerfSampleReadFormat::count_and_loss) return std::nullopt;
+        return PerfSampleRingPlan(bytes, process, thread, period, format);
     }
 private:
     friend class PerfSampleRingReader;
-    PerfSampleRingPlan(std::span<const std::byte> bytes, uint32_t process, uint32_t thread, uint64_t period) noexcept
-        : bytes_(bytes), process_(process), thread_(thread), period_(period) {}
+    PerfSampleRingPlan(std::span<const std::byte> bytes, uint32_t process, uint32_t thread, uint64_t period,
+        PerfSampleReadFormat format) noexcept
+        : bytes_(bytes), process_(process), thread_(thread), period_(period), format_(format) {}
     std::span<const std::byte> bytes_;
     uint32_t process_, thread_;
     uint64_t period_;
+    PerfSampleReadFormat format_;
 };
 
 struct PerfCpuSample {
@@ -67,7 +72,10 @@ public:
         if (type == 2) return fail(PerfSampleRingError::lost_records);
         if (type == 5 || type == 6) return fail(PerfSampleRingError::throttled);
         if (type != 9) return fail(PerfSampleRingError::unknown_record);
-        if (length != 48 || (misc & 7) != 2) return fail(PerfSampleRingError::sample_layout);
+        const uint64_t expected_length = plan_.format_ == PerfSampleReadFormat::count ? 48 : 56;
+        if (length != expected_length || (misc & 7) != 2) return fail(PerfSampleRingError::sample_layout);
+        if (plan_.format_ == PerfSampleReadFormat::count_and_loss && value(48, 8) != 0)
+            return fail(PerfSampleRingError::lost_records);
         PerfCpuSample sample{value(8, 8), value(24, 8), value(32, 8), value(40, 8),
             static_cast<uint32_t>(value(16, 4)), static_cast<uint32_t>(value(20, 4))};
         if (sample.instruction_pointer == 0 || sample.process != plan_.process_ || sample.thread != plan_.thread_)

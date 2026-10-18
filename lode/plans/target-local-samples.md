@@ -10,19 +10,39 @@ The shared decoder is portable C++20. Platform adapters own ring mapping, memory
 
 ## Decoder contract
 
-Parse the ring layout, process identity, target identity, and fixed nominal period before use.
-Decode at most one 48-byte sample per call, including a wrapped record.
+Parse the ring layout, process identity, target identity, fixed nominal period, and read format before use.
+Decode at most one sample per call, including a wrapped record.
+`PerfSampleReadFormat::count` requires 48-byte records. `count_and_loss` requires 56-byte records with zero embedded loss.
+The format parameter has no default. An unnamed enum value rejects at parse.
 Require user-mode IP, matching process/thread, positive timestamp, fixed period, and nondecreasing timestamp and cumulative CPU.
 Reject invalid ring bounds, truncated records, unknown records, loss, and throttling.
 The first error is terminal. Failed calls cannot advance the accepted tail or repair earlier failures.
 An empty ring is distinct from failure. Accepted sample values contain no borrowed pointers.
-The platform adapter publishes only the decoder's accepted tail after the required barrier.
-The adapter must bound records and elapsed work per dispatch. A remaining backlog is explicit, never silently treated as a valid completed drain.
 
 ```cpp
-auto plan = PerfSampleRingPlan::parse(bytes, processId, threadId, period);
+auto plan = PerfSampleRingPlan::parse(bytes, processId, threadId, period, PerfSampleReadFormat::count_and_loss);
 PerfSampleRingReader reader(*plan, initialTail);
 auto result = reader.read(acquiredHead);
+```
+
+## Linux adapter contract
+
+`native/service/PerfRing.Linux.h` consumes a borrowed, writable Linux x64 perf mapping with one exclusive reader.
+`LinuxPerfRingPlan::attributes(period)` builds the only accepted 96-byte task-clock attributes with `PERF_FORMAT_LOST`.
+`parse` requires byte-identical attributes, so sideband, wakeup, watermark, and reserved fields cannot differ.
+It also requires page alignment, matching `data_offset` and `data_size`, and zero head and tail.
+`read()` acquires `data_head`, decodes one record, then issues a full fence and a relaxed tail store.
+A release store is a valid alternative under the Linux tools contract. The current code uses the full fence.
+Each result distinguishes snapshot completion from remaining backlog. Neither result proves source closure.
+The caller owns event disable, final drain, the 16-byte count/loss read, and mapping lifetime.
+`LinuxPerfCountLoss::parse` accepts only a 16-byte return.
+No older-kernel fallback can claim complete loss evidence.
+
+```cpp
+auto attr = LinuxPerfRingPlan::attributes(1000000);
+auto plan = LinuxPerfRingPlan::parse(mapping, pageSize, attr, getpid(), gettid());
+LinuxPerfRing ring(*plan);
+auto next = ring.read();
 ```
 
 ```mermaid
@@ -31,23 +51,30 @@ flowchart LR
     Decoder --> Sample[Owned sample value]
     Sample --> Admission[Future target-local admission and credit]
     Decoder --> Failure[Terminal source failure]
-    Admission --> Tail[Release accepted tail]
+    Admission --> Tail[Fence then publish accepted tail]
+    Tail --> Close[Disable, final drain, 16-byte loss read]
 ```
+
+## Verified state
+
+`ServiceOwnerVerify` on Windows passes 17 checks. A Linux x64 build with `PERF_FORMAT_LOST` headers adds `perf-ring`.
+`LinuxServiceOwnerVerify` passes 18, including `perf-sample-ring` and `perf-ring`.
+`LinuxPerfRingVerify` runs `normal`, `overflow`, and `epochs` live on `5.15.153.1-microsoft-standard-WSL2`.
+Evidence and its limits are in [the perf ring capture](../../reliability/features/native-signal/perf-ring.md).
+The live overflow mode decodes 73 samples, finds no loss record, and reads positive final loss.
+The producer runs on the consumer's CPU. Cross-CPU head and tail visibility is not observed.
+The embedded loss check is a second guard. A `PERF_RECORD_LOST` record precedes the next sample after loss.
+
+The workload drain loop is unbounded. Budget-limited live drains remain untested.
+The synthetic decoder checks do not enumerate every `misc` mode and flag combination.
+`PERF_FORMAT_LOST` on the verified kernel is a backport. Probe each executing kernel. Do not infer support from its version.
+The managed `tests/CozNet.LinuxPerf` path uses `read_format = 0` and does not consume this adapter.
 
 ## Remaining contracts
 
-`ServiceOwnerVerify` and `LinuxServiceOwnerVerify` each pass all 17 native checks, including `perf-sample-ring`.
-The decoder checks cover physical wrap, owned values, malformed records, producer bounds, and terminal prefix preservation.
-These synthetic checks do not exercise a live perf mapping or concurrent kernel publication.
-
-The wire format is little-endian. A live adapter must verify producer endianness and the exact sample and read formats.
-The decoder cannot infer that configuration from record lengths alone.
-Synthetic coverage currently checks user mode and kernel-mode rejection, but does not enumerate every `misc` mode and flag combination.
-This coverage limit is accepted for the isolated decoder. Live integration needs source-configuration and mode fixtures.
-
-The decoder does not establish concurrent ring-read safety, target-local dispatch, or CLR signal safety.
-Before live use, implement a Linux adapter with the documented perf head/tail barrier contract and bounded work.
-Then define source disable/drain/resume epochs, native credit publication, bounded target payment, and exact-once managed reconciliation.
+The adapter does not establish target-local notification, CLR signal safety, or a bounded dispatch budget.
+Next, define bounded target notification and source disable/drain/resume epochs.
+Then add native credit publication, bounded target payment, and exact-once managed reconciliation.
 Retain cancellation, code revocation, delivery quiescence, first receipt, and failed-prefix evidence.
 Keep the 2 ms debt, 2 ms lease, 50 us requested child, 5 ms handler, and 100 ms receipt bounds unchanged.
 Do not divide retrospective credit or claim that target-local sampling alone fixes capacity.

@@ -40,6 +40,24 @@ It uses portable C++ and leaves shared-memory ordering and dispatch to platform 
 Terminal errors prevent source repair or a later successful read from hiding earlier corruption.
 See [the decoder reference](../Reference/native-perf-decoder.md).
 
+## Why the live source reads the loss counter
+
+A complete capture claim needs evidence that the kernel dropped no sample.
+When the ring is full, the kernel counts each failed reservation.
+It writes a `PERF_RECORD_LOST` record only when a later output succeeds.
+If the ring stays full until disable, that record never appears.
+Zero decoded loss records therefore cannot prove complete capture.
+
+`PERF_FORMAT_LOST` makes `read(fd)` return the cumulative lost-sample count with the event count.
+The same flag also adds that count to every `PERF_SAMPLE_READ` value in the ring.
+Thus one source configuration changes both the final read and the sample length from 48 to 56 bytes.
+The decoder declares each layout explicitly instead of inferring it from a record length.
+The Linux adapter accepts only the 56-byte layout, so every live epoch can end with a final loss check.
+
+The live overflow mode shows this case. It decodes the 73 samples that fit one page.
+No loss record appears in the ring, and the final read reports positive loss.
+A count-only source would show 73 valid samples and no sign of loss.
+
 ## What remains
 
 Moving decoding alone does not move credit or payment ownership.
@@ -48,6 +66,7 @@ A target-local source needs bounded notification, source disable and final drain
 Native accounting also needs exact-once reconciliation with managed evidence and measured wall-time payment.
 Unread backlog cannot become silently dropped credit or a retrospective change to the experiment.
 
-These contracts must precede a live target-local backend. The current decoder does not establish CLR safety, stable capacity, or prediction accuracy.
+These contracts must precede a live target-local backend.
+The decoder and Linux adapter do not establish CLR safety, stable capacity, or prediction accuracy.
 IL rewriting remains a separate cooperative intervention option with its own coverage and observer-cost tradeoffs.
 Target-local native processing is not yet evidence that those tradeoffs can be avoided in a general .NET application.
