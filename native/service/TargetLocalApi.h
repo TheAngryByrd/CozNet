@@ -32,6 +32,9 @@ COZ_TARGET_LOCAL_EXPORT int32_t coz_target_open(uint32_t speedup, uint64_t perio
     uint32_t selected_count, const CozTargetSpan* eligible, uint32_t eligible_count, CozTargetExperiment** experiment);
 COZ_TARGET_LOCAL_EXPORT int32_t coz_target_register(CozTargetExperiment* experiment, uint32_t journal_capacity, CozTargetThread** thread);
 COZ_TARGET_LOCAL_EXPORT int32_t coz_target_start(CozTargetThread* thread);
+COZ_TARGET_LOCAL_EXPORT int32_t coz_target_post(CozTargetThread* thread, uint64_t payment_ip, uint64_t* token);
+COZ_TARGET_LOCAL_EXPORT int32_t coz_target_wait_begin(CozTargetThread* thread, uint64_t payment_ip);
+COZ_TARGET_LOCAL_EXPORT int32_t coz_target_wait_end(CozTargetThread* thread, uint64_t payment_ip, uint64_t token, uint32_t reason);
 COZ_TARGET_LOCAL_EXPORT int32_t coz_target_finish(CozTargetThread* thread, uint64_t payment_ip, CozTargetThreadResult* result);
 COZ_TARGET_LOCAL_EXPORT int32_t coz_target_events(CozTargetThread* thread, CozTargetEvent* events, uint32_t capacity, uint32_t* count);
 COZ_TARGET_LOCAL_EXPORT int32_t coz_target_release(CozTargetThread* thread);

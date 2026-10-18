@@ -1,6 +1,6 @@
 # Target-local forced-GC transitions
 
-Evidence: `artifacts/target-local-transitions/20261018T162853008-0529c4ad`.
+Evidence: `artifacts/target-local-transitions/20261018T192454148-24d37dd2`.
 
 `TargetLocalTransitionsVerify` ran `profile-gc 50 6000 3000 5` ten times in the Linux x64 container.
 The run records kernel `5.15.153.1-microsoft-standard-WSL2`, x64, with 4 CPUs. Earlier transition runs did not record the host.
@@ -8,24 +8,26 @@ While at least one profiled thread is in its work phase, the main thread forces 
 The criteria are in [the transition plan](../../../lode/plans/target-local-transitions.md). The runner hashes that file, and all source hashes stay unchanged.
 The sample runs through the library entry point `TargetLocalProfiler.run`. `native/WriteTargetLocalEvidence.py` writes this page.
 
-**Result: the current check passes, and an earlier check failed.** The failure stays part of the evidence.
+**Result: the current check passes.** Earlier failed checks stay part of the evidence.
 
-| Run | Passed | Ledger failure | Max observed debt (ns) | Forced GCs in work window | Max handler (ns) | Epochs complete, zero loss |
-| ---: | --- | --- | ---: | ---: | ---: | --- |
-| 1 | Yes | None | 999,954 | 19 | 1,523,986 | Yes |
-| 2 | Yes | None | 999,974 | 19 | 1,010,446 | Yes |
-| 3 | Yes | None | 999,971 | 19 | 1,005,336 | Yes |
-| 4 | Yes | None | 899,949 | 19 | 1,006,885 | Yes |
-| 5 | Yes | None | 999,971 | 20 | 1,504,494 | Yes |
-| 6 | Yes | None | 999,987 | 19 | 1,503,750 | Yes |
-| 7 | Yes | None | 999,994 | 20 | 1,504,992 | Yes |
-| 8 | Yes | None | 999,970 | 20 | 2,005,951 | Yes |
-| 9 | Yes | None | 999,987 | 20 | 1,506,720 | Yes |
-| 10 | Yes | None | 999,997 | 19 | 1,504,630 | Yes |
+| Run | Passed | Ledger failure | Max observed debt (ns) | Forced GCs in work window | Max handler (ns) | Wall minus counted CPU (ms) | Epochs complete, zero loss |
+| ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 1 | Yes | None | 999,961 | 20 | 1,504,794 | 9.7 | Yes |
+| 2 | Yes | None | 999,968 | 20 | 1,503,534 | 10.1 | Yes |
+| 3 | Yes | None | 999,951 | 19 | 1,505,695 | 9.7 | Yes |
+| 4 | Yes | None | 949,905 | 19 | 1,172,002 | 9.9 | Yes |
+| 5 | Yes | None | 999,973 | 19 | 1,053,991 | 9.6 | Yes |
+| 6 | Yes | None | 949,982 | 19 | 1,504,482 | 8.7 | Yes |
+| 7 | Yes | None | 799,934 | 20 | 1,019,173 | 8.3 | Yes |
+| 8 | Yes | None | 999,991 | 19 | 1,006,390 | 10.1 | Yes |
+| 9 | Yes | None | 949,972 | 19 | 1,006,588 | 8.5 | Yes |
+| 10 | Yes | None | 999,966 | 19 | 1,505,808 | 9.0 | Yes |
 
 No run crashed or hung. Every run closed both epochs with zero loss, retired both sessions, and restored the handlers.
 The `cleanup` check passes. A profile whose monitor throws raises `AggregateException`, and a second profile in the same process then passes.
-Every handler interval stays below 5 ms, and no run records a ledger failure.
+The `barrier-abort` check passes. A worker that throws releases its waiting peer, the run fails within 10 s, and a second profile then passes.
+Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,505,808 ns.
+Wall minus counted CPU is the largest per-thread difference. Counted CPU stops at disable and wall time includes the closing payment, so it is coarse.
 
 ## Run history
 
@@ -36,7 +38,12 @@ Every handler interval stays below 5 ms, and no run records a ledger failure.
 | `20261018T155026644-209a9e05` | Profiler moved into the library | Fail. Every run stopped on a perf-map parser defect before profiling. |
 | `20261018T155303110-d6c77c03` | Parser accepts the `0x` prefix | Pass, 10 of 10 |
 | `20261018T161924408-457ccd0e` | Cleanup on failure, native layout check, and payment address check | Pass, 10 of 10 |
-| `20261018T162853008-0529c4ad` | Join retry, construction before open, and transition host record | Pass, 10 of 10 |
+| `20261018T162853008-0529c4ad` | Join retry, construction before open, and cleanup check | Pass, 10 of 10 |
+| `20261018T182834143-78a15e0b` | Wait protocol in the ledger and the library | Fail. Run 4 broke the debt bound while the peer accepted no sample for six selected samples. |
+| `20261018T183151879-34460604` | Per-thread CPU and wall time diagnostics | Pass, 10 of 10 |
+| `20261018T190118893-b2109c5d` | Barrier abort, post race, and token bound | Fail. Run 8: 2 ms debt bound. |
+| `20261018T191244704-9849fce2` | Barrier errors cancel the run | Pass, 10 of 10 |
+| `20261018T192454148-24d37dd2` | Run-queue delay excludes failed reads | Pass, 10 of 10 |
 
 ## Earlier failed check
 
@@ -49,12 +56,12 @@ In sequences 71 through 80 of run 4, the selected thread accepts five selected s
 The journal holds no peer sample in that interval. Sequence 82 records the failure at 2,499,985 ns of debt.
 The ledger then pays the debt in bounded children. It forgives nothing.
 The journal has no scheduling or GC suspension times, so it cannot show why the peer accepted no sample.
-One hypothesis is that the GC suspended and resumed the two threads at different times. No check can test it yet.
+One hypothesis is that the host or the GC deschedules one thread. Profile results now record thread CPU and wall time to test it.
 
 ## Consequence
 
-The current-design checks show no failure in 40 runs, with 19 to 20 forced collections during profiling in the latest run.
-The earlier failure shows that a thread can go without samples long enough to break the 2 ms debt bound. Its cause is unknown.
+The passing current-design checks hold 70 runs with no failure. Two current-design checks each fail 1 of 10 runs with the same signature as the first failure.
+A thread can go without samples long enough to break the 2 ms debt bound. The cause is unknown.
 GC-heavy workloads stay outside the supported model. The debt bound stays unchanged.
 
 ## Check limits

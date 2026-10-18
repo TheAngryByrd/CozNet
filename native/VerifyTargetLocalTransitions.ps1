@@ -39,12 +39,15 @@ for ($index = 1; $index -le $Runs; $index++) {
 }
 & docker @container sh -c "cd /app && timeout -k 2s 60s dotnet CozNet.TargetLocal.dll cleanup /out/cleanup.json" *> (Join-Path $run 'cleanup.json.log')
 $cleanupExit = $LASTEXITCODE
+& docker @container sh -c "cd /app && timeout -k 2s 60s dotnet CozNet.TargetLocal.dll barrier-abort /out/barrier-abort.json" *> (Join-Path $run 'barrier-abort.json.log')
+$abortExit = $LASTEXITCODE
+$abort = if (Test-Path -LiteralPath (Join-Path $run 'barrier-abort.json')) { Get-Content (Join-Path $run 'barrier-abort.json') -Raw | ConvertFrom-Json } else { $null }
 $cleanup = if (Test-Path -LiteralPath (Join-Path $run 'cleanup.json')) { Get-Content (Join-Path $run 'cleanup.json') -Raw | ConvertFrom-Json } else { $null }
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash -eq $hashes[$name] }
-$passed = $unchanged -and $cleanupExit -eq 0 -and $null -ne $cleanup -and $cleanup.passed -and $Runs -eq 10 -and @($outcomes).Count -eq 10 -and @($outcomes | Where-Object {
+$passed = $unchanged -and $cleanupExit -eq 0 -and $null -ne $cleanup -and $cleanup.passed -and $abortExit -eq 0 -and $null -ne $abort -and $abort.passed -and $Runs -eq 10 -and @($outcomes).Count -eq 10 -and @($outcomes | Where-Object {
     $_.exitCode -ne 0 -or -not $_.recordExists -or -not $_.passed -or $_.forcedCollections -lt 10 -or $_.maxHandlerNs -ge 5000000 }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; cleanupExitCode = $cleanupExit; cleanupPassed = [bool]$cleanup.passed; sources = $hashes; runs = $Runs; outcomes = $outcomes
+@{ passed = $passed; inputsUnchanged = $unchanged; cleanupExitCode = $cleanupExit; cleanupPassed = [bool]$cleanup.passed; barrierAbortPassed = [bool]$abort.passed; sources = $hashes; runs = $Runs; outcomes = $outcomes
     compilerImage = $compilerImage; runtimeImage = $runtimeImage; generalClrSafetyEstablished = $false } |
     ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run

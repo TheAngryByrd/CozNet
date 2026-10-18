@@ -63,26 +63,33 @@ private:
     InstructionSet selected_, eligible_;
 };
 
-enum class LedgerFailure : uint32_t { none, debt_exceeded, journal_full, clock_failed, wait_failed };
+enum class LedgerFailure : uint32_t { none, debt_exceeded, journal_full, clock_failed, wait_failed, protocol };
 
 class ExperimentDelay {
 public:
     uint64_t global() const noexcept { return global_.load(std::memory_order_acquire); }
     LedgerFailure failure() const noexcept { return LedgerFailure(failure_.load(std::memory_order_acquire)); }
     uint64_t sequences() const noexcept { return sequence_.load(std::memory_order_acquire); }
+    uint64_t posted() const noexcept { return posted_.load(std::memory_order_acquire); }
 private:
+    void post(uint64_t token) noexcept {
+        auto current = posted_.load(std::memory_order_acquire);
+        while (current < token && !posted_.compare_exchange_weak(current, token, std::memory_order_acq_rel, std::memory_order_acquire)) {}
+    }
     friend class ThreadDelayAccount;
     void fail(LedgerFailure failure) noexcept {
         uint32_t none = 0;
         failure_.compare_exchange_strong(none, uint32_t(failure), std::memory_order_acq_rel);
     }
     uint64_t next() noexcept { return sequence_.fetch_add(1, std::memory_order_acq_rel) + 1; }
-    std::atomic<uint64_t> global_{}, sequence_{};
+    std::atomic<uint64_t> global_{}, sequence_{}, posted_{};
     std::atomic<uint32_t> failure_{};
     static_assert(std::atomic<uint64_t>::is_always_lock_free && std::atomic<uint32_t>::is_always_lock_free);
 };
 
-enum class LedgerEventKind : uint32_t { sample, publish, child, deferred, failure };
+enum class LedgerEventKind : uint32_t { sample, publish, child, deferred, failure, block, wake, post };
+
+enum class WakeReason : uint32_t { dependency, timeout, cancelled, spurious };
 
 struct LedgerEvent {
     uint64_t sequence{}, observed_global{}, local_before{}, amount{}, requested{}, time{}, ip{};
@@ -90,7 +97,7 @@ struct LedgerEvent {
     uint32_t detail{};
 };
 
-enum class SettleOutcome { caught_up, published, budget_deferred, ineligible_deferred, failed };
+enum class SettleOutcome { caught_up, published, budget_deferred, ineligible_deferred, failed, blocked };
 
 struct SettleResult {
     SettleOutcome outcome{SettleOutcome::failed};
@@ -137,6 +144,10 @@ public:
     template<class Clock, class Waiter>
     SettleResult settle(Clock& clock, Waiter& waiter, uint64_t ip, uint64_t handler_started) noexcept {
         SettleResult result;
+        if (blocked_) {
+            result.outcome = SettleOutcome::blocked;
+            return result;
+        }
         if (journal_.size() - count_ < settle_reserve) return failed(result, LedgerFailure::journal_full, ip);
         bool first = true;
         for (;;) {
@@ -189,7 +200,66 @@ public:
         }
     }
 
+    bool blocked() const noexcept { return blocked_; }
+
+    template<class Clock, class Waiter>
+    bool catchUp(Clock& clock, Waiter& waiter, uint64_t ip) noexcept {
+        if (blocked_) return protocol(ip);
+        for (unsigned step = 0; step < catch_up_limit; ++step) {
+            const auto result = settle(clock, waiter, ip, clock.now());
+            if (result.outcome == SettleOutcome::caught_up || result.outcome == SettleOutcome::published) return true;
+            if (result.outcome != SettleOutcome::budget_deferred) return false;
+        }
+        return false;
+    }
+
+    template<class Clock>
+    std::optional<uint64_t> post(Clock& clock, uint64_t ip) noexcept {
+        if (blocked_ || journal_.size() - count_ < 2) {
+            protocol(ip);
+            return std::nullopt;
+        }
+        append({0, experiment_.global(), local_, local_, 0, stamp(clock), ip, LedgerEventKind::post, 0});
+        experiment_.post(local_);
+        return local_;
+    }
+
+    template<class Clock>
+    bool beginBlock(Clock& clock, uint64_t ip) noexcept {
+        if (blocked_ || journal_.size() - count_ < 2) return protocol(ip);
+        block_global_ = experiment_.global();
+        append({0, block_global_, local_, 0, 0, stamp(clock), ip, LedgerEventKind::block, 0});
+        blocked_ = true;
+        return true;
+    }
+
+    template<class Clock>
+    bool endBlock(Clock& clock, uint64_t ip, uint64_t token, WakeReason reason) noexcept {
+        if (!blocked_ || journal_.size() - count_ < 2 || uint32_t(reason) > uint32_t(WakeReason::spurious)) return protocol(ip);
+        const auto observed = experiment_.global();
+        uint64_t skip = 0;
+        if (reason == WakeReason::dependency) {
+            if (token > observed || token > experiment_.posted()) return protocol(ip);
+            skip = token > block_global_ ? token - block_global_ : 0;
+        } else {
+            token = 0;
+        }
+        append({0, observed, local_, skip, token, stamp(clock), ip, LedgerEventKind::wake, uint32_t(reason)});
+        local_ += skip;
+        blocked_ = false;
+        return true;
+    }
+
 private:
+    static constexpr unsigned catch_up_limit = 64;
+
+    bool protocol(uint64_t ip) noexcept {
+        experiment_.fail(LedgerFailure::protocol);
+        if (count_ < journal_.size())
+            append({0, experiment_.global(), local_, 0, 0, 0, ip, LedgerEventKind::failure, uint32_t(LedgerFailure::protocol)});
+        return false;
+    }
+
     template<class Clock> uint64_t stamp(Clock& clock) noexcept {
         const auto now = clock.now();
         if (now == 0) {
@@ -210,7 +280,8 @@ private:
             clock_failure_pending_ = false;
             clock_failure_recorded_ = true;
             // The caller adds a child's measured wait to local delay after this append.
-            const auto local = event.kind == LedgerEventKind::child ? event.local_before + event.amount : event.local_before;
+            const bool adds = event.kind == LedgerEventKind::child || event.kind == LedgerEventKind::wake;
+            const auto local = adds ? event.local_before + event.amount : event.local_before;
             journal_[count_++] = {experiment_.next(), experiment_.global(), local, 0, 0, 0, event.ip,
                 LedgerEventKind::failure, uint32_t(LedgerFailure::clock_failed)};
         }
@@ -229,7 +300,8 @@ private:
     std::span<LedgerEvent> journal_;
     size_t count_{};
     uint64_t local_;
-    bool debt_failed_{}, clock_failure_pending_{}, clock_failure_recorded_{};
+    uint64_t block_global_{};
+    bool debt_failed_{}, clock_failure_pending_{}, clock_failure_recorded_{}, blocked_{};
 };
 
 template<class Clock, class Waiter>

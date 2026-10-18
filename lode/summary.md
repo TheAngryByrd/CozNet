@@ -12,7 +12,8 @@ Its live modes cover backlog, terminal loss, cancellation, and retirement.
 The [native ledger](plans/target-local-credit.md) credits and pays on each thread with a valid sequence replay in a two-thread native run.
 A [CLR fork/join workload](plans/target-local-prediction.md) runs this path in managed threads through `TargetLocalProfiler.run` and replays every journal in F#.
 Its qualification predicts real 50% optimizations in three configurations, with median absolute differences from about 1 to 3 percentage points.
-The qualified model excludes blocking, async, and GC-heavy work. The profile-zero handler share is about 0.1% of elapsed time. A [forced-GC check](plans/target-local-transitions.md) passes 10 of 10 in four runs. A cleanup check shows that a failed monitor still closes the experiment.
+Explicit [barrier waits](plans/target-local-status.md#wait-protocol) follow the Coz wake rule, with a skip bounded by the release token. Their latest qualification fails one configuration. Kernel run-queue delay of 17 to 81 ms in single arms explains its two outlying blocks. Earlier barrier runs pass.
+The qualified model excludes other blocking, async, and GC-heavy work. The profile-zero handler share is about 0.1% of elapsed time. A [forced-GC check](plans/target-local-transitions.md) passes 10 of 10 in six checks and fails 1 of 10 in three others, each by the 2 ms debt bound. A cleanup check shows that a failed monitor still closes the experiment.
 An earlier check with a flawed count failed the debt bound in 1 of 10.
 See [the evidence](../reliability/features/target-local/transitions.md). That failure's cause needs GC suspension timestamps. The runner does not record kernel identity.
 General CLR safety remains unverified.

@@ -70,6 +70,15 @@ module internal TargetLocalNative =
     [<DllImport("CozNet.TargetLocal", EntryPoint = "coz_target_finish")>]
     extern int Finish(nativeint thread, uint64 paymentIp, TargetThreadResult& result)
 
+    [<DllImport("CozNet.TargetLocal", EntryPoint = "coz_target_post")>]
+    extern int Post(nativeint thread, uint64 paymentIp, uint64& token)
+
+    [<DllImport("CozNet.TargetLocal", EntryPoint = "coz_target_wait_begin")>]
+    extern int WaitBegin(nativeint thread, uint64 paymentIp)
+
+    [<DllImport("CozNet.TargetLocal", EntryPoint = "coz_target_wait_end")>]
+    extern int WaitEnd(nativeint thread, uint64 paymentIp, uint64 token, uint32 reason)
+
     [<DllImport("CozNet.TargetLocal", EntryPoint = "coz_target_events")>]
     extern int Events(nativeint thread, [<In; Out>] NativeEvent[] events, uint32 capacity, uint32& count)
 
@@ -117,12 +126,117 @@ module PerfMap =
     let currentProcess () =
         $"/tmp/perf-{Environment.ProcessId}.map"
 
+type internal TargetCurrent() =
+    [<ThreadStatic; DefaultValue>]
+    static val mutable private handle: nativeint
+
+    [<ThreadStatic; DefaultValue>]
+    static val mutable private paymentIp: uint64
+
+    [<ThreadStatic; DefaultValue>]
+    static val mutable private error: int
+
+    [<ThreadStatic; DefaultValue>]
+    static val mutable private abort: CancellationToken
+
+    [<ThreadStatic; DefaultValue>]
+    static val mutable private source: CancellationTokenSource
+
+    static member Handle = TargetCurrent.handle
+    static member PaymentIp = TargetCurrent.paymentIp
+    static member Error = TargetCurrent.error
+    static member Abort = TargetCurrent.abort
+
+    static member Set(value, ip, abort: CancellationToken) =
+        TargetCurrent.handle <- value
+        TargetCurrent.paymentIp <- ip
+        TargetCurrent.error <- 0
+        TargetCurrent.abort <- abort
+        TargetCurrent.source <- null
+
+    static member Set(value, ip, source: CancellationTokenSource) =
+        TargetCurrent.Set(value, ip, source.Token)
+        TargetCurrent.source <- source
+
+    static member Record code =
+        if code <> 0 then
+            if TargetCurrent.error = 0 then
+                TargetCurrent.error <- code
+
+            if not (isNull TargetCurrent.source) then
+                TargetCurrent.source.Cancel()
+
+[<RequireQualifiedAccess>]
+type TargetWakeReason =
+    | Dependency = 0u
+    | Timeout = 1u
+    | Cancelled = 2u
+    | Spurious = 3u
+
+type internal TargetBarrierPhase(number: int64) =
+    let arrived = [| 0 |]
+    member _.Arrive() = Interlocked.Increment(&arrived[0])
+    member val Token = 0UL with get, set
+    member val Done = new ManualResetEventSlim(false)
+    member _.Number = number
+
+type TargetBarrier(participants: int) =
+    do
+        if participants < 1 then
+            raise (ArgumentOutOfRangeException(nameof participants))
+
+    let mutable current = TargetBarrierPhase 0L
+
+    member _.Phase = (Volatile.Read &current).Number
+
+    member _.SignalAndWait(timeout: TimeSpan, cancellation: CancellationToken) =
+        let handle = TargetCurrent.Handle
+        let ip = TargetCurrent.PaymentIp
+        let phase = Volatile.Read &current
+        let arrived = phase.Arrive()
+
+        if arrived > participants then
+            raise (InvalidOperationException "More workers arrived than the barrier has participants.")
+
+        if arrived = participants then
+            if handle <> 0n then
+                let mutable posted = 0UL
+                TargetCurrent.Record(TargetLocalNative.Post(handle, ip, &posted))
+                phase.Token <- posted
+
+            Volatile.Write(&current, TargetBarrierPhase(phase.Number + 1L))
+            phase.Done.Set()
+            true
+        else
+            if handle <> 0n then
+                TargetCurrent.Record(TargetLocalNative.WaitBegin(handle, ip))
+
+            let mutable reason = TargetWakeReason.Cancelled
+            use linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, TargetCurrent.Abort)
+
+            try
+                reason <-
+                    try
+                        if phase.Done.Wait(timeout, linked.Token) then TargetWakeReason.Dependency else TargetWakeReason.Timeout
+                    with :? OperationCanceledException ->
+                        TargetWakeReason.Cancelled
+            finally
+                if handle <> 0n then
+                    let token = if reason = TargetWakeReason.Dependency then phase.Token else 0UL
+                    TargetCurrent.Record(TargetLocalNative.WaitEnd(handle, ip, token, uint32 reason))
+
+            reason = TargetWakeReason.Dependency
+
+    member this.SignalAndWait() =
+        this.SignalAndWait(Timeout.InfiniteTimeSpan, CancellationToken.None) |> ignore
+
 type TargetWorker = {
     Work: unit -> unit
     PaymentIp: uint64
 }
 
 type TargetThreadOutcome = {
+    RunDelayNs: int64
     Result: TargetThreadResult
     FinishCode: int
     Error: string
@@ -171,6 +285,13 @@ module TargetLocalProfiler =
 
     let private span (first, last) = { Begin = first; End = last }
 
+    let private runDelay () =
+        try
+            let fields = File.ReadAllText("/proc/thread-self/schedstat").Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            if fields.Length >= 2 then Int64.Parse fields[1] else -1L
+        with _ ->
+            -1L
+
     let run (speedup: uint32) (period: uint64) (selected: (uint64 * uint64) array) (eligible: (uint64 * uint64) array)
         (journalCapacity: uint32) (workers: TargetWorker array) (monitor: TargetRunState -> unit) =
         if not (isSupported ()) then
@@ -194,6 +315,7 @@ module TargetLocalProfiler =
         let outcomes = Array.zeroCreate<TargetThreadOutcome> workers.Length
         let journals = Array.create workers.Length Array.empty<TargetLedgerEvent>
         let working = [| 0 |]
+        use abort = new CancellationTokenSource()
 
         let thread index (worker: TargetWorker) =
             Thread(fun () ->
@@ -202,12 +324,16 @@ module TargetLocalProfiler =
                 ready.SignalAndWait()
 
                 if registered <> 0 then
+                    abort.Cancel()
                     ready.SignalAndWait()
-                    outcomes[index] <- { Result = TargetThreadResult(); FinishCode = registered; Error = $"register {registered}"; StartedTicks = 0L; FinishedTicks = 0L }
+                    outcomes[index] <- { RunDelayNs = -1L; Result = TargetThreadResult(); FinishCode = registered; Error = $"register {registered}"; StartedTicks = 0L; FinishedTicks = 0L }
                 else
                     let started = TargetLocalNative.Start handle
+                    TargetCurrent.Set(handle, worker.PaymentIp, abort)
+                    if started <> 0 then abort.Cancel()
                     ready.SignalAndWait()
                     let startedTicks = Stopwatch.GetTimestamp()
+                    let delayBefore = runDelay ()
                     let workError =
                         if started <> 0 then
                             ""
@@ -218,9 +344,14 @@ module TargetLocalProfiler =
                                     worker.Work()
                                     ""
                                 with error ->
+                                    abort.Cancel()
                                     $"work {error}"
                             finally
                                 Interlocked.Decrement(&working[0]) |> ignore
+                    let delayAfter = runDelay ()
+                    let barrierError = TargetCurrent.Error
+                    TargetCurrent.Set(0n, 0UL, CancellationToken.None)
+                    if barrierError <> 0 then abort.Cancel()
                     let mutable result = TargetThreadResult()
                     let code = TargetLocalNative.Finish(handle, worker.PaymentIp, &result)
                     let finishedTicks = Stopwatch.GetTimestamp()
@@ -232,10 +363,11 @@ module TargetLocalProfiler =
                     let error =
                         [ if started <> 0 then $"start {started}"
                           if workError <> "" then workError
+                          if barrierError <> 0 then $"barrier {barrierError}"
                           if read <> 0 then $"events {read}"
                           if released <> 0 then $"release {released}" ]
                         |> String.concat ", "
-                    outcomes[index] <- { Result = result; FinishCode = code; Error = error; StartedTicks = startedTicks; FinishedTicks = finishedTicks })
+                    outcomes[index] <- { RunDelayNs = (if delayBefore < 0L || delayAfter < 0L then -1L else delayAfter - delayBefore); Result = result; FinishCode = code; Error = error; StartedTicks = startedTicks; FinishedTicks = finishedTicks })
 
         let threads = workers |> Array.mapi thread
         threads |> Array.iter (fun worker -> worker.IsBackground <- true)
@@ -251,6 +383,7 @@ module TargetLocalProfiler =
                     started <- started + 1
                 monitor (TargetRunState(working, threads[.. started - 1]))
             with error ->
+                abort.Cancel()
                 failures.Add error
         finally
             if started < threads.Length then

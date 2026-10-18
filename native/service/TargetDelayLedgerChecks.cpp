@@ -1,4 +1,5 @@
 #include "TargetDelayLedger.h"
+#include <functional>
 #include <stdexcept>
 #include <vector>
 
@@ -236,6 +237,155 @@ void childClockFailureKeepsLocalOrder() {
     require(clock_events == 1, "Only the first clock failure must append a failure event.");
 }
 
+
+void publish(Thread& thread, Clock& clock, Waiter& waiter, uint64_t samples, uint64_t& time) {
+    for (uint64_t index = 0; index < samples; ++index) thread.account.accept(sample(selected_ip, ++time), 1, 1);
+    thread.account.settle(clock, waiter, selected_ip, clock.now());
+}
+
+void dependencyWakeSkipsOnlyToToken() {
+    ExperimentDelay experiment;
+    const auto ledger = plan();
+    Thread selected(experiment, ledger), peer(experiment, ledger);
+    Clock clock;
+    Waiter waiter{0, 0, 0, &clock};
+    uint64_t time = 0;
+    require(peer.account.beginBlock(clock, peer_ip) && peer.account.blocked(), "A runnable thread must block.");
+    publish(selected, clock, waiter, 2, time);
+    const auto token = selected.account.post(clock, selected_ip);
+    require(token && *token == 1000000 && experiment.global() == 1000000, "A caught-up post must return its local delay.");
+    publish(selected, clock, waiter, 1, time);
+    require(experiment.global() == 1500000, "Credit after the post must publish.");
+    require(peer.account.settle(clock, waiter, peer_ip, clock.now()).outcome == SettleOutcome::blocked && waiter.calls == 0,
+        "A blocked thread must not pay.");
+    require(peer.account.endBlock(clock, peer_ip, *token, WakeReason::dependency) && peer.account.local() == 1000000,
+        "A dependency wake must skip exactly to the token.");
+    const auto paid = peer.account.settle(clock, waiter, peer_ip, clock.now());
+    require(paid.debt_before == 500000 && paid.requested == 500000 && peer.account.local() == 1500000,
+        "Credit published after the post must be paid, not skipped.");
+    const auto events = peer.account.events();
+    require(events[0].kind == LedgerEventKind::block && events[0].observed_global == 0
+        && events[1].kind == LedgerEventKind::wake && events[1].amount == 1000000 && events[1].requested == 1000000
+        && events[1].detail == uint32_t(WakeReason::dependency), "Block and wake events must record the skip and its token.");
+    require(experiment.failure() == LedgerFailure::none, "A valid protocol must not fail.");
+}
+
+void otherWakesSkipNothing() {
+    for (const auto reason : {WakeReason::timeout, WakeReason::cancelled, WakeReason::spurious}) {
+        ExperimentDelay experiment;
+        const auto ledger = plan();
+        Thread selected(experiment, ledger), peer(experiment, ledger);
+        Clock clock;
+        Waiter waiter{0, 0, 0, &clock};
+        uint64_t time = 0;
+        peer.account.beginBlock(clock, peer_ip);
+        publish(selected, clock, waiter, 2, time);
+        const auto token = selected.account.post(clock, selected_ip);
+        require(peer.account.endBlock(clock, peer_ip, *token, reason) && peer.account.local() == 0
+            && peer.account.events().back().requested == 0, "A timeout, cancellation, or spurious wake must skip nothing.");
+        require(peer.account.catchUp(clock, waiter, peer_ip) && peer.account.local() == 1000000,
+            "The waiter must then pay the delay inserted while it waited.");
+    }
+}
+
+void debtAtBlockStaysOwed() {
+    ExperimentDelay experiment;
+    const auto ledger = plan();
+    Thread selected(experiment, ledger), peer(experiment, ledger);
+    Clock clock;
+    Waiter waiter{0, 0, 0, &clock};
+    uint64_t time = 0;
+    publish(selected, clock, waiter, 1, time);
+    peer.account.beginBlock(clock, peer_ip);
+    publish(selected, clock, waiter, 1, time);
+    const auto token = selected.account.post(clock, selected_ip);
+    peer.account.endBlock(clock, peer_ip, *token, WakeReason::dependency);
+    require(peer.account.local() == 500000 && experiment.global() == 1000000,
+        "A dependency wake must not forgive debt owed at the block.");
+}
+
+void postBehindGlobalIsValid() {
+    ExperimentDelay experiment;
+    const auto ledger = plan();
+    Thread selected(experiment, ledger), other(experiment, ledger), peer(experiment, ledger);
+    Clock clock;
+    Waiter waiter{0, 0, 0, &clock};
+    uint64_t time = 0;
+    peer.account.beginBlock(clock, peer_ip);
+    publish(selected, clock, waiter, 2, time);
+    uint64_t other_time = 100;
+    publish(other, clock, waiter, 4, other_time);
+    const auto token = selected.account.post(clock, selected_ip);
+    require(token && *token == 1000000 && experiment.global() == 2000000 && experiment.failure() == LedgerFailure::none,
+        "A post behind later global credit must return its own caught-up delay.");
+    require(peer.account.endBlock(clock, peer_ip, *token, WakeReason::dependency) && peer.account.local() == 1000000,
+        "The waiter must skip only to the releaser's token.");
+}
+
+void wakeClockFailureKeepsLocalOrder() {
+    ExperimentDelay experiment;
+    const auto ledger = plan();
+    Thread selected(experiment, ledger), peer(experiment, ledger);
+    Clock clock;
+    Waiter waiter{0, 0, 0, &clock};
+    uint64_t time = 0;
+    peer.account.beginBlock(clock, peer_ip);
+    publish(selected, clock, waiter, 2, time);
+    const auto token = selected.account.post(clock, selected_ip);
+    clock.zero_at = clock.calls + 1;
+    peer.account.endBlock(clock, peer_ip, *token, WakeReason::dependency);
+    const auto events = peer.account.events();
+    require(events.back().kind == LedgerEventKind::failure && events.back().local_before == 1000000,
+        "A clock failure after a wake must record the local delay that includes the skip.");
+}
+
+void catchUpPaysAllDebt() {
+    ExperimentDelay experiment;
+    const auto ledger = plan();
+    Thread selected(experiment, ledger), peer(experiment, ledger);
+    Clock clock;
+    Waiter waiter{0, 0, 0, &clock};
+    uint64_t time = 0;
+    publish(selected, clock, waiter, 3, time);
+    require(peer.account.catchUp(clock, waiter, peer_ip) && peer.account.local() == 1500000,
+        "Catch-up at an eligible address must pay all debt.");
+    publish(selected, clock, waiter, 1, time);
+    require(!peer.account.catchUp(clock, waiter, runtime_ip) && peer.account.local() == 1500000,
+        "Catch-up at an ineligible address must not pay.");
+}
+
+void protocolViolationsFail() {
+    const std::function<bool(Thread&, Thread&, Clock&, Waiter&)> cases[] = {
+        [](Thread&, Thread& peer, Clock& clock, Waiter&) { peer.account.beginBlock(clock, peer_ip); return !peer.account.beginBlock(clock, peer_ip); },
+        [](Thread&, Thread& peer, Clock& clock, Waiter&) { return !peer.account.endBlock(clock, peer_ip, 0, WakeReason::dependency); },
+        [](Thread&, Thread& peer, Clock& clock, Waiter&) {
+            peer.account.beginBlock(clock, peer_ip);
+            return !peer.account.endBlock(clock, peer_ip, 1, WakeReason::dependency);
+        },
+        [](Thread& selected, Thread& peer, Clock& clock, Waiter& waiter) {
+            uint64_t time = 0;
+            publish(selected, clock, waiter, 2, time);
+            selected.account.post(clock, selected_ip);
+            peer.account.beginBlock(clock, peer_ip);
+            return !peer.account.endBlock(clock, peer_ip, 1000001, WakeReason::dependency);
+        },
+        [](Thread&, Thread& peer, Clock& clock, Waiter&) { peer.account.beginBlock(clock, peer_ip); return !peer.account.post(clock, peer_ip); },
+        [](Thread&, Thread& peer, Clock& clock, Waiter&) {
+            peer.account.beginBlock(clock, peer_ip);
+            return !peer.account.endBlock(clock, peer_ip, 0, WakeReason(9));
+        },
+    };
+    for (const auto& violation : cases) {
+        ExperimentDelay experiment;
+        const auto ledger = plan();
+        Thread selected(experiment, ledger), peer(experiment, ledger);
+        Clock clock;
+        Waiter waiter{0, 0, 0, &clock};
+        require(violation(selected, peer, clock, waiter) && experiment.failure() == LedgerFailure::protocol
+            && peer.account.events().back().kind == LedgerEventKind::failure, "A protocol violation must fail the experiment and journal it.");
+    }
+}
+
 void sequencesAreUniqueAndContiguous() {
     ExperimentDelay experiment;
     const auto ledger = plan();
@@ -274,4 +424,11 @@ int main() {
     sequencesAreUniqueAndContiguous();
     eventClockFailureFailsTheExperiment();
     childClockFailureKeepsLocalOrder();
+    dependencyWakeSkipsOnlyToToken();
+    otherWakesSkipNothing();
+    debtAtBlockStaysOwed();
+    catchUpPaysAllDebt();
+    protocolViolationsFail();
+    postBehindGlobalIsValid();
+    wakeClockFailureKeepsLocalOrder();
 }

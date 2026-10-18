@@ -36,15 +36,23 @@ The qualified model is narrow. It is a model of what CozNet can predict today, n
 | --- | --- |
 | Linux x64, kernel with `PERF_FORMAT_LOST` | Windows, macOS, Linux ARM64 |
 | CPU-bound managed threads that register through the CozNet ABI | Threads that do not register, the thread pool, tasks, and async |
-| No waits before the final join | Locks, `Monitor`, `Barrier`, I/O, and any other blocking |
+| No waits before the final join, or waits through `TargetBarrier` | Locks, `Monitor`, `System.Threading.Barrier`, I/O, and any other blocking |
 | Tiered compilation and ReadyToRun disabled | Tiered code replacement and ReadyToRun images |
 | Selected code as named method ranges from the perf map | Source lines, inlined callees, and code that the JIT moves |
-| Workloads with little allocation | GC-heavy workloads. One earlier forced-GC check broke the 2 ms debt bound in 1 of 10 runs. |
+| Workloads with little allocation | GC-heavy workloads. Three forced-GC checks each broke the 2 ms debt bound in 1 of 10 runs. |
+| Hosts with spare CPUs | Loaded hosts. A runnable thread that waits in the kernel run queue adds wall time that the profiler cannot remove. One barrier run had blocks off by 11 points with 17 to 81 ms of run-queue delay. Another broke the 2 ms debt bound with no forced GC. |
 
-A blocked thread needs the Coz wake rule, so that it skips delay inserted while it waited. The native ledger does not implement that rule yet.
+## Why a woken thread skips only to the release token
+
+A thread that waits for another thread must not owe the delay that its waker inserted during the wait. Coz therefore lets a woken thread skip that delay.
+Pinned Coz skips to the global delay at wake time. Credit that a third thread publishes after the release, but before the woken thread runs, is then skipped too.
+CozNet skips only to the token that the releaser posted after it caught up. Credit after the post is paid, not skipped.
+A timeout, a cancellation, or a spurious wake skips nothing, because no other thread released the waiter.
+The [barrier qualification](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/target-local/barrier.md) shows the effect: in `selected-dominant`, the wakes skip about half of the global delay.
 The handler pays delay with a spin at managed instruction addresses inside the work methods. Other addresses defer payment.
-Four forced-GC checks each run ten profiled runs with a blocking gen-2 GC every 5 ms of work. All forty pass with no crash, loss, or ledger failure.
-An earlier check with a flawed collection count failed the 2 ms debt bound in 1 of 10 runs, for an unknown reason. See [the transition evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/target-local/transitions.md).
+Forced-GC checks run ten profiled runs each, with a blocking gen-2 GC every 5 ms of work. No run crashes or loses samples.
+Three checks each fail 1 of 10 runs by the 2 ms debt bound, for an unknown reason. The others pass 10 of 10.
+One barrier run with no forced GC broke the same bound, so forced GC is not the only trigger. See [the transition evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/target-local/transitions.md).
 JIT, tiering, ReJIT, thread abort, and process exit during payment are not checked. CLR safety outside the qualified workload is not established.
 
 ## IL rewriting compared with native intervention
@@ -60,7 +68,7 @@ and [the callback-reuse comparison](https://github.com/TheAngryByrd/CozNet/blob/
 | --- | --- | --- |
 | Coverage | Probe sites inside rewritten methods | Any sampled instruction. Payment needs an eligible address. |
 | Profile-zero overhead | Not isolated. Probe cost was the largest measured stage. | Handler share about 0.1% of elapsed time. Elapsed ratio medians from about 0.96 to 1.04. |
-| Runtime safety | Managed controller with native requests. Controller preemption broke the debt bound. | Native handler at managed addresses. Forced-GC checks pass 40 of 40. An earlier check failed 1 of 10. |
+| Runtime safety | Managed controller with native requests. Controller preemption broke the debt bound. | Native handler at managed addresses. Forced-GC checks fail 1 of 10 runs in three of nine checks. One barrier run without forced GC also broke the debt bound. |
 | Prediction error | About 10 to 30 points of shortfall | Median absolute difference about 1 to 3 points in the qualified model |
 
 The comparison does not use the same workload. The target-local path removes the managed controller from each sample and payment.

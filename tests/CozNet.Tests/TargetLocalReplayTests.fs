@@ -32,6 +32,17 @@ module TargetLocalReplayTests =
         event 1 6UL TargetLedgerEventKind.Publish 50000UL 50700UL 50700UL 0UL peerIp 0u
     |]
 
+    let private barrier = [|
+        event 1 1UL TargetLedgerEventKind.Block 0UL 0UL 0UL 0UL peerIp 0u
+        event 0 2UL TargetLedgerEventKind.Sample 0UL 0UL 50000UL 0UL selectedIp 1u
+        event 0 3UL TargetLedgerEventKind.Publish 0UL 50000UL 50000UL 0UL selectedIp 0u
+        event 0 4UL TargetLedgerEventKind.Post 50000UL 50000UL 50000UL 0UL selectedIp 0u
+        event 0 5UL TargetLedgerEventKind.Sample 50000UL 50000UL 50000UL 0UL selectedIp 1u
+        event 0 6UL TargetLedgerEventKind.Publish 50000UL 100000UL 100000UL 0UL selectedIp 0u
+        event 1 7UL TargetLedgerEventKind.Wake 100000UL 0UL 50000UL 50000UL peerIp 0u
+        event 1 8UL TargetLedgerEventKind.Child 100000UL 50000UL 50000UL 50000UL peerIp 0u
+    |]
+
     let private replayed events = TargetLocalReplay.replay plan 2 events
 
     let private rejected events (reason: string) message =
@@ -136,6 +147,28 @@ module TargetLocalReplayTests =
                 rejected (change { valid with Amount = 600UL }) "Deferred event" "A deferral of the wrong debt must reject."
                 rejected (change { valid with Ip = selectedIp }) "Deferred event" "An ineligible reason at an eligible address must reject."
                 rejected (change { valid with Detail = 1u }) "Deferred event" "A budget reason at an ineligible address must reject."
+            }
+
+            test "a dependency wake skips to its post token" {
+                let summary = barrier |> replayed |> Result.defaultWith failwith
+                Expect.equal (summary.Blocks, summary.DependencyWakes, summary.SkippedDelay) (1, 1, 50000UL) "The wake must skip to the token."
+                Expect.equal (summary.GlobalDelay, summary.Locals) (100000UL, [| 100000UL; 100000UL |]) "Credit after the post must be paid."
+                Expect.equal summary.MaxObservedDebt 50000UL "Skipped delay must not count as debt, but credit after the post must."
+            }
+
+            test "wake protocol violations reject" {
+                let barrierAt index change =
+                    barrier |> Array.mapi (fun position value -> if position = index then change value else value)
+                rejected (barrierAt 6 (fun value -> { value with Amount = 100000UL; Requested = 100000UL })) "does not match" "A skip to wake-time global must reject."
+                rejected (barrierAt 6 (fun value -> { value with Amount = 40000UL; Requested = 40000UL })) "does not match" "An unposted token must reject."
+                rejected (barrierAt 6 (fun value -> { value with Detail = 1u })) "does not match" "A timeout that skips delay must reject."
+                rejected (barrierAt 0 (fun value -> { value with Kind = TargetLedgerEventKind.Sample; Ip = peerIp })) "has no block" "A wake without a block must reject."
+                rejected (barrierAt 3 (fun value -> { value with Amount = 40000UL })) "does not post" "A post of another value must reject."
+                rejected (Array.take 6 barrier) "still blocked" "A journal that ends blocked must reject."
+                let doubled = [| barrier[0]; { barrier[0] with Sequence = 2UL } |]
+                rejected doubled "wait protocol" "A second block must reject."
+                let settles = [| barrier[0]; event 1 2UL TargetLedgerEventKind.Deferred 0UL 0UL 0UL 0UL 0x9000UL 0u |]
+                rejected settles "settles a blocked worker" "Settlement while blocked must reject."
             }
 
             test "invalid replay inputs reject" {

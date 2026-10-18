@@ -19,6 +19,8 @@ These criteria are fixed before the first run.
 6. No run is repeated to replace a failure.
 7. `cleanup`: one profile whose monitor throws must raise `AggregateException` with that failure.
    A second profile in the same process must then pass. This shows that the first run closed its experiment.
+8. `barrier-abort`: one worker throws after a barrier phase while the other waits at the next phase.
+   The run must fail with that worker error within 10 s, and a second profile in the same process must then pass.
 
 Revision: criteria 1 and 4 changed after review of the first run, before the second run.
 The first run counted collections from thread start to join. At least 5 ms passes between its forced collections, so its 42 to 66 collections
@@ -39,6 +41,7 @@ These checks do not test prediction accuracy under GC. They do not cover JIT, ti
 dotnet run --project build/build.fsproj -- -t TargetLocalTransitionsVerify
 ```
 
+Revision: criterion 8 was added before the run that follows the run-wide barrier abort.
 Revision: criterion 7 was added before the run that follows the cleanup changes in `TargetLocalProfiler.run`.
 Revision: the sample now runs through `TargetLocalProfiler.run`. The work-window counter moved into the library with no change to criteria 1 to 6.
 

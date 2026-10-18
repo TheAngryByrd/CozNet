@@ -7,7 +7,8 @@ The [target-local sample plan](target-local-samples.md) has a portable decoder, 
 The [native ledger](target-local-credit.md) credits and pays target-locally in a native two-thread run.
 The [CLR fork/join qualification](target-local-prediction.md) passes its fixed criteria with managed replay.
 The [forced-GC check](target-local-transitions.md) passes 10 of 10 after an earlier flawed check failed 1 of 10.
-Next, add the Coz wake rule for CozNet waits, GC suspension timestamps to explain the earlier debt failure, and wider workloads.
+The [Coz wake rule](target-local-blocking.md) works for `TargetBarrier`. Four barrier qualification runs pass. The latest fails on measured host run-queue delay.
+Next, explain the debt failures where one thread accepts no samples, then cover JIT, tiering, ReJIT, and shutdown during payment.
 The managed drain dependency remains in the live backend exposed by [nominal timer diagnostics](timer-nominal-credit.md).
 The timer path avoids loop probes. Its default interval policy still discards first-event weights.
 The new callback-reuse comparison completes but retains about ten percentage points of shortfall.

@@ -9,6 +9,9 @@ type TargetLedgerEventKind =
     | Child = 2
     | Deferred = 3
     | Failure = 4
+    | Block = 5
+    | Wake = 6
+    | Post = 7
 
 [<Struct>]
 type TargetLedgerEvent = {
@@ -75,6 +78,9 @@ type TargetReplaySummary = {
     Deferred: int
     Failures: int
     MaxObservedDebt: uint64
+    Blocks: int
+    DependencyWakes: int
+    SkippedDelay: uint64
 }
 
 [<RequireQualifiedAccess>]
@@ -138,9 +144,18 @@ module TargetLocalReplay =
                     let mutable deferred = 0
                     let mutable failures = 0
                     let mutable maxDebt = 0UL
+                    let blockGlobal = Array.create<uint64 option> workers None
+                    let mutable posted = Set.empty<uint64>
+                    let mutable blocks = 0
+                    let mutable dependencyWakes = 0
+                    let mutable skipped = 0UL
 
                     for event in ordered do
                         let local = locals[event.Worker]
+                        let blocked = blockGlobal[event.Worker].IsSome
+
+                        if blocked && (event.Kind = TargetLedgerEventKind.Publish || event.Kind = TargetLedgerEventKind.Child || event.Kind = TargetLedgerEventKind.Deferred) then
+                            reject $"Event {event.Sequence} settles a blocked worker."
 
                         if event.LocalBefore <> local then
                             reject $"Event {event.Sequence} expects local delay {event.LocalBefore}, but the replay has {local}."
@@ -148,8 +163,10 @@ module TargetLocalReplay =
                         if not (published.Contains event.ObservedGlobal) then
                             reject $"Event {event.Sequence} observes a global delay that no publish produced."
 
-                        if event.ObservedGlobal > event.LocalBefore then
-                            maxDebt <- max maxDebt (event.ObservedGlobal - event.LocalBefore)
+                        let owedBefore = if event.Kind = TargetLedgerEventKind.Wake then event.LocalBefore + event.Amount else event.LocalBefore
+
+                        if (not blocked || event.Kind = TargetLedgerEventKind.Wake) && event.ObservedGlobal > owedBefore then
+                            maxDebt <- max maxDebt (event.ObservedGlobal - owedBefore)
 
                         match event.Kind with
                         | TargetLedgerEventKind.Sample ->
@@ -199,10 +216,45 @@ module TargetLocalReplay =
                         | TargetLedgerEventKind.Failure ->
                             failures <- failures + 1
                             reject $"Event {event.Sequence} records ledger failure {event.Detail}."
+                        | TargetLedgerEventKind.Block ->
+                            if blocked || event.Amount <> 0UL then
+                                reject $"Block event {event.Sequence} breaks the wait protocol."
+
+                            blockGlobal[event.Worker] <- Some event.ObservedGlobal
+                            blocks <- blocks + 1
+                        | TargetLedgerEventKind.Wake ->
+                            match blockGlobal[event.Worker] with
+                            | None -> reject $"Wake event {event.Sequence} has no block."
+                            | Some atBlock ->
+                                let expected, valid =
+                                    if event.Detail = 0u then
+                                        let token = event.Requested
+                                        (if token > atBlock then token - atBlock else 0UL),
+                                        posted.Contains token && token <= event.ObservedGlobal
+                                    else
+                                        0UL, event.Detail <= 3u && event.Requested = 0UL
+
+                                if not valid || event.Amount <> expected then
+                                    reject $"Wake event {event.Sequence} does not match its block and token."
+
+                                if event.Detail = 0u then
+                                    dependencyWakes <- dependencyWakes + 1
+
+                                skipped <- skipped + event.Amount
+                                locals[event.Worker] <- local + event.Amount
+                                blockGlobal[event.Worker] <- None
+                        | TargetLedgerEventKind.Post ->
+                            if blocked || event.Amount <> local then
+                                reject $"Post event {event.Sequence} does not post its local delay."
+
+                            posted <- posted.Add event.Amount
                         | _ -> reject $"Event {event.Sequence} has an unknown kind."
 
                     let globalDelay =
                         if publishes.Length = 0 then 0UL else publishes[publishes.Length - 1].Amount
+
+                    if blockGlobal |> Array.exists _.IsSome then
+                        reject "A worker is still blocked at the end of the journal."
 
                     match failure with
                     | Some message -> Error message
@@ -218,6 +270,9 @@ module TargetLocalReplay =
                             Deferred = deferred
                             Failures = failures
                             MaxObservedDebt = maxDebt
+                            Blocks = blocks
+                            DependencyWakes = dependencyWakes
+                            SkippedDelay = skipped
                         }
 
     let effectiveDuration (elapsed: uint64) (summary: TargetReplaySummary) =

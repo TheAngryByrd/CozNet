@@ -232,6 +232,31 @@ public:
     }
 
     void cancel() noexcept { if (dispatcher_) dispatcher_->cancel(); }
+
+    int suspendNotifications() noexcept {
+        sigset_t mask;
+        sigemptyset(&mask);
+        sigaddset(&mask, signalNumber());
+        return pthread_sigmask(SIG_BLOCK, &mask, nullptr);
+    }
+
+    int resumeNotifications() noexcept {
+        sigset_t mask;
+        sigemptyset(&mask);
+        sigaddset(&mask, signalNumber());
+        return pthread_sigmask(SIG_UNBLOCK, &mask, nullptr);
+    }
+
+    // Call only with notifications suspended on the session thread.
+    DispatchResult drainNow(uint32_t max_steps) noexcept {
+        DispatchResult result{DispatchOutcome::not_open};
+        for (uint32_t step = 0; step < max_steps; ++step) {
+            const auto sequence = deliveries_.fetch_add(1, std::memory_order_relaxed) + 1;
+            result = dispatcher_->notify({armed_generation_.load(std::memory_order_acquire), sequence}, config_.budget);
+            if (result.outcome != DispatchOutcome::records_exhausted && result.outcome != DispatchOutcome::time_exhausted) return result;
+        }
+        return result;
+    }
     int lifecycleError() const noexcept { return lifecycle_error_; }
     const Dispatcher& dispatcher() const noexcept { return *dispatcher_; }
     const Sink& sink() const noexcept { return sink_; }

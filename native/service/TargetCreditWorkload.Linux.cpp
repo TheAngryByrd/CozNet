@@ -134,6 +134,11 @@ Replay replay(const std::vector<const Worker*>& workers, const LedgerPlan& plan,
         case LedgerEventKind::failure:
             ++result.failures;
             break;
+        case LedgerEventKind::block:
+        case LedgerEventKind::wake:
+        case LedgerEventKind::post:
+            result.valid = false;
+            break;
         }
         if (event->observed_global > event->local_before && event->observed_global - event->local_before > result.max_debt)
             result.max_debt = event->observed_global - event->local_before;

@@ -38,7 +38,7 @@ struct CozTargetThread {
     Session::Handle session;
     pid_t owner{};
     uint64_t started{};
-    bool closing{};
+    bool closing{}, waiting{};
     std::atomic<bool> finished{};
     CozTargetThread(CozTargetExperiment& value, uint32_t capacity) : experiment(value), events(capacity), log(capacity) {}
 };
@@ -109,8 +109,52 @@ extern "C" int32_t coz_target_start(CozTargetThread* thread) {
     return thread->session->start();
 }
 
+namespace {
+bool explicitCall(CozTargetThread* thread) noexcept {
+    return thread && thread->session && thread->owner == gettid() && thread->started != 0 && !thread->closing;
+}
+
+bool catchUp(CozTargetThread& thread, uint64_t payment_ip) noexcept {
+    const auto drained = thread.session->drainNow(64);
+    if (drained.outcome != DispatchOutcome::drained_snapshot) return false;
+    return thread.account->catchUp(thread.clock, thread.waiter, payment_ip);
+}
+}
+
+extern "C" int32_t coz_target_post(CozTargetThread* thread, uint64_t payment_ip, uint64_t* token) {
+    if (!token) return EINVAL;
+    *token = 0;
+    if (!explicitCall(thread) || thread->waiting) return EINVAL;
+    if (const int error = thread->session->suspendNotifications(); error != 0) return error;
+    const bool caught = catchUp(*thread, payment_ip);
+    const auto posted = caught ? thread->account->post(thread->clock, payment_ip) : std::nullopt;
+    const int resumed = thread->session->resumeNotifications();
+    if (!posted) return EPROTO;
+    *token = *posted;
+    return resumed;
+}
+
+extern "C" int32_t coz_target_wait_begin(CozTargetThread* thread, uint64_t payment_ip) {
+    if (!explicitCall(thread) || thread->waiting) return EINVAL;
+    if (const int error = thread->session->suspendNotifications(); error != 0) return error;
+    if (!catchUp(*thread, payment_ip) || !thread->account->beginBlock(thread->clock, payment_ip)) {
+        thread->session->resumeNotifications();
+        return EPROTO;
+    }
+    thread->waiting = true;
+    return 0;
+}
+
+extern "C" int32_t coz_target_wait_end(CozTargetThread* thread, uint64_t payment_ip, uint64_t token, uint32_t reason) {
+    if (!explicitCall(thread) || !thread->waiting) return EINVAL;
+    thread->waiting = false;
+    const bool woke = thread->account->endBlock(thread->clock, payment_ip, token, WakeReason(reason));
+    const int resumed = thread->session->resumeNotifications();
+    return woke ? resumed : EPROTO;
+}
+
 extern "C" int32_t coz_target_finish(CozTargetThread* thread, uint64_t payment_ip, CozTargetThreadResult* result) {
-    if (!thread || !result || !thread->session || thread->owner != gettid() || thread->closing) return EINVAL;
+    if (!thread || !result || !thread->session || thread->owner != gettid() || thread->closing || thread->waiting) return EINVAL;
     *result = {};
     thread->closing = true;
     auto& session = *thread->session;

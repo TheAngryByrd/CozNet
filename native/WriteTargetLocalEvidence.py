@@ -13,6 +13,13 @@ PREDICTION_HISTORY = [
      "Fail. Every profile arm stopped on a perf-map parser defect before profiling."),
     ("20261018T155143041-1a9300c5", "Same", "Parser accepts the `0x` prefix", "Pass"),
     ("20261018T161755678-2da1482f", "Same", "Cleanup on failure, native layout check, and payment address check", "Pass"),
+    ("20261018T162737768-cfc37f48", "Same", "Join retry, construction before open, and transition host record", "Pass"),
+    ("20261018T182717084-bb88b1d8", "Same", "Wait protocol in the ledger and the library",
+     "Fail. One `peer-longer` block differs by 12.75 points. Its profiled arm ran 11 ms longer than its siblings."),
+    ("20261018T183034093-0968049a", "Same", "Per-thread CPU and wall time diagnostics", "Pass"),
+    ("20261018T190000743-76bbee08", "Same", "Barrier abort, post race, and token bound", "Pass"),
+    ("20261018T191125911-68e03b4b", "Same", "Barrier errors cancel the run", "Pass"),
+    ("20261018T192337237-ab4134f4", "Same", "Run-queue delay diagnostic", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -20,6 +27,21 @@ TRANSITION_HISTORY = [
     ("20261018T155026644-209a9e05", "Profiler moved into the library", "Fail. Every run stopped on a perf-map parser defect before profiling."),
     ("20261018T155303110-d6c77c03", "Parser accepts the `0x` prefix", "Pass, 10 of 10"),
     ("20261018T161924408-457ccd0e", "Cleanup on failure, native layout check, and payment address check", "Pass, 10 of 10"),
+    ("20261018T162853008-0529c4ad", "Join retry, construction before open, and cleanup check", "Pass, 10 of 10"),
+    ("20261018T182834143-78a15e0b", "Wait protocol in the ledger and the library",
+     "Fail. Run 4 broke the debt bound while the peer accepted no sample for six selected samples."),
+    ("20261018T183151879-34460604", "Per-thread CPU and wall time diagnostics", "Pass, 10 of 10"),
+    ("20261018T190118893-b2109c5d", "Barrier abort, post race, and token bound", "Fail. Run 8: 2 ms debt bound."),
+    ("20261018T191244704-9849fce2", "Barrier errors cancel the run", "Pass, 10 of 10"),
+]
+BARRIER_HISTORY = [
+    ("20261018T182448183-601598d1", "First barrier run", "Pass"),
+    ("20261018T183213218-c2268d43", "Per-thread CPU and wall time diagnostics. The prediction plan gained an open-failure note.", "Pass"),
+    ("20261018T190140317-c13b65a5", "Barrier abort, post race, and token bound", "Pass"),
+    ("20261018T191307038-5d4a0177", "Barrier errors cancel the run", "Pass"),
+    ("20261018T191852956-237f7bf8", "Blocking plan rows match the implementation",
+     "Fail. `peer-bound` block 5: the peer accepted no sample for five selected samples and broke the 2 ms debt bound. No forced GC runs here."),
+    ("20261018T192211666-aeadc5b5", "Run-queue delay diagnostic", "Pass"),
 ]
 
 
@@ -125,18 +147,49 @@ See [the tutorial](../../../docsSrc/Tutorials/Target_Local_Prediction.md) and [t
 def transitions(root, run, change):
     directory = root / "artifacts/target-local-transitions" / run
     summary = load(directory / "summary.json")
-    if not summary["passed"] or not summary["inputsUnchanged"]:
-        raise SystemExit("The transition run did not pass.")
+    if not summary["inputsUnchanged"] or not summary.get("cleanupPassed") or not summary.get("barrierAbortPassed"):
+        raise SystemExit("The transition run changed inputs or failed a lifetime check.")
     check_history(root, "target-local-transitions", TRANSITION_HISTORY, run)
     kernel, cpus = host(directory)
-    total = 10 * sum(1 for _, _, result in TRANSITION_HISTORY + [(run, change, "Pass")] if result.startswith("Pass"))
-    rows, forced = [], []
+    rows, forced, failed_runs = [], [], []
+    all_complete = True
     for o in summary["outcomes"]:
         d = load(directory / f"gc-{o['run']}.json")
         forced.append(o["forcedCollections"])
         complete = all(t["complete"] == 1 and t["lost"] == 0 for t in d["threads"])
-        rows.append(f"| {o['run']} | Yes | None | {d['replay']['MaxObservedDebt']:,} | {o['forcedCollections']} | {int(o['maxHandlerNs']):,} | {'Yes' if complete else 'No'} |")
-    history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in TRANSITION_HISTORY + [(run, change, "Pass, 10 of 10")])
+        debt = f"{d['replay']['MaxObservedDebt']:,}" if d.get("replay") else "replay rejected"
+        failure = "None" if d["ledgerFailure"] == 0 else "`debt_exceeded`" if d["ledgerFailure"] == 1 else str(d["ledgerFailure"])
+        gap = max(t["wallNs"] - t["cpuNs"] for t in d["threads"]) / 1e6
+        run_ok = (o["exitCode"] == 0 and o["recordExists"] and o["passed"] and o["forcedCollections"] >= 10
+                  and o["maxHandlerNs"] < 5000000)
+        all_complete = all_complete and complete
+        if not run_ok:
+            reasons = []
+            if not o["passed"] and d["ledgerFailure"] == 0 and o["exitCode"] == 0:
+                reasons.append("profile result did not pass")
+            if o["exitCode"] != 0 or not o["recordExists"]:
+                reasons.append("exit or record")
+            if d["ledgerFailure"] == 1:
+                reasons.append("2 ms debt bound")
+            elif d["ledgerFailure"] != 0:
+                reasons.append(f"ledger failure {d['ledgerFailure']}")
+            if o["forcedCollections"] < 10:
+                reasons.append("fewer than 10 forced collections")
+            if o["maxHandlerNs"] >= 5000000:
+                reasons.append("5 ms handler bound")
+            if not complete:
+                reasons.append("incomplete epoch or loss")
+            failed_runs.append((o["run"], ", ".join(reasons) or "unclassified"))
+        rows.append(f"| {o['run']} | {'Yes' if run_ok else 'No'} | {failure} | {debt} | {o['forcedCollections']} | {int(o['maxHandlerNs']):,} | {gap:.1f} | {'Yes' if complete else 'No'} |")
+    failed_text = "; ".join(f"run {r}: {why}" for r, why in failed_runs)
+    current = "Pass, 10 of 10" if summary["passed"] else f"Fail. {failed_text}."
+    total = 10 * sum(1 for _, _, result in TRANSITION_HISTORY + [(run, change, current)] if result.startswith("Pass"))
+    history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in TRANSITION_HISTORY + [(run, change, current)])
+    verdict = ("**Result: the current check passes.** Earlier failed checks stay part of the evidence." if summary["passed"] else
+               f"**Result: the current check fails.** {10 - len(failed_runs)} of 10 runs pass. Failed criteria: {failed_text}.")
+    longest = max(int(o["maxHandlerNs"]) for o in summary["outcomes"])
+    outcome = (f"Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is {longest:,} ns." if summary["passed"] else
+               f"The longest handler interval is {longest:,} ns. Each failed run keeps its journal and its replay result.")
     failed = root / "artifacts/target-local-transitions/20261018T151031617-addf680d/gc-4.json"
     debt = sorted(load(failed)["events"], key=lambda e: e[1])
     observed = next(e for e in debt if e[2] == 4)
@@ -150,15 +203,17 @@ While at least one profiled thread is in its work phase, the main thread forces 
 The criteria are in [the transition plan](../../../lode/plans/target-local-transitions.md). The runner hashes that file, and all source hashes stay unchanged.
 The sample runs through the library entry point `TargetLocalProfiler.run`. `native/WriteTargetLocalEvidence.py` writes this page.
 
-**Result: the current check passes, and an earlier check failed.** The failure stays part of the evidence.
+{verdict}
 
-| Run | Passed | Ledger failure | Max observed debt (ns) | Forced GCs in work window | Max handler (ns) | Epochs complete, zero loss |
-| ---: | --- | --- | ---: | ---: | ---: | --- |
+| Run | Passed | Ledger failure | Max observed debt (ns) | Forced GCs in work window | Max handler (ns) | Wall minus counted CPU (ms) | Epochs complete, zero loss |
+| ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
 {chr(10).join(rows)}
 
-No run crashed or hung. Every run closed both epochs with zero loss, retired both sessions, and restored the handlers.
+{"No run crashed or hung. Every run closed both epochs with zero loss, retired both sessions, and restored the handlers." if all_complete else "At least one run did not close both epochs with zero loss. The table shows which."}
 The `cleanup` check passes. A profile whose monitor throws raises `AggregateException`, and a second profile in the same process then passes.
-Every handler interval stays below 5 ms, and no run records a ledger failure.
+The `barrier-abort` check passes. A worker that throws releases its waiting peer, the run fails within 10 s, and a second profile then passes.
+{outcome}
+Wall minus counted CPU is the largest per-thread difference. Counted CPU stops at disable and wall time includes the closing payment, so it is coarse.
 
 ## Run history
 
@@ -177,12 +232,12 @@ In sequences 71 through 80 of run 4, the selected thread accepts five selected s
 The journal holds no peer sample in that interval. Sequence {observed[1]} records the failure at {observed[3] - observed[4]:,} ns of debt.
 The ledger then pays the debt in bounded children. It forgives nothing.
 The journal has no scheduling or GC suspension times, so it cannot show why the peer accepted no sample.
-One hypothesis is that the GC suspended and resumed the two threads at different times. No check can test it yet.
+One hypothesis is that the host or the GC deschedules one thread. Profile results now record thread CPU and wall time to test it.
 
 ## Consequence
 
-The current-design checks show no failure in {total} runs, with {min(forced)} to {max(forced)} forced collections during profiling in the latest run.
-The earlier failure shows that a thread can go without samples long enough to break the 2 ms debt bound. Its cause is unknown.
+The passing current-design checks hold {total} runs with no failure. Two current-design checks each fail 1 of 10 runs with the same signature as the first failure.
+A thread can go without samples long enough to break the 2 ms debt bound. The cause is unknown.
 GC-heavy workloads stay outside the supported model. The debt bound stays unchanged.
 
 ## Check limits
@@ -195,11 +250,111 @@ See [the support boundary](../../../docsSrc/Explanations/target-local-prediction
 """
 
 
+def barrier(root, run, change):
+    directory = root / "artifacts/target-local-barrier" / run
+    summary, manifest = load(directory / "summary.json"), load(directory / "manifest.json")
+    if not summary["inputsUnchanged"]:
+        raise SystemExit("The barrier run changed its inputs.")
+    check_history(root, "target-local-barrier", BARRIER_HISTORY, run)
+    kernel, cpus = host(directory)
+    rows, blocks, longest = [], [], 0
+    expected = {"alternating": "about 40%", "selected-dominant": "about 50%", "peer-bound": "about 0%"}
+    for c in summary["configurations"]:
+        def pct(value):
+            return "n/a" if value is None else f"{value*100:.2f}%"
+        def pp(value):
+            return "n/a" if value is None else f"{value*100:.2f} pp"
+        rows.append(f"| `{c['name']}` | `{c['pattern']}` | {expected[c['pattern']]} | {c['validBlocks']} / 5 | {pct(c['medianPredicted'])} | "
+                    f"{pct(c['medianActual'])} | {pp(c['medianAbsoluteDifference'])} | {pp(c['maxAbsoluteDifference'])} | "
+                    f"{'n/a' if c['medianSkippedNs'] is None else format(c['medianSkippedNs']/1e6, '.1f') + ' ms'} | {'Pass' if c['passed'] else 'Fail'} |")
+        for b in c["blocks"]:
+            if not b["valid"]:
+                blocks.append(f"| `{c['name']}` | {b['block']} | Invalid: {'; '.join(b['reasons'])} | | | | | | | |")
+                continue
+            blocks.append(f"| `{c['name']}` | {b['block']} | {b['predicted']*100:.2f}% | {b['actual']*100:.2f}% | {b['difference']*100:+.2f} pp | "
+                          f"{b['profileSpeedupGlobalNs']/1e6:.1f} | {b['skippedNs']/1e6:.1f} | {b['zeroHandlerShare']*100:.3f}% | "
+                          f"{(b.get('zeroMaxRunDelayNs') or 0)/1e6:.2f} | {(b.get('speedupMaxRunDelayNs') or 0)/1e6:.2f} |")
+            longest = max(longest, b["maxHandlerNs"])
+    failing = [(c["name"], b) for c in summary["configurations"] for b in c["blocks"] if not b["valid"] or abs(b["difference"]) > 0.10]
+    failed_configs = [c["name"] for c in summary["configurations"] if not c["passed"]]
+    if summary["passed"]:
+        verdict = "**Result: the current run passes.**"
+        current = "Pass"
+    else:
+        parts = [f"`{name}` block {b['block']}" + ("" if b["valid"] else " invalid") +
+                 (f" ({b['difference']*100:+.2f} pp; run-queue delay {(b.get('zeroMaxRunDelayNs') or 0)/1e6:.1f} ms at 0% and {(b.get('speedupMaxRunDelayNs') or 0)/1e6:.1f} ms at 50%)" if b["valid"] else "")
+                 for name, b in failing]
+        verdict = f"**Result: the current run fails** in {', '.join(f'`{n}`' for n in failed_configs)}. Failing blocks: {'; '.join(parts)}."
+        current = f"Fail. {'; '.join(parts)}."
+    history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in BARRIER_HISTORY + [(run, change, current)])
+    all_blocks = [b for c in summary["configurations"] for b in c["blocks"]]
+    treatment_delay = max(b.get("speedupMaxRunDelayNs") or 0 for b in all_blocks)
+    zero_delay = max(b.get("zeroMaxRunDelayNs") or 0 for b in all_blocks)
+    delay_missing = any(b.get("runDelayMissing") for b in all_blocks)
+    return f"""# Target-local barrier qualification
+
+Evidence: `artifacts/target-local-barrier/{run}`.
+
+`TargetLocalBarrierVerify` ran once with seed {manifest['seed']} on kernel `{kernel}`, x64, with {cpus} CPUs.
+The criteria are in [the prediction plan](../../../lode/plans/target-local-prediction.md#barrier-qualification), fixed before the first barrier run.
+The runner hashes that file, [the blocking plan](../../../lode/plans/target-local-blocking.md), and the sources. All hashes stay unchanged.
+`native/WriteTargetLocalEvidence.py` writes this page.
+
+Two registered threads run 10 phases. In each phase the selected thread runs A rounds and the peer runs B rounds. Both then meet at a `TargetBarrier`.
+Each block runs `profile-phases 0`, `profile-phases 50`, `plain-phases <pattern> 100`, and `plain-phases <pattern> 50` in a random order.
+
+| Configuration | Pattern | Expected actual | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Median skipped delay | Result |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+{chr(10).join(rows)}
+
+| Configuration | Block | Predicted | Actual | Difference | Global delay (ms) | Skipped delay (ms) | Handler share at 0% | Run-queue delay at 0% (ms) | Run-queue delay at 50% (ms) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+{chr(10).join(blocks)}
+
+{verdict}
+The gate stays unchanged. Each failing block is recorded with its run-queue delays.
+A valid block has runs that all exit 0, both epochs complete with zero loss, a valid managed replay, no ledger failure, and all 10 phases complete.
+Each profiled run in a valid block records at least one dependency wake. The longest handler interval in a valid block is {longest:,} ns.
+
+## What the skipped delay shows
+
+In `selected-dominant`, the peer finishes each phase early and waits while the selected thread publishes credit.
+Each wake skips only to the token that the selected thread posted at the barrier. The skipped delay is about half of the global delay.
+Without the wake rule, the peer would owe that delay after each wake.
+In `peer-bound`, the selected thread waits instead. Its wakes skip only the peer's published payment overshoot, a few hundred nanoseconds, and the prediction stays near 0%.
+In `alternating`, the critical thread changes in every phase. The prediction follows the real gain of about 40%.
+
+## Run history
+
+| Run | Change before the run | Result |
+| --- | --- | --- |
+{history}
+
+Exploratory smoke runs before the criteria used other pattern names and are not part of any result.
+
+## Limits
+
+One host and one kernel. Five blocks for each configuration cannot establish a general error bound.
+Only `TargetBarrier` uses the wait protocol. Locks, `Monitor`, tasks, and other waits stay unsupported.
+A timed-out or cancelled barrier wait skips nothing. Deterministic checks cover it, but no qualified run exercises a timeout.
+A worker that is preempted between its arrival and its block skips nothing for the delay inserted in that window. That biases the prediction low.
+The failed run shows that a runnable thread can go without samples long enough to break the 2 ms debt bound, even without forced GC.
+Each worker records its kernel run-queue delay. In this run the largest value is {treatment_delay/1e6:.2f} ms in a 50% arm and {zero_delay/1e6:.2f} ms in a 0% arm.
+{"Some workers could not read their run-queue delay." if delay_missing else "Every worker read its run-queue delay."}
+Run-queue delay adds wall time that the profiler does not remove. A long delay in a 0% arm raises E0 and the prediction. A long delay in a 50% arm lowers it.
+
+See [the blocking plan](../../../lode/plans/target-local-blocking.md) and [the API reference](../../../docsSrc/Reference/target-local-api.md).
+"""
+
+
 def main():
     root = pathlib.Path(__file__).resolve().parent.parent
     out = root / "reliability/features/target-local"
-    (out / "prediction.md").write_text(prediction(root, sys.argv[1], sys.argv[3]), newline="\n")
-    (out / "transitions.md").write_text(transitions(root, sys.argv[2], sys.argv[3]), newline="\n")
+    pages = {"prediction.md": prediction(root, sys.argv[1], sys.argv[3]), "transitions.md": transitions(root, sys.argv[2], sys.argv[3])}
+    if len(sys.argv) > 5:
+        pages["barrier.md"] = barrier(root, sys.argv[4], sys.argv[5])
+    for name, text in pages.items():
+        (out / name).write_text(text, newline="\n")
 
 
 if __name__ == "__main__":

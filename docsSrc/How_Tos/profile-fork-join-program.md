@@ -1,7 +1,7 @@
 # How to profile your own fork/join program
 
 Use this procedure to predict the effect of an optimization in your own Linux x64 program.
-Your program must match the [supported model](../Explanations/target-local-prediction.md#support-boundary): CPU-bound threads that do not wait before the final join.
+Your program must match the [supported model](../Explanations/target-local-prediction.md#support-boundary): CPU-bound threads that do not wait before the final join, or that wait only at a `TargetBarrier`.
 
 1. Reference the `CozNet` library from your program.
 2. Put each worker body in a method marked `[<MethodImpl(MethodImplOptions.NoInlining)>]`.
@@ -28,6 +28,8 @@ Your program must match the [supported model](../Explanations/target-local-predi
 
 7. Check that `zero.Passed` and `half.Passed` are true. Do not use a result that did not pass.
 8. Compute the predicted reduction as `1.0 - float half.EffectiveNs / float zero.EffectiveNs`.
+
+For a phased program, create one `TargetBarrier` with one participant for each worker. Call `barrier.SignalAndWait()` at the end of each phase inside `Work`.
 
 The selected spans name the candidate code. The eligible spans name every worker method, because a thread pays delay only at an eligible address.
 `PaymentIp` must be inside one eligible span, or `run` raises `ArgumentException`. Each worker uses the start of its own work method.

@@ -13,7 +13,10 @@ The library name is `CozNet.TargetLocal` (`libCozNet.TargetLocal.so`). Every fun
 | `coz_target_open(speedup, period, selected, selected_count, eligible, eligible_count, experiment)` | Any | Parses the ledger plan and installs the signal handlers. Returns `EBUSY` unless `SIGRTMIN + 8` and `SIGIO` have the default disposition. |
 | `coz_target_register(experiment, journal_capacity, thread)` | Worker | Creates the session and ledger account for the calling thread. Fails with `EBUSY` after any thread started. |
 | `coz_target_start(thread)` | Same worker | Enables sampling and notification. |
-| `coz_target_finish(thread, payment_ip, result)` | Same worker | Closes the epoch, pays remaining debt at `payment_ip`, and retires the session. |
+| `coz_target_post(thread, payment_ip, token)` | Same worker, after start | Masks the notification signal, drains the ring, catches up at `payment_ip`, and returns a release token. |
+| `coz_target_wait_begin(thread, payment_ip)` | Same worker, after start | Masks the signal, drains, catches up, and blocks the account. The signal stays masked. |
+| `coz_target_wait_end(thread, payment_ip, token, reason)` | Same worker, while waiting | Wakes the account with reason 0 (dependency), 1 (timeout), 2 (cancelled), or 3 (spurious), then unmasks. |
+| `coz_target_finish(thread, payment_ip, result)` | Same worker, not waiting | Closes the epoch, pays remaining debt at `payment_ip`, and retires the session. |
 | `coz_target_events(thread, events, capacity, count)` | Any, after finish | Copies the thread journal. Returns `ENOBUFS` if `capacity` is too small. |
 | `coz_target_release(thread)` | Any, after finish | Frees the thread. If handler quiescence failed, it returns `EBUSY` on every call and keeps the memory. The experiment then cannot close. |
 | `coz_target_close(experiment, result)` | Any, after all releases | Reports the final global delay and restores the signal handlers. |
@@ -78,10 +81,31 @@ It ignores entries with a zero size, an overflow, or a field that is not hexadec
 5. It joins the threads, closes the experiment, and replays every journal with `TargetLocalReplay.replay`.
    If `monitor` throws, a thread cannot start, or the caller is interrupted during the join, it releases the barrier, joins the started threads, and closes the experiment before it raises `AggregateException`.
 
+`TargetThreadOutcome.RunDelayNs` is the change in kernel run-queue delay (`/proc/thread-self/schedstat`, field 2) across `Work`. It is -1 when the file cannot be read.
+
 `TargetProfileResult` holds `ElapsedNs`, `GlobalNs`, `EffectiveNs`, the experiment result, each thread outcome, all events, the replay result, and `Passed`.
 `Passed` is true only when every thread completes with zero loss and quiescence, every handler interval is below 5 ms, no ledger failure or foreign signal occurs,
 and the replay is valid with the native global delay and event count. An exception in `Work` makes the run fail.
 See [the how-to](../How_Tos/profile-fork-join-program.md).
+
+## Barrier
+
+`TargetBarrier(participants)` is a reusable barrier. Outside a target-local profile, or on another platform, it is a plain barrier.
+Inside `TargetLocalProfiler.run`, each worker uses the wait protocol:
+
+1. The last worker to arrive calls `coz_target_post` and stores the token in the phase. It then releases the phase.
+2. Each other worker calls `coz_target_wait_begin`, waits for the phase, and calls `coz_target_wait_end` with the phase token.
+
+`SignalAndWait()` waits without a limit. `SignalAndWait(timeout, cancellation)` returns false when a worker that must wait times out or is cancelled.
+The last arriver never waits, so it returns true even with a cancelled token.
+Inside a profile, a worker that fails to register or start, a `Work` exception, a barrier error, or a monitor exception cancels every barrier wait in the run.
+A worker that times out or is cancelled still counts as arrived for its phase, and its wake skips nothing.
+More arrivals than participants in one phase raise `InvalidOperationException`. A failed native call fails the run with `barrier <error>`.
+`Phase` returns the number of completed phases.
+
+The replay checks every `block`, `wake`, and `post` event. A dependency wake must name the token of an earlier `post`.
+No `publish`, `child`, or `deferred` event can belong to a blocked worker, and no worker can stay blocked at the end.
+`TargetReplaySummary` reports `Blocks`, `DependencyWakes`, and `SkippedDelay`.
 
 ## Sample program
 
@@ -92,6 +116,8 @@ See [the how-to](../How_Tos/profile-fork-join-program.md).
 | `calibrate <out>` | Rounds of `Work.peer` for each millisecond |
 | `plain <selectedRounds> <peerRounds> <out>` | Elapsed time without the profiler |
 | `profile <speedup> <selectedRounds> <peerRounds> <out>` | Elapsed, global, and effective time, thread results, replay summary, and all events |
+| `plain-phases <pattern> <selectedPercent> <out>` | Elapsed time of 10 barrier phases without the profiler, with selected work scaled to `selectedPercent` |
+| `profile-phases <speedup> <pattern> <out>` | The profile result for 10 barrier phases. Patterns are `alternating`, `selected-dominant`, and `peer-bound`. |
 | `profile-gc <speedup> <selectedRounds> <peerRounds> <intervalMs> <out>` | The profile result, with a forced blocking gen-2 GC every `intervalMs` from the main thread |
 
 The profile mode requires `DOTNET_TieredCompilation=0`, `DOTNET_ReadyToRun=0`, `DOTNET_PerfMapEnabled=3`, and `DOTNET_PerfMapShowOptimizationTiers=1`.

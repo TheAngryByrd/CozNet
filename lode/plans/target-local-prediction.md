@@ -61,6 +61,42 @@ Criterion 10 then changed from the later to the earlier thread start after the s
 Criterion 7 gained the handler share before the run that follows the move of the profiler into `src/CozNet/TargetLocalProfiler.fs`.
 The first run used the two-configuration criteria and is kept as superseded evidence. The runner hashes this file.
 
+## Open failure
+
+Run `20261018T182717084-bb88b1d8` fails criterion 6. One `peer-longer` block differs by 12.75 points.
+Its `profile-speedup` arm runs 11 ms longer than its sibling blocks, while both plain arms stay within 3 ms.
+Transition run `20261018T182834143-78a15e0b` also fails: its peer accepts no sample while the selected thread accepts six.
+Hypothesis: the host deschedules one profiled thread. Each profile result now records thread CPU (`cpuNs`) and wall time (`wallNs`).
+The analyzer reports the largest `wallNs - cpuNs` for each profile arm. The pass rule does not change.
+
+## Run-queue delay diagnostic
+
+Barrier run `20261018T191852956-237f7bf8` fails criterion 5 in `peer-bound` block 5. The peer accepts no sample while the selected thread accepts five.
+No forced GC runs in that workload. The peer wall time exceeds its counted CPU by about 5.5 ms.
+Hypothesis: the host scheduler leaves the runnable peer off CPU. Each worker now records the change in kernel run-queue delay
+(`/proc/thread-self/schedstat`, field 2) across its work. A failure with a run-queue delay near the sample gap supports the hypothesis.
+The pass rules do not change.
+
+## Barrier qualification
+
+These criteria are fixed before the first barrier qualification run. The runner is `TargetLocalBarrierVerify`.
+
+1. Workload: two registered threads run 10 phases. Each phase runs selected work A and peer work B, then both meet at a `TargetBarrier`.
+2. Configurations, in rounds of A and B for each phase:
+   - `barrier-alternating`: phases alternate (2400, 600) and (300, 600). The expected real reduction is about 40%.
+   - `barrier-selected-dominant`: (2400, 600) in every phase. The expected real reduction is about 50%.
+   - `barrier-peer-bound`: (300, 600) in every phase. The expected real reduction is about 0%.
+3. Each block runs, in random order: `profile-phases 0`, `profile-phases 50`, `plain-phases <pattern> 100`, and `plain-phases <pattern> 50`.
+4. Run 5 blocks for each configuration with seed 20261018. Keep every block.
+5. A block is valid only if every run exits 0, both epochs complete with zero loss, the managed replay is valid,
+   no ledger failure occurs, every handler interval is below 5 ms, all 10 phases complete, and at least one dependency wake occurs.
+6. Predicted reduction is `1 - Es / E0`. Actual reduction is `1 - T50 / T100`.
+7. Pass: in each configuration, the median absolute difference is at most 5 percentage points, and every block is within 10.
+8. Report the skipped delay, the handler share at 0%, and the elapsed ratio. They are not gated.
+9. Any invalid block fails the qualification. Do not rerun an unchanged block to replace it.
+
+The exploratory smoke runs before these criteria used the earlier pattern names and are not part of any result.
+
 ## Verified state
 
 `samples/CozNet.TargetLocal` and `native/service/TargetLocalApi.Linux.cpp` implement the integration. `TargetLocalPredictionVerify` runs it.

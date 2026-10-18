@@ -48,6 +48,21 @@ It returns false and records `journal_full` when the journal cannot keep `settle
 Debt is never forgiven. A deferred debt stays until a later settlement pays it.
 A failed wait or clock keeps the measured part, appends a `failure` event, and fails the experiment.
 
+## Wait protocol
+
+| Call | Requirement | Effect |
+| --- | --- | --- |
+| `catchUp(clock, waiter, ip)` | Not blocked | Repeats `settle` at `ip` until caught up, at most 64 times. Returns false at an ineligible address or on failure. |
+| `post(clock, ip)` | Not blocked | Appends `post` and returns the local delay as the token. The caller catches up first. Credit that another thread publishes after the catch-up stays above the token. |
+| `beginBlock(clock, ip)` | Not blocked | Records the global delay at the block and appends `block`. |
+| `endBlock(clock, ip, token, reason)` | Blocked | Appends `wake` and adds the skip to local delay. |
+
+For `WakeReason::dependency`, the token must not exceed the current global delay or the largest posted token. The skip is `max(0, token - blockGlobal)`.
+The native check bounds the skip. Only the managed replay proves that the token matches one exact `post`.
+For `timeout`, `cancelled`, and `spurious`, the skip is 0 and the stored token is 0.
+While blocked, `settle` returns `blocked` and pays nothing. `accept` still credits samples.
+Each requirement violation appends a `failure` event and sets the sticky `LedgerFailure::protocol`.
+
 ## Events
 
 Each `LedgerEvent` takes one sequence from `ExperimentDelay`. The sequences of all threads form one gapless range.
@@ -59,6 +74,9 @@ Each `LedgerEvent` takes one sequence from `ExperimentDelay`. The sequences of a
 | `child` | Measured wait | `requested` is the child request, `detail` is the wait status |
 | `deferred` | Debt left unpaid | `detail` is 1 for a budget stop and 0 for an ineligible instruction |
 | `failure` | Debt or 0 | `detail` is the `LedgerFailure` value |
+| `block` | 0 | `observed_global` is the global delay at the block |
+| `wake` | Skipped delay | `requested` is the token, `detail` is the `WakeReason` |
+| `post` | The token | `observed_global` is the global delay at the post |
 
 Every event keeps `observed_global` and `local_before`. A publish takes its sequence after its swap.
 Sequence order therefore does not always match swap order between threads. A replay must take global delay as the largest publish.
