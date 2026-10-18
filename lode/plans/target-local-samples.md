@@ -57,24 +57,23 @@ flowchart LR
 
 ## Verified state
 
-`ServiceOwnerVerify` on Windows passes 17 checks. A Linux x64 build with `PERF_FORMAT_LOST` headers adds `perf-ring`.
-`LinuxServiceOwnerVerify` passes 18, including `perf-sample-ring` and `perf-ring`.
+`ServiceOwnerVerify` on Windows passes 18 checks. A Linux x64 build with `PERF_FORMAT_LOST` headers adds `perf-ring`.
+`LinuxServiceOwnerVerify` passes 19, including `perf-sample-ring`, `target-sample-dispatch`, and `perf-ring`.
 `LinuxPerfRingVerify` runs `normal`, `overflow`, and `epochs` live on `5.15.153.1-microsoft-standard-WSL2`.
 Evidence and its limits are in [the perf ring capture](../../reliability/features/native-signal/perf-ring.md).
 The live overflow mode decodes 73 samples, finds no loss record, and reads positive final loss.
 The producer runs on the consumer's CPU. Cross-CPU head and tail visibility is not observed.
 The embedded loss check is a second guard. A `PERF_RECORD_LOST` record precedes the next sample after loss.
 
-The workload drain loop is unbounded. Budget-limited live drains remain untested.
+The `PerfRingWorkload` drain loop is unbounded. [Target-local dispatch](target-local-dispatch.md) tests budget-limited live drains.
 The synthetic decoder checks do not enumerate every `misc` mode and flag combination.
 `PERF_FORMAT_LOST` on the verified kernel is a backport. Probe each executing kernel. Do not infer support from its version.
 The managed `tests/CozNet.LinuxPerf` path uses `read_format = 0` and does not consume this adapter.
 
 ## Remaining contracts
 
-The adapter does not establish target-local notification, CLR signal safety, or a bounded dispatch budget.
-Next, define bounded target notification and source disable/drain/resume epochs.
-Then add native credit publication, bounded target payment, and exact-once managed reconciliation.
+[Target-local dispatch](target-local-dispatch.md) defines notification, bounded dispatch, and epochs over this adapter.
+Next, add native credit publication, bounded target payment, and exact-once managed reconciliation.
 Retain cancellation, code revocation, delivery quiescence, first receipt, and failed-prefix evidence.
 Keep the 2 ms debt, 2 ms lease, 50 us requested child, 5 ms handler, and 100 ms receipt bounds unchanged.
 Do not divide retrospective credit or claim that target-local sampling alone fixes capacity.

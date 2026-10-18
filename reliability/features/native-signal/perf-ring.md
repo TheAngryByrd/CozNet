@@ -34,8 +34,8 @@ The two modes use separate events, so this comparison is not a reconciliation.
 
 ## Limits
 
-The workload drain loop has no record or time budget. Bounded dispatch remains untested live.
-These runs do not test target-local notification, signal handlers, native credit, payment, or CLR execution.
+The workload drain loop has no record or time budget. [Target dispatch](target-dispatch.md) tests bounded dispatch live.
+These runs do not test native credit, payment, or CLR execution.
 They do not establish service capacity or prediction accuracy.
 `PERF_FORMAT_LOST` on this kernel is a Microsoft backport. Other kernels and seccomp policies are not verified.
 

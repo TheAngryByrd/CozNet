@@ -1,6 +1,7 @@
 # Lode index
 
 For the portable one-record decoder, the Linux perf ring adapter, and remaining target-local integration, read [target-local samples](plans/target-local-samples.md).
+For fasync notification, bounded dispatch, epoch closure, and the Linux session lifecycle, read [target-local dispatch](plans/target-local-dispatch.md).
 
 For nominal timer credit, the retained controller-preemption backlog, and the next sample-processing design, read [timer nominal credit](plans/timer-nominal-credit.md).
 

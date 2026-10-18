@@ -58,11 +58,31 @@ The live overflow mode shows this case. It decodes the 73 samples that fit one p
 No loss record appears in the ring, and the final read reports positive loss.
 A count-only source would show 73 valid samples and no sign of loss.
 
+## Why each sample notifies its own thread
+
+Upstream Coz arms a thread CPU timer on each target. CozNet first used the same trigger with a 2 ms interval.
+On the verified kernel, those timers expired only about every 10 ms of thread CPU.
+Each notification then held about ten 1 ms samples. At 50% speedup, ten selected samples can publish 5 ms of credit.
+That burst conflicts with the 2 ms debt bound, independent of scheduling delay.
+
+Perf can instead notify through fasync. With an owner thread and a real-time signal, the kernel requests one signal for each overflow.
+Overflows that occur before its deferred wakeup work runs share one signal.
+The signal arrives on the sampled thread and names the event descriptor.
+In the live capture without masking, each notification holds one sample.
+A future credit sink would then see at most one selected sample in most dispatches. This change publishes no credit.
+The live capture records a median handler interval of 293 ns for a one-sample dispatch.
+
+Queued notifications still need bounds. A thread can block the signal while samples accumulate.
+The first dispatch after the mask then finds many samples, and the queued notifications follow it.
+Each dispatch therefore has record and elapsed budgets. A budget stop reports remaining backlog instead of a completed drain.
+See [the dispatch evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/native-signal/target-dispatch.md).
+
 ## What remains
 
 Moving decoding alone does not move credit or payment ownership.
 The existing timer backend still requires managed reservations for finite native leases.
-A target-local source needs bounded notification, source disable and final drain, epoch continuity, code invalidation, and safe retirement.
+The [dispatch reference](../Reference/target-sample-dispatch.md) covers bounded notification, source disable and final drain, epoch continuity, and native retirement.
+Code invalidation and CLR execution remain open.
 Native accounting also needs exact-once reconciliation with managed evidence and measured wall-time payment.
 Unread backlog cannot become silently dropped credit or a retrospective change to the experiment.
 

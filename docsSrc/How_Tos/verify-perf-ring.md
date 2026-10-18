@@ -46,11 +46,42 @@ A one-page data area holds 73 samples of 56 bytes. Without drains, the `overflow
 A passing `overflow` result means that the final read detected loss. It does not mean that capture is complete.
 An `overflow` run with zero final loss fails. It is inconclusive, not evidence of complete capture.
 
+## Check target-local dispatch
+
+The same run starts `TargetDispatchWorkload` in four modes. Each mode writes `dispatch-<mode>.json`.
+Each perf sample overflow requests one real-time signal to the target thread. Each signal starts one bounded dispatch.
+The kernel merges overflows that occur before its deferred wakeup work runs.
+A dispatch stops after 250,000 ns or its record budget, whichever comes first. Each closure step can read 8 records.
+A masked step blocks the signal while the thread works. Its notifications stay queued until the mask ends.
+
+| Mode | Data pages | Records per dispatch | Work | Expected result |
+| --- | ---: | ---: | --- | --- |
+| `bounded` | 2 | 8 | Three epochs of 100 ms | Three complete epochs, zero loss, and a wrapped ring |
+| `backlog` | 4 | 1 | 60 ms, 30 ms masked, 30 ms, 40 ms masked | Budget stops with backlog, and closure takes more than one step |
+| `incomplete` | 1 | 1 | 20 ms, 300 ms masked, 20 ms | A terminal epoch with loss evidence, and a refused resume |
+| `cancel` | 4 | 8 | 150 ms, cancelled after 50 ms | Cancelled dispatches, a complete closure, and a refused resume |
+
+1. In every `dispatch-<mode>.json`, check that `passed` is true.
+2. Check that `stale`, `reentered`, `foreignSignals`, `sigioFallbacks`, and `logDropped` are 0.
+   Check that `duplicateCreate` is 16 (`EBUSY`).
+3. Check that `maxHandlerNs` is less than 5,000,000.
+4. In `retirement`, check that `blocked`, `disabled`, `asyncCleared`, `unmapped`, `closed`, and `maskRestored` are true.
+5. Check that each epoch `accepted` value equals the number of `samples` with that `generation`.
+6. In `dispatch-backlog.json`, check that `exhaustedWithBacklog` is positive and `closeSteps` is more than 1.
+7. In `dispatch-backlog.json`, check that the retirement `pendingDrained` value is positive.
+8. In `dispatch-incomplete.json`, check that `complete` is false and `refusedResume` is 71 (`EPROTO`).
+9. In `dispatch-incomplete.json`, check that the epoch `lost` value or the retirement `rawLost` value is positive.
+10. In `dispatch-cancel.json`, check that `cancelledDispatches` is positive and `refusedResume` is 71.
+
+A `records_exhausted` or `time_exhausted` dispatch with backlog `remaining` did not drain the ring.
+A `drained_snapshot` dispatch reached the head that it read. It does not show source closure.
+The `incomplete` mode keeps every accepted sample under generation 1. The epoch record marks that generation incomplete.
+
 ## Limits
 
-The workload drain loop has no record or time budget. Budget-limited drains are not tested live.
+The `PerfRingWorkload` drain loop has no record or time budget. `TargetDispatchWorkload` tests budget-limited drains.
 Sample counts are not exact functions of elapsed CPU time. Do not compare them with a computed expectation.
 The workload thread is both the producer CPU and the consumer. Cross-CPU publication is not tested.
-These checks do not test target-local notification, native credit, payment, signal handlers, or CLR execution.
+These checks do not test native credit, payment, or CLR execution.
 
-See [the adapter reference](../Reference/native-perf-decoder.md#linux-adapter).
+See [the adapter reference](../Reference/native-perf-decoder.md#linux-adapter) and [the dispatch reference](../Reference/target-sample-dispatch.md).

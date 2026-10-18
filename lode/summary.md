@@ -7,7 +7,8 @@ Its declared capture verifies preparation, live reset, and both accounting repla
 The receipt audit identifies delayed same-epoch credit publication. A separate scheduler diagnostic measures 13.800756 ms controller preemption during a receipt gap.
 The portable [native sample decoder](plans/target-local-samples.md) accepts one validated 48-byte or 56-byte perf record per call and preserves terminal failures.
 A Linux x64 ring adapter reads a live task-clock mapping and requires `PERF_FORMAT_LOST`. Its live overflow case detects loss only through the final 16-byte read.
-Target notification, bounded dispatch, credit, and payment integration remain unimplemented. Existing timer capacity and CLR safety limits remain.
+[Target-local dispatch](plans/target-local-dispatch.md) requests a signal to the sampled thread for each overflow. The kernel merges overflows before its deferred wakeup work. Each dispatch drains under record and elapsed budgets.
+Its live modes cover backlog, terminal loss, cancellation, and retirement. Credit and payment integration remain unimplemented. CLR safety remains unverified.
 
 Optional clock capture now binds both sampled arms to the [matched comparison plan](profiling/sample-membership.md#matched-comparison-activation).
 The retained 500,000-batch block places all recorded treatment credit inside the observed source window and frozen prefix.

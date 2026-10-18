@@ -143,3 +143,4 @@ Without that definition, CMake skips both targets and reports a status message. 
 CMake caches the header result as `COZ_HAVE_PERF_FORMAT_LOST`. After a header upgrade, use a new build directory or clear that entry.
 The workload thread is both the producer CPU and the consumer. Cross-CPU head and tail visibility is not verified.
 See [target-local processing](../Explanations/target-local-sample-processing.md) for the design context.
+See [target sample dispatch](target-sample-dispatch.md) for bounded dispatch and epoch closure over this adapter.
