@@ -69,8 +69,8 @@ Perf can instead notify through fasync. With an owner thread and a real-time sig
 Overflows that occur before its deferred wakeup work runs share one signal.
 The signal arrives on the sampled thread and names the event descriptor.
 In the live capture without masking, each notification holds one sample.
-A future credit sink would then see at most one selected sample in most dispatches. This change publishes no credit.
-The live capture records a median handler interval of 293 ns for a one-sample dispatch.
+The [native ledger](../Reference/target-delay-ledger.md) then credits at most one selected sample in most dispatches.
+The live capture records a median handler interval of less than 1 microsecond for a one-sample dispatch.
 
 Queued notifications still need bounds. A thread can block the signal while samples accumulate.
 The first dispatch after the mask then finds many samples, and the queued notifications follow it.

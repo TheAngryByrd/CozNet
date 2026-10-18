@@ -63,6 +63,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 
 - [Native perf sample decoder](Reference/native-perf-decoder.md): record layouts, terminal errors, and the Linux ring adapter.
 - [Target sample dispatch](Reference/target-sample-dispatch.md): dispatch budgets, outcomes, epochs, and the Linux notification session.
+- [Target delay ledger](Reference/target-delay-ledger.md): native credit, publication, bounded payment, and the event journal.
 
 - [Bound sample membership](Reference/bound-sample-membership.md).
 

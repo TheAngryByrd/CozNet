@@ -113,7 +113,8 @@ int main(int argc, char** argv) {
         finish(output);
         return 1;
     }
-    std::vector<JournalSample> journal(4096);
+    std::vector<JournalSample> storage(4096);
+    SampleJournal journal(storage);
     std::vector<TargetDispatchLogEntry> log(4096);
     LinuxTargetSampleSession::Handle session;
     const int created = LinuxTargetSampleSession::create({period, mode->data_pages, budget}, journal, log, session);
@@ -122,7 +123,8 @@ int main(int argc, char** argv) {
         finish(output);
         return created == EACCES || created == EPERM || created == ENOENT ? 2 : 1;
     }
-    std::vector<JournalSample> second_journal(1);
+    std::vector<JournalSample> second_storage(1);
+    SampleJournal second_journal(second_storage);
     std::vector<TargetDispatchLogEntry> second_log(1);
     LinuxTargetSampleSession::Handle second;
     const int duplicate = LinuxTargetSampleSession::create({period, mode->data_pages, budget}, second_journal, second_log, second);
@@ -154,7 +156,7 @@ int main(int argc, char** argv) {
     const auto& retirement = session->retire();
     const auto restored = LinuxTargetSampleSession::restore();
     const auto entries = session->log().entries();
-    const auto samples = session->journal().entries();
+    const auto samples = session->sink().entries();
 
     bool passed = duplicate == EBUSY && !second && start_error == 0 && resume_error == 0 && lifecycle == 0 && retirement.error == 0 && retirement.blocked
         && retirement.disabled && retirement.async_cleared && retirement.unmapped && retirement.closed && retirement.mask_restored && restored == 0

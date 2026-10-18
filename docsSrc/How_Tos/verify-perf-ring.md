@@ -77,11 +77,27 @@ A `records_exhausted` or `time_exhausted` dispatch with backlog `remaining` did 
 A `drained_snapshot` dispatch reached the head that it read. It does not show source closure.
 The `incomplete` mode keeps every accepted sample under generation 1. The epoch record marks that generation incomplete.
 
+## Check native credit and payment
+
+The same run starts `TargetCreditWorkload` in `zero` and `half` modes. Each mode writes `credit-<mode>.json`.
+A selected thread and a peer thread share one experiment delay. Each thread credits and pays in its own handler.
+
+1. In both files, check that `passed` is true and `replay.valid` is true.
+2. Check that `failure` is 0 and `replay.failures` is 0.
+3. Check that `replay.childMax` is not more than 50000.
+4. Check that each worker has `epochComplete` true, `lost` 0, and `quiescent` true.
+5. Check that each worker `maxHandlerNs` is less than 5,000,000.
+6. In `credit-zero.json`, check that `global`, `replay.credited`, and `replay.children` are 0.
+7. In `credit-half.json`, check that `replay.credited` equals `replay.selectedSamples` times 500000.
+8. In `credit-half.json`, check that `global` minus the peer `local` is not more than 2,000,000.
+
+A valid replay shows that the journals match the ledger rules. It does not show that a prediction is correct.
+
 ## Limits
 
 The `PerfRingWorkload` drain loop has no record or time budget. `TargetDispatchWorkload` tests budget-limited drains.
 Sample counts are not exact functions of elapsed CPU time. Do not compare them with a computed expectation.
 The workload thread is both the producer CPU and the consumer. Cross-CPU publication is not tested.
-These checks do not test native credit, payment, or CLR execution.
+These checks do not test CLR execution or prediction accuracy.
 
 See [the adapter reference](../Reference/native-perf-decoder.md#linux-adapter) and [the dispatch reference](../Reference/target-sample-dispatch.md).

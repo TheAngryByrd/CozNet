@@ -1,5 +1,6 @@
 #pragma once
 #include "PerfRing.Linux.h"
+#include "TargetDelayLedger.h"
 #include "TargetSampleDispatch.h"
 #include <array>
 #include <atomic>
@@ -13,9 +14,15 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
+#include <ucontext.h>
 #include <unistd.h>
 
 namespace coz::service {
+// One process-wide owner for the notification signal across every sink type.
+struct LinuxTargetSignalOwner {
+    inline static std::atomic<const void*> installed{};
+    inline static std::atomic<uint32_t> live{};
+};
 struct LinuxPerfSource {
     int fd{-1};
     LinuxPerfRing* ring{};
@@ -37,8 +44,26 @@ struct LinuxMonotonicClock {
     }
 };
 
+struct LinuxSpinWaiter {
+    static constexpr unsigned iteration_limit = 1u << 20;
+    LedgerWait wait(uint64_t requested) noexcept {
+        LinuxMonotonicClock clock;
+        const auto started = clock.now();
+        if (started == 0) return {LedgerWaitStatus::failed, 0};
+        auto now = started;
+        for (unsigned iteration = 0; now - started < requested; ++iteration) {
+            if (iteration == iteration_limit) return {LedgerWaitStatus::failed, now - started};
+            const auto next = clock.now();
+            if (next == 0 || next < now) return {LedgerWaitStatus::failed, now - started};
+            now = next;
+            __builtin_ia32_pause();
+        }
+        return {LedgerWaitStatus::completed, now - started};
+    }
+};
+
 struct TargetDispatchLogEntry {
-    uint64_t sequence{}, handler_started{}, handler_finished{};
+    uint64_t sequence{}, handler_started{}, handler_finished{}, ip{};
     DispatchResult result;
 };
 
@@ -64,9 +89,11 @@ struct TargetRetirement {
 };
 
 // All member functions except cancel() must run on the thread that called create().
-class LinuxTargetSampleSession {
+// The sink must outlive the session handle.
+template<class Sink>
+class LinuxTargetSession {
 public:
-    using Dispatcher = TargetSampleDispatcher<LinuxPerfSource, LinuxMonotonicClock, SampleJournal>;
+    using Dispatcher = TargetSampleDispatcher<LinuxPerfSource, LinuxMonotonicClock, Sink>;
     struct Config {
         uint64_t period;
         size_t data_pages;
@@ -76,21 +103,18 @@ public:
     static int signalNumber() noexcept { return SIGRTMIN + 8; }
 
     static int install() noexcept {
-        for (const int number : {signalNumber(), SIGIO}) {
-            struct sigaction previous{};
-            if (sigaction(number, nullptr, &previous) != 0) return errno;
-            if (previous.sa_handler != SIG_DFL) return EBUSY;
-        }
-        struct sigaction action{};
-        action.sa_sigaction = handler;
-        action.sa_flags = SA_SIGINFO | SA_RESTART;
-        sigemptyset(&action.sa_mask);
-        if (sigaction(signalNumber(), &action, nullptr) != 0) return errno;
-        action.sa_sigaction = fallback;
-        return sigaction(SIGIO, &action, nullptr) == 0 ? 0 : errno;
+        const void* empty = nullptr;
+        const auto* claim = reinterpret_cast<const void*>(&fallback);
+        if (!LinuxTargetSignalOwner::installed.compare_exchange_strong(empty, claim, std::memory_order_acq_rel)) return EBUSY;
+        const int error = installHandlers();
+        LinuxTargetSignalOwner::installed.store(error == 0 ? reinterpret_cast<const void*>(&handler) : nullptr,
+            std::memory_order_release);
+        return error;
     }
 
     static int restore() noexcept {
+        if (LinuxTargetSignalOwner::installed.load(std::memory_order_acquire) != reinterpret_cast<const void*>(&handler)) return EPERM;
+        if (LinuxTargetSignalOwner::live.load(std::memory_order_acquire) != 0) return EBUSY;
         for (auto& slot : slots_) if (slot.load(std::memory_order_acquire)) return EBUSY;
         sigset_t pending;
         if (sigpending(&pending) != 0) return errno;
@@ -100,6 +124,7 @@ public:
         sigemptyset(&action.sa_mask);
         for (const int number : {signalNumber(), SIGIO})
             if (sigaction(number, &action, nullptr) != 0) return errno;
+        LinuxTargetSignalOwner::installed.store(nullptr, std::memory_order_release);
         return 0;
     }
 
@@ -108,19 +133,19 @@ public:
 
     // Another thread's handler can still hold the registry pointer after a quiescence timeout.
     struct Release {
-        void operator()(LinuxTargetSampleSession* session) const noexcept {
+        void operator()(LinuxTargetSession* session) const noexcept {
             if (session->retire().quiescent) delete session;
         }
     };
-    using Handle = std::unique_ptr<LinuxTargetSampleSession, Release>;
+    using Handle = std::unique_ptr<LinuxTargetSession, Release>;
 
-    static int create(Config config, std::span<JournalSample> journal, std::span<TargetDispatchLogEntry> log,
+    static int create(Config config, Sink& sink, std::span<TargetDispatchLogEntry> log,
         Handle& result) noexcept {
         result.reset();
         if (config.period == 0 || config.data_pages == 0 || (config.data_pages & (config.data_pages - 1)) != 0) return EINVAL;
         const auto thread = uint32_t(gettid());
         for (auto& owner : owners_) if (owner.load(std::memory_order_acquire) == thread) return EBUSY;
-        Handle session(new (std::nothrow) LinuxTargetSampleSession(config, journal, log));
+        Handle session(new (std::nothrow) LinuxTargetSession(config, sink, log));
         if (!session) return ENOMEM;
         const int error = session->open();
         if (error != 0) return error;
@@ -128,8 +153,8 @@ public:
         return 0;
     }
 
-    LinuxTargetSampleSession(const LinuxTargetSampleSession&) = delete;
-    LinuxTargetSampleSession& operator=(const LinuxTargetSampleSession&) = delete;
+    LinuxTargetSession(const LinuxTargetSession&) = delete;
+    LinuxTargetSession& operator=(const LinuxTargetSession&) = delete;
 
     int start() noexcept {
         if (!blocked_ || !dispatcher_->start()) return EPROTO;
@@ -209,7 +234,7 @@ public:
     void cancel() noexcept { if (dispatcher_) dispatcher_->cancel(); }
     int lifecycleError() const noexcept { return lifecycle_error_; }
     const Dispatcher& dispatcher() const noexcept { return *dispatcher_; }
-    const SampleJournal& journal() const noexcept { return journal_; }
+    const Sink& sink() const noexcept { return sink_; }
     const TargetDispatchLog& log() const noexcept { return log_; }
     uint64_t deliveries() const noexcept { return deliveries_.load(std::memory_order_relaxed); }
     uint64_t pendingDrained() const noexcept { return pending_drained_; }
@@ -220,13 +245,13 @@ private:
     static constexpr size_t slot_count = 64;
     static constexpr unsigned pending_limit = 65536;
     static constexpr uint64_t quiescence_limit_ns = 100000000;
-    inline static std::array<std::atomic<LinuxTargetSampleSession*>, slot_count> slots_{};
+    inline static std::array<std::atomic<LinuxTargetSession*>, slot_count> slots_{};
     inline static std::atomic<uint64_t> foreign_{}, sigio_{};
     inline static std::atomic<uint32_t> handlers_{};
     inline static std::array<std::atomic<uint32_t>, slot_count> owners_{};
 
-    LinuxTargetSampleSession(Config config, std::span<JournalSample> journal, std::span<TargetDispatchLogEntry> log) noexcept
-        : config_(config), journal_(journal), log_(log), attr_(LinuxPerfRingPlan::attributes(config.period)) {}
+    LinuxTargetSession(Config config, Sink& sink, std::span<TargetDispatchLogEntry> log) noexcept
+        : config_(config), sink_(sink), log_(log), attr_(LinuxPerfRingPlan::attributes(config.period)) {}
 
     DispatchResult lifecycle(int error) noexcept {
         lifecycle_error_ = error;
@@ -256,12 +281,13 @@ private:
         if (!plan) return EPROTO;
         ring_.emplace(*plan);
         source_ = {fd_, &*ring_};
-        dispatcher_.emplace(source_, clock_, journal_);
+        dispatcher_.emplace(source_, clock_, sink_);
         bool registered = false;
         for (size_t index = 0; index < slot_count && !registered; ++index) {
-            LinuxTargetSampleSession* empty = nullptr;
+            LinuxTargetSession* empty = nullptr;
             if (slots_[index].compare_exchange_strong(empty, this, std::memory_order_seq_cst)) {
                 owners_[index].store(thread_, std::memory_order_release);
+                LinuxTargetSignalOwner::live.fetch_add(1, std::memory_order_acq_rel);
                 slot_ = index;
                 registered = true;
             }
@@ -325,13 +351,36 @@ private:
     void unregister() noexcept {
         if (slot_ == slot_count) return;
         owners_[slot_].store(0, std::memory_order_release);
+        LinuxTargetSignalOwner::live.fetch_sub(1, std::memory_order_acq_rel);
         slots_[slot_].store(nullptr, std::memory_order_seq_cst);
         slot_ = slot_count;
     }
 
+    static int installHandlers() noexcept {
+        for (const int number : {signalNumber(), SIGIO}) {
+            struct sigaction previous{};
+            if (sigaction(number, nullptr, &previous) != 0) return errno;
+            if (previous.sa_handler != SIG_DFL) return EBUSY;
+        }
+        struct sigaction action{};
+        action.sa_sigaction = handler;
+        action.sa_flags = SA_SIGINFO | SA_RESTART;
+        sigemptyset(&action.sa_mask);
+        if (sigaction(signalNumber(), &action, nullptr) != 0) return errno;
+        action.sa_sigaction = fallback;
+        if (sigaction(SIGIO, &action, nullptr) != 0) {
+            const int error = errno;
+            struct sigaction reset{};
+            reset.sa_handler = SIG_DFL;
+            sigaction(signalNumber(), &reset, nullptr);
+            return error;
+        }
+        return 0;
+    }
+
     static void fallback(int, siginfo_t*, void*) noexcept { sigio_.fetch_add(1, std::memory_order_relaxed); }
 
-    static void handler(int number, siginfo_t* info, void*) noexcept {
+    static void handler(int number, siginfo_t* info, void* context) noexcept {
         const int saved = errno;
         struct Active {
             Active() noexcept { handlers_.fetch_add(1, std::memory_order_seq_cst); }
@@ -340,7 +389,7 @@ private:
         LinuxMonotonicClock clock;
         const auto started = clock.now();
         const auto thread = uint32_t(gettid());
-        LinuxTargetSampleSession* session = nullptr;
+        LinuxTargetSession* session = nullptr;
         if (number == signalNumber() && info->si_code == POLL_IN)
             for (auto& slot : slots_)
                 if (auto* candidate = slot.load(std::memory_order_seq_cst);
@@ -356,12 +405,16 @@ private:
         const auto sequence = session->deliveries_.fetch_add(1, std::memory_order_relaxed) + 1;
         const SampleNotification notification{session->armed_generation_.load(std::memory_order_acquire), sequence};
         auto result = session->dispatcher_->notify(notification, session->config_.budget);
-        session->log_.append({sequence, started, clock.now(), result});
+        const auto ip = uint64_t(static_cast<ucontext_t*>(context)->uc_mcontext.gregs[REG_RIP]);
+        if constexpr (requires { session->sink_.settle(ip, started); })
+            if (result.outcome != DispatchOutcome::reentered && result.outcome != DispatchOutcome::stale_notification)
+                session->sink_.settle(ip, started);
+        session->log_.append({sequence, started, clock.now(), ip, result});
         errno = saved;
     }
 
     Config config_;
-    SampleJournal journal_;
+    Sink& sink_;
     TargetDispatchLog log_;
     perf_event_attr attr_;
     LinuxMonotonicClock clock_;
@@ -379,4 +432,6 @@ private:
     int fd_{-1}, lifecycle_error_{};
     bool blocked_{}, mask_saved_{}, async_{}, retired_{};
 };
+
+using LinuxTargetSampleSession = LinuxTargetSession<SampleJournal>;
 }

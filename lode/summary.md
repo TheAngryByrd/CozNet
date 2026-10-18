@@ -8,7 +8,9 @@ The receipt audit identifies delayed same-epoch credit publication. A separate s
 The portable [native sample decoder](plans/target-local-samples.md) accepts one validated 48-byte or 56-byte perf record per call and preserves terminal failures.
 A Linux x64 ring adapter reads a live task-clock mapping and requires `PERF_FORMAT_LOST`. Its live overflow case detects loss only through the final 16-byte read.
 [Target-local dispatch](plans/target-local-dispatch.md) requests a signal to the sampled thread for each overflow. The kernel merges overflows before its deferred wakeup work. Each dispatch drains under record and elapsed budgets.
-Its live modes cover backlog, terminal loss, cancellation, and retirement. Credit and payment integration remain unimplemented. CLR safety remains unverified.
+Its live modes cover backlog, terminal loss, cancellation, and retirement.
+The [native ledger](plans/target-local-credit.md) credits and pays on each thread with a valid sequence replay in a two-thread native run.
+CLR integration, managed reconciliation, and prediction accuracy remain unverified.
 
 Optional clock capture now binds both sampled arms to the [matched comparison plan](profiling/sample-membership.md#matched-comparison-activation).
 The retained 500,000-batch block places all recorded treatment credit inside the observed source window and frozen prefix.

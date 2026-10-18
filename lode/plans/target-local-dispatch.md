@@ -85,14 +85,14 @@ CLR code binding is a later sink contract. A binding generation must stay valid 
 
 `target-sample-dispatch` runs synthetic dispatcher checks on Windows and Linux.
 `LinuxPerfRingVerify` runs `TargetDispatchWorkload` in `bounded`, `backlog`, `incomplete`, and `cancel` modes.
-In `bounded`, 272 notifications each drain one sample. The maximum handler interval in any mode is 12,680 ns.
-`backlog` stops 29 dispatches with remaining backlog and closes in 5 steps. `incomplete` stays terminal with 198 lost samples.
+In `bounded`, each notification drains one sample. Every handler interval stays far below 5 ms.
+`backlog` stops dispatches with remaining backlog and closes in several steps. `incomplete` stays terminal with positive final loss.
 A second session on one thread returns `EBUSY` before any side effect.
 `cancel` reads nothing after cancellation, closes completely, and refuses resume. No live mode reaches the elapsed budget.
 See [the dispatch capture](../../reliability/features/native-signal/target-dispatch.md).
 
 
-Next, the sink becomes native credit publication. It must keep one accounting owner and the existing debt, lease, and handler bounds.
+[Target-local credit](target-local-credit.md) supplies the credit sink. The session settles after each dispatch.
 Signal-handler execution inside CLR-managed code remains unverified.
 
 See [the sample plan](target-local-samples.md), [target leases](target-local-lease.md), and [the decoder reference](../../docsSrc/Reference/native-perf-decoder.md).

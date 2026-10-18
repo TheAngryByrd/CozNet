@@ -95,7 +95,8 @@ The calling thread must return from `cancel()` before the owner releases the ses
 
 `install()` requires the default disposition for `SIGRTMIN + 8` and `SIGIO`. It installs the notification handler and a `SIGIO` counter.
 A `SIGIO` signal means that the kernel could not queue a notification. The samples stay in the ring.
-`restore()` fails with `EBUSY` while any session is registered, or while the calling thread has a pending `SIGIO` or notification signal.
+`install()` and `restore()` share one process-wide owner across all sink types. `install()` returns `EBUSY` while another sink type owns the signal. `restore()` returns `EPERM` from a sink type that does not own it.
+`restore()` fails with `EBUSY` while any session of any sink type is registered, or while the calling thread has a pending `SIGIO` or notification signal.
 It cannot see signals pending on other threads. Every target thread must retire successfully before `restore()`.
 
 The handler accepts a signal only with `si_code = POLL_IN`, the session descriptor in `si_fd`, and the session thread.
