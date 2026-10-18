@@ -5,7 +5,8 @@ Keep the serial model separate from the proposed sampled engine.
 
 The [target-local sample plan](target-local-samples.md) has a portable decoder, a Linux ring adapter, and [bounded dispatch](target-local-dispatch.md).
 The [native ledger](target-local-credit.md) credits and pays target-locally in a native two-thread run.
-Next, run it inside a CLR process, replay the journal in managed code, and compare predictions with real optimizations.
+The [CLR fork/join qualification](target-local-prediction.md) passes its fixed criteria with managed replay.
+Next, add the Coz wake rule for CozNet waits, runtime-transition checks under handler payment, and wider workloads.
 The managed drain dependency remains in the live backend exposed by [nominal timer diagnostics](timer-nominal-credit.md).
 The timer path avoids loop probes. Its default interval policy still discards first-event weights.
 The new callback-reuse comparison completes but retains about ten percentage points of shortfall.

@@ -7,6 +7,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 ## Tutorials
 
 - [Run your first serial experiment](Tutorials/Getting_Started.md).
+- [Predict an optimization with target-local sampling](Tutorials/Target_Local_Prediction.md).
 
 ## How-to guides
 
@@ -64,6 +65,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 - [Native perf sample decoder](Reference/native-perf-decoder.md): record layouts, terminal errors, and the Linux ring adapter.
 - [Target sample dispatch](Reference/target-sample-dispatch.md): dispatch budgets, outcomes, epochs, and the Linux notification session.
 - [Target delay ledger](Reference/target-delay-ledger.md): native credit, publication, bounded payment, and the event journal.
+- [Target-local API](Reference/target-local-api.md): the native C ABI, the managed replay, and the sample program.
 
 - [Bound sample membership](Reference/bound-sample-membership.md).
 
@@ -130,6 +132,7 @@ The public engine supports serial, synchronous CPU regions. Native service and s
 ## Explanation
 
 - [Target-local sample processing](Explanations/target-local-sample-processing.md): upstream designs, final loss evidence, and remaining runtime contracts.
+- [Target-local prediction](Explanations/target-local-prediction.md): why the fork/join model has an exact answer, and the support boundary.
 
 - [CPU time and the prediction gap](Explanations/selected-cpu.md).
 

@@ -524,6 +524,7 @@ let linuxTargetLeaseDisarmFailure _ =
 let linuxTimerApi _ = nativeScript "VerifyTimerApi.ps1"
 
 let linuxPerfRingVerify _ = nativeScript "VerifyPerfRing.ps1"
+let targetLocalPredictionVerify _ = nativeScript "VerifyTargetLocalPrediction.ps1"
 
 let linuxTimerInterop _ = nativeScript "VerifyTimerInterop.ps1"
 
@@ -1293,6 +1294,7 @@ let initTargets () =
     Target.create "LinuxTargetLeaseDrainFailure" linuxTargetLeaseDrainFailure
     Target.create "LinuxTimerApi" linuxTimerApi
     Target.create "LinuxPerfRingVerify" linuxPerfRingVerify
+    Target.create "TargetLocalPredictionVerify" targetLocalPredictionVerify
     Target.create "LinuxTimerInterop" linuxTimerInterop
     Target.create "LinuxTimerManaged" linuxTimerManaged
     Target.create "LinuxSampledTimer" linuxSampledTimer

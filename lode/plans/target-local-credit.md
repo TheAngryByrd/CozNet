@@ -5,8 +5,8 @@
 The native target-local ledger is the only live accounting owner during a native experiment.
 Each sampled thread credits, publishes, and pays inside its own dispatch handler.
 No managed controller runs for each sample or each payment.
-Target state: managed code receives the closed experiment journals once and replays them exactly against `DelayLedger` semantics.
-Today the replay runs only in the native workload.
+Managed code receives the closed experiment journals once and replays them in `src/CozNet/TargetLocalReplay.fs`.
+The native credit workload also keeps its own native replay.
 A replay mismatch invalidates the experiment. Managed code never edits native credit.
 
 Rationale: the nominal timer diagnostics show controller preemption before delayed credit publication.
@@ -46,7 +46,7 @@ A journal without free entries makes the dispatcher stop with `sink_full`. The s
 `accept` and `settle` set the sticky `journal_full` failure if they reach a full journal. No event is dropped silently.
 
 At experiment close, the owner collects every journal once. The sequences must form one contiguous range with no duplicate.
-The replay applies each event in sequence order. The current replay is native. A managed `DelayLedger` replay is planned.
+The replay applies each event in sequence order. `TargetLocalReplay.replay` does it in managed code. The native credit workload has its own copy.
 It requires the same prior local value for each event and recomputes each sample credit from the selected spans.
 An observed global must be zero or a value that some publish produced. Final global delay is the largest publish. Sorted by value, each publish must observe the previous publish.
 Each child must follow positive observed debt and must not request more than that debt.

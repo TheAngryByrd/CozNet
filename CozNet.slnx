@@ -7,5 +7,6 @@
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/CozNet.Serial/CozNet.Serial.fsproj" />
+    <Project Path="samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj" />
   </Folder>
 </Solution>

@@ -10,7 +10,9 @@ A Linux x64 ring adapter reads a live task-clock mapping and requires `PERF_FORM
 [Target-local dispatch](plans/target-local-dispatch.md) requests a signal to the sampled thread for each overflow. The kernel merges overflows before its deferred wakeup work. Each dispatch drains under record and elapsed budgets.
 Its live modes cover backlog, terminal loss, cancellation, and retirement.
 The [native ledger](plans/target-local-credit.md) credits and pays on each thread with a valid sequence replay in a two-thread native run.
-CLR integration, managed reconciliation, and prediction accuracy remain unverified.
+A [CLR fork/join workload](plans/target-local-prediction.md) runs this path in managed threads and replays every journal in F#.
+Its qualification predicts real 50% optimizations in three configurations, with median absolute differences from about 1 to 3 percentage points.
+The qualified model excludes blocking, async, and GC-heavy work. General CLR safety remains unverified.
 
 Optional clock capture now binds both sampled arms to the [matched comparison plan](profiling/sample-membership.md#matched-comparison-activation).
 The retained 500,000-batch block places all recorded treatment credit inside the observed source window and frozen prefix.

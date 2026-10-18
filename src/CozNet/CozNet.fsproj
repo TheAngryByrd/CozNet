@@ -18,6 +18,7 @@
     <Compile Include="SignalService.fs" />
     <Compile Include="SignalAccounting.fs" />
     <Compile Include="CooperativeRuntime.fs" />
+    <Compile Include="TargetLocalReplay.fs" />
     <Compile Include="Experiment.fs" />
     <InternalsVisibleTo Include="CozNet.Tests" />
     <InternalsVisibleTo Include="CozNet.Instrumentation" />
