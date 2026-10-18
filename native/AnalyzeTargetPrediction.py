@@ -48,19 +48,38 @@ def load(run, name):
     return json.loads(path.read_text()) if path.exists() else None
 
 
-WAKE, POST, FAILURE = 6, 7, 4
+SAMPLE, WAKE, POST, FAILURE = 0, 6, 7, 4
 DEBT_EXCEEDED, DEPENDENCY = 1, 0
+START_FIELDS = ("workStartedNs", "startedNs", "finishedNs", "startRunDelayNs", "runDelayNs")
+
+
+def start_complete(thread):
+    return (all(type(thread.get(k)) is int for k in START_FIELDS)
+            and thread["startedNs"] <= thread["workStartedNs"] <= thread["finishedNs"]
+            and 0 <= thread["startRunDelayNs"] <= thread["runDelayNs"])
+
+
+def residual_run_delay(thread, complete):
+    waits = thread.get("waitRunDelayNs", [])
+    if not complete or any(d < 0 for d in waits):
+        return None
+    return thread["runDelayNs"] - thread["startRunDelayNs"] - sum(waits)
 
 
 def wait_diagnostics(data):
-    if data is None or "threads" not in data or "events" not in data:
+    if data is None:
         return None
+    if "threads" not in data or "events" not in data:
+        return {"complete": False, "startComplete": False, "workStartNs": [], "waits": 0, "maxWaitRunDelayNs": None,
+                "totalWaitRunDelayNs": 0, "unreadWaits": 0, "debtFailures": []}
     events = sorted(data["events"], key=lambda e: e[9])
     origin = events[0][9] if events else 0
     threads = data["threads"]
+    starts = [start_complete(t) for t in threads]
     wakes = {i: [e for e in events if e[0] == i and e[2] == WAKE] for i in range(len(threads))}
     complete = all("waitRunDelayNs" in t and len(t["waitRunDelayNs"]) == len(wakes[i]) and t.get("waitRunDelaysDropped") == 0
                    for i, t in enumerate(threads))
+    first_samples = [next((e[9] - origin for e in events if e[0] == i and e[2] == SAMPLE), None) for i in range(len(threads))]
     failures = []
     for failure in (e for e in events if e[2] == FAILURE and e[8] == DEBT_EXCEEDED):
         item = {"worker": failure[0], "timeNs": failure[9] - origin, "debtNs": failure[5], "afterWake": False}
@@ -71,9 +90,15 @@ def wait_diagnostics(data):
                     if wake[8] == DEPENDENCY else None)
             item.update({"afterWake": True, "wakeReason": wake[8], "waitRunDelayNs": delays[len(prior) - 1] if len(prior) <= len(delays) else None,
                          "postToWakeNs": wake[9] - post[9] if post else None, "wakeToFailureNs": failure[9] - wake[9]})
+        else:
+            thread, started = threads[failure[0]], starts[failure[0]]
+            item.update({"startRunDelayNs": thread["startRunDelayNs"] if started else None,
+                         "workStartToFailureNs": failure[9] - thread["workStartedNs"] if started else None,
+                         "firstSampleNs": first_samples, "residualRunDelayNs": residual_run_delay(thread, started)})
         failures.append(item)
     values = [d for t in threads for d in t.get("waitRunDelayNs", []) if d >= 0]
-    return {"complete": complete, "waits": sum(len(w) for w in wakes.values()), "maxWaitRunDelayNs": max(values, default=None),
+    return {"complete": complete, "startComplete": all(starts),
+            "workStartNs": [t["workStartedNs"] - origin if ok else None for t, ok in zip(threads, starts)], "waits": sum(len(w) for w in wakes.values()), "maxWaitRunDelayNs": max(values, default=None),
             "totalWaitRunDelayNs": sum(values), "unreadWaits": sum(1 for t in threads for d in t.get("waitRunDelayNs", []) if d < 0),
             "debtFailures": failures}
 
@@ -93,6 +118,7 @@ def main():
     passed = (manifest["inputsUnchanged"] and manifest["blocks"] == BLOCKS and manifest["speedup"] == SPEEDUP and manifest["seed"] == SEED
               and declared == table and len(manifest["configurations"]) == len(table) and not unknown)
     diagnostics_complete = True
+    start_diagnostics_complete = True
     for configuration in manifest["configurations"]:
         name = configuration["name"]
         blocks = []
@@ -119,6 +145,7 @@ def main():
             record = {"block": block, "valid": not reasons, "reasons": reasons,
                       "waitDiagnostics": {arm: wait_diagnostics(arms[arm]) for arm in ("profile-zero", "profile-speedup")}}
             diagnostics_complete = diagnostics_complete and all(d is None or d["complete"] for d in record["waitDiagnostics"].values())
+            start_diagnostics_complete = start_diagnostics_complete and all(d is None or d["startComplete"] for d in record["waitDiagnostics"].values())
             if not reasons:
                 zero, speed, original, optimized = (arms[a] for a in ("profile-zero", "profile-speedup", "original", "optimized"))
                 predicted = 1 - speed["effectiveNs"] / zero["effectiveNs"]
@@ -163,8 +190,8 @@ def main():
                    for d in b["waitDiagnostics"].values() if d is not None)
     if barrier:
         passed = passed and observed > 0
-    passed = passed and diagnostics_complete
-    summary = {"passed": passed, "waitDiagnosticsComplete": diagnostics_complete, "totalWaitRunDelayNs": observed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT,
+    passed = passed and diagnostics_complete and start_diagnostics_complete
+    summary = {"passed": passed, "waitDiagnosticsComplete": diagnostics_complete, "startDiagnosticsComplete": start_diagnostics_complete, "totalWaitRunDelayNs": observed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT,
                "blockLimit": BLOCK_LIMIT, "speedup": manifest["speedup"], "configurations": configurations,
                "supportedModel": "Linux x64 CPU-bound managed fork/join threads registered through CozNet",
                "generalClrSafetyEstablished": False}

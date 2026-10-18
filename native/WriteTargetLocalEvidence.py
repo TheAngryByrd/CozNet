@@ -28,6 +28,7 @@ PREDICTION_HISTORY = [
      "Fail. `peer-longer` 5 valid blocks, median 5.69 pp, block differences -5.7, -5.9, -3.7, -7.0, -2.3."),
     ("20261018T214023824-28b274dc", "Same", "Per-wait run-queue delay, pread reader, and LF-normalized source hashes, before review fixes",
      "Fail. `peer-longer` block 1 +16.79 pp: its plain `optimized` arm ran 118.5 ms against 104.1 ms for `original`."),
+    ("20261018T221254076-9a1e3880", "Same", "Review fixes: wait copy after the finish time, scalar parser, debt-exceeded and dependency-wake pairing", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -46,6 +47,7 @@ TRANSITION_HISTORY = [
     ("20261018T203245961-56927b66", "Run-queue reads outside the timed window", "Pass, 10 of 10"),
     ("20261018T210459943-dfa8e472", "Review fixes: perf-map setting check, checked-run seam, shutdown work-state marker, and wording", "Pass, 10 of 10"),
     ("20261018T213950841-bc5dbc42", "Per-wait run-queue delay, pread reader, and LF-normalized source hashes, before review fixes", "Fail. Run 4: 2 ms debt bound under 19 forced GCs."),
+    ("20261018T221219867-6603996f", "Review fixes: wait copy after the finish time, scalar parser, debt-exceeded and dependency-wake pairing", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -66,6 +68,8 @@ BARRIER_HISTORY = [
      "Fail. `barrier-selected-dominant` block 1 invalid: a 5 ms debt failure at the peer's first sample, with 82.9 ms of whole-run run-queue delay."),
     ("20261018T214145452-1972f479", "Per-wait run-queue delay, pread reader, and LF-normalized source hashes, before review fixes",
      "Fail. `peer-bound` block 5 +12.18 pp. Its arms vary by about 7%, with at most 0.34 ms of run-queue delay in the profiled arms."),
+    ("20261018T221415876-73afdb27", "Review fixes: wait copy after the finish time, scalar parser, debt-exceeded and dependency-wake pairing",
+     "Fail. `barrier-alternating` block 3 invalid: a 3 ms debt failure at the peer's first sample, before its first wake, with 6.7 ms of whole-run run-queue delay."),
 ]
 
 
@@ -115,7 +119,7 @@ def prediction(root, run, change):
     positive = ", ".join(f"`{c['name']}` {sum(1 for b in c['blocks'] if b['valid'] and b['difference'] > 0)} of {c['validBlocks']}" for c in summary["configurations"])
     failed = [c for c in summary["configurations"] if not c["passed"]]
     if not summary["passed"] and not failed:
-        detail = "the wait diagnostics are incomplete" if not summary.get("waitDiagnosticsComplete", True) else "a run-level criterion failed"
+        detail = run_level_detail(summary)
         current = f"Fail. {detail.capitalize()}."
         verdict = f"**Result: the current run fails.** {detail.capitalize()}. The run is kept, and no rerun replaces it."
     elif failed:
@@ -163,6 +167,10 @@ The longest handler interval in any profile run of a valid block is {longest:,} 
 In `selected-dominant`, a 50% optimization leaves the selected thread longer than the peer. Over-credit would show as a prediction above 50%.
 The median prediction is {dominant:.2f}%. The highest block prediction is {dominant_max:.2f}%.{' Every block is inside the block limit.' if all(abs(b['difference']) <= 0.10 for b in dominant_blocks) and len(dominant_blocks) == 5 else ' At least one block is invalid or outside the block limit.'}
 {"A median above 50% is the over-credit signature. This run shows it, and five blocks cannot separate it from variation." if dominant > 50 else "The median does not show the over-credit signature."}
+
+## Run-queue delay
+
+{wait_section(summary)}
 
 ## Overhead
 
@@ -315,6 +323,30 @@ See [the support boundary](../../../docsSrc/Explanations/target-local-prediction
 CPUSET_RUN = "20261018T203443644-3be38dc4"
 
 
+def run_level_detail(summary):
+    if not summary.get("waitDiagnosticsComplete", True):
+        return "the wait diagnostics are incomplete"
+    if not summary.get("startDiagnosticsComplete", True):
+        return "the start diagnostics are incomplete"
+    return "a run-level criterion failed"
+
+
+def start_place(f, work_starts):
+    samples = f.get("firstSampleNs") or []
+    workers = ", ".join(f"worker {i} starts work at {signed_ms(work_starts[i] if i < len(work_starts) else None)} and takes its first sample at {ms(v)}"
+                        for i, v in enumerate(samples))
+    return (f"before the first wake: start run-queue delay {fine_ms(f.get('startRunDelayNs'))}, work start to failure {signed_ms(f.get('workStartToFailureNs'))}, "
+            f"residual run-queue delay {fine_ms(f.get('residualRunDelayNs'))}. Times from the first event: {workers or 'unknown'}")
+
+
+def fine_ms(value):
+    return "unknown" if value is None or value < 0 else f"{value/1e6:.4f} ms"
+
+
+def signed_ms(value):
+    return "unknown" if value is None else f"{value/1e6:+.1f} ms"
+
+
 def ms(value):
     return "unknown" if value is None or value < 0 else f"{value/1e6:.1f} ms"
 
@@ -335,18 +367,21 @@ def invalid_arms(directory, name, block):
 
 def wait_section(summary):
     if "waitDiagnosticsComplete" not in summary:
-        return "This run predates the wait diagnostics."
+        return "This run predates the run-queue diagnostics."
     rows = []
     for c in summary["configurations"]:
         for b in c["blocks"]:
             for arm, d in (b.get("waitDiagnostics") or {}).items():
                 for f in (d or {}).get("debtFailures", []):
                     where = (f"after a wake: wait run-queue delay {ms(f.get('waitRunDelayNs'))}, post to wake {ms(f.get('postToWakeNs'))}, "
-                             f"wake to failure {ms(f.get('wakeToFailureNs'))}") if f["afterWake"] else "before the first wake of that thread"
+                             f"wake to failure {ms(f.get('wakeToFailureNs'))}") if f["afterWake"] else start_place(f, d.get("workStartNs") or [])
                     rows.append(f"| `{c['name']}` | {b['block']} | {arm} | {f['worker']} | {f['timeNs']/1e6:.3f} ms | {f['debtNs']/1e6:.3f} ms | {where} |")
     complete = "complete" if summary["waitDiagnosticsComplete"] else "incomplete"
     text = (f"The wait records are {complete}: each profile arm must hold one value for each wake, with none dropped. "
             f"The readable wait values sum to {summary.get('totalWaitRunDelayNs', 0)/1e6:.2f} ms across the run.")
+    if "startDiagnosticsComplete" in summary:
+        text += (f" The start records are {'complete' if summary['startDiagnosticsComplete'] else 'incomplete'}: each profile thread must hold "
+                 "a start run-queue delay and a work start time in the order of its native start and finish.")
     if not rows:
         return text + "\n\nNo profile arm records a debt failure."
     return (text + "\n\n| Configuration | Block | Arm | Worker | Time | Debt | Place |\n| --- | ---: | --- | ---: | ---: | ---: | --- |\n"
@@ -428,8 +463,9 @@ def barrier(root, run, change):
                  for name, b in failing]
         medians = "; ".join(f"`{c['name']}` median {c['medianAbsoluteDifference']*100:.2f} pp" for c in summary["configurations"]
                             if not c["passed"] and c["medianAbsoluteDifference"] is not None and c["medianAbsoluteDifference"] > 0.05)
-        detail = "; ".join(x for x in [medians, "; ".join(parts)] if x)
-        verdict = f"**Result: the current run fails** in {', '.join(f'`{n}`' for n in failed_configs)}. Failed criteria: {detail}."
+        detail = "; ".join(x for x in [medians, "; ".join(parts)] if x) or run_level_detail(summary).capitalize()
+        verdict = (f"**Result: the current run fails** in {', '.join(f'`{n}`' for n in failed_configs)}. Failed criteria: {detail}." if failed_configs
+                   else f"**Result: the current run fails.** Failed criteria: {detail}.")
         current = f"Fail. {detail}."
     history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in BARRIER_HISTORY + [(run, change, current)])
     all_blocks = [b for c in summary["configurations"] for b in c["blocks"]]
@@ -469,7 +505,7 @@ Without the wake rule, the peer would owe that delay after each wake.
 In `peer-bound`, the selected thread waits instead. Its wakes skip only the peer's published payment overshoot, a few hundred nanoseconds, and the prediction stays near 0%.
 In `alternating`, the critical thread changes in every phase. The prediction follows the real gain of about 40%.
 
-## Wait run-queue delay
+## Run-queue delay
 
 {wait_section(summary)}
 

@@ -1,6 +1,6 @@
 # Target-local forced-GC transitions
 
-Evidence: `artifacts/target-local-transitions/20261018T221219867-6603996f`.
+Evidence: `artifacts/target-local-transitions/20261018T233751688-5acdb8cc`.
 
 `TargetLocalTransitionsVerify` ran `profile-gc 50 6000 3000 5` ten times in the Linux x64 container.
 The run records kernel `5.15.153.1-microsoft-standard-WSL2`, x64, with 4 CPUs. Earlier transition runs did not record the host.
@@ -12,21 +12,21 @@ The sample runs through the checked library entry point `TargetLocalProfiler.run
 
 | Run | Passed | Ledger failure | Max observed debt (ns) | Forced GCs in work window | Max handler (ns) | Wall minus counted CPU (ms) | Epochs complete, zero loss |
 | ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
-| 1 | Yes | None | 999,994 | 19 | 1,503,847 | 5.4 | Yes |
-| 2 | Yes | None | 999,988 | 20 | 1,504,759 | 6.4 | Yes |
-| 3 | Yes | None | 999,951 | 20 | 1,504,700 | 6.0 | Yes |
-| 4 | Yes | None | 1,499,974 | 20 | 1,505,558 | 8.5 | Yes |
-| 5 | Yes | None | 999,975 | 19 | 1,504,148 | 5.9 | Yes |
-| 6 | Yes | None | 699,858 | 19 | 1,014,941 | 5.1 | Yes |
-| 7 | Yes | None | 999,979 | 20 | 1,504,900 | 7.0 | Yes |
-| 8 | Yes | None | 999,993 | 19 | 1,503,915 | 7.0 | Yes |
-| 9 | Yes | None | 999,973 | 19 | 1,017,253 | 6.0 | Yes |
-| 10 | Yes | None | 949,963 | 20 | 1,005,096 | 6.4 | Yes |
+| 1 | Yes | None | 999,974 | 19 | 1,008,383 | 7.3 | Yes |
+| 2 | Yes | None | 949,938 | 19 | 1,008,396 | 6.2 | Yes |
+| 3 | Yes | None | 999,997 | 20 | 1,504,568 | 7.5 | Yes |
+| 4 | Yes | None | 999,949 | 20 | 1,005,938 | 7.9 | Yes |
+| 5 | Yes | None | 949,975 | 19 | 1,511,594 | 6.1 | Yes |
+| 6 | Yes | None | 999,977 | 19 | 1,514,978 | 4.1 | Yes |
+| 7 | Yes | None | 999,994 | 20 | 1,504,319 | 7.5 | Yes |
+| 8 | Yes | None | 899,964 | 19 | 1,014,241 | 5.5 | Yes |
+| 9 | Yes | None | 949,948 | 20 | 1,008,947 | 6.3 | Yes |
+| 10 | Yes | None | 949,977 | 19 | 1,011,011 | 5.4 | Yes |
 
 No run crashed or hung. Every run closed both epochs with zero loss, retired both sessions, and restored the handlers.
 The `cleanup` check passes. A profile whose monitor throws raises `AggregateException`, and a second profile in the same process then passes.
 The `barrier-abort` check passes. A worker that throws releases its waiting peer, the run fails within 10 s, and a second profile then passes.
-Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,505,558 ns.
+Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,514,978 ns.
 Wall minus counted CPU is the largest per-thread difference. Counted CPU stops at disable and wall time includes the closing payment, so it is coarse.
 
 ## Run history
@@ -49,6 +49,7 @@ Wall minus counted CPU is the largest per-thread difference. Counted CPU stops a
 | `20261018T210459943-dfa8e472` | Review fixes: perf-map setting check, checked-run seam, shutdown work-state marker, and wording | Pass, 10 of 10 |
 | `20261018T213950841-bc5dbc42` | Per-wait run-queue delay, pread reader, and LF-normalized source hashes, before review fixes | Fail. Run 4: 2 ms debt bound under 19 forced GCs. |
 | `20261018T221219867-6603996f` | Review fixes: wait copy after the finish time, scalar parser, debt-exceeded and dependency-wake pairing | Pass, 10 of 10 |
+| `20261018T233751688-5acdb8cc` | Start run-queue delay diagnostic | Pass, 10 of 10 |
 
 ## Earlier failed check
 
@@ -65,7 +66,7 @@ One hypothesis is that the host or the GC deschedules one thread. Profile result
 
 ## Consequence
 
-The passing current-design checks hold 110 runs with no failure. Three current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
+The passing current-design checks hold 120 runs with no failure. Three current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
 A thread can go without samples long enough to break the 2 ms debt bound. The cause is unknown.
 GC-heavy workloads stay outside the supported model. The debt bound stays unchanged.
 

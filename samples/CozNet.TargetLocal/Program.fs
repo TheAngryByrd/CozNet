@@ -121,6 +121,7 @@ let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (outpu
                    maxHandlerNs = r.MaxHandlerNs; totalHandlerNs = r.TotalHandlerNs; local = r.Local; events = r.Events
                    cpuNs = r.Value; wallNs = uint64 (Stopwatch.GetElapsedTime(outcome.StartedTicks, outcome.FinishedTicks).TotalNanoseconds); runDelayNs = outcome.RunDelayNs
                    waitRunDelayNs = outcome.WaitRunDelayNs; waitRunDelaysDropped = outcome.WaitRunDelaysDropped
+                   startRunDelayNs = outcome.StartRunDelayNs; workStartedNs = outcome.StartedTicks
                    startedNs = r.StartedNs; finishedNs = r.FinishedNs; finalDebt = r.FinalDebt; failure = r.Failure
                    closeOutcome = r.CloseOutcome; lifecycleError = r.LifecycleError; retireError = r.RetireError; quiescent = r.Quiescent |})
         events =
@@ -207,7 +208,8 @@ let private profilePhases speedup pattern (output: string) =
                 {| finishCode = outcome.FinishCode; error = outcome.Error; complete = r.Complete; lost = r.Lost; accepted = r.Accepted
                    maxHandlerNs = r.MaxHandlerNs; totalHandlerNs = r.TotalHandlerNs; local = r.Local; events = r.Events; finalDebt = r.FinalDebt
                    cpuNs = r.Value; wallNs = uint64 (Stopwatch.GetElapsedTime(outcome.StartedTicks, outcome.FinishedTicks).TotalNanoseconds); runDelayNs = outcome.RunDelayNs
-                   waitRunDelayNs = outcome.WaitRunDelayNs; waitRunDelaysDropped = outcome.WaitRunDelaysDropped |})
+                   waitRunDelayNs = outcome.WaitRunDelayNs; waitRunDelaysDropped = outcome.WaitRunDelaysDropped
+                   startRunDelayNs = outcome.StartRunDelayNs; workStartedNs = outcome.StartedTicks; startedNs = r.StartedNs; finishedNs = r.FinishedNs |})
         events =
             result.Events
             |> Array.map (fun e -> [| uint64 e.Worker; e.Sequence; uint64 e.Kind; e.ObservedGlobal; e.LocalBefore; e.Amount; e.Requested; e.Ip; uint64 e.Detail; e.Time |])

@@ -403,6 +403,7 @@ type TargetWorker = {
 
 type TargetThreadOutcome = {
     RunDelayNs: int64
+    StartRunDelayNs: int64
     WaitRunDelayNs: int64 array
     WaitRunDelaysDropped: int
     Result: TargetThreadResult
@@ -495,7 +496,7 @@ module TargetLocalProfiler =
                 if registered <> 0 then
                     abort.Cancel()
                     ready.SignalAndWait()
-                    outcomes[index] <- { RunDelayNs = -1L; WaitRunDelayNs = Array.empty; WaitRunDelaysDropped = 0; Result = TargetThreadResult(); FinishCode = registered; Error = $"register {registered}"; StartedTicks = 0L; FinishedTicks = 0L }
+                    outcomes[index] <- { RunDelayNs = -1L; StartRunDelayNs = -1L; WaitRunDelayNs = Array.empty; WaitRunDelaysDropped = 0; Result = TargetThreadResult(); FinishCode = registered; Error = $"register {registered}"; StartedTicks = 0L; FinishedTicks = 0L }
                 else
                     let started = TargetLocalNative.Start handle
                     TargetCurrent.Set(handle, worker.PaymentIp, abort)
@@ -503,6 +504,7 @@ module TargetLocalProfiler =
                     if started <> 0 then abort.Cancel()
                     let delayBefore = delayOf clock
                     ready.SignalAndWait()
+                    let delayStarted = delayOf clock
                     let startedTicks = Stopwatch.GetTimestamp()
                     let workError =
                         if started <> 0 then
@@ -539,6 +541,7 @@ module TargetLocalProfiler =
                           if released <> 0 then $"release {released}" ]
                         |> String.concat ", "
                     outcomes[index] <- { RunDelayNs = (if delayBefore < 0L || delayAfter < 0L then -1L else delayAfter - delayBefore)
+                                         StartRunDelayNs = (if delayBefore < 0L || delayStarted < 0L then -1L else delayStarted - delayBefore)
                                          WaitRunDelayNs = waits; WaitRunDelaysDropped = waitsDropped; Result = result; FinishCode = code; Error = error; StartedTicks = startedTicks; FinishedTicks = finishedTicks })
 
         let threads = workers |> Array.mapi thread

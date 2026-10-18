@@ -62,7 +62,8 @@ A thread that pays delay spins. On a core shared with another profiled thread th
 In one `peer-bound` barrier run, every block predicted a small gain that did not exist.
 A diagnostic run with one thread per physical core showed no sign bias. It also halved the CPU count, and a later unrestricted run showed no bias either, so SMT is a hypothesis.
 A runnable thread that waits for a CPU also cannot pay. Its debt stays, so a debt failure stays a failure. Each barrier wait now records its own run-queue delay to place such a failure. In the diagnostic run, a woken peer started 8.7 ms after its release and broke the 2 ms debt bound.
-Its whole-run run-queue delay was 8.6 ms, which is consistent with that wait but does not place it. CLR safety outside the qualified workload is not established.
+Its whole-run run-queue delay was 8.6 ms, which is consistent with that wait but does not place it.
+Each worker also records its start run-queue delay. In the latest prediction run, a peer started work 5.3 ms after the selected thread with 8.3 microseconds of start run-queue delay, and its first sample broke the debt bound. So that late start has a cause other than run-queue delay, which is not yet found. CLR safety outside the qualified workload is not established.
 
 ## IL rewriting compared with native intervention
 

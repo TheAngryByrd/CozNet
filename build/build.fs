@@ -528,6 +528,20 @@ let targetLocalPredictionVerify _ = nativeScript "VerifyTargetLocalPrediction.ps
 let targetLocalTransitionsVerify _ = nativeScript "VerifyTargetLocalTransitions.ps1"
 let targetLocalBarrierVerify _ = nativeScript "VerifyTargetLocalBarrier.ps1"
 
+let targetPredictionAnalysisChecks _ =
+    CreateProcess.fromRawCommand (Environment.environVarOrDefault "COZNET_PYTHON" "python") [
+        rootDirectory
+        </> "native/TargetPredictionAnalysisChecks.py"
+    ]
+    |> CreateProcess.withWorkingDirectory rootDirectory
+    |> Proc.run
+    |> fun result ->
+        if
+            result.ExitCode
+            <> 0
+        then
+            failwith "Target prediction analysis checks failed."
+
 let linuxTimerInterop _ = nativeScript "VerifyTimerInterop.ps1"
 
 let linuxSampledTimer _ =
@@ -1299,6 +1313,7 @@ let initTargets () =
     Target.create "TargetLocalPredictionVerify" targetLocalPredictionVerify
     Target.create "TargetLocalTransitionsVerify" targetLocalTransitionsVerify
     Target.create "TargetLocalBarrierVerify" targetLocalBarrierVerify
+    Target.create "TargetPredictionAnalysisChecks" targetPredictionAnalysisChecks
     Target.create "LinuxTimerInterop" linuxTimerInterop
     Target.create "LinuxTimerManaged" linuxTimerManaged
     Target.create "LinuxSampledTimer" linuxSampledTimer

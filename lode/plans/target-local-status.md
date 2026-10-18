@@ -102,6 +102,24 @@ The review fixes changed the timed path, so all three suites ran again on the fi
   The peer takes its first sample 5.8 ms after the selected thread's first sample, before its first wake. By then 3 ms is published, so the first sample records a 3 ms debt failure.
   The peer's whole-run run-queue delay in that arm is 6.66 ms. The wait diagnostic classifies the failure as before the first wake, so no wait delay applies.
 This is the second captured debt failure at a thread's first sample. Both threads had several milliseconds of whole-run run-queue delay.
-Next diagnostic: record the run-queue delay between the start barrier and the first sample, so a startup failure can be placed.
+
+## Start run-queue delay
+
+[The start-delay plan](target-local-start-delay.md) records the run-queue delay across the start barrier and the work start time of each worker.
+The analyzer fails a run when a start record is missing or out of order. It places each debt failure before a first wake.
+
+The runs on the reviewed tree:
+- Transition run `20261018T233751688-5acdb8cc` passes 10 of 10.
+- Barrier run `20261018T234001547-747aae56` passes all three patterns, with median differences of 1.45 to 3.78 points and start records complete.
+- Prediction run `20261018T233840885-22a9d378` fails `selected-dominant` block 5, which is invalid. The other 14 blocks are within the limits.
+
+In that block, the peer starts work 5.3 ms after the selected thread. Its start run-queue delay is 8.3 microseconds, and its residual run-queue delay is 0.
+So run-queue delay does not cause this late start. The selected thread publishes 3 ms before the peer takes its first sample, 0.6 ms after its work start.
+The peer journals no sample from its native start to 0.6 ms after its work start. Its task-clock count is within 1.1 ms of its native span, so the peer was on a CPU for most of that interval.
+Fact: the perf event sets `exclude_kernel`, so a sample in kernel mode is not recorded. Hypothesis, not shown: the peer spent that interval in kernel mode. The records do not show where in the interval from its native start to its work start.
+
+In the other 59 profile arms of both suites, the work start skew is at most 0.13 ms, except one of 1.19 ms. That arm has 1.30 ms of start run-queue delay.
+Three captured debt failures now occur at a first sample. Only the latest run has start records, so the two earlier failures stay unplaced.
+Next step: find what holds a worker for milliseconds between its native start and its work start, and decide how delay published before every worker starts its work is handled. The bounds do not change.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).
