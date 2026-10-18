@@ -202,6 +202,54 @@ module CodeBinding =
         | Ok current when current.BoundRanges <> binding.BoundRanges -> Error "A bound method moved to another native range during the run."
         | Ok _ -> Ok()
 
+[<AllowNullLiteral>]
+type internal RunQueueClock private (handle: Microsoft.Win32.SafeHandles.SafeFileHandle) =
+    let buffer = Array.zeroCreate<byte> 128
+
+    static member internal Parse(bytes: byte array, count: int) =
+        let mutable field = 0
+        let mutable index = 0
+        let mutable runTime = -1L
+        let mutable delay = -1L
+
+        while field < 2 && index < count do
+            while index < count && (bytes[index] = ' 'B || bytes[index] = '\n'B) do
+                index <- index + 1
+
+            let start = index
+            let mutable value = 0L
+
+            while index < count && bytes[index] >= '0'B && bytes[index] <= '9'B do
+                value <- value * 10L + int64 (bytes[index] - '0'B)
+                index <- index + 1
+
+            if index > start then
+                if field = 0 then runTime <- value else delay <- value
+                field <- field + 1
+            else
+                index <- count
+
+        struct (runTime, delay)
+
+    static member Open() =
+        try
+            new RunQueueClock(File.OpenHandle "/proc/thread-self/schedstat")
+        with _ ->
+            null
+
+    member _.Read() =
+        try
+            RunQueueClock.Parse(buffer, RandomAccess.Read(handle, Span<byte> buffer, 0L))
+        with _ ->
+            struct (-1L, -1L)
+
+    member this.Delay() =
+        let struct (_, delay) = this.Read()
+        delay
+
+    interface IDisposable with
+        member _.Dispose() = handle.Dispose()
+
 type internal TargetCurrent() =
     [<ThreadStatic; DefaultValue>]
     static val mutable private handle: nativeint
@@ -218,8 +266,47 @@ type internal TargetCurrent() =
     [<ThreadStatic; DefaultValue>]
     static val mutable private source: CancellationTokenSource
 
+    [<ThreadStatic; DefaultValue>]
+    static val mutable private clock: RunQueueClock
+
+    [<ThreadStatic; DefaultValue>]
+    static val mutable private waits: int64 array
+
+    [<ThreadStatic; DefaultValue>]
+    static val mutable private waitCount: int
+
+    [<ThreadStatic; DefaultValue>]
+    static val mutable private waitsDropped: int
+
     static member Handle = TargetCurrent.handle
     static member PaymentIp = TargetCurrent.paymentIp
+
+    static member RunQueue() =
+        if isNull TargetCurrent.clock then -1L else TargetCurrent.clock.Delay()
+
+    static member RecordWait(before: int64, after: int64) =
+        if not (isNull TargetCurrent.waits) then
+            if TargetCurrent.waitCount < TargetCurrent.waits.Length then
+                TargetCurrent.waits[TargetCurrent.waitCount] <- if before < 0L || after < 0L then -1L else after - before
+                TargetCurrent.waitCount <- TargetCurrent.waitCount + 1
+            else
+                TargetCurrent.waitsDropped <- TargetCurrent.waitsDropped + 1
+
+    static member Track(clock: RunQueueClock, capacity: int) =
+        TargetCurrent.clock <- clock
+        TargetCurrent.waits <- Array.zeroCreate capacity
+        TargetCurrent.RecordWait(TargetCurrent.RunQueue(), TargetCurrent.RunQueue())
+        TargetCurrent.waitCount <- 0
+        TargetCurrent.waitsDropped <- 0
+
+    static member TakeWaits() =
+        let waits = if isNull TargetCurrent.waits then Array.empty else Array.sub TargetCurrent.waits 0 TargetCurrent.waitCount
+        let dropped = TargetCurrent.waitsDropped
+        TargetCurrent.clock <- null
+        TargetCurrent.waits <- null
+        TargetCurrent.waitCount <- 0
+        TargetCurrent.waitsDropped <- 0
+        waits, dropped
     static member Error = TargetCurrent.error
     static member Abort = TargetCurrent.abort
 
@@ -284,6 +371,8 @@ type TargetBarrier(participants: int) =
             phase.Done.Set()
             true
         else
+            let before = if handle <> 0n then TargetCurrent.RunQueue() else -1L
+
             if handle <> 0n then
                 TargetCurrent.Record(TargetLocalNative.WaitBegin(handle, ip))
 
@@ -300,6 +389,7 @@ type TargetBarrier(participants: int) =
                 if handle <> 0n then
                     let token = if reason = TargetWakeReason.Dependency then phase.Token else 0UL
                     TargetCurrent.Record(TargetLocalNative.WaitEnd(handle, ip, token, uint32 reason))
+                    TargetCurrent.RecordWait(before, TargetCurrent.RunQueue())
 
             reason = TargetWakeReason.Dependency
 
@@ -313,6 +403,8 @@ type TargetWorker = {
 
 type TargetThreadOutcome = {
     RunDelayNs: int64
+    WaitRunDelayNs: int64 array
+    WaitRunDelaysDropped: int
     Result: TargetThreadResult
     FinishCode: int
     Error: string
@@ -363,12 +455,9 @@ module TargetLocalProfiler =
 
     let private span (first, last) = { Begin = first; End = last }
 
-    let private runDelay () =
-        try
-            let fields = File.ReadAllText("/proc/thread-self/schedstat").Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            if fields.Length >= 2 then Int64.Parse fields[1] else -1L
-        with _ ->
-            -1L
+    let private waitCapacity = 1024
+
+    let private delayOf (clock: RunQueueClock) = if isNull clock then -1L else clock.Delay()
 
     let run (speedup: uint32) (period: uint64) (selected: (uint64 * uint64) array) (eligible: (uint64 * uint64) array)
         (journalCapacity: uint32) (workers: TargetWorker array) (monitor: TargetRunState -> unit) =
@@ -399,18 +488,20 @@ module TargetLocalProfiler =
             Thread(fun () ->
                 let mutable handle = 0n
                 let registered = TargetLocalNative.Register(experiment, journalCapacity, &handle)
-                runDelay () |> ignore
+                use clock = RunQueueClock.Open()
+                delayOf clock |> ignore
                 ready.SignalAndWait()
 
                 if registered <> 0 then
                     abort.Cancel()
                     ready.SignalAndWait()
-                    outcomes[index] <- { RunDelayNs = -1L; Result = TargetThreadResult(); FinishCode = registered; Error = $"register {registered}"; StartedTicks = 0L; FinishedTicks = 0L }
+                    outcomes[index] <- { RunDelayNs = -1L; WaitRunDelayNs = Array.empty; WaitRunDelaysDropped = 0; Result = TargetThreadResult(); FinishCode = registered; Error = $"register {registered}"; StartedTicks = 0L; FinishedTicks = 0L }
                 else
                     let started = TargetLocalNative.Start handle
                     TargetCurrent.Set(handle, worker.PaymentIp, abort)
+                    TargetCurrent.Track(clock, waitCapacity)
                     if started <> 0 then abort.Cancel()
-                    let delayBefore = runDelay ()
+                    let delayBefore = delayOf clock
                     ready.SignalAndWait()
                     let startedTicks = Stopwatch.GetTimestamp()
                     let workError =
@@ -433,7 +524,8 @@ module TargetLocalProfiler =
                     let mutable result = TargetThreadResult()
                     let code = TargetLocalNative.Finish(handle, worker.PaymentIp, &result)
                     let finishedTicks = Stopwatch.GetTimestamp()
-                    let delayAfter = runDelay ()
+                    let delayAfter = delayOf clock
+                    let waits, waitsDropped = TargetCurrent.TakeWaits()
                     let buffer = Array.zeroCreate<NativeEvent> (int result.Events)
                     let mutable count = 0u
                     let read = TargetLocalNative.Events(handle, buffer, uint32 buffer.Length, &count)
@@ -446,7 +538,8 @@ module TargetLocalProfiler =
                           if read <> 0 then $"events {read}"
                           if released <> 0 then $"release {released}" ]
                         |> String.concat ", "
-                    outcomes[index] <- { RunDelayNs = (if delayBefore < 0L || delayAfter < 0L then -1L else delayAfter - delayBefore); Result = result; FinishCode = code; Error = error; StartedTicks = startedTicks; FinishedTicks = finishedTicks })
+                    outcomes[index] <- { RunDelayNs = (if delayBefore < 0L || delayAfter < 0L then -1L else delayAfter - delayBefore)
+                                         WaitRunDelayNs = waits; WaitRunDelaysDropped = waitsDropped; Result = result; FinishCode = code; Error = error; StartedTicks = startedTicks; FinishedTicks = finishedTicks })
 
         let threads = workers |> Array.mapi thread
         threads |> Array.iter (fun worker -> worker.IsBackground <- true)

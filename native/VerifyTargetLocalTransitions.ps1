@@ -11,9 +11,17 @@ if ($LASTEXITCODE -ne 0) { throw 'The Linux SDK image is unavailable.' }
 $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.Linux.cpp', 'native/service/TargetSampleSession.Linux.h',
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'src/CozNet/TargetLocalReplay.fs',
     'src/CozNet/TargetLocalProfiler.fs', 'samples/CozNet.TargetLocal/Work.fs', 'samples/CozNet.TargetLocal/Program.fs',
-    'native/VerifyTargetLocalTransitions.ps1', 'lode/plans/target-local-transitions.md', 'lode/plans/target-local-lifecycle.md')
+    'native/VerifyTargetLocalTransitions.ps1', 'lode/plans/target-local-transitions.md', 'lode/plans/target-local-lifecycle.md', 'lode/plans/target-local-wait-delay.md')
 $hashes = @{}
-foreach ($name in $sources) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash }
+function Get-SourceHash([string] $Path) {
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    $normalized = [Collections.Generic.List[byte]]::new($bytes.Length)
+    for ($i = 0; $i -lt $bytes.Length; $i++) {
+        if (-not ($bytes[$i] -eq 13 -and $i + 1 -lt $bytes.Length -and $bytes[$i + 1] -eq 10)) { $normalized.Add($bytes[$i]) }
+    }
+    [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($normalized.ToArray()))
+}
+foreach ($name in $sources) { $hashes[$name] = Get-SourceHash (Join-Path $root $name) }
 & dotnet build (Join-Path $root 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj') -c Release *> (Join-Path $run 'managed-build.log')
 if ($LASTEXITCODE -ne 0) { throw "The managed build failed. See $run/managed-build.log." }
 Copy-Item -Recurse (Join-Path $root 'samples/CozNet.TargetLocal/bin/Release/net10.0/*') $app
@@ -61,10 +69,10 @@ $lifecycle = [ordered]@{
     shutdownPassed = $shutdownExit -eq 0 -and $shutdownSeconds -lt 10 -and (Test-Path -LiteralPath (Join-Path $run 'shutdown.json.marker')) -and -not (Test-Path -LiteralPath (Join-Path $run 'shutdown.json')) -and (Get-Content (Join-Path $run 'shutdown.json.marker') -Raw | ConvertFrom-Json).working
     shutdownExitCode = $shutdownExit; shutdownSeconds = $shutdownSeconds }
 $unchanged = $true
-foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash -eq $hashes[$name] }
+foreach ($name in $sources) { $unchanged = $unchanged -and (Get-SourceHash (Join-Path $root $name)) -eq $hashes[$name] }
 $passed = $unchanged -and $lifecycle.bindingTieredPassed -and $lifecycle.bindingDefaultPassed -and $lifecycle.shutdownPassed -and $cleanupExit -eq 0 -and $null -ne $cleanup -and $cleanup.passed -and $abortExit -eq 0 -and $null -ne $abort -and $abort.passed -and $Runs -eq 10 -and @($outcomes).Count -eq 10 -and @($outcomes | Where-Object {
     $_.exitCode -ne 0 -or -not $_.recordExists -or -not $_.passed -or $_.forcedCollections -lt 10 -or $_.maxHandlerNs -ge 5000000 }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; cleanupExitCode = $cleanupExit; cleanupPassed = [bool]$cleanup.passed; barrierAbortPassed = [bool]$abort.passed; lifecycle = $lifecycle; sources = $hashes; runs = $Runs; outcomes = $outcomes
+@{ passed = $passed; inputsUnchanged = $unchanged; cleanupExitCode = $cleanupExit; cleanupPassed = [bool]$cleanup.passed; barrierAbortPassed = [bool]$abort.passed; lifecycle = $lifecycle; sourceHash = 'sha256 after CRLF to LF'; sources = $hashes; runs = $Runs; outcomes = $outcomes
     compilerImage = $compilerImage; runtimeImage = $runtimeImage; generalClrSafetyEstablished = $false } |
     ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run

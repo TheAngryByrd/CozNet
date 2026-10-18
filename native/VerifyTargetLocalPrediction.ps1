@@ -13,9 +13,17 @@ $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.L
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'native/service/PerfRing.Linux.h', 'native/service/PerfSampleRing.h',
     'src/CozNet/TargetLocalReplay.fs', 'src/CozNet/TargetLocalProfiler.fs', 'samples/CozNet.TargetLocal/Work.fs',
     'samples/CozNet.TargetLocal/Program.fs', 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj',
-    'native/VerifyTargetLocalPrediction.ps1', 'native/AnalyzeTargetPrediction.py', 'lode/plans/target-local-prediction.md', 'build/build.fs')
+    'native/VerifyTargetLocalPrediction.ps1', 'native/AnalyzeTargetPrediction.py', 'lode/plans/target-local-prediction.md', 'lode/plans/target-local-wait-delay.md', 'build/build.fs')
 $hashes = @{}
-foreach ($name in $sources) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash }
+function Get-SourceHash([string] $Path) {
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    $normalized = [Collections.Generic.List[byte]]::new($bytes.Length)
+    for ($i = 0; $i -lt $bytes.Length; $i++) {
+        if (-not ($bytes[$i] -eq 13 -and $i + 1 -lt $bytes.Length -and $bytes[$i + 1] -eq 10)) { $normalized.Add($bytes[$i]) }
+    }
+    [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($normalized.ToArray()))
+}
+foreach ($name in $sources) { $hashes[$name] = Get-SourceHash (Join-Path $root $name) }
 & dotnet build (Join-Path $root 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj') -c Release *> (Join-Path $run 'managed-build.log')
 if ($LASTEXITCODE -ne 0) { throw "The managed build failed. See $run/managed-build.log." }
 Copy-Item -Recurse (Join-Path $root 'samples/CozNet.TargetLocal/bin/Release/net10.0/*') $app
@@ -55,9 +63,9 @@ foreach ($configuration in $configurations) {
     }
 }
 $unchanged = $true
-foreach ($name in $sources) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $root $name) -Algorithm SHA256).Hash -eq $hashes[$name] }
+foreach ($name in $sources) { $unchanged = $unchanged -and (Get-SourceHash (Join-Path $root $name)) -eq $hashes[$name] }
 foreach ($name in $binaries.Keys) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $app $name) -Algorithm SHA256).Hash -eq $binaries[$name] }
-@{ sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage; seed = $Seed; blocks = $Blocks
+@{ sourceHash = 'sha256 after CRLF to LF'; sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage; seed = $Seed; blocks = $Blocks
     speedup = $speedup; configurations = $configurations; runs = $runs; inputsUnchanged = $unchanged } |
     ConvertTo-Json -Depth 6 | Set-Content (Join-Path $run 'manifest.json')
 & $PythonCommand -I (Join-Path $PSScriptRoot 'AnalyzeTargetPrediction.py') $run

@@ -48,6 +48,36 @@ def load(run, name):
     return json.loads(path.read_text()) if path.exists() else None
 
 
+WAKE, POST, FAILURE = 6, 7, 4
+DEBT_EXCEEDED, DEPENDENCY = 1, 0
+
+
+def wait_diagnostics(data):
+    if data is None or "threads" not in data or "events" not in data:
+        return None
+    events = sorted(data["events"], key=lambda e: e[9])
+    origin = events[0][9] if events else 0
+    threads = data["threads"]
+    wakes = {i: [e for e in events if e[0] == i and e[2] == WAKE] for i in range(len(threads))}
+    complete = all("waitRunDelayNs" in t and len(t["waitRunDelayNs"]) == len(wakes[i]) and t.get("waitRunDelaysDropped") == 0
+                   for i, t in enumerate(threads))
+    failures = []
+    for failure in (e for e in events if e[2] == FAILURE and e[8] == DEBT_EXCEEDED):
+        item = {"worker": failure[0], "timeNs": failure[9] - origin, "debtNs": failure[5], "afterWake": False}
+        prior = [w for w in wakes.get(failure[0], []) if w[9] <= failure[9]]
+        if prior:
+            wake, delays = prior[-1], threads[failure[0]].get("waitRunDelayNs", [])
+            post = (next((e for e in reversed(events) if e[2] == POST and e[9] <= wake[9] and e[5] == wake[6]), None)
+                    if wake[8] == DEPENDENCY else None)
+            item.update({"afterWake": True, "wakeReason": wake[8], "waitRunDelayNs": delays[len(prior) - 1] if len(prior) <= len(delays) else None,
+                         "postToWakeNs": wake[9] - post[9] if post else None, "wakeToFailureNs": failure[9] - wake[9]})
+        failures.append(item)
+    values = [d for t in threads for d in t.get("waitRunDelayNs", []) if d >= 0]
+    return {"complete": complete, "waits": sum(len(w) for w in wakes.values()), "maxWaitRunDelayNs": max(values, default=None),
+            "totalWaitRunDelayNs": sum(values), "unreadWaits": sum(1 for t in threads for d in t.get("waitRunDelayNs", []) if d < 0),
+            "debtFailures": failures}
+
+
 def main():
     run = pathlib.Path(sys.argv[1]).resolve()
     manifest = load(run, "manifest.json")
@@ -62,6 +92,7 @@ def main():
     unknown = [r for r in manifest["runs"] if (r["configuration"], r["block"]) not in known]
     passed = (manifest["inputsUnchanged"] and manifest["blocks"] == BLOCKS and manifest["speedup"] == SPEEDUP and manifest["seed"] == SEED
               and declared == table and len(manifest["configurations"]) == len(table) and not unknown)
+    diagnostics_complete = True
     for configuration in manifest["configurations"]:
         name = configuration["name"]
         blocks = []
@@ -85,7 +116,9 @@ def main():
                         for field, value in fields_for(arm, rounds).items():
                             if data.get(field) != value:
                                 reasons.append(f"{arm} records {field} {data.get(field)}")
-            record = {"block": block, "valid": not reasons, "reasons": reasons}
+            record = {"block": block, "valid": not reasons, "reasons": reasons,
+                      "waitDiagnostics": {arm: wait_diagnostics(arms[arm]) for arm in ("profile-zero", "profile-speedup")}}
+            diagnostics_complete = diagnostics_complete and all(d is None or d["complete"] for d in record["waitDiagnostics"].values())
             if not reasons:
                 zero, speed, original, optimized = (arms[a] for a in ("profile-zero", "profile-speedup", "original", "optimized"))
                 predicted = 1 - speed["effectiveNs"] / zero["effectiveNs"]
@@ -126,7 +159,12 @@ def main():
             "medianSpeedupHandlerShare": statistics.median(b["speedupHandlerShare"] for b in valid) if valid and all(b["speedupHandlerShare"] is not None for b in valid) else None,
             "passed": configuration_passed,
         })
-    summary = {"passed": passed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT,
+    observed = sum(d["totalWaitRunDelayNs"] for c in configurations for b in c["blocks"]
+                   for d in b["waitDiagnostics"].values() if d is not None)
+    if barrier:
+        passed = passed and observed > 0
+    passed = passed and diagnostics_complete
+    summary = {"passed": passed, "waitDiagnosticsComplete": diagnostics_complete, "totalWaitRunDelayNs": observed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT,
                "blockLimit": BLOCK_LIMIT, "speedup": manifest["speedup"], "configurations": configurations,
                "supportedModel": "Linux x64 CPU-bound managed fork/join threads registered through CozNet",
                "generalClrSafetyEstablished": False}

@@ -82,7 +82,12 @@ It ignores entries with a zero size, an overflow, or a field that is not hexadec
    If `monitor` throws, a thread cannot start, or the caller is interrupted during the join, it releases the barrier, joins the started threads, and closes the experiment before it raises `AggregateException`.
 
 `TargetThreadOutcome.RunDelayNs` is the change in kernel run-queue delay (`/proc/thread-self/schedstat`, field 2) from the release of the start barrier to the finish, so it includes the wake latency at that barrier. It is -1 when the file cannot be read.
-Each worker reads the file once at registration, so the read code is compiled outside the timed work.
+Each worker opens the file once at registration and reads it once there, so the read code is compiled outside the timed work. Each later read is a `pread` at offset 0.
+`TargetThreadOutcome.WaitRunDelayNs` holds the change in run-queue delay across each completed `TargetBarrier` wait of that worker, in order. A failed read records -1.
+The interval starts before `WaitBegin` and ends after `WaitEnd`, so it includes the time from the release to the wake.
+A worker keeps at most 1024 values. `WaitRunDelaysDropped` counts each later wait.
+
+The qualification runners hash each text source after they replace CRLF with LF, and each manifest records `sourceHash`. A hash then equals the SHA-256 of the committed blob.
 `TargetLedgerEvent.Time` is the native event time. For a sample, it is the perf sample time.
 
 `TargetProfileResult` holds `ElapsedNs`, `GlobalNs`, `EffectiveNs`, the experiment result, each thread outcome, all events, the replay result, and `Passed`.

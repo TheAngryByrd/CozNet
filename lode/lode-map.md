@@ -7,6 +7,7 @@ For the CLR fork/join workload, acceptance criteria, and qualification, read [ta
 For the wait protocol, `TargetBarrier`, and the release-token wake rule, read [target-local blocking](plans/target-local-blocking.md).
 For the current implementation state and open failures after the latest runs, read [target-local status](plans/target-local-status.md).
 For code binding, tiering rejection, shutdown, and failure diagnostics, read [target-local lifecycle](plans/target-local-lifecycle.md).
+For the per-wait run-queue delay, the debt rule for a thread that waits for a CPU, and source hashing, read [target-local wait delay](plans/target-local-wait-delay.md).
 For forced-GC runtime transitions under handler payment, read [target-local transitions](plans/target-local-transitions.md).
 
 For nominal timer credit, the retained controller-preemption backlog, and the next sample-processing design, read [timer nominal credit](plans/timer-nominal-credit.md).

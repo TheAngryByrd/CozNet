@@ -75,9 +75,33 @@ The fixes change no code in the timed window. The failures are kept, no rerun re
 A thread that the host leaves off CPU cannot pay, and the profiler reports that as a failure, as the no-forgiveness rule requires.
 
 The prediction run `20261018T192337237-ab4134f4` passed with a `selected-longer` median difference of 4.09 points, and run `20261018T193237454-cc14a621` passed with 2.95 points.
-The latest prediction run, `20261018T210529693-6820c454`, fails `peer-longer` as described above.
+Prediction run `20261018T210529693-6820c454` fails `peer-longer` as described above.
 
-Accepted risk: three hashed files are CRLF in the working tree and LF in Git, and every manifest hashes the CRLF bytes.
-A fresh clone therefore cannot reverify `inputsUnchanged` from the repository. Normalize the line endings before the next qualification run.
+## Wait run-queue delay
+
+[The wait-delay plan](target-local-wait-delay.md) keeps the debt of a runnable thread that waits for a CPU, so a debt failure stays a failure.
+Each `TargetBarrier` wait now records its own run-queue delay, and the runners hash sources after CRLF to LF normalization.
+Manifests before this change hash working-tree bytes, and some of those files had CRLF line endings, so a fresh clone cannot reverify those hashes.
+
+The first runs on this design fail in all three suites. Each failure is kept, and no rerun replaces it.
+- Barrier run `20261018T214145452-1972f479`: the wait records are complete in all 30 profile arms, with 0.20 ms of wait run-queue delay in total.
+  `peer-bound` block 5 differs by +12.18 points. Its plain `original` arm runs 99.5 ms, its `optimized` arm 106.2 ms, and its `profile-zero` arm 108.7 ms.
+  No profiled arm in that block has more than 0.34 ms of run-queue delay. The plain arms do not record run-queue delay, so scheduling delay in them stays possible. No profile arm records a debt failure.
+- Prediction run `20261018T214023824-28b274dc`: `peer-longer` block 1 differs by +16.79 points. Its plain `optimized` arm runs 118.5 ms against 104.1 ms for `original`.
+  The profiled arms stay near their siblings, and the overhead medians are 0.996 to 1.010.
+- Transition run `20261018T213950841-bc5dbc42`: run 4 breaks the 2 ms debt bound under 19 forced GCs. The peer pays in 50 microsecond children without a gap,
+  but it is 1.65 ms behind when the selected thread publishes 0.5 ms, so its debt reaches 2.10 ms. The forced-GC mode uses no barrier, so the wait change does not reach it.
+In the barrier and prediction failures, plain or zero arms vary by 7 to 14% between arms, with at most 0.34 ms of run-queue delay measured in the profiled arms.
+Five blocks for each configuration cannot separate that host variation from a profiler error.
+Hypothesis, not shown: a quieter host or more blocks would give a stable pass. A persistent profiler error would survive both.
+
+The review fixes changed the timed path, so all three suites ran again on the fixed tree.
+- Transition run `20261018T221219867-6603996f` passes 10 of 10, with all lifecycle checks.
+- Prediction run `20261018T221254076-9a1e3880` passes all three configurations, with median differences of 1.17 to 1.84 points and wait records complete.
+- Barrier run `20261018T221415876-73afdb27` fails `alternating` block 3, which is invalid. The other 14 blocks are within the limits.
+  The peer takes its first sample 5.8 ms after the selected thread's first sample, before its first wake. By then 3 ms is published, so the first sample records a 3 ms debt failure.
+  The peer's whole-run run-queue delay in that arm is 6.66 ms. The wait diagnostic classifies the failure as before the first wake, so no wait delay applies.
+This is the second captured debt failure at a thread's first sample. Both threads had several milliseconds of whole-run run-queue delay.
+Next diagnostic: record the run-queue delay between the start barrier and the first sample, so a startup failure can be placed.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).
