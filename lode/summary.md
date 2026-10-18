@@ -12,7 +12,9 @@ Its live modes cover backlog, terminal loss, cancellation, and retirement.
 The [native ledger](plans/target-local-credit.md) credits and pays on each thread with a valid sequence replay in a two-thread native run.
 A [CLR fork/join workload](plans/target-local-prediction.md) runs this path in managed threads and replays every journal in F#.
 Its qualification predicts real 50% optimizations in three configurations, with median absolute differences from about 1 to 3 percentage points.
-The qualified model excludes blocking, async, and GC-heavy work. General CLR safety remains unverified.
+The qualified model excludes blocking, async, and GC-heavy work. A [forced-GC check](plans/target-local-transitions.md) passes 10 of 10. An earlier check with a flawed count failed the debt bound in 1 of 10.
+See [the evidence](../reliability/features/target-local/transitions.md). That failure's cause needs GC suspension timestamps. The runner does not record kernel identity.
+General CLR safety remains unverified.
 
 Optional clock capture now binds both sampled arms to the [matched comparison plan](profiling/sample-membership.md#matched-comparison-activation).
 The retained 500,000-batch block places all recorded treatment credit inside the observed source window and frozen prefix.

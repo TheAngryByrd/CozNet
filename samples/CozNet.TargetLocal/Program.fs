@@ -53,7 +53,7 @@ type private WorkerOutcome = {
     Error: string
 }
 
-let private profile speedup selectedRounds peerRounds (output: string) =
+let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (output: string) =
     if not (layoutsMatch ()) then failwith "The native result layouts differ."
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
@@ -66,6 +66,7 @@ let private profile speedup selectedRounds peerRounds (output: string) =
     check "open" (Open(speedup, period, selected, 1u, eligible, 2u, &experiment))
     let ready = new Barrier(2)
     let outcomes = Array.zeroCreate<WorkerOutcome> 2
+    let working = [| 0 |]
     let run index (work: uint64 -> uint64) rounds paymentIp =
         Thread(fun () ->
             let mutable thread = 0n
@@ -78,7 +79,9 @@ let private profile speedup selectedRounds peerRounds (output: string) =
                 let started = Start thread
                 ready.SignalAndWait()
                 let startedTicks = Stopwatch.GetTimestamp()
+                Interlocked.Increment(&working[0]) |> ignore
                 if started = 0 then work rounds |> ignore
+                Interlocked.Decrement(&working[0]) |> ignore
                 let mutable result = ThreadResult()
                 let code = Finish(thread, paymentIp, &result)
                 let finishedTicks = Stopwatch.GetTimestamp()
@@ -93,8 +96,19 @@ let private profile speedup selectedRounds peerRounds (output: string) =
                     |> String.concat ", "
                 outcomes[index] <- { StartedTicks = startedTicks; FinishedTicks = finishedTicks; Result = result; FinishCode = code; Events = buffer; Error = error })
     let threads = [| run 0 Work.selected selectedRounds selected[0].Begin; run 1 Work.peer peerRounds eligible[1].Begin |]
+    let collections = GC.CollectionCount 2
     threads |> Array.iter _.Start()
+    let mutable forced = 0
+    if gcIntervalMs > 0 then
+        while Volatile.Read(&working[0]) = 0 && threads |> Array.exists _.IsAlive do
+            Thread.SpinWait 100
+        while Volatile.Read(&working[0]) > 0 do
+            Thread.Sleep gcIntervalMs
+            if Volatile.Read(&working[0]) > 0 then
+                GC.Collect(2, GCCollectionMode.Forced, true)
+                forced <- forced + 1
     threads |> Array.iter _.Join()
+    let gen2 = GC.CollectionCount 2 - collections
     let mutable closed = ExperimentResult()
     let closeCode = Close(experiment, &closed)
     let events =
@@ -144,6 +158,9 @@ let private profile speedup selectedRounds peerRounds (output: string) =
         selectedRange = selectedRange
         peerRange = peerRange
         elapsedNs = elapsed
+        gcIntervalMs = gcIntervalMs
+        forcedCollections = forced
+        gen2Collections = gen2
         startedTicks = outcomes |> Array.map _.StartedTicks
         finishedTicks = outcomes |> Array.map _.FinishedTicks
         globalNs = closed.Global
@@ -178,7 +195,9 @@ let main argv =
     | [| "calibrate"; output |] -> calibrate output
     | [| "plain"; selectedRounds; peerRounds; output |] -> plain (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "profile"; speedup; selectedRounds; peerRounds; output |] ->
-        profile (UInt32.Parse speedup) (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+        profile (UInt32.Parse speedup) (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) 0 output
+    | [| "profile-gc"; speedup; selectedRounds; peerRounds; interval; output |] ->
+        profile (UInt32.Parse speedup) (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) (Int32.Parse interval) output
     | _ ->
-        eprintfn "usage: calibrate <out> | plain <selectedRounds> <peerRounds> <out> | profile <speedup> <selectedRounds> <peerRounds> <out>"
+        eprintfn "usage: calibrate <out> | plain <selectedRounds> <peerRounds> <out> | profile <speedup> <selectedRounds> <peerRounds> <out> | profile-gc <speedup> <selectedRounds> <peerRounds> <intervalMs> <out>"
         64

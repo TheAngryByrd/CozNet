@@ -5,6 +5,7 @@ For fasync notification, bounded dispatch, epoch closure, and the Linux session 
 For the native ledger, target-local payment, and journal replay, read [target-local credit](plans/target-local-credit.md).
 For the CLR fork/join workload, acceptance criteria, and qualification, read [target-local prediction](plans/target-local-prediction.md).
 For the planned Coz wake rule in the native ledger, read [target-local blocking](plans/target-local-blocking.md).
+For forced-GC runtime transitions under handler payment, read [target-local transitions](plans/target-local-transitions.md).
 
 For nominal timer credit, the retained controller-preemption backlog, and the next sample-processing design, read [timer nominal credit](plans/timer-nominal-credit.md).
 

@@ -67,6 +67,7 @@ The replay types are public so that the sample can use them. They are experiment
 | `calibrate <out>` | Rounds of `Work.peer` for each millisecond |
 | `plain <selectedRounds> <peerRounds> <out>` | Elapsed time without the profiler |
 | `profile <speedup> <selectedRounds> <peerRounds> <out>` | Elapsed, global, and effective time, thread results, replay summary, and all events |
+| `profile-gc <speedup> <selectedRounds> <peerRounds> <intervalMs> <out>` | The profile result, with a forced blocking gen-2 GC every `intervalMs` from the main thread |
 
 The profile mode requires `DOTNET_TieredCompilation=0`, `DOTNET_ReadyToRun=0`, `DOTNET_PerfMapEnabled=3`, and `DOTNET_PerfMapShowOptimizationTiers=1`.
 It reads the optimized method ranges from `/tmp/perf-<pid>.map`.
