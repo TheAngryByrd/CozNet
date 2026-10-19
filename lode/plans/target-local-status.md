@@ -579,6 +579,11 @@ The medians of the baseline values in the transaction suites:
 - With the workers on different physical cores, the plain handoff stays much longer than the profiled one. In the `transaction` suite it grows from 154.5 to 276.3 microseconds, and in the `spintransaction` suite it falls from 117.8 to 104.6.
 - So the pinned runs do not support the hypothesis that a shared physical core causes the longer plain handoff. Its cause stays unknown.
 - Pinning raises the passing points of the `transaction` suite from 1 to 2, and lowers those of the other two suites from 4 to 3. The pinned lock suite fails `selected-50` with a median of 6.30 points.
+- Pinning also changes the plain `transaction` arms. The median plain wall latency of the baseline rises from 989 to 1094 microseconds.
+  The median real `peer` gains rise by 11.73, 5.72, and 10.60 points, from 2.83%, 8.08%, and 9.66% to 14.56%, 13.80%, and 20.26%.
+  The median `peer` predictions change by -0.60, -4.52, and -1.89 points, from 5.02%, 9.98%, and 11.93% to 4.42%, 5.46%, and 10.04%.
+  So most of the larger `peer` gap comes from the higher real gains, except at `peer-50`, where the lower prediction is also large. In the unpinned run, `peer-25` and `peer-50` already fail by one block each, and `peer-75` by two blocks.
+  One pair of runs does not show that the pin causes the higher real gains.
 
 The other suites on the same tree:
 - Semaphore run `20261019T150434417-1c70a9de`, latency profile run `20261019T151001061-8a5886f5`, transition run `20261019T151104175-85ce5931`, prediction run `20261019T151134794-7a258cc6`, and barrier run `20261019T151300669-5a77b643` pass.
