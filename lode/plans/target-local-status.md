@@ -496,4 +496,30 @@ The other suites on the same tree:
 - Semaphore run `20261019T121226146-ac4f2bea` fails `selected-50` with a median of 6.60 points and `selected-75` with 5.27.
 - Spin lock run `20261019T121428141-2d666768` has 5 valid blocks for the first time, and fails only `selected-75`, with a median of 6.37 points.
 
+## Spin queue
+
+[The spin queue plan](target-local-spin-queue.md) lets a `TargetQueue` consumer spin up to 1 ms before it blocks, and adds a `spintransaction` suite.
+Criterion 96 gives these medians over the five blocks of each run on the same tree:
+
+| Suite and run | Wall latency, profile baseline | Wall latency, plain original | Handoff, profile baseline | Handoff, plain original |
+| --- | ---: | ---: | ---: | ---: |
+| `spintransaction` `20261019T124806158-79f85b15` | 820 us | 936 us | 6.4 us | 104.7 us |
+| `transaction` `20261019T124914850-b10c2f47` | 865 us | 958 us | 49.7 us | 150.2 us |
+
+- The spin shortens the profiled handoff from 49.7 to 6.4 microseconds, and the plain handoff from 150.2 to 104.7.
+- The handoff gap stays about the same: 100.5 microseconds without the spin and 98.3 with it. The wall-latency gap is 94 microseconds without the spin and 116 with it.
+- So the spin did not close the handoff gap. The plain records do not count the takes in a spin, so they do not show how many plain dequeues still blocked and waited for a wake.
+- The hypothesis of the plan is not shown, and the cause of the extra plain handoff time stays unknown. CPU load, contention, and power state can also change with the spin.
+
+The spin transaction run fails criterion 95 at two points. All five blocks are valid, and all three `selected` points pass.
+- `peer-25` fails with a median of 5.34 points, and `peer-75` with 6.92 and one block of -12.47 points. The median `peer` predictions stay from 3.81% to 4.56%, below the median real gains of 5.40% to 11.18%.
+The transaction run fails `selected-25` by one block of 27.61 points, `selected-50` with a median of 8.32 points, and `peer-50` by one block of -12.59 points.
+
+The other suites on the same tree:
+- Throughput run `20261019T125416608-a58c20e0`, latency profile run `20261019T125516048-6470f3c8`, transition run `20261019T125615160-ba0dd35e`, prediction run `20261019T125645104-7e8dced4`, and barrier run `20261019T125807312-5f10cdcc` pass.
+- Semaphore run `20261019T125015330-52253802` fails `selected-50` with a median of 5.51 points.
+- Lock run `20261019T125115354-73f1edc7` fails `selected-50` with a median of 6.28 points, `peer-50` with 5.18, `peer-75` with 5.74, and `peer-25` by one block of -13.92 points.
+- Spin lock run `20261019T125215820-36780b18` fails, because block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` also fails by its median of 5.60 points.
+- Pipeline run `20261019T125316611-20aa9ebf` fails `peer-50` by one block of 12.29 points and `peer-75` with a median of 5.13 points.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

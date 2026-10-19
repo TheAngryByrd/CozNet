@@ -1,7 +1,7 @@
-param([ValidateSet('latency', 'throughput', 'pipeline', 'lock', 'spinlock', 'semaphore', 'transaction')][string]$Workload = 'latency', [string]$EvidenceDirectory = '', [int]$Blocks = 5, [int]$Seed = 20261018,
+param([ValidateSet('latency', 'throughput', 'pipeline', 'lock', 'spinlock', 'semaphore', 'transaction', 'spintransaction')][string]$Workload = 'latency', [string]$EvidenceDirectory = '', [int]$Blocks = 5, [int]$Seed = 20261018,
     [string]$PythonCommand = $(if ($env:COZNET_PYTHON) { $env:COZNET_PYTHON } elseif ($IsWindows) { 'py' } else { 'python3' }))
 $ErrorActionPreference = 'Stop'
-if (-not $EvidenceDirectory) { $EvidenceDirectory = Join-Path $PSScriptRoot $(switch ($Workload) { 'throughput' { '../artifacts/target-local-throughput' } 'pipeline' { '../artifacts/target-local-pipeline' } 'lock' { '../artifacts/target-local-lock' } 'spinlock' { '../artifacts/target-local-spinlock' } 'semaphore' { '../artifacts/target-local-semaphore' } 'transaction' { '../artifacts/target-local-transaction' } default { '../artifacts/target-local-profile' } }) }
+if (-not $EvidenceDirectory) { $EvidenceDirectory = Join-Path $PSScriptRoot $(switch ($Workload) { 'throughput' { '../artifacts/target-local-throughput' } 'pipeline' { '../artifacts/target-local-pipeline' } 'lock' { '../artifacts/target-local-lock' } 'spinlock' { '../artifacts/target-local-spinlock' } 'semaphore' { '../artifacts/target-local-semaphore' } 'transaction' { '../artifacts/target-local-transaction' } 'spintransaction' { '../artifacts/target-local-spintransaction' } default { '../artifacts/target-local-profile' } }) }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 $app = Join-Path $run 'app'
@@ -14,7 +14,7 @@ $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.L
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'native/service/PerfRing.Linux.h', 'native/service/PerfSampleRing.h',
     'src/CozNet/TargetLocalReplay.fs', 'src/CozNet/TargetLocalLinux.fs', 'src/CozNet/TargetLocalProfiler.fs', 'src/CozNet/TargetCausalProfile.fs', 'samples/CozNet.TargetLocal/Work.fs',
     'samples/CozNet.TargetLocal/Program.fs', 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj',
-    'native/VerifyTargetLocalProfile.ps1', 'native/AnalyzeTargetProfile.py', 'lode/plans/target-local-causal-profile.md', 'lode/plans/target-local-throughput.md', 'lode/plans/target-local-queue.md', 'lode/plans/target-local-experiment-diagnostics.md', 'lode/plans/target-local-warmup.md', 'lode/plans/target-local-rotation.md', 'lode/plans/target-local-lock.md', 'lode/plans/target-local-lock-handoff.md', 'lode/plans/target-local-spin-lock.md', 'lode/plans/target-local-semaphore.md', 'lode/plans/target-local-failure-records.md', 'lode/plans/target-local-failure-context.md', 'lode/plans/target-local-transactions.md', 'lode/plans/target-local-transaction-delay.md', 'lode/plans/target-local-transaction-handoff.md', 'build/build.fs')
+    'native/VerifyTargetLocalProfile.ps1', 'native/AnalyzeTargetProfile.py', 'lode/plans/target-local-causal-profile.md', 'lode/plans/target-local-throughput.md', 'lode/plans/target-local-queue.md', 'lode/plans/target-local-experiment-diagnostics.md', 'lode/plans/target-local-warmup.md', 'lode/plans/target-local-rotation.md', 'lode/plans/target-local-lock.md', 'lode/plans/target-local-lock-handoff.md', 'lode/plans/target-local-spin-lock.md', 'lode/plans/target-local-semaphore.md', 'lode/plans/target-local-failure-records.md', 'lode/plans/target-local-failure-context.md', 'lode/plans/target-local-transactions.md', 'lode/plans/target-local-transaction-delay.md', 'lode/plans/target-local-transaction-handoff.md', 'lode/plans/target-local-spin-queue.md', 'build/build.fs')
 $hashes = @{}
 function Get-SourceHash([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)
@@ -40,9 +40,9 @@ $container = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-dro
     '--mount', "type=bind,source=$app,target=/app,readonly", '--mount', "type=bind,source=$run,target=/out", $runtimeImage)
 & docker @container sh -c 'uname -a > /out/kernel.txt && nproc > /out/cpus.txt'
 $selected = switch ($Workload) { 'latency' { 6000 } 'semaphore' { 24 } default { 40 } }
-$peer = switch ($Workload) { 'latency' { 3000 } 'semaphore' { 12 } 'transaction' { 8 } default { 20 } }
-$profileMode = switch ($Workload) { 'throughput' { 'throughput-profile' } 'pipeline' { 'pipeline-profile' } 'lock' { 'lock-profile' } 'spinlock' { 'spin-lock-profile' } 'semaphore' { 'semaphore-profile' } 'transaction' { 'transaction-profile' } default { 'causal-profile' } }
-$plainMode = switch ($Workload) { 'throughput' { 'plain-throughput' } 'pipeline' { 'plain-pipeline' } 'lock' { 'plain-lock' } 'spinlock' { 'plain-spin-lock' } 'semaphore' { 'plain-semaphore' } 'transaction' { 'plain-transaction' } default { 'plain' } }
+$peer = switch ($Workload) { 'latency' { 3000 } 'semaphore' { 12 } 'transaction' { 8 } 'spintransaction' { 8 } default { 20 } }
+$profileMode = switch ($Workload) { 'throughput' { 'throughput-profile' } 'pipeline' { 'pipeline-profile' } 'lock' { 'lock-profile' } 'spinlock' { 'spin-lock-profile' } 'semaphore' { 'semaphore-profile' } 'transaction' { 'transaction-profile' } 'spintransaction' { 'spin-transaction-profile' } default { 'causal-profile' } }
+$plainMode = switch ($Workload) { 'throughput' { 'plain-throughput' } 'pipeline' { 'plain-pipeline' } 'lock' { 'plain-lock' } 'spinlock' { 'plain-spin-lock' } 'semaphore' { 'plain-semaphore' } 'transaction' { 'plain-transaction' } 'spintransaction' { 'plain-spin-transaction' } default { 'plain' } }
 $speedups = @(25, 50, 75)
 $random = [Random]::new($Seed)
 $runs = @()

@@ -83,6 +83,40 @@ module TargetQueueTests =
                 Expect.equal (received |> List.choose (function ValueSome v -> Some v | ValueNone -> None) |> List.sort) [ 1..1000 ] "Each item must arrive once."
             }
 
+            test "a spin queue rejects a spin outside 0 to 1 ms and keeps the timeout budget" {
+                Expect.throwsT<ArgumentOutOfRangeException> (fun () -> TargetQueue<int>(1, TimeSpan.FromMilliseconds 2.0) |> ignore) "A spin above 1 ms must fail."
+                Expect.throwsT<ArgumentOutOfRangeException> (fun () -> TargetQueue<int>(1, TimeSpan.FromTicks -1L) |> ignore) "A negative spin must fail."
+                let queue = TargetQueue<int>(1, TimeSpan.FromMilliseconds 1.0)
+                Expect.equal queue.Spin (TimeSpan.FromMilliseconds 1.0) "The queue must keep its spin."
+                let fastest =
+                    [ for _ in 1..20 ->
+                        let watch = Diagnostics.Stopwatch.StartNew()
+                        Expect.equal (queue.Dequeue(TimeSpan.FromMilliseconds 0.2, CancellationToken.None)) ValueNone "An empty queue must time out."
+                        watch.Elapsed ] |> List.min
+                Expect.isLessThan fastest (TimeSpan.FromMilliseconds 0.9) "A 0.2 ms timeout must stop the 1 ms spin in at least one of 20 attempts."
+            }
+
+            test "a spinning dequeue takes an item that arrives during the spin" {
+                let attempt () =
+                    let queue = TargetQueue<int>(4, TimeSpan.FromMilliseconds 1.0)
+                    let mutable taken = ValueNone
+                    let mutable waiting = 0
+                    let consumer = Threading.Thread((fun () -> Volatile.Write(&waiting, 1); taken <- queue.Dequeue(TimeSpan.FromSeconds 5.0, CancellationToken.None)), IsBackground = true)
+                    consumer.Start()
+                    while Volatile.Read &waiting = 0 do Threading.Thread.Yield() |> ignore
+                    let watch = Diagnostics.Stopwatch.StartNew()
+                    while watch.Elapsed < TimeSpan.FromMilliseconds 0.3 do Threading.Thread.SpinWait 10
+                    Expect.isTrue (queue.Enqueue(7, TimeSpan.FromSeconds 1.0, CancellationToken.None)) "The enqueue must succeed."
+                    Expect.isTrue (consumer.Join(TimeSpan.FromSeconds 10.0)) "The consumer must finish."
+                    Expect.equal taken (ValueSome 7) "The consumer must take the item."
+                    queue.SpunTakes
+                let spun = [ for _ in 1..20 -> attempt () ] |> List.sum
+                Expect.isGreaterThan spun 0L "At least one of 20 dequeues must take its item during the spin."
+                let plain = TargetQueue<int>(4)
+                Expect.isTrue (plain.Enqueue(1, TimeSpan.Zero, CancellationToken.None)) "A free space must be taken."
+                Expect.equal (plain.Dequeue(TimeSpan.Zero, CancellationToken.None), plain.SpunTakes) (ValueSome 1, 0L) "A take without a wait must not count as a spin."
+            }
+
             test "a queue needs a capacity of at least one" {
                 Expect.throwsT<ArgumentOutOfRangeException> (fun () -> TargetQueue<int> 0 |> ignore) "A zero capacity must fail."
             }

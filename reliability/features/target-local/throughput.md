@@ -1,6 +1,6 @@
 # Target-local throughput profile
 
-Evidence: `artifacts/target-local-throughput/20261019T121628106-2be55ac2`.
+Evidence: `artifacts/target-local-throughput/20261019T125416608-a58c20e0`.
 
 `TargetLocalThroughputVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `throughput-profile` process and seven `plain-throughput` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the throughput plan](../../../lode/plans/target-local-throu
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 8.98% | 11.50% | 2.53 pp | 5.59 pp | Pass |
-| `selected-50` | 5 / 5 | 25.81% | 26.13% | 0.52 pp | 2.34 pp | Pass |
-| `selected-75` | 5 / 5 | 48.45% | 50.36% | 1.99 pp | 3.09 pp | Pass |
-| `peer-25` | 5 / 5 | 19.19% | 17.96% | 1.99 pp | 2.87 pp | Pass |
-| `peer-50` | 5 / 5 | 40.51% | 40.38% | 0.82 pp | 1.39 pp | Pass |
-| `peer-75` | 5 / 5 | 65.86% | 66.65% | 0.75 pp | 2.30 pp | Pass |
+| `selected-25` | 5 / 5 | 8.32% | 10.19% | 1.01 pp | 4.02 pp | Pass |
+| `selected-50` | 5 / 5 | 23.98% | 24.43% | 0.86 pp | 4.04 pp | Pass |
+| `selected-75` | 5 / 5 | 48.05% | 49.26% | 2.65 pp | 3.82 pp | Pass |
+| `peer-25` | 5 / 5 | 16.79% | 17.86% | 0.75 pp | 5.37 pp | Pass |
+| `peer-50` | 5 / 5 | 38.73% | 40.79% | 1.82 pp | 2.31 pp | Pass |
+| `peer-75` | 5 / 5 | 64.78% | 65.50% | 0.22 pp | 3.01 pp | Pass |
 
 If both workers have the same cost for each round, the expected gains are 10%, 25%, and 50% for `Work.selected` and 18.2%, 40%, and 66.7% for `Work.peer`. The criteria use the measured gains.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 1.208, 0.911 |
-| `selected-50` | 1.469, 0.744 |
-| `selected-75` | 1.966, 0.517 |
-| `peer-25` | 0.808, 1.077 |
-| `peer-50` | 0.595, 1.182 |
-| `peer-75` | 0.342, 1.306 |
+| `selected-25` | 1.225, 0.904 |
+| `selected-50` | 1.507, 0.762 |
+| `selected-75` | 2.021, 0.519 |
+| `peer-25` | 0.832, 1.107 |
+| `peer-50` | 0.613, 1.208 |
+| `peer-75` | 0.352, 1.353 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.806, 1.063; order 4: 1.000, 1.000; order 5: 1.230, 0.927; order 6: 1.216, 0.911. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.846, 1.117; order 4: 1.000, 1.000; order 5: 1.235, 0.927; order 6: 1.234, 0.930. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -2.53 pp | -0.52 pp | -1.99 pp | 1.23 pp | 1.39 pp | -0.22 pp |
-| 2 | Yes | 0.36 pp | -0.75 pp | -3.09 pp | -2.87 pp | -1.23 pp | -0.75 pp |
-| 3 | Yes | -0.66 pp | -0.33 pp | -1.02 pp | -0.60 pp | 0.82 pp | -1.77 pp |
-| 4 | Yes | -5.59 pp | -2.34 pp | -3.01 pp | 1.99 pp | 0.75 pp | -2.30 pp |
-| 5 | Yes | 2.91 pp | 0.15 pp | -1.28 pp | 2.04 pp | 0.00 pp | 0.14 pp |
+| 1 | Yes | -0.86 pp | 0.16 pp | -2.65 pp | -5.37 pp | -2.31 pp | -0.12 pp |
+| 2 | Yes | -1.01 pp | 4.04 pp | -3.82 pp | 0.68 pp | -1.82 pp | -3.01 pp |
+| 3 | Yes | -2.86 pp | -0.86 pp | -2.72 pp | -2.41 pp | -1.67 pp | -1.54 pp |
+| 4 | Yes | -4.02 pp | -0.62 pp | -0.67 pp | -0.22 pp | -2.30 pp | -0.22 pp |
+| 5 | Yes | -0.50 pp | -3.90 pp | -1.11 pp | -0.75 pp | -1.54 pp | -0.21 pp |
 
 ## Run history
 
@@ -68,6 +68,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T110611005-2a35600a` | Latency progress points | Pass |
 | `20261019T113911746-669e1783` | Per-transaction virtual latency | Fail. `peer-75` has one block of -10.54 points. |
 | `20261019T121628106-2be55ac2` | Transaction queue handoff | Pass |
+| `20261019T125416608-a58c20e0` | Spin before a queue wait | Pass |
 
 ## Limits
 

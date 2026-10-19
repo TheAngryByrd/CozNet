@@ -53,6 +53,7 @@ PREDICTION_HISTORY = [
     ("20261019T094506888-d9c14620", "Same", "Failure context", "Fail. `peer-longer` has one block of -12.57 points, and `selected-dominant` block 5 is invalid from a startup debt failure."),
     ("20261019T110837795-78ce6bcb", "Same", "Latency progress points", "Pass"),
     ("20261019T114345641-a76a3c68", "Same", "Per-transaction virtual latency", "Pass"),
+    ("20261019T121854888-ee18e87d", "Same", "Transaction queue handoff", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -95,6 +96,7 @@ TRANSITION_HISTORY = [
     ("20261019T094438941-7638b960", "Failure context", "Pass, 10 of 10"),
     ("20261019T110806692-b4b671d5", "Latency progress points", "Pass, 10 of 10"),
     ("20261019T114316513-16ceb9b8", "Per-transaction virtual latency", "Pass, 10 of 10"),
+    ("20261019T121826636-adddad30", "Transaction queue handoff", "Fail, 9 of 10. Run 7 breaks the 2 ms debt bound."),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -139,6 +141,7 @@ BARRIER_HISTORY = [
     ("20261019T094627976-f1d19c78", "Failure context", "Pass"),
     ("20261019T111000032-74adbcce", "Latency progress points", "Fail. `barrier-peer-bound` median 5.10 points."),
     ("20261019T114508965-bf1d556a", "Per-transaction virtual latency", "Pass"),
+    ("20261019T122016119-859682da", "Transaction queue handoff", "Pass"),
 ]
 
 
@@ -675,6 +678,7 @@ PROFILE_HISTORY = [
     ("20261019T094341955-4375de13", "Failure context", "Pass"),
     ("20261019T110709359-b184c519", "Latency progress points", "Pass"),
     ("20261019T114214114-cd942bc0", "Per-transaction virtual latency", "Pass"),
+    ("20261019T121727927-5e679245", "Transaction queue handoff", "Pass"),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
@@ -690,10 +694,13 @@ THROUGHPUT_HISTORY = [
     ("20261019T094241716-2243c889", "Failure context", "Pass"),
     ("20261019T110611005-2a35600a", "Latency progress points", "Pass"),
     ("20261019T113911746-669e1783", "Per-transaction virtual latency", "Fail. `peer-75` has one block of -10.54 points."),
+    ("20261019T121628106-2be55ac2", "Transaction queue handoff", "Pass"),
 ]
+SPINTRANSACTION_HISTORY = []
 TRANSACTION_HISTORY = [
     ("20261019T110105861-414dba20", "First transaction profile run", "Fail. All six points fail. The real gains follow the model, but the `peer` predictions stay near 5% at each speedup."),
     ("20261019T113356248-f1cbfddc", "Per-transaction virtual latency", "Fail. `selected-50` median 7.09 points and `peer-25` median 5.47 points. The other four points pass."),
+    ("20261019T121118409-e589636a", "Transaction queue handoff", "Fail. `selected-25` median 7.58 points and `selected-50` median 10.07 points. The other four points pass."),
 ]
 SEMAPHORE_HISTORY = [
     ("20261019T082323819-903a6cef", "First semaphore profile run", "Fail. `selected-75` has one block of -10.61 points, and `peer-75` median 5.24 points."),
@@ -701,6 +708,7 @@ SEMAPHORE_HISTORY = [
     ("20261019T093837289-67cf3f9e", "Failure context", "Fail. `selected-50` median 5.09 points and `selected-75` median 5.41 points."),
     ("20261019T110212880-744018ed", "Latency progress points", "Fail. Five points fail: four by one block each, and `peer-50` by two blocks."),
     ("20261019T113503667-76dc9109", "Per-transaction virtual latency", "Fail. `selected-50` median 5.43 points and `selected-75` median 6.21 points."),
+    ("20261019T121226146-ac4f2bea", "Transaction queue handoff", "Fail. `selected-50` median 6.60 points and `selected-75` median 5.27 points."),
 ]
 SPINLOCK_HISTORY = [
     ("20261019T074539772-03c40325", "First spin lock profile run", "Fail. Blocks 4 and 5 are invalid: `peer` at 75% has 97 and 98 visits. In the three valid blocks, `selected-50` has a median of 1.77 points, and `selected-75` fails at 6.87 points."),
@@ -709,6 +717,7 @@ SPINLOCK_HISTORY = [
     ("20261019T094042685-1d761439", "Failure context", "Fail. Block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` median 8.59 points."),
     ("20261019T110413189-a8e4bb89", "Latency progress points", "Fail. Block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` median 7.87 points."),
     ("20261019T113703476-df6944a8", "Per-transaction virtual latency", "Fail. Block 4 is invalid: `peer` at 75% has 95 visits. `selected-75` median 6.93 points."),
+    ("20261019T121428141-2d666768", "Transaction queue handoff", "Fail. `selected-75` median 6.37 points. All five blocks are valid."),
 ]
 LOCK_HISTORY = [
     ("20261019T062708436-df83442b", "First lock profile run", "Fail. `selected-50` median 9.13 points, all five blocks below the actual gain. `peer-25` has one block of 11.87 points."),
@@ -719,6 +728,7 @@ LOCK_HISTORY = [
     ("20261019T093943719-10b7cd71", "Failure context", "Fail. `selected-50` median 6.09 points with one block of -12.53 points."),
     ("20261019T110313420-3292dd51", "Latency progress points", "Pass"),
     ("20261019T113602781-8f0b3de1", "Per-transaction virtual latency", "Fail. Five points fail. `selected-50` median 7.49 points, `selected-75` median 5.67 points, and the three `peer` points by block 5."),
+    ("20261019T121327119-d95b4f14", "Transaction queue handoff", "Fail. `selected-50` median 6.84 points, `selected-75` one block of 12.51 points, and `peer-25` one block of -15.85 points."),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
@@ -733,6 +743,7 @@ PIPELINE_HISTORY = [
     ("20261019T094141941-f8894fe3", "Failure context", "Fail. Block 5 is invalid from a debt failure after a wake with a skip of 0, and `peer-50` has one block of -11.12 points."),
     ("20261019T110512150-9b6ceb9a", "Latency progress points", "Pass"),
     ("20261019T113807687-40ce0fab", "Per-transaction virtual latency", "Pass"),
+    ("20261019T121528493-e18bd4fd", "Transaction queue handoff", "Fail. `peer-75` median 6.62 points with one block of -10.53 points."),
 ]
 
 
@@ -741,11 +752,11 @@ def profile(root, run, change, kind="target-local-profile"):
     summary, manifest = load(directory / "summary.json"), load(directory / "manifest.json")
     if not summary["inputsUnchanged"]:
         raise SystemExit("The profile run changed its inputs.")
-    workload = {"target-local-throughput": "throughput", "target-local-pipeline": "pipeline", "target-local-lock": "lock", "target-local-spinlock": "spinlock", "target-local-semaphore": "semaphore", "target-local-transaction": "transaction"}.get(kind, "latency")
+    workload = {"target-local-throughput": "throughput", "target-local-pipeline": "pipeline", "target-local-lock": "lock", "target-local-spinlock": "spinlock", "target-local-semaphore": "semaphore", "target-local-transaction": "transaction", "target-local-spintransaction": "spintransaction"}.get(kind, "latency")
     throughput = workload != "latency"
     if manifest.get("workload", "latency") != workload:
         raise SystemExit(f"The run in {kind} records the workload {manifest.get('workload')}.")
-    known = {"throughput": THROUGHPUT_HISTORY, "pipeline": PIPELINE_HISTORY, "lock": LOCK_HISTORY, "spinlock": SPINLOCK_HISTORY, "semaphore": SEMAPHORE_HISTORY, "transaction": TRANSACTION_HISTORY}.get(workload, PROFILE_HISTORY)
+    known = {"throughput": THROUGHPUT_HISTORY, "pipeline": PIPELINE_HISTORY, "lock": LOCK_HISTORY, "spinlock": SPINLOCK_HISTORY, "semaphore": SEMAPHORE_HISTORY, "transaction": TRANSACTION_HISTORY, "spintransaction": SPINTRANSACTION_HISTORY}.get(workload, PROFILE_HISTORY)
     check_history(root, kind, known, run)
     kernel, cpus = host(directory)
     rows = "\n".join(f"| `{p['point']}` | {p['validBlocks']} / 5 | {pct(p['medianPredicted'])} | {pct(p['medianActual'])} | "
@@ -808,36 +819,40 @@ def profile(root, run, change, kind="target-local-profile"):
     current = "Pass" if summary["passed"] else f"Fail. Points {', '.join(failed) or 'none'} fail, or a run-level criterion fails."
     verdict = "**Result: the current run passes.**" if summary["passed"] else f"**Result: the current run fails.** {current[6:]} The run is kept, and no rerun replaces it."
     history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in known + [(run, change, current)])
-    title = {"throughput": "Target-local throughput profile", "pipeline": "Target-local pipeline profile", "lock": "Target-local lock profile", "spinlock": "Target-local spin lock profile", "semaphore": "Target-local semaphore profile", "transaction": "Target-local transaction profile"}.get(workload, "Target-local causal profile")
+    title = {"throughput": "Target-local throughput profile", "pipeline": "Target-local pipeline profile", "lock": "Target-local lock profile", "spinlock": "Target-local spin lock profile", "semaphore": "Target-local semaphore profile", "transaction": "Target-local transaction profile", "spintransaction": "Target-local spin transaction profile"}.get(workload, "Target-local causal profile")
     target, modes = {"throughput": ("TargetLocalThroughputVerify", "`throughput-profile` process and seven `plain-throughput`"),
                      "pipeline": ("TargetLocalPipelineVerify", "`pipeline-profile` process and seven `plain-pipeline`"),
                      "lock": ("TargetLocalLockVerify", "`lock-profile` process and seven `plain-lock`"),
                      "spinlock": ("TargetLocalSpinLockVerify", "`spin-lock-profile` process and seven `plain-spin-lock`"),
                      "semaphore": ("TargetLocalSemaphoreVerify", "`semaphore-profile` process and seven `plain-semaphore`"),
-                     "transaction": ("TargetLocalTransactionVerify", "`transaction-profile` process and seven `plain-transaction`")}.get(
+                     "transaction": ("TargetLocalTransactionVerify", "`transaction-profile` process and seven `plain-transaction`"),
+                     "spintransaction": ("TargetLocalSpinTransactionVerify", "`spin-transaction-profile` process and seven `plain-spin-transaction`")}.get(
         workload, ("TargetLocalProfileVerify", "`causal-profile` process and seven `plain`"))
     description = {"throughput": "Each experiment runs for 120 ms. The selected worker repeats `Work.selected 40` and the peer repeats `Work.peer 20`, with one visit of the progress point after each call.",
                    "pipeline": "Each experiment runs for 120 ms. A producer repeats `Work.selected 40` and puts one item into a `TargetQueue` of 4 items. A consumer takes each item, runs `Work.peer 20`, and visits the progress point.",
                    "lock": "Each experiment runs for 120 ms. Two workers each repeat `Work.peer 20` outside a `TargetLock`, then `Work.selected 40` inside it, and then visit the progress point.",
                    "spinlock": "Each experiment runs for 120 ms. Two workers each repeat `Work.peer 20` outside a `TargetLock` that spins up to 1 ms before it blocks, then `Work.selected 40` inside it, and then visit the progress point.",
                    "semaphore": "Each experiment runs for 120 ms. Two workers take turns through two `TargetSemaphore` objects. Worker 0 runs `Work.selected 24` and releases worker 1, which runs `Work.peer 12`, visits the progress point, and releases worker 0.",
-                   "transaction": "Each experiment runs for 120 ms with a latency progress point. Worker 0 begins a transaction, runs `Work.selected 40`, and enqueues it in a `TargetQueue` of 4 items. Worker 1 dequeues it, runs `Work.peer 8`, and ends it. The prediction is `1 - (VL / V) / (VL0 / V0)`, where VL sums the virtual latency of the transactions, each its wall latency minus the global delay added during it and at least 0, and V counts the departures. The real gain is `1 - W / W0`, where W is the mean wall latency."}.get(
+                   "transaction": "Each experiment runs for 120 ms with a latency progress point. Worker 0 begins a transaction, runs `Work.selected 40`, and enqueues it in a `TargetQueue` of 4 items. Worker 1 dequeues it, runs `Work.peer 8`, and ends it. The prediction is `1 - (VL / V) / (VL0 / V0)`, where VL sums the virtual latency of the transactions, each its wall latency minus the global delay added during it and at least 0, and V counts the departures. The real gain is `1 - W / W0`, where W is the mean wall latency.",
+                   "spintransaction": "Each experiment runs for 120 ms with a latency progress point. Worker 0 begins a transaction, runs `Work.selected 40`, and enqueues it in a `TargetQueue` of 4 items. Worker 1 dequeues it, spinning up to 1 ms before it blocks, runs `Work.peer 8`, and ends it. The prediction is `1 - (VL / V) / (VL0 / V0)`, where VL sums the virtual latency of the transactions, each its wall latency minus the global delay added during it and at least 0, and V counts the departures. The real gain is `1 - W / W0`, where W is the mean wall latency."}.get(
         workload, "The selected thread runs 6000 rounds and the peer 3000. The progress point is the end of the workload.")
     plan = {"throughput": "[the throughput plan](../../../lode/plans/target-local-throughput.md)",
             "pipeline": "[the queue plan](../../../lode/plans/target-local-queue.md)",
             "lock": "[the lock plan](../../../lode/plans/target-local-lock.md)",
             "spinlock": "[the spin lock plan](../../../lode/plans/target-local-spin-lock.md)",
             "semaphore": "[the semaphore plan](../../../lode/plans/target-local-semaphore.md)",
-            "transaction": "[the latency point plan](../../../lode/plans/target-local-transactions.md) and [the transaction delay plan](../../../lode/plans/target-local-transaction-delay.md)"}.get(workload, "[the profile plan](../../../lode/plans/target-local-causal-profile.md)")
+            "transaction": "[the latency point plan](../../../lode/plans/target-local-transactions.md) and [the transaction delay plan](../../../lode/plans/target-local-transaction-delay.md)",
+            "spintransaction": "[the spin queue plan](../../../lode/plans/target-local-spin-queue.md)"}.get(workload, "[the profile plan](../../../lode/plans/target-local-causal-profile.md)")
     expected = {"throughput": "If both workers have the same cost for each round, the expected gains are 10%, 25%, and 50% for `Work.selected` and 18.2%, 40%, and 66.7% for `Work.peer`. The criteria use the measured gains.",
                 "pipeline": "The producer is the bottleneck, so the model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. Above 50%, the consumer sets the rate.",
                 "lock": "The lock sets the rate, so the model gives `Work.selected` 25%, 50%, and 62.5%, and `Work.peer` 0% at each speedup. At 75%, the work outside the lock sets the rate.",
                 "spinlock": "The lock sets the rate, so the model gives `Work.selected` 25%, 50%, and 62.5%, and `Work.peer` 0% at each speedup. At 75%, the work outside the lock sets the rate.",
                 "semaphore": "No work runs in parallel, so the model gives `Work.selected` 16.7%, 33.3%, and 50%, and `Work.peer` 8.3%, 16.7%, and 25%. The model leaves out the two handoffs of each visit.",
-                "transaction": "The producer sets the rate at every point, so the latency of a transaction is about the sum of both parts. The model gives `Work.selected` 20.8%, 41.7%, and 62.5%, and `Work.peer` 4.2%, 8.3%, and 12.5%. The model leaves out the queue handoff and any queue wait."}.get(
+                "transaction": "The producer sets the rate at every point, so the latency of a transaction is about the sum of both parts. The model gives `Work.selected` 20.8%, 41.7%, and 62.5%, and `Work.peer` 4.2%, 8.3%, and 12.5%. The model leaves out the queue handoff and any queue wait.",
+                "spintransaction": "The producer sets the rate at every point, so the latency of a transaction is about the sum of both parts. The model gives `Work.selected` 20.8%, 41.7%, and 62.5%, and `Work.peer` 4.2%, 8.3%, and 12.5%. The model leaves out the queue handoff and any queue wait."}.get(
         workload, "The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.")
     limits = ("A latency experiment counts each transaction that ends, from the first work start to the last finish. The consumer drains the queue after the stop, so each transaction that begins also ends."
-              if workload == "transaction" else
+              if workload in ("transaction", "spintransaction") else
               "A throughput experiment counts every visit from the first work start to the last finish, so work in progress at the stop counts."
               if throughput else "The progress point is the end of the workload.")
     return f"""# {title}
@@ -887,7 +902,7 @@ The warm-up experiment passed in {warmups}.
 ## Limits
 
 {limits}
-{"The profile covers CPU-bound threads on Linux x64 that block only at a `TargetLock`." if workload in ("lock", "spinlock") else "The profile covers CPU-bound threads on Linux x64 that block only at a `TargetSemaphore` with one releasing thread and one waiting thread for each semaphore." if workload == "semaphore" else "The profile covers CPU-bound threads on Linux x64 that block only at a `TargetQueue` with one producer and one consumer, with a latency progress point." if workload == "transaction" else "The profile covers CPU-bound threads on Linux x64 that block only at a `TargetQueue` with one producer and one consumer." if workload == "pipeline" else "The profile covers CPU-bound threads on Linux x64 that do not block outside `TargetBarrier`."} CLR safety outside this workload is not established.
+{"The profile covers CPU-bound threads on Linux x64 that block only at a `TargetLock`." if workload in ("lock", "spinlock") else "The profile covers CPU-bound threads on Linux x64 that block only at a `TargetSemaphore` with one releasing thread and one waiting thread for each semaphore." if workload == "semaphore" else "The profile covers CPU-bound threads on Linux x64 that block only at a `TargetQueue` with one producer and one consumer, with a latency progress point." if workload in ("transaction", "spintransaction") else "The profile covers CPU-bound threads on Linux x64 that block only at a `TargetQueue` with one producer and one consumer." if workload == "pipeline" else "The profile covers CPU-bound threads on Linux x64 that do not block outside `TargetBarrier`."} CLR safety outside this workload is not established.
 """
 
 
@@ -911,6 +926,8 @@ def main():
         pages["semaphore.md"] = profile(root, sys.argv[16], sys.argv[17], "target-local-semaphore")
     if len(sys.argv) > 19:
         pages["transaction.md"] = profile(root, sys.argv[18], sys.argv[19], "target-local-transaction")
+    if len(sys.argv) > 21:
+        pages["spintransaction.md"] = profile(root, sys.argv[20], sys.argv[21], "target-local-spintransaction")
     for name, text in pages.items():
         (out / name).write_text(text, newline="\n")
 

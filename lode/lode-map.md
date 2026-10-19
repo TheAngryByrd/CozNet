@@ -25,6 +25,7 @@ For the journal events before each failure, read [target-local failure context](
 For latency progress points and the transaction suite, read [target-local latency progress points](plans/target-local-transactions.md).
 For the virtual latency of each transaction, read [target-local transaction delay](plans/target-local-transaction-delay.md).
 For the queue handoff of the transaction suite, read [target-local transaction handoff](plans/target-local-transaction-handoff.md).
+For the spin before a queue wait and the spin transaction suite, read [target-local spin queue](plans/target-local-spin-queue.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).
 For the warm-up experiment and the first-experiment cost in a process, read [target-local warm-up](plans/target-local-warmup.md).
 For the rotated experiment order and the warm-up gate, read [target-local rotation](plans/target-local-rotation.md).

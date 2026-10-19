@@ -8,7 +8,7 @@
 - Randomized paired experiments, raw observations, and bounded settings.
 - Deterministic tests and a real CPU comparison sample.
 - Lode Coding project knowledge.
-- Experimental Linux x64 target-local profiler: `TargetLocalProfiler.runBound`, `CodeBinding`, `TargetBarrier`, `TargetQueue`, `TargetSemaphore`, and `TargetLock`, with an optional spin of up to 1 ms before a lock wait. Each causal profile experiment keeps its ledger failures, the journal events before each failure (`TargetCausalContextEvent`) with a summary for each worker (`TargetCausalWorkerContext`), and its GC collection count and pause.
+- Experimental Linux x64 target-local profiler: `TargetLocalProfiler.runBound`, `CodeBinding`, `TargetBarrier`, `TargetQueue`, `TargetSemaphore`, and `TargetLock`, with an optional spin of up to 1 ms before a lock wait or a `TargetQueue` dequeue wait. Each causal profile experiment keeps its ledger failures, the journal events before each failure (`TargetCausalContextEvent`) with a summary for each worker (`TargetCausalWorkerContext`), and its GC collection count and pause.
 - `TargetCausalDesign.tryCreate` and `TargetCausalProfile.run` for seeded causal profiles with `EndToEnd`, `Throughput`, and `Latency` progress points. `TargetProgressCounter.Begin` and `End` mark a transaction, `TargetProgressCounter.Transactions` returns their begin and end times, and a `Latency` prediction subtracts the global delay added during each transaction.
 
 ### Changed

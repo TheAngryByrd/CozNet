@@ -418,26 +418,28 @@ let private endTransactions (counter: TargetProgressCounter) (handoffs: QueueHan
             Work.peer rounds |> ignore
             counter.End ticket
 
-let private transactionProfile (seed: int) (rotation: int) (output: string) =
+let private transactionSpin = TimeSpan.FromMilliseconds 1.0
+
+let private transactionProfileWith (mode: string) (spin: TimeSpan) (seed: int) (rotation: int) (output: string) =
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
     let peerRange = binding.Range Work.peerName
     let queues = Collections.Generic.List<QueueHandoffs>()
     let workers (counter: TargetProgressCounter) =
-        let queue = TargetQueue<struct (int64 * int64)> pipelineCapacity
+        let queue = TargetQueue<struct (int64 * int64)>(pipelineCapacity, spin)
         let handoffs = QueueHandoffs()
         queues.Add handoffs
         [| { Work = beginTransactions counter queue 40UL; PaymentIp = fst selectedRange }
            { Work = endTransactions counter handoffs queue 8UL; PaymentIp = fst peerRange } |]
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Latency throughputDuration)) journalCapacity workers
     let stats = queues |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs |}) |> Seq.toArray
-    writeProfileWith "transaction-profile" seed rotation 40 8 throughputDuration null (box stats) profile output
+    writeProfileWith mode seed rotation 40 8 throughputDuration null (box stats) profile output
 
-let private plainTransaction selectedRounds peerRounds (output: string) =
+let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
     let counter = TargetProgressCounter()
-    let queue = TargetQueue<struct (int64 * int64)> pipelineCapacity
+    let queue = TargetQueue<struct (int64 * int64)>(pipelineCapacity, spin)
     let handoffs = QueueHandoffs()
     let ready = new Barrier(3)
     let started = Array.zeroCreate<int64> 2
@@ -456,7 +458,7 @@ let private plainTransaction selectedRounds peerRounds (output: string) =
     threads |> Array.iter _.Join()
     let elapsed = Stopwatch.GetElapsedTime(Array.min started, Array.max finished).TotalNanoseconds
     let visits = counter.Visits
-    write output {| mode = "plain-transaction"; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
+    write output {| mode = mode; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
                     elapsedNs = uint64 elapsed; visits = visits; arrivals = counter.Arrivals; latencyNs = counter.LatencyNs
                     handoffs = handoffs.Handoffs; handoffNs = handoffs.HandoffNs; passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
@@ -689,8 +691,10 @@ let main argv =
     | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "lock-profile"; seed; rotation; output |] -> lockProfileWith "lock-profile" TimeSpan.Zero (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-lock"; selectedRounds; peerRounds; output |] -> plainLockWith "plain-lock" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
-    | [| "transaction-profile"; seed; rotation; output |] -> transactionProfile (Int32.Parse seed) (Int32.Parse rotation) output
-    | [| "plain-transaction"; selectedRounds; peerRounds; output |] -> plainTransaction (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "transaction-profile"; seed; rotation; output |] -> transactionProfileWith "transaction-profile" TimeSpan.Zero (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "plain-transaction"; selectedRounds; peerRounds; output |] -> plainTransactionWith "plain-transaction" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "spin-transaction-profile"; seed; rotation; output |] -> transactionProfileWith "spin-transaction-profile" transactionSpin (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "plain-spin-transaction"; selectedRounds; peerRounds; output |] -> plainTransactionWith "plain-spin-transaction" transactionSpin (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "semaphore-profile"; seed; rotation; output |] -> semaphoreProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-semaphore"; selectedRounds; peerRounds; output |] -> plainSemaphore (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "spin-lock-profile"; seed; rotation; output |] -> lockProfileWith "spin-lock-profile" lockSpin (Int32.Parse seed) (Int32.Parse rotation) output

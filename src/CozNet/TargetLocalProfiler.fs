@@ -269,7 +269,7 @@ module internal TargetWait =
             TargetCurrent.Record(TargetLocalNative.Post(handle, TargetCurrent.PaymentIp, &posted))
             posted
 
-    let internal acquireWithSpin (spin: TimeSpan) (semaphore: SemaphoreSlim) (timeout: TimeSpan) (cancellation: CancellationToken) (onAcquired: bool -> uint64 voption) =
+    let internal acquireSpinning (spin: TimeSpan) (onSpun: unit -> unit) (semaphore: SemaphoreSlim) (timeout: TimeSpan) (cancellation: CancellationToken) (onAcquired: bool -> uint64 voption) =
         if cancellation.IsCancellationRequested || TargetCurrent.Abort.IsCancellationRequested then
             false
         elif semaphore.Wait 0 then
@@ -305,6 +305,7 @@ module internal TargetWait =
 
                 let acquired =
                     if spun then
+                        onSpun ()
                         TargetWakeReason.Dependency
                     else
                         let remaining =
@@ -333,12 +334,18 @@ module internal TargetWait =
 
             reason = TargetWakeReason.Dependency || reason = TargetWakeReason.Spurious
 
+    let private notSpun () = ()
+
+    let internal acquireWithSpin spin semaphore timeout cancellation onAcquired = acquireSpinning spin notSpun semaphore timeout cancellation onAcquired
+
     let internal acquire semaphore timeout cancellation onAcquired = acquireWithSpin TimeSpan.Zero semaphore timeout cancellation onAcquired
 
-type TargetQueue<'T>(capacity: int) =
+type TargetQueue<'T>(capacity: int, spin: TimeSpan) =
     do
         if capacity < 1 then
             raise (ArgumentOutOfRangeException(nameof capacity))
+        if spin < TimeSpan.Zero || spin > TimeSpan.FromMilliseconds 1.0 then
+            raise (ArgumentOutOfRangeException(nameof spin, "The spin must be from 0 to 1 ms."))
 
     let items = Collections.Concurrent.ConcurrentQueue<struct ('T * uint64)>()
     let available = new SemaphoreSlim(0)
@@ -346,8 +353,13 @@ type TargetQueue<'T>(capacity: int) =
     let gate = obj ()
     let releases = Collections.Generic.Queue<uint64>()
     let mutable initialSpaces = capacity
+    let mutable spunTakes = 0L
+
+    new(capacity: int) = TargetQueue<'T>(capacity, TimeSpan.Zero)
 
     member _.Capacity = capacity
+    member _.Spin = spin
+    member internal _.SpunTakes = Interlocked.Read(&spunTakes)
     member _.Count = items.Count
 
     member _.Enqueue(item: 'T, timeout: TimeSpan, cancellation: CancellationToken) =
@@ -380,7 +392,7 @@ type TargetQueue<'T>(capacity: int) =
                 ValueSome token
             | _ -> ValueNone
 
-        if TargetWait.acquire available timeout cancellation take then
+        if TargetWait.acquireSpinning spin (fun () -> Interlocked.Increment(&spunTakes) |> ignore) available timeout cancellation take then
             match taken.Value with
             | ValueSome item ->
                 let token = TargetWait.post ()

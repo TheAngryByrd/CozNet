@@ -302,6 +302,14 @@ class ThroughputChecks(unittest.TestCase):
         self.assertFalse(queue_stats_complete(profile, {"original": {**plain, "handoffs": 0}}))
         self.assertFalse(queue_stats_complete({**profile, "queueStats": [profile["queueStats"][0], {"handoffs": 0, "handoffNs": 0}, profile["queueStats"][2]]}, {"original": plain}))
 
+    def test_spin_transaction_arms_use_the_transaction_rounds(self):
+        args = expected_args(20261018, 1, "spintransaction")
+        self.assertEqual((args["profile"], args["peer-75"]), ("spin-transaction-profile 20261018 0", "plain-spin-transaction 40 2"))
+        experiments = [{"Candidate": "a", "Speedup": 0, "Passed": True, "Visits": 100, "VirtualLatencyNs": 100000, "EffectiveNs": 1000},
+                       {"Candidate": "a", "Speedup": 50, "Passed": True, "Visits": 200, "VirtualLatencyNs": 120000, "EffectiveNs": 1000}]
+        self.assertAlmostEqual(prediction({"mode": "spin-transaction-profile", "experiments": experiments}, "a", 50), 1 - 600 / 1000)
+        self.assertAlmostEqual(actual_gain({"elapsedNs": 1, "visits": 100, "latencyNs": 100000}, {"elapsedNs": 1, "visits": 200, "latencyNs": 150000}, "spintransaction"), 0.25)
+
     def test_latency_experiments_need_one_visit(self):
         self.assertTrue(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 1}}), "latency"))
         self.assertFalse(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 2}}), "latency"))

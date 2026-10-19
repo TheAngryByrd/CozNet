@@ -14,7 +14,8 @@ WORKLOADS = {"latency": {"profile": "causal-profile", "plain": "plain", "selecte
              "lock": {"profile": "lock-profile", "plain": "plain-lock", "selected": 40, "peer": 20, "durationMs": 120},
              "spinlock": {"profile": "spin-lock-profile", "plain": "plain-spin-lock", "selected": 40, "peer": 20, "durationMs": 120},
              "semaphore": {"profile": "semaphore-profile", "plain": "plain-semaphore", "selected": 24, "peer": 12, "durationMs": 120},
-             "transaction": {"profile": "transaction-profile", "plain": "plain-transaction", "selected": 40, "peer": 8, "durationMs": 120}}
+             "transaction": {"profile": "transaction-profile", "plain": "plain-transaction", "selected": 40, "peer": 8, "durationMs": 120},
+             "spintransaction": {"profile": "spin-transaction-profile", "plain": "plain-spin-transaction", "selected": 40, "peer": 8, "durationMs": 120}}
 MIN_VISITS = 100
 SPEEDUPS = (25, 50, 75)
 SELECTED_NAME = "CozNet.TargetLocal.Work::selected(uint64)"
@@ -59,7 +60,7 @@ def actual_gain(original, optimized, workload):
         return 1 - optimized["elapsedNs"] / original["elapsedNs"]
     if not original.get("visits") or not optimized.get("visits"):
         return None
-    if workload == "transaction":
+    if workload in TRANSACTIONS:
         if not all(type(r.get("latencyNs")) is int and r["latencyNs"] > 0 for r in (original, optimized)):
             return None
         return 1 - (optimized["latencyNs"] / optimized["visits"]) / (original["latencyNs"] / original["visits"])
@@ -168,6 +169,7 @@ def handoff_shares(profile, plain, candidate, speedup):
     return [profiled, real]
 
 
+TRANSACTIONS = ("transaction", "spintransaction")
 QUEUE_KEYS = ("handoffs", "handoffNs")
 
 
@@ -227,11 +229,11 @@ def prediction(record, candidate, speedup):
         return None
     if baseline.get("Visits", 1) <= 0 or point.get("Visits", 1) <= 0:
         return None
-    if record.get("mode") == "transaction-profile" and "VirtualLatencyNs" in baseline:
+    if record.get("mode") in ("transaction-profile", "spin-transaction-profile") and "VirtualLatencyNs" in baseline:
         if not all(type(e.get(k)) is int and e[k] > 0 for e in (baseline, point) for k in ("VirtualLatencyNs", "Visits")):
             return None
         return 1 - (point["VirtualLatencyNs"] / point["Visits"]) / (baseline["VirtualLatencyNs"] / baseline["Visits"])
-    if record.get("mode") == "transaction-profile":
+    if record.get("mode") in ("transaction-profile", "spin-transaction-profile"):
         fields = ("LatencyNs", "ElapsedNs", "EffectiveNs", "Visits")
         if not all(type(e.get(k)) is int and e[k] > 0 for e in (baseline, point) for k in fields):
             return None
@@ -279,9 +281,9 @@ def main():
             reasons.append("the profile record does not hold its warm-up experiment")
         elif workload in ("lock", "spinlock") and not lock_stats_complete(profile, data):
             reasons.append("a lock record does not hold its handoff counts")
-        elif workload == "transaction" and not queue_stats_complete(profile, data):
+        elif workload in TRANSACTIONS and not queue_stats_complete(profile, data):
             reasons.append("a transaction record does not hold its queue handoffs")
-        elif workload == "transaction" and not latency_counts_complete(profile, data):
+        elif workload in TRANSACTIONS and not latency_counts_complete(profile, data):
             reasons.append("a transaction record does not hold its arrivals and latency, or its arrivals differ from its departures")
         reasons += [f"{arm} not passed" for arm, value in data.items() if value is not None and not value.get("passed")]
         reasons += [f"{arm} has fewer than {MIN_VISITS} visits" for arm, value in data.items() if value is not None and not visits_sufficient(value, workload)]
@@ -296,11 +298,11 @@ def main():
                                "handoffShares": handoff_shares(profile, optimized, name, speedup)
                                if complete and workload in ("lock", "spinlock") and lock_stats_complete(profile, data) else None,
                                "queueHandoffNs": queue_handoffs(profile, optimized, name, speedup)
-                               if complete and workload == "transaction" and queue_stats_complete(profile, data) else None,
+                               if complete and workload in TRANSACTIONS and queue_stats_complete(profile, data) else None,
                                "difference": None if predicted is None or actual is None else predicted - actual}
         blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "points": points,
                        "baselineQueueHandoffNs": queue_handoffs(profile, data["original"], None, 0)
-                       if complete and workload == "transaction" and queue_stats_complete(profile, data) else None,
+                       if complete and workload in TRANSACTIONS and queue_stats_complete(profile, data) else None,
                        "orderRatios": order_ratios(profile) if complete else {},
                        "warmupPassed": profile["warmup"]["Passed"] if isinstance(profile, dict) and warmup_present(profile) else None,
                        "failedExperiments": failed_experiments(profile),
@@ -338,7 +340,7 @@ def main():
     order_summary = {str(o): [statistics.median(r[i] for r in rows) for i in range(2)] for o, rows in sorted(by_order.items())}
     summary = {"passed": passed, "workload": workload, "positionsBalanced": balanced, "warmupsPassed": warmups, "medianWorkRatioByOrder": order_summary, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
                "points": summary_points, "blocks": blocks,
-               "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + {"throughput": "throughput progress point", "pipeline": "throughput progress point behind a TargetQueue", "lock": "throughput progress point with a TargetLock", "spinlock": "throughput progress point with a TargetLock that spins up to 1 ms", "semaphore": "throughput progress point with two workers that take turns through TargetSemaphore", "transaction": "latency progress point around a TargetQueue pipeline"}.get(workload, "end-to-end progress point"),
+               "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + {"throughput": "throughput progress point", "pipeline": "throughput progress point behind a TargetQueue", "lock": "throughput progress point with a TargetLock", "spinlock": "throughput progress point with a TargetLock that spins up to 1 ms", "semaphore": "throughput progress point with two workers that take turns through TargetSemaphore", "transaction": "latency progress point around a TargetQueue pipeline", "spintransaction": "latency progress point around a TargetQueue pipeline whose consumer spins up to 1 ms"}.get(workload, "end-to-end progress point"),
                "generalClrSafetyEstablished": False}
     (run / "summary.json").write_text(json.dumps(summary, indent=2))
     return 0 if passed else 1

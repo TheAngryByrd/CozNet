@@ -1,6 +1,6 @@
 # Target-local causal profile
 
-Evidence: `artifacts/target-local-profile/20261019T121727927-5e679245`.
+Evidence: `artifacts/target-local-profile/20261019T125516048-6470f3c8`.
 
 `TargetLocalProfileVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `causal-profile` process and seven `plain` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the profile plan](../../../lode/plans/target-local-causal-p
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 25.75% | 24.48% | 2.85 pp | 3.18 pp | Pass |
-| `selected-50` | 5 / 5 | 49.38% | 49.33% | 1.84 pp | 5.22 pp | Pass |
-| `selected-75` | 5 / 5 | 47.84% | 50.69% | 2.27 pp | 4.55 pp | Pass |
-| `peer-25` | 5 / 5 | 0.77% | 0.38% | 1.60 pp | 3.16 pp | Pass |
-| `peer-50` | 5 / 5 | -1.45% | 1.72% | 3.44 pp | 5.12 pp | Pass |
-| `peer-75` | 5 / 5 | -1.11% | 0.67% | 1.78 pp | 2.24 pp | Pass |
+| `selected-25` | 5 / 5 | 24.81% | 25.33% | 2.32 pp | 4.35 pp | Pass |
+| `selected-50` | 5 / 5 | 48.90% | 50.17% | 1.89 pp | 3.06 pp | Pass |
+| `selected-75` | 5 / 5 | 49.77% | 50.11% | 0.75 pp | 1.16 pp | Pass |
+| `peer-25` | 5 / 5 | -0.17% | 0.36% | 0.63 pp | 5.51 pp | Pass |
+| `peer-50` | 5 / 5 | 0.20% | 0.70% | 3.72 pp | 4.70 pp | Pass |
+| `peer-75` | 5 / 5 | -0.09% | 3.37% | 2.21 pp | 9.15 pp | Pass |
 
 The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.988, 1.001 |
-| `selected-50` | 1.007, 1.000 |
-| `selected-75` | 1.034, 1.046 |
-| `peer-25` | 0.992, 1.005 |
-| `peer-50` | 1.014, 1.009 |
-| `peer-75` | 1.011, 1.038 |
+| `selected-25` | 1.001, 1.007 |
+| `selected-50` | 1.008, 1.025 |
+| `selected-75` | 1.026, 1.002 |
+| `peer-25` | 1.002, 1.004 |
+| `peer-50` | 0.998, 1.004 |
+| `peer-75` | 1.001, 1.003 |
 
-The median work ratio by run order in the process is order 0: 0.995, 1.000; order 1: 1.005, 1.005; order 2: 1.000, 1.000; order 3: 1.000, 1.000; order 4: 1.014, 1.001; order 5: 0.988, 1.013; order 6: 1.007, 1.000. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.019, 1.000; order 1: 0.995, 1.000; order 2: 1.000, 1.000; order 3: 1.001, 1.004; order 4: 0.998, 1.002; order 5: 1.015, 1.025; order 6: 1.008, 1.025. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | 3.01 pp | 1.35 pp | 1.02 pp | 3.16 pp | 1.12 pp | -1.44 pp |
-| 2 | Yes | 1.67 pp | 1.84 pp | -3.44 pp | 1.13 pp | -2.03 pp | 1.01 pp |
-| 3 | Yes | -2.85 pp | -4.21 pp | -2.27 pp | 0.39 pp | -3.44 pp | -1.78 pp |
-| 4 | Yes | 1.66 pp | 1.19 pp | -0.43 pp | -1.60 pp | -3.81 pp | -1.91 pp |
-| 5 | Yes | -3.18 pp | -5.22 pp | -4.55 pp | -2.75 pp | -5.12 pp | -2.24 pp |
+| 1 | Yes | 4.35 pp | 0.34 pp | 0.45 pp | 0.24 pp | -0.86 pp | -1.45 pp |
+| 2 | Yes | -3.98 pp | -1.63 pp | -0.75 pp | -5.51 pp | -3.72 pp | -6.97 pp |
+| 3 | Yes | 0.73 pp | 3.06 pp | -0.86 pp | -2.96 pp | 4.59 pp | 0.69 pp |
+| 4 | Yes | -2.32 pp | -2.85 pp | -1.16 pp | -0.13 pp | 0.88 pp | -9.15 pp |
+| 5 | Yes | -0.14 pp | -1.89 pp | -0.68 pp | 0.63 pp | -4.70 pp | -2.21 pp |
 
 ## Run history
 
@@ -69,6 +69,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T110709359-b184c519` | Latency progress points | Pass |
 | `20261019T114214114-cd942bc0` | Per-transaction virtual latency | Pass |
 | `20261019T121727927-5e679245` | Transaction queue handoff | Pass |
+| `20261019T125516048-6470f3c8` | Spin before a queue wait | Pass |
 
 ## Limits
 
