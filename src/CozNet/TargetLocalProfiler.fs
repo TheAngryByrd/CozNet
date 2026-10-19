@@ -400,6 +400,46 @@ type TargetQueue<'T>(capacity: int) =
         | ValueSome item -> item
         | ValueNone -> raise (OperationCanceledException "The run aborted the dequeue.")
 
+type TargetSemaphore(initialCount: int) =
+    do
+        if initialCount < 0 then
+            raise (ArgumentOutOfRangeException(nameof initialCount))
+
+    let permits = new SemaphoreSlim(initialCount)
+    let gate = obj ()
+    let releases = Collections.Generic.Queue<uint64>()
+    let mutable initialPermits = initialCount
+
+    member _.CurrentCount = permits.CurrentCount
+
+    member internal _.StoredTokens = lock gate (fun () -> releases.Count)
+
+    member _.Wait(timeout: TimeSpan, cancellation: CancellationToken) =
+        let take waited =
+            lock gate (fun () ->
+                if waited && releases.Count > 0 then
+                    ValueSome(releases.Dequeue())
+                elif initialPermits > 0 then
+                    initialPermits <- initialPermits - 1
+                    ValueNone
+                elif releases.Count > 0 then
+                    ValueSome(releases.Dequeue())
+                else
+                    raise (InvalidOperationException "The semaphore gave a permit that it does not hold."))
+
+        TargetWait.acquire permits timeout cancellation take
+
+    member this.Wait() =
+        if not (this.Wait(Timeout.InfiniteTimeSpan, CancellationToken.None)) then
+            raise (OperationCanceledException "The run aborted the semaphore wait.")
+
+    member _.Release() =
+        lock gate (fun () ->
+            if initialPermits + releases.Count = Int32.MaxValue then
+                raise (SemaphoreFullException "The semaphore already holds Int32.MaxValue permits.")
+            releases.Enqueue(TargetWait.post ()))
+        permits.Release() |> ignore
+
 type TargetLock(spin: TimeSpan) =
     do
         if spin < TimeSpan.Zero || spin > TimeSpan.FromMilliseconds 1.0 then

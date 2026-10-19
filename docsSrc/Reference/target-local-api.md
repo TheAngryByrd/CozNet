@@ -195,6 +195,24 @@ With several producers or consumers, a waiting producer can take the token of a 
 Create a new queue for each run, and use it only from registered workers of that run. Other use is not supported. It can fail the run, or skip delay by the wrong token.
 A timeout or a cancellation skips no delay. The abort token of the run cancels each wait. Without a profiler handle, the queue makes no native call.
 
+## Semaphore
+
+`TargetSemaphore(initialCount)` is a counting semaphore for profiled workers. It raises `ArgumentOutOfRangeException` when `initialCount` is below 0.
+
+| Member | Result |
+| --- | --- |
+| `Wait(timeout, cancellation)` | `true` after it takes a permit. `false` after a timeout or a cancellation, without a permit. |
+| `Wait()` | Waits without a limit. It raises `OperationCanceledException` when the run aborts the wait. |
+| `Release()` | Adds one permit. Any thread can call it. It raises `SemaphoreFullException` when the semaphore holds `Int32.MaxValue` permits, counting the permits that a waiter has taken but not yet recorded. |
+| `CurrentCount` | The number of free permits. |
+
+In a profiled worker, `Release` posts and stores the token in a FIFO list before it adds the permit.
+A `Wait` that waits ends its wait with the oldest stored token. A `Wait` that does not wait takes one of the `initialCount` permits first.
+With one releasing thread and one waiting thread, the token is that of the release that added the permit.
+With several releasing or waiting threads, a waiter can take the token of an earlier or a later release, before its own wake. Its skip can then be too large or too small.
+Create a new semaphore for each run, and use it only from registered workers of that run. Other use is not supported.
+A timeout or a cancellation skips no delay. The abort token of the run cancels each wait. Without a profiler handle, the semaphore makes no native call.
+
 ## Lock
 
 `TargetLock()` is a non-recursive mutual-exclusion lock for profiled workers. `TargetLock(spin)` spins up to `spin`, from 0 to 1 ms, inside its wait before it blocks.
@@ -232,6 +250,7 @@ Only the holder writes the token, so the token is always that of the release tha
 | `plain-throughput <selectedRounds> <peerRounds> <out>` | The same loops without the profiler for 120 ms, with the elapsed time and the visits |
 | `pipeline-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. A producer runs `Work.selected 40` for each item of a `TargetQueue` of 4 items, and a consumer runs `Work.peer 20` and visits for each item. |
 | `lock-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. Two workers each run `Work.peer 20` outside a `TargetLock` and `Work.selected 40` inside it, and visit once per cycle. |
+| `semaphore-profile <seed> <rotation> <out>` and `plain-semaphore <selectedRounds> <peerRounds> <out>` | Two workers that take turns through two `TargetSemaphore` objects. Worker 0 runs `Work.selected 24`, and worker 1 runs `Work.peer 12` and visits. |
 | `spin-lock-profile <seed> <rotation> <out>` and `plain-spin-lock <selectedRounds> <peerRounds> <out>` | The lock workloads with a 1 ms spin |
 | `plain-lock <selectedRounds> <peerRounds> <out>` | The same lock workload without the profiler for 120 ms, with the elapsed time and the visits |
 | `plain-pipeline <selectedRounds> <peerRounds> <out>` | The same pipeline without the profiler for 120 ms, with the elapsed time and the visits |

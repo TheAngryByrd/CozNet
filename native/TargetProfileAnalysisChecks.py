@@ -248,6 +248,10 @@ class ThroughputChecks(unittest.TestCase):
         args = expected_args(20261018, 1, "spinlock")
         self.assertEqual((args["profile"], args["selected-25"]), ("spin-lock-profile 20261018 0", "plain-spin-lock 30 20"))
 
+    def test_semaphore_arms_use_the_semaphore_rounds(self):
+        args = expected_args(20261018, 1, "semaphore")
+        self.assertEqual((args["profile"], args["selected-25"], args["peer-75"]), ("semaphore-profile 20261018 0", "plain-semaphore 18 12", "plain-semaphore 24 3"))
+
     def test_latency_experiments_need_one_visit(self):
         self.assertTrue(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 1}}), "latency"))
         self.assertFalse(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 2}}), "latency"))

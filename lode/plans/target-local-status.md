@@ -339,4 +339,23 @@ The other suites on the same tree:
 - Latency profile run `20261019T074837405-5db1c839` fails, because block 1 is invalid. Its `selected` experiment at 75% records ledger failure 1, the 2 ms debt bound.
   In that experiment, thread 1 has 8.41 ms of run-queue delay, and its wall time exceeds its CPU time by 8.38 ms. The four valid blocks are within the limits.
 
+## Semaphore
+
+[The semaphore plan](target-local-semaphore.md) adds `TargetSemaphore` and a `semaphore` suite, in which two workers take turns and no work runs in parallel.
+Semaphore run `20261019T082323819-903a6cef` fails criterion 72. All five blocks are valid, the positions are balanced, and four of six points pass.
+- `selected-75` has a median difference of 1.58 points, but block 4 is at -10.61 points.
+- `peer-75` has a median difference of 5.24 points, above the 5-point limit. Its blocks range from -7.06 to +6.85 points.
+- The other four points have median differences from 1.87 to 2.55 points, and each block is within 5.21 points.
+- Both lines follow the serial model: the `Work.peer` gain is about half of the `Work.selected` gain at each speedup.
+Criteria 71 and 73 hold, and criterion 74 is checked after the commit.
+
+The other suites on the same tree:
+- Throughput run `20261019T082728956-3c510383`, transition run `20261019T082925705-0e9bf3e5`, prediction run `20261019T082954122-98c31e2d`, and barrier run `20261019T083116455-261fde3b` pass.
+- Lock run `20261019T082429851-cb3998b5` fails `selected-50` with a median of 5.62 points, `selected-75` with a median of 5.17 points and one block of 12.83 points, and `peer-75` with a median of 5.55 points.
+- Spin lock run `20261019T082529889-abecc54b` fails, because block 3 is invalid: `peer` at 75% has 96 visits. `selected-75` also fails, with a median of 6.70 points and one block of 10.52 points.
+- Pipeline run `20261019T082629301-c4292b43` fails `peer-25` by one block of 10.11 points.
+- Latency profile run `20261019T082828297-eb8d2196` fails, because block 1 is invalid. In its `peer` experiment at 75%, the replay records ledger failure 1, the 2 ms debt bound.
+  The record does not name the thread of the failure. Thread 0, which pays delay at a `peer` speedup, has 4.2 microseconds of run-queue delay, and its wall time exceeds its CPU time by 17.1 microseconds.
+  For thread 1, wall time minus counted CPU time is 1.16 ms, with no run-queue delay, and the records do not show why. No large run-queue delay is recorded, and the cause of this failure is not known.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

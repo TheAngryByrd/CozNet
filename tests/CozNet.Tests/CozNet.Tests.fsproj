@@ -30,6 +30,7 @@
         <Compile Include="TargetCausalProfileTests.fs" />
         <Compile Include="TargetQueueTests.fs" />
         <Compile Include="TargetLockTests.fs" />
+    <Compile Include="TargetSemaphoreTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>

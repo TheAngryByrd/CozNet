@@ -390,6 +390,71 @@ let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRou
                     passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
+type private Turns() =
+    let mutable finished = 0
+    member val Selected = TargetSemaphore 0
+    member val Peer = TargetSemaphore 0
+    member _.Finish() = Volatile.Write(&finished, 1)
+    member _.Finished = Volatile.Read &finished = 1
+
+let private leadTurns (counter: TargetProgressCounter) (turns: Turns) rounds () =
+    try
+        while not counter.Stopped do
+            Work.selected rounds |> ignore
+            turns.Peer.Release()
+            turns.Selected.Wait()
+    finally
+        turns.Finish()
+        turns.Peer.Release()
+
+let private followTurns (counter: TargetProgressCounter) (turns: Turns) rounds () =
+    let mutable running = true
+    while running do
+        turns.Peer.Wait()
+        if turns.Finished then
+            running <- false
+        else
+            Work.peer rounds |> ignore
+            counter.Visit()
+            turns.Selected.Release()
+
+let private semaphoreProfile (seed: int) (rotation: int) (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
+    let workers (counter: TargetProgressCounter) =
+        let turns = Turns()
+        [| { Work = leadTurns counter turns 24UL; PaymentIp = fst selectedRange }
+           { Work = followTurns counter turns 12UL; PaymentIp = fst peerRange } |]
+    let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Throughput throughputDuration)) journalCapacity workers
+    writeProfile "semaphore-profile" seed rotation 24 12 throughputDuration profile output
+
+let private plainSemaphore selectedRounds peerRounds (output: string) =
+    Work.selected 1UL |> ignore
+    Work.peer 1UL |> ignore
+    let counter = TargetProgressCounter()
+    let turns = Turns()
+    let ready = new Barrier(3)
+    let started = Array.zeroCreate<int64> 2
+    let finished = Array.zeroCreate<int64> 2
+    let run index (body: unit -> unit) =
+        Thread(fun () ->
+            ready.SignalAndWait()
+            started[index] <- Stopwatch.GetTimestamp()
+            body ()
+            finished[index] <- Stopwatch.GetTimestamp())
+    let threads = [| run 0 (leadTurns counter turns selectedRounds); run 1 (followTurns counter turns peerRounds) |]
+    threads |> Array.iter _.Start()
+    ready.SignalAndWait()
+    Thread.Sleep throughputDuration
+    counter.Stop()
+    threads |> Array.iter _.Join()
+    let elapsed = Stopwatch.GetElapsedTime(Array.min started, Array.max finished).TotalNanoseconds
+    let visits = counter.Visits
+    write output {| mode = "plain-semaphore"; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
+                    elapsedNs = uint64 elapsed; visits = visits; passed = visits >= 100L |}
+    if visits >= 100L then 0 else 1
+
 let private plainPipeline selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
@@ -553,6 +618,8 @@ let main argv =
     | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "lock-profile"; seed; rotation; output |] -> lockProfileWith "lock-profile" TimeSpan.Zero (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-lock"; selectedRounds; peerRounds; output |] -> plainLockWith "plain-lock" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "semaphore-profile"; seed; rotation; output |] -> semaphoreProfile (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "plain-semaphore"; selectedRounds; peerRounds; output |] -> plainSemaphore (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "spin-lock-profile"; seed; rotation; output |] -> lockProfileWith "spin-lock-profile" lockSpin (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-spin-lock"; selectedRounds; peerRounds; output |] -> plainLockWith "plain-spin-lock" lockSpin (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "pipeline-profile"; seed; rotation; output |] -> pipelineProfile (Int32.Parse seed) (Int32.Parse rotation) output

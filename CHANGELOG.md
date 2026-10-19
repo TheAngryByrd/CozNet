@@ -8,7 +8,7 @@
 - Randomized paired experiments, raw observations, and bounded settings.
 - Deterministic tests and a real CPU comparison sample.
 - Lode Coding project knowledge.
-- Experimental Linux x64 target-local profiler: `TargetLocalProfiler.runBound`, `CodeBinding`, `TargetBarrier`, `TargetQueue`, and `TargetLock`, with an optional spin of up to 1 ms before a lock wait.
+- Experimental Linux x64 target-local profiler: `TargetLocalProfiler.runBound`, `CodeBinding`, `TargetBarrier`, `TargetQueue`, `TargetSemaphore`, and `TargetLock`, with an optional spin of up to 1 ms before a lock wait.
 - `TargetCausalDesign.tryCreate` and `TargetCausalProfile.run` for seeded causal profiles with `EndToEnd` and `Throughput` progress points.
 
 ### Changed
