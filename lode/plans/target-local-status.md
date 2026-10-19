@@ -555,4 +555,36 @@ The other suites on the same tree:
 - Pipeline run `20261019T132114927-617f3dac`, throughput run `20261019T132215488-c111dbb5`, latency profile run `20261019T132316833-16878b7d`, transition run `20261019T132415383-4b7b1039`, prediction run `20261019T132443343-058778d3`, and barrier run `20261019T132604565-2f365b47` pass.
 - Spin lock run `20261019T132014752-3e849f73` fails `selected-75` by one block of 12.34 points. All five blocks are valid.
 
+## Worker pinning
+
+[The worker pinning plan](target-local-worker-pinning.md) pins worker 0 to CPU 0 and worker 1 to CPU 2, one CPU on each physical core.
+In each pinned run, all five blocks are valid, so every record holds the requested CPUs and the CPUs that the workers read, and criterion 102 holds. No pinned run records a debt failure.
+Criterion 103 compares each pinned run with the unpinned run of the same suite on the same tree:
+
+| Suite | Unpinned run | Points passed, unpinned | Pinned run | Points passed, pinned |
+| --- | --- | ---: | --- | ---: |
+| `transaction` | `20261019T150326902-04963faa` | 1 of 6 | `20261019T151433256-9111c620` | 2 of 6 |
+| `spintransaction` | `20261019T150209127-dbb260bc` | 4 of 6 | `20261019T151537988-f95836bc` | 3 of 6 |
+| `lock` | `20261019T150538269-4c383533` | 4 of 6 | `20261019T151641806-dc43550e` | 3 of 6 |
+
+The medians of the baseline values in the transaction suites:
+
+| Run | Wall latency, profile and plain | Handoff, profile and plain | Enqueue, profile and plain | Dequeue minus enqueue return, profile and plain | Plain spin share |
+| --- | --- | --- | --- | --- | ---: |
+| `transaction`, unpinned | 902 and 989 us | 49.9 and 154.5 us | 13.66 and 45.96 us | 36.21 and 109.09 us | 0.00% |
+| `transaction`, pinned | 855 and 1094 us | 44.5 and 276.3 us | 12.52 and 70.94 us | 32.53 and 205.32 us | 0.00% |
+| `spintransaction`, unpinned | 878 and 960 us | 8.9 and 117.8 us | 2.65 and 34.73 us | 6.80 and 82.56 us | 96.25% |
+| `spintransaction`, pinned | 833 and 916 us | 4.9 and 104.6 us | 1.26 and 29.90 us | 3.44 and 77.15 us | 96.43% |
+
+- With the workers on different physical cores, the plain handoff stays much longer than the profiled one. In the `transaction` suite it grows from 154.5 to 276.3 microseconds, and in the `spintransaction` suite it falls from 117.8 to 104.6.
+- So the pinned runs do not support the hypothesis that a shared physical core causes the longer plain handoff. Its cause stays unknown.
+- Pinning raises the passing points of the `transaction` suite from 1 to 2, and lowers those of the other two suites from 4 to 3. The pinned lock suite fails `selected-50` with a median of 6.30 points.
+
+The other suites on the same tree:
+- Semaphore run `20261019T150434417-1c70a9de`, latency profile run `20261019T151001061-8a5886f5`, transition run `20261019T151104175-85ce5931`, prediction run `20261019T151134794-7a258cc6`, and barrier run `20261019T151300669-5a77b643` pass.
+- Throughput run `20261019T150855392-75711219` fails `peer-25` by one block of 10.25 points.
+- Pipeline run `20261019T150749398-6a7afb49` fails `peer-25` by one block of 12.47 points and `peer-75` by one block of 10.19 points.
+- Unpinned lock run `20261019T150538269-4c383533` fails `selected-50` with a median of 9.20 points and `selected-75` with 6.47.
+- Spin lock run `20261019T150642975-999bd98a` fails, because block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` also fails with a median of 8.09 points.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

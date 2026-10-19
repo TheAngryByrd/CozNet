@@ -212,6 +212,25 @@ def queue_handoffs(profile, plain, candidate, speedup):
     return [mean(stats[point["Order"] + 1]), mean(plain) if plain else None]
 
 
+PINNED_CPUS = [0, 2]
+
+
+def pinning_complete(profile, arms, requested):
+    if not requested:
+        return True
+    if requested != PINNED_CPUS:
+        return False
+    if not isinstance(profile, dict) or profile.get("workerCpus") != requested:
+        return False
+    seen = profile.get("workerCpusSeen")
+    runs = [profile.get("warmup")] + sorted(profile.get("experiments") or [], key=lambda e: e.get("Order", 0))
+    if not isinstance(seen, list) or len(seen) != len(runs):
+        return False
+    if not all(s == requested for s, e in zip(seen, runs) if isinstance(e, dict) and e.get("Passed")):
+        return False
+    return all(v is not None and v.get("workerCpus") == requested and v.get("workerCpusSeen") == [requested] for arm, v in arms.items() if arm != "profile")
+
+
 def driver_matches(record):
     points = record.get("points")
     expected = sorted((name, s) for name in CANDIDATES.values() for s in SPEEDUPS)
@@ -293,6 +312,8 @@ def main():
             reasons.append("a passed experiment does not hold two thread records")
         elif not warmup_present(profile):
             reasons.append("the profile record does not hold its warm-up experiment")
+        elif not pinning_complete(profile, data, manifest.get("workerCpus")):
+            reasons.append("a pinned record does not hold its worker CPUs")
         elif workload in ("lock", "spinlock") and not lock_stats_complete(profile, data):
             reasons.append("a lock record does not hold its handoff counts")
         elif workload in TRANSACTIONS and not queue_stats_complete(profile, data):

@@ -55,6 +55,7 @@ PREDICTION_HISTORY = [
     ("20261019T114345641-a76a3c68", "Same", "Per-transaction virtual latency", "Pass"),
     ("20261019T121854888-ee18e87d", "Same", "Transaction queue handoff", "Pass"),
     ("20261019T125645104-7e8dced4", "Same", "Spin before a queue wait", "Pass"),
+    ("20261019T132443343-058778d3", "Same", "Handoff parts", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -99,6 +100,7 @@ TRANSITION_HISTORY = [
     ("20261019T114316513-16ceb9b8", "Per-transaction virtual latency", "Pass, 10 of 10"),
     ("20261019T121826636-adddad30", "Transaction queue handoff", "Fail, 9 of 10. Run 7 breaks the 2 ms debt bound."),
     ("20261019T125615160-ba0dd35e", "Spin before a queue wait", "Pass, 10 of 10"),
+    ("20261019T132415383-4b7b1039", "Handoff parts", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -145,6 +147,7 @@ BARRIER_HISTORY = [
     ("20261019T114508965-bf1d556a", "Per-transaction virtual latency", "Pass"),
     ("20261019T122016119-859682da", "Transaction queue handoff", "Pass"),
     ("20261019T125807312-5f10cdcc", "Spin before a queue wait", "Pass"),
+    ("20261019T132604565-2f365b47", "Handoff parts", "Pass"),
 ]
 
 
@@ -683,6 +686,7 @@ PROFILE_HISTORY = [
     ("20261019T114214114-cd942bc0", "Per-transaction virtual latency", "Pass"),
     ("20261019T121727927-5e679245", "Transaction queue handoff", "Pass"),
     ("20261019T125516048-6470f3c8", "Spin before a queue wait", "Pass"),
+    ("20261019T132316833-16878b7d", "Handoff parts", "Pass"),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
@@ -700,15 +704,18 @@ THROUGHPUT_HISTORY = [
     ("20261019T113911746-669e1783", "Per-transaction virtual latency", "Fail. `peer-75` has one block of -10.54 points."),
     ("20261019T121628106-2be55ac2", "Transaction queue handoff", "Pass"),
     ("20261019T125416608-a58c20e0", "Spin before a queue wait", "Pass"),
+    ("20261019T132215488-c111dbb5", "Handoff parts", "Pass"),
 ]
 SPINTRANSACTION_HISTORY = [
     ("20261019T124806158-79f85b15", "First spin transaction profile run", "Fail. `peer-25` median 5.34 points and `peer-75` median 6.92 points. The three `selected` points pass."),
+    ("20261019T131601688-284620fc", "Handoff parts", "Fail. `peer-75` median 7.29 points. The other five points pass."),
 ]
 TRANSACTION_HISTORY = [
     ("20261019T110105861-414dba20", "First transaction profile run", "Fail. All six points fail. The real gains follow the model, but the `peer` predictions stay near 5% at each speedup."),
     ("20261019T113356248-f1cbfddc", "Per-transaction virtual latency", "Fail. `selected-50` median 7.09 points and `peer-25` median 5.47 points. The other four points pass."),
     ("20261019T121118409-e589636a", "Transaction queue handoff", "Fail. `selected-25` median 7.58 points and `selected-50` median 10.07 points. The other four points pass."),
     ("20261019T124914850-b10c2f47", "Spin before a queue wait", "Fail. `selected-25` one block of 27.61 points, `selected-50` median 8.32 points, and `peer-50` one block of -12.59 points."),
+    ("20261019T131709144-4aa0a3ef", "Handoff parts", "Fail. `selected-25` median 7.25 points and `selected-50` median 7.76 points."),
 ]
 SEMAPHORE_HISTORY = [
     ("20261019T082323819-903a6cef", "First semaphore profile run", "Fail. `selected-75` has one block of -10.61 points, and `peer-75` median 5.24 points."),
@@ -718,6 +725,7 @@ SEMAPHORE_HISTORY = [
     ("20261019T113503667-76dc9109", "Per-transaction virtual latency", "Fail. `selected-50` median 5.43 points and `selected-75` median 6.21 points."),
     ("20261019T121226146-ac4f2bea", "Transaction queue handoff", "Fail. `selected-50` median 6.60 points and `selected-75` median 5.27 points."),
     ("20261019T125015330-52253802", "Spin before a queue wait", "Fail. `selected-50` median 5.51 points."),
+    ("20261019T131809935-75def747", "Handoff parts", "Pass"),
 ]
 SPINLOCK_HISTORY = [
     ("20261019T074539772-03c40325", "First spin lock profile run", "Fail. Blocks 4 and 5 are invalid: `peer` at 75% has 97 and 98 visits. In the three valid blocks, `selected-50` has a median of 1.77 points, and `selected-75` fails at 6.87 points."),
@@ -728,6 +736,7 @@ SPINLOCK_HISTORY = [
     ("20261019T113703476-df6944a8", "Per-transaction virtual latency", "Fail. Block 4 is invalid: `peer` at 75% has 95 visits. `selected-75` median 6.93 points."),
     ("20261019T121428141-2d666768", "Transaction queue handoff", "Fail. `selected-75` median 6.37 points. All five blocks are valid."),
     ("20261019T125215820-36780b18", "Spin before a queue wait", "Fail. Block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` median 5.60 points."),
+    ("20261019T132014752-3e849f73", "Handoff parts", "Fail. `selected-75` one block of 12.34 points. All five blocks are valid."),
 ]
 LOCK_HISTORY = [
     ("20261019T062708436-df83442b", "First lock profile run", "Fail. `selected-50` median 9.13 points, all five blocks below the actual gain. `peer-25` has one block of 11.87 points."),
@@ -740,6 +749,7 @@ LOCK_HISTORY = [
     ("20261019T113602781-8f0b3de1", "Per-transaction virtual latency", "Fail. Five points fail. `selected-50` median 7.49 points, `selected-75` median 5.67 points, and the three `peer` points by block 5."),
     ("20261019T121327119-d95b4f14", "Transaction queue handoff", "Fail. `selected-50` median 6.84 points, `selected-75` one block of 12.51 points, and `peer-25` one block of -15.85 points."),
     ("20261019T125115354-73f1edc7", "Spin before a queue wait", "Fail. `selected-50` median 6.28 points, `peer-50` median 5.18, `peer-75` median 5.74, and `peer-25` one block of -13.92 points."),
+    ("20261019T131912794-bfae28ce", "Handoff parts", "Fail. Block 1 is invalid: a debt failure after one child payment of 3.35 ms for a request of 50 microseconds."),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
@@ -756,6 +766,7 @@ PIPELINE_HISTORY = [
     ("20261019T113807687-40ce0fab", "Per-transaction virtual latency", "Pass"),
     ("20261019T121528493-e18bd4fd", "Transaction queue handoff", "Fail. `peer-75` median 6.62 points with one block of -10.53 points."),
     ("20261019T125316611-20aa9ebf", "Spin before a queue wait", "Fail. `peer-50` one block of 12.29 points and `peer-75` median 5.13 points."),
+    ("20261019T132114927-617f3dac", "Handoff parts", "Pass"),
 ]
 
 

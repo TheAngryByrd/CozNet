@@ -1,6 +1,6 @@
 # Target-local transaction profile
 
-Evidence: `artifacts/target-local-transaction/20261019T131709144-4aa0a3ef`.
+Evidence: `artifacts/target-local-transaction/20261019T150326902-04963faa`.
 
 `TargetLocalTransactionVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `transaction-profile` process and seven `plain-transaction` processes in a random order.
@@ -8,16 +8,16 @@ The profile process runs `TargetCausalProfile.run` with candidates `Work.selecte
 The criteria are in [the latency point plan](../../../lode/plans/target-local-transactions.md) and [the transaction delay plan](../../../lode/plans/target-local-transaction-delay.md). The runner hashes that file, and all source hashes stay unchanged.
 `native/WriteTargetLocalEvidence.py` writes this page.
 
-**Result: the current run fails.** Points selected-25, selected-50 fail, or a run-level criterion fails. The run is kept, and no rerun replaces it.
+**Result: the current run fails.** Points selected-25, selected-50, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. The run is kept, and no rerun replaces it.
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 24.62% | 18.72% | 7.25 pp | 8.04 pp | Fail |
-| `selected-50` | 5 / 5 | 48.33% | 40.58% | 7.76 pp | 13.44 pp | Fail |
-| `selected-75` | 5 / 5 | 66.12% | 62.03% | 2.63 pp | 7.29 pp | Pass |
-| `peer-25` | 5 / 5 | 3.71% | 3.69% | 1.59 pp | 3.99 pp | Pass |
-| `peer-50` | 5 / 5 | 7.87% | 7.88% | 3.58 pp | 4.69 pp | Pass |
-| `peer-75` | 5 / 5 | 11.33% | 10.65% | 2.32 pp | 5.35 pp | Pass |
+| `selected-25` | 5 / 5 | 24.41% | 20.14% | 4.01 pp | 15.35 pp | Fail |
+| `selected-50` | 5 / 5 | 45.17% | 41.40% | 5.97 pp | 13.67 pp | Fail |
+| `selected-75` | 5 / 5 | 66.13% | 62.22% | 3.90 pp | 9.64 pp | Pass |
+| `peer-25` | 5 / 5 | 5.02% | 2.83% | 2.91 pp | 13.74 pp | Fail |
+| `peer-50` | 5 / 5 | 9.98% | 8.08% | 2.09 pp | 24.54 pp | Fail |
+| `peer-75` | 5 / 5 | 11.93% | 9.66% | 4.13 pp | 23.44 pp | Fail |
 
 The producer sets the rate at every point, so the latency of a transaction is about the sum of both parts. The model gives `Work.selected` 20.8%, 41.7%, and 62.5%, and `Work.peer` 4.2%, 8.3%, and 12.5%. The model leaves out the queue handoff and any queue wait.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.999, 0.929 |
-| `selected-50` | 0.988, 0.865 |
-| `selected-75` | 0.996, 0.729 |
-| `peer-25` | 1.001, 1.050 |
-| `peer-50` | 1.011, 1.113 |
-| `peer-75` | 1.008, 1.145 |
+| `selected-25` | 0.983, 0.924 |
+| `selected-50` | 0.992, 0.865 |
+| `selected-75` | 0.964, 0.686 |
+| `peer-25` | 0.993, 1.048 |
+| `peer-50` | 0.991, 1.086 |
+| `peer-75` | 0.989, 1.138 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.015, 1.000; order 2: 1.014, 1.000; order 3: 1.000, 1.050; order 4: 0.988, 1.000; order 5: 0.997, 0.912; order 6: 0.996, 0.929. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 0.991, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.983, 1.032; order 4: 0.998, 1.000; order 5: 0.985, 0.924; order 6: 0.982, 0.904. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -46,30 +46,30 @@ The handoff of an item is the time from just before its enqueue to the return of
 
 | Point | Median mean handoff, profile | Median mean handoff, real arm |
 | --- | ---: | ---: |
-| baseline | 48.6 us | 145.2 us |
-| `selected-25` | 52.0 us | 127.2 us |
-| `selected-50` | 55.8 us | 91.9 us |
-| `selected-75` | 143.1 us | 52.8 us |
-| `peer-25` | 60.5 us | 141.5 us |
-| `peer-50` | 74.7 us | 140.0 us |
-| `peer-75` | 82.9 us | 138.0 us |
+| baseline | 49.9 us | 154.5 us |
+| `selected-25` | 49.3 us | 136.3 us |
+| `selected-50` | 62.9 us | 92.9 us |
+| `selected-75` | 139.5 us | 58.0 us |
+| `peer-25` | 58.5 us | 156.9 us |
+| `peer-50` | 81.1 us | 140.0 us |
+| `peer-75` | 94.0 us | 141.6 us |
 
 The second value is the signed difference between the dequeue return and the enqueue return of the same item, as a mean. It can be negative, because the consumer can take an item before the producer reads its time after `Enqueue`. The table gives the median over valid blocks of the baseline values.
 
 | Arm | Mean enqueue time | Mean dequeue return minus enqueue return | Share of spin takes |
 | --- | ---: | ---: | ---: |
-| Profile baseline | 20.4 us | 27.8 us | 0.0% |
-| Plain original | 42.0 us | 103.2 us | 0.0% |
+| Profile baseline | 13.7 us | 36.2 us | 0.0% |
+| Plain original | 46.0 us | 109.1 us | 0.0% |
 
 ## Blocks
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | 0.89 pp | 3.91 pp | 2.63 pp | -0.25 pp | -4.69 pp | -4.40 pp |
-| 2 | Yes | 2.83 pp | 8.20 pp | 6.45 pp | 1.59 pp | 4.41 pp | -1.75 pp |
-| 3 | Yes | 7.25 pp | 7.76 pp | 2.40 pp | -0.06 pp | 1.90 pp | 2.32 pp |
-| 4 | Yes | 7.45 pp | 4.73 pp | 7.29 pp | -3.99 pp | -3.58 pp | -1.60 pp |
-| 5 | Yes | 8.04 pp | 13.44 pp | 0.41 pp | 2.24 pp | 1.59 pp | 5.35 pp |
+| 1 | Yes | 15.35 pp | 13.67 pp | 9.64 pp | 13.74 pp | 24.54 pp | 15.56 pp |
+| 2 | Yes | 2.83 pp | 5.97 pp | 6.76 pp | 2.91 pp | -1.43 pp | -0.02 pp |
+| 3 | Yes | 2.67 pp | -1.79 pp | 3.90 pp | -4.35 pp | -3.48 pp | -4.13 pp |
+| 4 | Yes | 6.02 pp | 7.46 pp | 1.93 pp | 2.87 pp | 1.90 pp | 23.44 pp |
+| 5 | Yes | 4.01 pp | 0.18 pp | 1.74 pp | -2.66 pp | -2.09 pp | -1.64 pp |
 
 ## Run history
 
@@ -79,7 +79,8 @@ The second value is the signed difference between the dequeue return and the enq
 | `20261019T113356248-f1cbfddc` | Per-transaction virtual latency | Fail. `selected-50` median 7.09 points and `peer-25` median 5.47 points. The other four points pass. |
 | `20261019T121118409-e589636a` | Transaction queue handoff | Fail. `selected-25` median 7.58 points and `selected-50` median 10.07 points. The other four points pass. |
 | `20261019T124914850-b10c2f47` | Spin before a queue wait | Fail. `selected-25` one block of 27.61 points, `selected-50` median 8.32 points, and `peer-50` one block of -12.59 points. |
-| `20261019T131709144-4aa0a3ef` | Handoff parts | Fail. Points selected-25, selected-50 fail, or a run-level criterion fails. |
+| `20261019T131709144-4aa0a3ef` | Handoff parts | Fail. `selected-25` median 7.25 points and `selected-50` median 7.76 points. |
+| `20261019T150326902-04963faa` | Worker pinning | Fail. Points selected-25, selected-50, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. |
 
 ## Limits
 

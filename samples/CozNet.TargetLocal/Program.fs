@@ -10,6 +10,40 @@ open CozNet
 let private period = 1000000UL
 let private journalCapacity = 1u <<< 20
 
+module private Pinning =
+    [<System.Runtime.InteropServices.DllImport("libc", SetLastError = true)>]
+    extern int sched_setaffinity(int pid, unativeint size, uint64& mask)
+
+    [<System.Runtime.InteropServices.DllImport("libc")>]
+    extern int sched_getcpu()
+
+    let requested =
+        match Environment.GetEnvironmentVariable "COZNET_WORKER_CPUS" with
+        | null
+        | "" -> null
+        | text ->
+            let cpus = text.Split ',' |> Array.map Int32.Parse
+            if cpus.Length <> 2 || cpus |> Array.exists (fun cpu -> cpu < 0 || cpu > 63) then
+                eprintfn "COZNET_WORKER_CPUS must hold two CPUs from 0 to 63."
+                Environment.Exit 3
+            cpus
+
+    let private seen = Collections.Generic.List<int array>()
+
+    let start () =
+        let cpus = Array.create 2 -1
+        if not (isNull requested) then lock seen (fun () -> seen.Add cpus)
+        cpus
+
+    let wrap (cpus: int array) (index: int) (body: unit -> unit) () =
+        if not (isNull requested) then
+            let mutable mask = 1UL <<< requested[index]
+            if sched_setaffinity(0, unativeint 8, &mask) <> 0 then Environment.Exit 3
+        body ()
+        if not (isNull requested) then cpus[index] <- sched_getcpu ()
+
+    let recorded () = if isNull requested then null else lock seen (fun () -> seen.ToArray())
+
 let private write (path: string) value =
     File.WriteAllText(path, JsonSerializer.Serialize(value, JsonSerializerOptions(WriteIndented = false)))
 
@@ -281,7 +315,8 @@ let private writeProfileWith mode seed (rotation: int) selectedRounds peerRounds
         profile.Points
         |> Array.map (fun p -> {| candidate = p.Candidate; speedup = p.Speedup; prediction = p.Predictions[0] |> Option.toNullable |})
     write output {| mode = mode; seed = seed; rotation = rotation; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = durationMs
-                    warmup = profile.Warmup; experiments = profile.Experiments; points = points; lockStats = lockStats; queueStats = queueStats; passed = passed |}
+                    warmup = profile.Warmup; experiments = profile.Experiments; points = points; lockStats = lockStats; queueStats = queueStats
+                    workerCpus = Pinning.requested; workerCpusSeen = Pinning.recorded (); passed = passed |}
     if passed then 0 else 1
 
 let private writeProfile mode seed rotation selectedRounds peerRounds durationMs profile output =
@@ -357,8 +392,9 @@ let private lockProfileWith (mode: string) (spin: TimeSpan) (seed: int) (rotatio
     let workers (counter: TargetProgressCounter) =
         let gate = TargetLock spin
         locks.Add gate
-        [| { Work = guarded counter gate 40UL 20UL; PaymentIp = fst selectedRange }
-           { Work = guarded counter gate 40UL 20UL; PaymentIp = fst peerRange } |]
+        let cpus = Pinning.start ()
+        [| { Work = Pinning.wrap cpus 0 (guarded counter gate 40UL 20UL); PaymentIp = fst selectedRange }
+           { Work = Pinning.wrap cpus 1 (guarded counter gate 40UL 20UL); PaymentIp = fst peerRange } |]
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Throughput throughputDuration)) journalCapacity workers
     let stats = locks |> Seq.map (fun l -> box {| entries = l.Entries; waitedEntries = l.WaitedEntries; handoffNs = l.HandoffNs |}) |> Seq.toArray
     writeProfileWith mode seed rotation 40 20 throughputDuration (box stats) null profile output
@@ -368,6 +404,7 @@ let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRou
     Work.peer 1UL |> ignore
     let counter = TargetProgressCounter()
     let gate = TargetLock spin
+    let cpus = Pinning.start ()
     let ready = new Barrier(3)
     let started = Array.zeroCreate<int64> 2
     let finished = Array.zeroCreate<int64> 2
@@ -375,7 +412,7 @@ let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRou
         Thread(fun () ->
             ready.SignalAndWait()
             started[index] <- Stopwatch.GetTimestamp()
-            guarded counter gate selectedRounds peerRounds ()
+            Pinning.wrap cpus index (guarded counter gate selectedRounds peerRounds) ()
             finished[index] <- Stopwatch.GetTimestamp())
     let threads = [| run 0; run 1 |]
     threads |> Array.iter _.Start()
@@ -387,6 +424,7 @@ let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRou
     let visits = counter.Visits
     write output {| mode = mode; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
                     elapsedNs = uint64 elapsed; visits = visits; entries = gate.Entries; waitedEntries = gate.WaitedEntries; handoffNs = gate.HandoffNs
+                    workerCpus = Pinning.requested; workerCpusSeen = Pinning.recorded ()
                     passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
@@ -446,8 +484,9 @@ let private transactionProfileWith (mode: string) (spin: TimeSpan) (seed: int) (
         let queue = TargetQueue<struct (int64 * int64)>(pipelineCapacity, spin)
         let handoffs = QueueHandoffs queue
         queues.Add handoffs
-        [| { Work = beginTransactions counter handoffs 40UL; PaymentIp = fst selectedRange }
-           { Work = endTransactions counter handoffs 8UL; PaymentIp = fst peerRange } |]
+        let cpus = Pinning.start ()
+        [| { Work = Pinning.wrap cpus 0 (beginTransactions counter handoffs 40UL); PaymentIp = fst selectedRange }
+           { Work = Pinning.wrap cpus 1 (endTransactions counter handoffs 8UL); PaymentIp = fst peerRange } |]
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Latency throughputDuration)) journalCapacity workers
     let stats =
         queues
@@ -461,6 +500,7 @@ let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds 
     let counter = TargetProgressCounter()
     let queue = TargetQueue<struct (int64 * int64)>(pipelineCapacity, spin)
     let handoffs = QueueHandoffs queue
+    let cpus = Pinning.start ()
     let ready = new Barrier(3)
     let started = Array.zeroCreate<int64> 2
     let finished = Array.zeroCreate<int64> 2
@@ -470,7 +510,7 @@ let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds 
             started[index] <- Stopwatch.GetTimestamp()
             body ()
             finished[index] <- Stopwatch.GetTimestamp())
-    let threads = [| run 0 (beginTransactions counter handoffs selectedRounds); run 1 (endTransactions counter handoffs peerRounds) |]
+    let threads = [| run 0 (Pinning.wrap cpus 0 (beginTransactions counter handoffs selectedRounds)); run 1 (Pinning.wrap cpus 1 (endTransactions counter handoffs peerRounds)) |]
     threads |> Array.iter _.Start()
     ready.SignalAndWait()
     Thread.Sleep throughputDuration
@@ -481,7 +521,7 @@ let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds 
     write output {| mode = mode; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
                     elapsedNs = uint64 elapsed; visits = visits; arrivals = counter.Arrivals; latencyNs = counter.LatencyNs
                     handoffs = handoffs.Handoffs; handoffNs = handoffs.HandoffNs; enqueues = handoffs.Enqueues; enqueueNs = handoffs.EnqueueNs
-                    spunDequeues = handoffs.Spun; passed = visits >= 100L |}
+                    spunDequeues = handoffs.Spun; workerCpus = Pinning.requested; workerCpusSeen = Pinning.recorded (); passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
 type private Turns() =

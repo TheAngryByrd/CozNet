@@ -1,6 +1,6 @@
 # Target-local semaphore profile
 
-Evidence: `artifacts/target-local-semaphore/20261019T131809935-75def747`.
+Evidence: `artifacts/target-local-semaphore/20261019T150434417-1c70a9de`.
 
 `TargetLocalSemaphoreVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `semaphore-profile` process and seven `plain-semaphore` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the semaphore plan](../../../lode/plans/target-local-semaph
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 14.98% | 17.86% | 4.85 pp | 6.29 pp | Pass |
-| `selected-50` | 5 / 5 | 29.89% | 33.77% | 4.08 pp | 6.73 pp | Pass |
-| `selected-75` | 5 / 5 | 44.63% | 49.12% | 4.91 pp | 5.30 pp | Pass |
-| `peer-25` | 5 / 5 | 8.74% | 8.00% | 0.33 pp | 3.63 pp | Pass |
-| `peer-50` | 5 / 5 | 14.29% | 15.04% | 3.58 pp | 7.57 pp | Pass |
-| `peer-75` | 5 / 5 | 19.76% | 23.01% | 4.27 pp | 8.41 pp | Pass |
+| `selected-25` | 5 / 5 | 16.68% | 16.52% | 1.42 pp | 4.51 pp | Pass |
+| `selected-50` | 5 / 5 | 31.71% | 33.98% | 2.27 pp | 6.07 pp | Pass |
+| `selected-75` | 5 / 5 | 46.14% | 48.55% | 2.65 pp | 7.51 pp | Pass |
+| `peer-25` | 5 / 5 | 9.12% | 6.27% | 2.49 pp | 3.51 pp | Pass |
+| `peer-50` | 5 / 5 | 16.22% | 16.46% | 1.34 pp | 3.68 pp | Pass |
+| `peer-75` | 5 / 5 | 22.38% | 22.56% | 1.76 pp | 2.70 pp | Pass |
 
 No work runs in parallel, so the model gives `Work.selected` 16.7%, 33.3%, and 50%, and `Work.peer` 8.3%, 16.7%, and 25%. The model leaves out the two handoffs of each visit.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.992, 0.992 |
-| `selected-50` | 1.001, 0.996 |
-| `selected-75` | 0.985, 0.985 |
-| `peer-25` | 0.984, 0.984 |
-| `peer-50` | 0.998, 0.997 |
-| `peer-75` | 1.018, 1.018 |
+| `selected-25` | 0.980, 0.980 |
+| `selected-50` | 0.979, 0.979 |
+| `selected-75` | 0.973, 0.974 |
+| `peer-25` | 0.984, 0.985 |
+| `peer-50` | 0.987, 0.987 |
+| `peer-75` | 1.004, 1.002 |
 
-The median work ratio by run order in the process is order 0: 0.989, 0.989; order 1: 0.999, 1.000; order 2: 1.000, 1.000; order 3: 0.990, 0.989; order 4: 1.000, 1.000; order 5: 0.998, 0.997; order 6: 1.001, 0.996. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 0.984, 0.984; order 1: 0.984, 0.985; order 2: 0.984, 0.984; order 3: 0.985, 0.986; order 4: 1.000, 1.000; order 5: 0.973, 0.974; order 6: 0.986, 0.984. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -0.59 pp | -4.25 pp | 0.02 pp | -0.33 pp | -1.22 pp | 3.35 pp |
-| 2 | Yes | -6.29 pp | -3.10 pp | -4.67 pp | 0.20 pp | -4.18 pp | -4.32 pp |
-| 3 | Yes | -5.26 pp | -6.73 pp | -5.09 pp | -3.63 pp | -7.57 pp | -8.41 pp |
-| 4 | Yes | 4.85 pp | -2.91 pp | -4.91 pp | -0.33 pp | -0.39 pp | 0.82 pp |
-| 5 | Yes | -3.52 pp | -4.08 pp | -5.30 pp | 2.68 pp | 3.58 pp | -4.27 pp |
+| 1 | Yes | -4.51 pp | -6.07 pp | -7.51 pp | -0.74 pp | 1.34 pp | 2.70 pp |
+| 2 | Yes | -0.82 pp | -1.20 pp | -2.65 pp | 2.49 pp | 0.55 pp | 0.34 pp |
+| 3 | Yes | -0.04 pp | -2.11 pp | -2.41 pp | 0.54 pp | -3.21 pp | -1.40 pp |
+| 4 | Yes | 1.42 pp | -2.27 pp | -4.05 pp | 3.51 pp | -3.68 pp | 1.89 pp |
+| 5 | Yes | -1.43 pp | -4.09 pp | 2.00 pp | 2.90 pp | 0.80 pp | -1.76 pp |
 
 ## Run history
 
@@ -62,6 +62,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T121226146-ac4f2bea` | Transaction queue handoff | Fail. `selected-50` median 6.60 points and `selected-75` median 5.27 points. |
 | `20261019T125015330-52253802` | Spin before a queue wait | Fail. `selected-50` median 5.51 points. |
 | `20261019T131809935-75def747` | Handoff parts | Pass |
+| `20261019T150434417-1c70a9de` | Worker pinning | Pass |
 
 ## Limits
 

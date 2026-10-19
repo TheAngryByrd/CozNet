@@ -1,6 +1,6 @@
 import unittest
 
-from AnalyzeTargetProfile import (handoff_parts, queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
+from AnalyzeTargetProfile import (pinning_complete, handoff_parts, queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
                                   order_ratios,
                                   positions_balanced,
                                   prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
@@ -313,6 +313,18 @@ class ThroughputChecks(unittest.TestCase):
                        {"Candidate": "a", "Speedup": 50, "Passed": True, "Visits": 200, "VirtualLatencyNs": 120000, "EffectiveNs": 1000}]
         self.assertAlmostEqual(prediction({"mode": "spin-transaction-profile", "experiments": experiments}, "a", 50), 1 - 600 / 1000)
         self.assertAlmostEqual(actual_gain({"elapsedNs": 1, "visits": 100, "latencyNs": 100000}, {"elapsedNs": 1, "visits": 200, "latencyNs": 150000}, "spintransaction"), 0.25)
+
+    def test_pinned_records_hold_the_requested_cpus(self):
+        profile = {"workerCpus": [0, 2], "warmup": {"Passed": True}, "experiments": [{"Order": 0, "Passed": True}, {"Order": 1, "Passed": False}],
+                   "workerCpusSeen": [[0, 2], [0, 2], [-1, -1]]}
+        plain = {"original": {"workerCpus": [0, 2], "workerCpusSeen": [[0, 2]]}}
+        self.assertTrue(pinning_complete(profile, {"profile": profile, **plain}, [0, 2]))
+        self.assertTrue(pinning_complete(None, {}, None))
+        self.assertFalse(pinning_complete({**profile, "workerCpusSeen": [[0, 2], [1, 2], [-1, -1]]}, plain, [0, 2]))
+        self.assertFalse(pinning_complete(profile, {"original": {"workerCpus": [0, 2], "workerCpusSeen": [[0, 3]]}}, [0, 2]))
+        self.assertFalse(pinning_complete({**profile, "workerCpusSeen": [[0, 2]]}, plain, [0, 2]))
+        same = {**profile, "workerCpus": [0, 0], "workerCpusSeen": [[0, 0], [0, 0], [-1, -1]]}
+        self.assertFalse(pinning_complete(same, {"original": {"workerCpus": [0, 0], "workerCpusSeen": [[0, 0]]}}, [0, 0]))
 
     def test_latency_experiments_need_one_visit(self):
         self.assertTrue(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 1}}), "latency"))

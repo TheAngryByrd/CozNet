@@ -1,6 +1,6 @@
 # Target-local causal profile
 
-Evidence: `artifacts/target-local-profile/20261019T132316833-16878b7d`.
+Evidence: `artifacts/target-local-profile/20261019T151001061-8a5886f5`.
 
 `TargetLocalProfileVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `causal-profile` process and seven `plain` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the profile plan](../../../lode/plans/target-local-causal-p
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 23.27% | 23.08% | 0.90 pp | 2.80 pp | Pass |
-| `selected-50` | 5 / 5 | 48.04% | 49.82% | 1.79 pp | 4.04 pp | Pass |
-| `selected-75` | 5 / 5 | 49.24% | 50.47% | 1.58 pp | 2.01 pp | Pass |
-| `peer-25` | 5 / 5 | -1.85% | -1.15% | 0.70 pp | 1.63 pp | Pass |
-| `peer-50` | 5 / 5 | -0.77% | 0.01% | 1.38 pp | 2.29 pp | Pass |
-| `peer-75` | 5 / 5 | 0.17% | 0.46% | 2.16 pp | 3.03 pp | Pass |
+| `selected-25` | 5 / 5 | 23.96% | 25.21% | 2.20 pp | 2.92 pp | Pass |
+| `selected-50` | 5 / 5 | 49.28% | 48.46% | 1.15 pp | 1.92 pp | Pass |
+| `selected-75` | 5 / 5 | 48.65% | 49.60% | 2.62 pp | 2.71 pp | Pass |
+| `peer-25` | 5 / 5 | 0.08% | -1.80% | 2.54 pp | 5.09 pp | Pass |
+| `peer-50` | 5 / 5 | -1.01% | -1.10% | 1.09 pp | 2.50 pp | Pass |
+| `peer-75` | 5 / 5 | -1.94% | 0.30% | 1.11 pp | 3.90 pp | Pass |
 
 The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 1.022, 1.033 |
-| `selected-50` | 1.022, 1.037 |
-| `selected-75` | 1.004, 1.021 |
-| `peer-25` | 1.019, 1.024 |
-| `peer-50` | 1.008, 1.014 |
-| `peer-75` | 0.998, 1.006 |
+| `selected-25` | 1.011, 1.009 |
+| `selected-50` | 1.010, 1.001 |
+| `selected-75` | 1.013, 1.017 |
+| `peer-25` | 0.999, 0.990 |
+| `peer-50` | 1.010, 0.993 |
+| `peer-75` | 1.019, 1.013 |
 
-The median work ratio by run order in the process is order 0: 1.005, 1.016; order 1: 0.999, 1.007; order 2: 1.004, 1.021; order 3: 1.005, 1.002; order 4: 1.022, 1.025; order 5: 1.005, 1.024; order 6: 1.008, 1.017. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.004, 1.000; order 1: 1.000, 1.009; order 2: 1.000, 1.000; order 3: 1.010, 1.000; order 4: 1.000, 1.000; order 5: 0.995, 1.009; order 6: 1.013, 1.005. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | 1.99 pp | -4.04 pp | -0.91 pp | -0.70 pp | -2.29 pp | -0.08 pp |
-| 2 | Yes | -0.48 pp | -1.16 pp | -0.67 pp | 1.63 pp | -0.78 pp | 2.42 pp |
-| 3 | Yes | -2.80 pp | -1.79 pp | -1.98 pp | -0.65 pp | 1.99 pp | -3.03 pp |
-| 4 | Yes | 0.45 pp | 2.13 pp | 2.01 pp | -0.61 pp | 1.38 pp | 2.16 pp |
-| 5 | Yes | 0.90 pp | -0.27 pp | -1.58 pp | 1.04 pp | -1.26 pp | -0.23 pp |
+| 1 | Yes | -2.20 pp | -1.35 pp | -2.62 pp | 2.54 pp | -1.41 pp | -3.24 pp |
+| 2 | Yes | 2.92 pp | 1.92 pp | 2.71 pp | 2.79 pp | 2.50 pp | 0.33 pp |
+| 3 | Yes | -2.42 pp | 0.22 pp | -2.67 pp | -0.42 pp | 1.09 pp | -0.14 pp |
+| 4 | Yes | 0.75 pp | 1.15 pp | 0.05 pp | -5.09 pp | 0.41 pp | -3.90 pp |
+| 5 | Yes | -1.09 pp | -0.29 pp | -0.95 pp | 1.88 pp | -1.09 pp | 1.11 pp |
 
 ## Run history
 
@@ -71,6 +71,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T121727927-5e679245` | Transaction queue handoff | Pass |
 | `20261019T125516048-6470f3c8` | Spin before a queue wait | Pass |
 | `20261019T132316833-16878b7d` | Handoff parts | Pass |
+| `20261019T151001061-8a5886f5` | Worker pinning | Pass |
 
 ## Limits
 
