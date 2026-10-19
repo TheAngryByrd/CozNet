@@ -141,6 +141,22 @@ the `setup` segment, from the native start to the start barrier, has a median of
 Its median on-CPU share is 64%, and 60 of the 120 setup segments have a major fault. It holds only `TargetCurrent.Set`, `TargetCurrent.Track`, and one trace point, after sampling starts.
 The `barrier` segment is at most 0.19 ms, and the interval from the native start stamp to the first point is at most 20 microseconds.
 
-Next step, from the plan decision: move the per-thread setup before the native start, and fix a replacement for criterion 14 that uses any read on the same handle, before the next runs. The bounds do not change.
+
+## Start setup
+
+[The start-setup plan](target-local-start-setup.md) sets the thread state before the native start. For barrier runs, criterion 27 replaces criterion 14 and counts all reads on the handle.
+
+The runs on the reviewed tree:
+- Transition run `20261019T004724440-fd9cd00c` passes 10 of 10.
+- Barrier run `20261019T004925668-914e6b56` passes all criteria. The median setup segment is 0.0049 ms, the largest is 0.0064 ms, and the reader is fresh.
+- Prediction run `20261019T004805873-c97ab2e5` keeps all 15 blocks within the limits, with median differences of 2.62 to 3.22 points. It fails criterion 26.
+  Its median setup segment is 0.0049 ms, but one of the 60 segments takes 0.60 ms. The other 59 take at most 0.0066 ms.
+  That segment has 0.14 ms on a CPU and 0.46 ms off the CPU. Its counters record no run-queue delay, no context switch, and no fault.
+  The reads in one point are sequential, so a switch between two reads can escape the counters. The cause of this stall is not known.
+  Hypothesis, not shown: the host paused the virtual CPU. In the same run, the largest `barrier` segment is 0.47 ms, and no criterion covers it.
+
+The move removes the profiler setup from the sampled interval: the median setup segment falls from 0.70 ms to 0.0049 ms in both suites.
+Criterion 26 also fails on one stall of unknown cause. No profile arm in these runs records a debt failure.
+Next step: find the cause of such stalls before any change to criterion 26, and qualify with one profiled thread per physical core. The bounds do not change.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

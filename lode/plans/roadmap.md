@@ -5,9 +5,9 @@ Keep the serial model separate from the proposed sampled engine.
 
 The [target-local sample plan](target-local-samples.md) has a portable decoder, a Linux ring adapter, and [bounded dispatch](target-local-dispatch.md).
 The [native ledger](target-local-credit.md) credits and pays target-locally in a native two-thread run.
-The [CLR fork/join qualification](target-local-prediction.md) passes its fixed criteria with managed replay in most runs. The latest run passes. An earlier run failed by a debt failure after a 5.3 ms late work start that run-queue delay does not explain.
-The [forced-GC check](target-local-transitions.md) passes 10 of 10 in thirteen checks, including the latest, and fails 1 of 10 by the 2 ms debt bound in four current-design checks.
-The [Coz wake rule](target-local-blocking.md) works for `TargetBarrier`. Eight of the sixteen barrier qualification runs pass. The latest fails criterion 14 with every block within the limits. [The start trace](target-local-start-trace.md) shows about 0.7 ms of profiler setup after sampling starts.
+The [CLR fork/join qualification](target-local-prediction.md) passes its fixed criteria with managed replay in most runs. The latest run keeps every block within the limits but fails the setup limit by one 0.60 ms stall of unknown cause.
+The [forced-GC check](target-local-transitions.md) passes 10 of 10 in fourteen checks, including the latest, and fails 1 of 10 by the 2 ms debt bound in four current-design checks.
+The [Coz wake rule](target-local-blocking.md) works for `TargetBarrier`. Nine of the seventeen barrier qualification runs pass, including the latest. [The start setup](target-local-start-setup.md) moves about 0.7 ms of profiler setup out of the sampled interval.
 [Code binding and shutdown](target-local-lifecycle.md) are enforced and checked. [Per-wait run-queue delay](target-local-wait-delay.md) now places a debt failure after a wake. Run-queue delay, possible SMT contention, and variation between arms correlate with the failures.
 Next, decide how the profiler should treat a woken thread that waits for a CPU, and qualify with one thread per physical core.
 The managed drain dependency remains in the live backend exposed by [nominal timer diagnostics](timer-nominal-credit.md).

@@ -32,6 +32,7 @@ PREDICTION_HISTORY = [
     ("20261018T233840885-22a9d378", "Same", "Start run-queue delay diagnostic",
      "Fail. `selected-dominant` block 5 invalid: the peer started work 5.3 ms late, with 8.3 microseconds of start run-queue delay, and its first sample recorded a 3 ms debt failure."),
     ("20261019T001613652-a3f06d98", "Same", "Start trace, with on-CPU time from schedstat field 1, before the revision", "Pass"),
+    ("20261019T002411461-b833589f", "Same", "Start trace with the thread CPU clock", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -54,6 +55,7 @@ TRANSITION_HISTORY = [
     ("20261018T233751688-5acdb8cc", "Start run-queue delay diagnostic", "Pass, 10 of 10"),
     ("20261019T001542478-b4d2cdb6", "Start trace, with on-CPU time from schedstat field 1, before the revision",
      "Fail. Run 8: 2 ms debt bound at 39 ms, after a 6.5 ms peer gap with no event. The peer has 5.3 ms of residual run-queue delay."),
+    ("20261019T002340083-c152f4ca", "Start trace with the thread CPU clock", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -78,6 +80,7 @@ BARRIER_HISTORY = [
      "Fail. `barrier-alternating` block 3 invalid: a 3 ms debt failure at the peer's first sample, before its first wake, with 6.7 ms of whole-run run-queue delay."),
     ("20261018T234001547-747aae56", "Start run-queue delay diagnostic", "Pass"),
     ("20261019T001733954-3bae192a", "Start trace, with on-CPU time from schedstat field 1, before the revision", "Pass"),
+    ("20261019T002531212-f435da11", "Start trace with the thread CPU clock", "Fail. Criterion 14: all 300 wait values are zero. All 15 blocks are within the limits, and 27 of 60 whole-run delays are above zero."),
 ]
 
 
@@ -332,8 +335,13 @@ CPUSET_RUN = "20261018T203443644-3be38dc4"
 
 
 def run_level_detail(summary, barrier=False):
-    if barrier and summary.get("totalWaitRunDelayNs", 1) == 0:
+    if barrier and summary.get("readerFresh") is False:
+        return "the readable wait values and whole-run run-queue delays sum to zero, so criterion 27 fails"
+    if barrier and "readerFresh" not in summary and summary.get("totalWaitRunDelayNs", 1) == 0:
         return "the readable wait values sum to zero, so criterion 14 fails"
+    if summary.get("startSetupWithinLimit") is False:
+        return (f"the setup segments are outside the limits of criterion 26, with a median of {fine_ms(summary.get('medianSetupNs'))} "
+                f"and a largest value of {fine_ms(summary['largestStartSegmentNs']['setup'])}")
     if not summary.get("waitDiagnosticsComplete", True):
         return "the wait diagnostics are incomplete"
     if not summary.get("startDiagnosticsComplete", True):
@@ -407,7 +415,7 @@ def wait_section(summary):
     if "startTraceComplete" in summary:
         largest = summary["largestStartSegmentNs"]
         text += (f" The start trace is {'complete' if summary['startTraceComplete'] else 'incomplete'}. Across all profile arms, the largest native start to first point is "
-                 f"{fine_ms(largest['nativeToFirstNs'])}, the largest setup segment is {fine_ms(largest['setup'])}, and the largest barrier segment is {fine_ms(largest['barrier'])}.")
+                 f"{fine_ms(largest['nativeToFirstNs'])}, the largest setup segment is {fine_ms(largest['setup'])}{', with a median of ' + fine_ms(summary['medianSetupNs']) if summary.get('medianSetupNs') is not None else ''}, and the largest barrier segment is {fine_ms(largest['barrier'])}.")
     if "startDiagnosticsComplete" in summary:
         text += (f" The start records are {'complete' if summary['startDiagnosticsComplete'] else 'incomplete'}: each profile thread must hold "
                  "a start run-queue delay and a work start time in the order of its native start and finish.")

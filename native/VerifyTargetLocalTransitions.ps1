@@ -11,7 +11,7 @@ if ($LASTEXITCODE -ne 0) { throw 'The Linux SDK image is unavailable.' }
 $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.Linux.cpp', 'native/service/TargetSampleSession.Linux.h',
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'src/CozNet/TargetLocalReplay.fs',
     'src/CozNet/TargetLocalProfiler.fs', 'samples/CozNet.TargetLocal/Work.fs', 'samples/CozNet.TargetLocal/Program.fs',
-    'native/VerifyTargetLocalTransitions.ps1', 'lode/plans/target-local-transitions.md', 'lode/plans/target-local-lifecycle.md', 'lode/plans/target-local-wait-delay.md', 'lode/plans/target-local-start-delay.md', 'lode/plans/target-local-start-trace.md')
+    'native/VerifyTargetLocalTransitions.ps1', 'lode/plans/target-local-transitions.md', 'lode/plans/target-local-lifecycle.md', 'lode/plans/target-local-wait-delay.md', 'lode/plans/target-local-start-delay.md', 'lode/plans/target-local-start-trace.md', 'lode/plans/target-local-start-setup.md')
 $hashes = @{}
 function Get-SourceHash([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)

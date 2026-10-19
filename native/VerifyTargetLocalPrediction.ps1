@@ -13,7 +13,7 @@ $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.L
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'native/service/PerfRing.Linux.h', 'native/service/PerfSampleRing.h',
     'src/CozNet/TargetLocalReplay.fs', 'src/CozNet/TargetLocalProfiler.fs', 'samples/CozNet.TargetLocal/Work.fs',
     'samples/CozNet.TargetLocal/Program.fs', 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj',
-    'native/VerifyTargetLocalPrediction.ps1', 'native/AnalyzeTargetPrediction.py', 'lode/plans/target-local-prediction.md', 'lode/plans/target-local-wait-delay.md', 'lode/plans/target-local-start-delay.md', 'lode/plans/target-local-start-trace.md', 'build/build.fs')
+    'native/VerifyTargetLocalPrediction.ps1', 'native/AnalyzeTargetPrediction.py', 'lode/plans/target-local-prediction.md', 'lode/plans/target-local-wait-delay.md', 'lode/plans/target-local-start-delay.md', 'lode/plans/target-local-start-trace.md', 'lode/plans/target-local-start-setup.md', 'build/build.fs')
 $hashes = @{}
 function Get-SourceHash([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)

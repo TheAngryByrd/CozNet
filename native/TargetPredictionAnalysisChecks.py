@@ -1,6 +1,6 @@
 import unittest
 
-from AnalyzeTargetPrediction import (DEBT_EXCEEDED, FAILURE, SAMPLE, add_largest, residual_run_delay, start_complete, trace_complete, trace_segments,
+from AnalyzeTargetPrediction import (DEBT_EXCEEDED, FAILURE, SAMPLE, add_largest, residual_run_delay, setup_walls, setup_within_limit, start_complete, trace_complete, trace_segments,
                                      wait_diagnostics)
 
 
@@ -113,6 +113,30 @@ class StartTraceChecks(unittest.TestCase):
         record = {"threads": [traced()], "events": [event(0, FAILURE, 3000, 3000000, DEBT_EXCEEDED)]}
         failure = wait_diagnostics(record)["debtFailures"][0]
         self.assertEqual(failure["startSegments"]["barrier"]["onCpuNs"], 400, f"failure {failure}")
+
+
+class SetupLimitChecks(unittest.TestCase):
+    def test_short_setup_segments_are_within_the_limit(self):
+        self.assertTrue(setup_within_limit([10_000, 40_000, 49_999]))
+
+    def test_median_at_the_limit_fails(self):
+        self.assertFalse(setup_within_limit([50_000, 50_000, 10_000]))
+
+    def test_one_long_segment_fails(self):
+        self.assertFalse(setup_within_limit([10_000, 10_000, 500_000]))
+
+    def test_no_segments_fail(self):
+        self.assertFalse(setup_within_limit([]))
+
+    def test_setup_walls_come_from_each_traced_thread(self):
+        diagnostics = {"profile-zero": wait_diagnostics({"threads": [traced(), thread()], "events": []}), "profile-speedup": None}
+        self.assertEqual(setup_walls(diagnostics), [100])
+
+
+class ReaderChecks(unittest.TestCase):
+    def test_whole_run_delay_counts_only_readable_values(self):
+        result = wait_diagnostics({"threads": [thread(runDelayNs=800), thread(runDelayNs=-1)], "events": []})
+        self.assertEqual(result["totalRunDelayNs"], 800)
 
 
 class StartupFailureChecks(unittest.TestCase):

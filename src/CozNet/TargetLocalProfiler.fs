@@ -545,10 +545,10 @@ module TargetLocalProfiler =
                     ready.SignalAndWait()
                     outcomes[index] <- { RunDelayNs = -1L; StartRunDelayNs = -1L; StartTrace = Array.empty; WaitRunDelayNs = Array.empty; WaitRunDelaysDropped = 0; Result = TargetThreadResult(); FinishCode = registered; Error = $"register {registered}"; StartedTicks = 0L; FinishedTicks = 0L }
                 else
-                    let started = TargetLocalNative.Start handle
-                    trace.Record 0 |> ignore
                     TargetCurrent.Set(handle, worker.PaymentIp, abort)
                     TargetCurrent.Track(clock, waitCapacity)
+                    let started = TargetLocalNative.Start handle
+                    trace.Record 0 |> ignore
                     if started <> 0 then abort.Cancel()
                     let delayBefore = trace.Record 1
                     ready.SignalAndWait()

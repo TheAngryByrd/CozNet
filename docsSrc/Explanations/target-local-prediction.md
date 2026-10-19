@@ -63,7 +63,7 @@ In one `peer-bound` barrier run, every block predicted a small gain that did not
 A diagnostic run with one thread per physical core showed no sign bias. It also halved the CPU count, and a later unrestricted run showed no bias either, so SMT is a hypothesis.
 A runnable thread that waits for a CPU also cannot pay. Its debt stays, so a debt failure stays a failure. Each barrier wait now records its own run-queue delay to place such a failure. In the diagnostic run, a woken peer started 8.7 ms after its release and broke the 2 ms debt bound.
 Its whole-run run-queue delay was 8.6 ms, which is consistent with that wait but does not place it.
-Each worker also records its start run-queue delay. In an earlier prediction run, a peer started work 5.3 ms after the selected thread with 8.3 microseconds of start run-queue delay, and its first sample broke the debt bound. So that late start has a cause other than run-queue delay, which is not yet found. A start trace now shows about 0.7 ms of profiler setup per worker after sampling starts. CLR safety outside the qualified workload is not established.
+Each worker also records its start run-queue delay. In an earlier prediction run, a peer started work 5.3 ms after the selected thread with 8.3 microseconds of start run-queue delay, and its first sample broke the debt bound. So that late start has a cause other than run-queue delay, which is not yet found. A start trace showed about 0.7 ms of profiler setup per worker after sampling starts. Each worker now does that setup before sampling starts, and the median setup segment is 0.0049 ms. CLR safety outside the qualified workload is not established.
 
 ## IL rewriting compared with native intervention
 

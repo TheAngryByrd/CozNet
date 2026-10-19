@@ -76,7 +76,8 @@ It ignores entries with a zero size, an overflow, or a field that is not hexadec
 1. It raises `PlatformNotSupportedException` unless the process is Linux x64. It then raises `ArgumentException` unless there are 1 to 64 workers. It raises `InvalidOperationException` if a managed layout differs from `coz_target_layout`, or if the library has no `coz_target_layout` export.
    It raises `ArgumentException` if a `PaymentIp` is outside every eligible span.
 2. It opens the experiment and starts one thread for each `TargetWorker { Work; PaymentIp }`.
-3. Each thread registers, waits at a barrier, starts sampling, waits again, runs `Work`, finishes, copies its journal, and releases.
+3. Each thread registers, waits at a barrier, sets its thread state, starts sampling, waits again, runs `Work`, finishes, copies its journal, and releases.
+   The thread state is set before sampling starts, so its first-call compilation is not in the sampled interval.
 4. The calling thread runs `monitor` with a `TargetRunState`. `Working` is true while any worker runs `Work`. `Running` is true while any thread lives.
 5. It joins the threads, closes the experiment, and replays every journal with `TargetLocalReplay.replay`.
    If `monitor` throws, a thread cannot start, or the caller is interrupted during the join, it releases the barrier, joins the started threads, and closes the experiment before it raises `AggregateException`.

@@ -83,6 +83,18 @@ def trace_segments(thread):
     return segments
 
 
+SETUP_MEDIAN_LIMIT_NS = 50_000
+SETUP_MAX_LIMIT_NS = 500_000
+
+
+def setup_walls(diagnostics):
+    return [t["setup"]["wallNs"] for d in diagnostics.values() if d for t in d["startSegments"] if t]
+
+
+def setup_within_limit(walls):
+    return bool(walls) and statistics.median(walls) < SETUP_MEDIAN_LIMIT_NS and max(walls) < SETUP_MAX_LIMIT_NS
+
+
 def add_largest(largest, diagnostics):
     for segments in (t for d in diagnostics.values() if d for t in d["startSegments"] if t):
         largest["nativeToFirstNs"] = max(largest["nativeToFirstNs"], segments["nativeToFirstNs"])
@@ -102,7 +114,7 @@ def wait_diagnostics(data):
         return None
     if "threads" not in data or "events" not in data:
         return {"complete": False, "startComplete": False, "startTraceComplete": False, "startSegments": [], "workStartNs": [], "waits": 0, "maxWaitRunDelayNs": None,
-                "totalWaitRunDelayNs": 0, "unreadWaits": 0, "debtFailures": []}
+                "totalWaitRunDelayNs": 0, "totalRunDelayNs": 0, "unreadWaits": 0, "debtFailures": []}
     events = sorted(data["events"], key=lambda e: e[9])
     origin = events[0][9] if events else 0
     threads = data["threads"]
@@ -130,9 +142,10 @@ def wait_diagnostics(data):
                          "startSegments": traces[failure[0]]})
         failures.append(item)
     values = [d for t in threads for d in t.get("waitRunDelayNs", []) if d >= 0]
+    whole = sum(t["runDelayNs"] for t in threads if type(t.get("runDelayNs")) is int and t["runDelayNs"] >= 0)
     return {"complete": complete, "startComplete": all(starts), "startTraceComplete": all(t is not None for t in traces), "startSegments": traces,
             "workStartNs": [t["workStartedNs"] - origin if ok else None for t, ok in zip(threads, starts)], "waits": sum(len(w) for w in wakes.values()), "maxWaitRunDelayNs": max(values, default=None),
-            "totalWaitRunDelayNs": sum(values), "unreadWaits": sum(1 for t in threads for d in t.get("waitRunDelayNs", []) if d < 0),
+            "totalWaitRunDelayNs": sum(values), "totalRunDelayNs": whole, "unreadWaits": sum(1 for t in threads for d in t.get("waitRunDelayNs", []) if d < 0),
             "debtFailures": failures}
 
 
@@ -154,6 +167,7 @@ def main():
     start_diagnostics_complete = True
     start_trace_complete = True
     largest = {"nativeToFirstNs": 0, "setup": 0, "barrier": 0}
+    walls = []
     for configuration in manifest["configurations"]:
         name = configuration["name"]
         blocks = []
@@ -183,6 +197,7 @@ def main():
             start_diagnostics_complete = start_diagnostics_complete and all(d is None or d["startComplete"] for d in record["waitDiagnostics"].values())
             start_trace_complete = start_trace_complete and all(d is None or d["startTraceComplete"] for d in record["waitDiagnostics"].values())
             add_largest(largest, record["waitDiagnostics"])
+            walls += setup_walls(record["waitDiagnostics"])
             if not reasons:
                 zero, speed, original, optimized = (arms[a] for a in ("profile-zero", "profile-speedup", "original", "optimized"))
                 predicted = 1 - speed["effectiveNs"] / zero["effectiveNs"]
@@ -225,11 +240,16 @@ def main():
         })
     observed = sum(d["totalWaitRunDelayNs"] for c in configurations for b in c["blocks"]
                    for d in b["waitDiagnostics"].values() if d is not None)
+    reader = observed + sum(d["totalRunDelayNs"] for c in configurations for b in c["blocks"]
+                            for d in b["waitDiagnostics"].values() if d is not None)
+    reader_fresh = reader > 0
+    setup_ok = setup_within_limit(walls)
     if barrier:
-        passed = passed and observed > 0
-    passed = passed and diagnostics_complete and start_diagnostics_complete and start_trace_complete
+        passed = passed and reader_fresh
+    passed = passed and diagnostics_complete and start_diagnostics_complete and start_trace_complete and setup_ok
     summary = {"passed": passed, "waitDiagnosticsComplete": diagnostics_complete, "startDiagnosticsComplete": start_diagnostics_complete,
-               "startTraceComplete": start_trace_complete, "largestStartSegmentNs": largest, "totalWaitRunDelayNs": observed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT,
+               "startTraceComplete": start_trace_complete, "largestStartSegmentNs": largest, "readerFresh": reader_fresh,
+               "startSetupWithinLimit": setup_ok, "medianSetupNs": statistics.median(walls) if walls else None, "totalWaitRunDelayNs": observed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT,
                "blockLimit": BLOCK_LIMIT, "speedup": manifest["speedup"], "configurations": configurations,
                "supportedModel": "Linux x64 CPU-bound managed fork/join threads registered through CozNet",
                "generalClrSafetyEstablished": False}
