@@ -136,6 +136,7 @@ The target-local profiler predicts optimizations in two-thread CPU-bound fork/jo
 ## Explanation
 
 - [Target-local sample processing](Explanations/target-local-sample-processing.md): upstream designs, final loss evidence, and remaining runtime contracts.
+- [Target-local latency model](Explanations/target-local-latency-model.md): a deterministic model of the latency estimators for a queue between two threads.
 - [Target-local prediction](Explanations/target-local-prediction.md): why the fork/join model has an exact answer, and the support boundary.
 
 - [CPU time and the prediction gap](Explanations/selected-cpu.md).

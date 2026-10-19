@@ -870,4 +870,12 @@ The prediction results:
 - Peer 8 has 4 valid blocks and peer 2 has 4. In block 5, the peer 2 `selected` 75% experiment has a debt failure. Blocks 1 to 3 are valid for both peers, so criterion 137 gives "not decisive: too few valid blocks".
 - Over blocks 1 to 3, `selected-75` has a median of -13.75 points for peer 8 and -4.45 for peer 2. The per-block values are -32.54, -13.75, and -11.05 for peer 8, and -6.47, -4.45, and -2.60 for peer 2.
 
+## Latency model
+
+[The latency model plan](target-local-latency-model.md) adds a deterministic model of the transaction pipeline and fixed-input checks. No live capture ran, and the production estimator does not change.
+- The supervisor closed the visit-drop investigation as unresolved. Criterion 137 stays not decisive, and the three captures are not pooled.
+- In the model, with fine credit, the clipped gains of a transition case are -0.674 to -0.652 against a real gain of -0.714.
+- In the checked coarse case (p 40, c 16, K 4, s 3/4, T 160), with credit coarser than a transaction, 96 of 160 phases make no payment and 64 do. Every estimator then depends on the phase.
+- These are observations of finite model runs at a stated tick resolution, in a domain without payment overshoot. They do not establish a live mechanism or an estimator fix.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

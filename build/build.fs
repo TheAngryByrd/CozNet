@@ -539,7 +539,7 @@ let targetLocalQualify _ = nativeScript "QualifyTargetLocal.ps1"
 let targetLocalBottleneckVerify _ = nativeScript "VerifyTargetLocalBottleneck.ps1"
 
 let targetPredictionAnalysisChecks _ =
-    for script in [ "native/TargetPredictionAnalysisChecks.py"; "native/TargetGcAnalysisChecks.py"; "native/TargetProfileAnalysisChecks.py"; "native/TargetLocalPackageChecks.py"; "native/TargetBottleneckAnalysisChecks.py"; "native/TargetProbeAnalysisChecks.py" ] do
+    for script in [ "native/TargetPredictionAnalysisChecks.py"; "native/TargetGcAnalysisChecks.py"; "native/TargetProfileAnalysisChecks.py"; "native/TargetLocalPackageChecks.py"; "native/TargetBottleneckAnalysisChecks.py"; "native/TargetProbeAnalysisChecks.py"; "native/TargetLatencyModelChecks.py" ] do
         CreateProcess.fromRawCommand (Environment.environVarOrDefault "COZNET_PYTHON" "python") [
             rootDirectory
             </> script
