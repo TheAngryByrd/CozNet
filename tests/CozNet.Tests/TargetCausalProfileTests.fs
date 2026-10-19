@@ -325,9 +325,25 @@ module TargetCausalProfileTests =
                         Threads = [| outcome 10UL; outcome 20UL |]
                         Events = [| event 0 TargetLedgerEventKind.Child 5UL; event 0 TargetLedgerEventKind.Child 6UL; event 1 TargetLedgerEventKind.Wake 4UL
                                     event 1 TargetLedgerEventKind.Sample 0UL; event 0 TargetLedgerEventKind.Sample 0UL; event 0 TargetLedgerEventKind.Sample 0UL |] }
-                let rows = TargetCausalProfile.threads value
+                let rows = TargetCausalProfile.threads value Array.empty
                 Expect.equal (rows |> Array.map (fun t -> t.CpuNs, t.HandlerNs, t.PaymentNs, t.SkipNs, t.Samples, t.Wakes, t.RunDelayNs, t.WallNs))
                     [| 10UL, 3UL, 11UL, 0UL, 2, 0, 7L, 0UL; 20UL, 3UL, 0UL, 4UL, 1, 1, 7L, 0UL |] "Each thread must keep its own totals."
+            }
+
+            test "a window payment counts the overlap of each child payment with each transaction" {
+                let child worker time amount = { Worker = worker; Sequence = 0UL; Kind = TargetLedgerEventKind.Child; ObservedGlobal = 0UL; LocalBefore = 0UL
+                                                 Amount = amount; Requested = 0UL; Ip = 0UL; Detail = 0u; Time = time }
+                let windows = [| struct (100L, 200L); struct (150L, 300L) |]
+                let paid events = TargetCausalProfile.windowPayments 2 events windows
+                Expect.equal (paid [| child 1 130UL 20UL |]) [| 0UL; 20UL |] "A payment inside one window must count in full."
+                Expect.equal (paid [| child 0 110UL 30UL |]) [| 10UL; 0UL |] "A payment across a window edge must count only its overlap."
+                Expect.equal (paid [| child 0 450UL 50UL; child 1 90UL 40UL |]) [| 0UL; 0UL |] "A payment outside every window must count 0."
+                Expect.equal (paid [| child 1 180UL 20UL |]) [| 0UL; 40UL |] "A payment in two windows must count in both."
+                Expect.equal (paid [| { child 1 180UL 20UL with Kind = TargetLedgerEventKind.Wake } |]) [| 0UL; 0UL |] "A wake skip has no wall time and must count 0."
+                let outcome = { RunDelayNs = 0L; StartRunDelayNs = 0L; StartTrace = Array.empty; WaitRunDelayNs = Array.empty; WaitRunDelaysDropped = 0
+                                Result = TargetThreadResult(); FinishCode = 0; Error = ""; StartedTicks = 0L; FinishedTicks = 0L }
+                let value = { result 100UL true with Threads = [| outcome; outcome |]; Events = [| child 1 130UL 20UL |] }
+                Expect.equal (TargetCausalProfile.threads value windows |> Array.map _.WindowPaymentNs) [| 0UL; 20UL |] "Each thread record must hold its window payment."
             }
 
             test "an experiment keeps each ledger failure with its worker, debt, and times" {

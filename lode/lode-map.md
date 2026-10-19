@@ -32,6 +32,7 @@ For the diagnostic sample period and the `selected-75` over-correction, read [ta
 For the CPU placement of each transaction handoff, read [target-local handoff placement](plans/target-local-handoff-placement.md).
 For the wake time of the consumer after idle time and the `selected-75` error, read [target-local wake after idle](plans/target-local-wake-idle.md).
 For the command that runs every suite as one package, read [target-local qualification package](plans/target-local-qualification-package.md).
+For the paid delay inside each transaction window, read [target-local window payment](plans/target-local-window-payment.md).
 For the user decision on bounds and the matched plain warm-up, read [target-local plain warm-up](plans/target-local-plain-warmup.md).
 For the `selected` bias of the transaction points and the payment before each progress stamp, read [target-local progress settlement](plans/target-local-progress-settlement.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).

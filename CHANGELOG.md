@@ -13,6 +13,7 @@
 
 ### Changed
 
+- `TargetCausalThread` holds `WindowPaymentNs`. Code that constructs it must set the new field.
 - `TargetProgressCounter.Begin` and `End` pay the debt of the calling target thread before they read the clock. A caller that stamps inside a lock or other timed code pays at that point.
 - `TargetCausalDesign.tryCreate` takes a `rotation` after `seed`. The seed fixes one base order, and each block rotates it. An invalid rotation returns `InvalidRotation`.
 - `TargetProgressPoint` has a `Latency` case, so an exhaustive match on it must handle `Latency`. `TargetCausalExperiment` holds `Visits`, `Arrivals`, `LatencyNs`, `VirtualLatencyNs`, `NegativeTransactions`, `Threads`, `Failures`, `Collections`, and `GcPauseNs`, each `TargetCausalFailure` holds `ContextEvents`, `Context`, and `Workers`, and `TargetCausalProfileResult` holds `Progress` and `Warmup`. Code that constructs these records must set the new fields.

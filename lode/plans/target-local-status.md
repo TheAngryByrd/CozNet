@@ -766,4 +766,26 @@ Each suite had one new run, unchanged inputs, and source hashes equal to the sta
 - Three suites fail from prediction errors in valid blocks: lock, transaction, and spintransaction.
 - So the port is not qualified on this host. A qualification needs a package with `passed` and `treeClean` both true.
 
+## Window payment
+
+[The window payment plan](target-local-window-payment.md) records the paid delay inside each transaction window. `transaction` run `20261019T205349855-8c82f58d` ran once on the reviewed tree.
+
+These are medians over the passed `selected` experiments with no negative transaction, five at each speedup, in microseconds for each transaction:
+
+| Speedup | Global delay added in the windows | Consumer payment in the windows | Excess |
+| ---: | ---: | ---: | ---: |
+| 0 | 0.0 | 0.0 | 0.0 |
+| 25 | 214.1 | 89.1 | -126.4 |
+| 50 | 440.7 | 181.1 | -253.9 |
+| 75 | 694.9 | 463.7 | -239.0 |
+
+- The producer has a median window payment of 0 at each speedup. The excess is the payment of both threads minus the added global delay.
+- Criterion 132 rejects H12. The contrast is -239.0 minus -126.4, which is -112.6 microseconds, below the limit of 20. The windows hold less paid delay than the global delay added in them, at every speedup.
+- So the excess contrast that H12 predicts was not observed. The records do not show that the windows hold no payment for earlier delay, or that such payments add no latency. This line of work stops.
+- The ratio of the estimated window payment to the added delay rises from 0.42 at 25% and 0.41 at 50% to 0.67 at 75%. This ratio does not show which delay each payment settles, and the records do not show whether it causes the error.
+
+The run has five valid blocks and no debt failure, and it passes four points:
+- `selected-75` fails with a signed median of -12.54 points. It has failed in all six runs at 1 ms after the settlement change.
+- `peer-75` fails by one block of 23.91 points. Its median is 3.43 points.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

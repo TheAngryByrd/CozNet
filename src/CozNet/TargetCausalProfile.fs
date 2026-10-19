@@ -50,6 +50,7 @@ type TargetCausalThread = {
     Samples: int
     Wakes: int
     RunDelayNs: int64
+    WindowPaymentNs: uint64
 }
 
 type TargetCausalContextEvent = {
@@ -302,8 +303,20 @@ module TargetCausalProfile =
             | [] -> "The experiment did not pass."
             | parts -> String.Join("; ", parts)
 
-    let internal threads (result: TargetProfileResult) =
+    let internal windowPayments (count: int) (events: TargetLedgerEvent array) (transactions: struct (int64 * int64) array) =
+        let totals = Array.zeroCreate<uint64> count
+        for e in events do
+            if e.Kind = TargetLedgerEventKind.Child && e.Worker >= 0 && e.Worker < count && e.Time >= e.Amount then
+                let finished = int64 e.Time
+                let started = finished - int64 e.Amount
+                for struct (opened, closed) in transactions do
+                    let overlap = min finished closed - max started opened
+                    if overlap > 0L then totals[e.Worker] <- totals[e.Worker] + uint64 overlap
+        totals
+
+    let internal threads (result: TargetProfileResult) (transactions: struct (int64 * int64) array) =
         let count = result.Threads.Length
+        let window = windowPayments count result.Events transactions
         let payment, skip = Array.zeroCreate<uint64> count, Array.zeroCreate<uint64> count
         let samples, wakes = Array.zeroCreate<int> count, Array.zeroCreate<int> count
         for e in result.Events do
@@ -325,7 +338,8 @@ module TargetCausalProfile =
               SkipNs = skip[index]
               Samples = samples[index]
               Wakes = wakes[index]
-              RunDelayNs = outcome.RunDelayNs })
+              RunDelayNs = outcome.RunDelayNs
+              WindowPaymentNs = window[index] })
 
     let internal contextWindowNs = 10_000_000L
     let internal contextLimit = 64
@@ -391,7 +405,7 @@ module TargetCausalProfile =
                                | Some message -> message
                                | None -> () ]
                 { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = r.ElapsedNs; GlobalNs = r.GlobalNs
-                  EffectiveNs = r.EffectiveNs; Visits = visits; Arrivals = arrivals; LatencyNs = latencyNs; VirtualLatencyNs = virtualNs; NegativeTransactions = negative; Threads = threads r; Failures = failures r; Collections = gc.Collections
+                  EffectiveNs = r.EffectiveNs; Visits = visits; Arrivals = arrivals; LatencyNs = latencyNs; VirtualLatencyNs = virtualNs; NegativeTransactions = negative; Threads = threads r transactions; Failures = failures r; Collections = gc.Collections
                   GcPauseNs = gc.PauseNs; Passed = r.Passed && stop.IsNone
                   Error = String.Join("; ", errors) }
             | Error message ->
