@@ -40,6 +40,7 @@ PREDICTION_HISTORY = [
     ("20261019T020044104-92e8b8b1", "Same", "Linux backend file split and lifecycle plan update", "Pass"),
     ("20261019T024239257-fae8a160", "Same", "Causal profile driver", "Pass"),
     ("20261019T032259730-367c4746", "Same", "Throughput progress points", "Pass"),
+    ("20261019T040632196-702f8052", "Same", "Blocking queue and pipeline profile", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -70,6 +71,7 @@ TRANSITION_HISTORY = [
     ("20261019T020010673-c0788652", "Linux backend file split and lifecycle plan update", "Pass, 10 of 10"),
     ("20261019T024210440-65ed47ee", "Causal profile driver", "Pass, 10 of 10"),
     ("20261019T032230942-d027dbb5", "Throughput progress points", "Fail. Run 10: 2 ms debt bound. One GC window covers 1.16 ms of the 5.77 ms failure interval."),
+    ("20261019T040604415-1a034540", "Blocking queue and pipeline profile", "Fail. Run 9: 2 ms debt bound. Two GC windows cover 0.91 ms of the 6.50 ms failure interval."),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -102,6 +104,7 @@ BARRIER_HISTORY = [
     ("20261019T024401530-b69ae382", "Causal profile driver",
      "Fail. Criterion 26: one of 60 setup segments takes 0.70 ms, with 9.3 microseconds on a CPU. All 15 blocks are within the limits."),
     ("20261019T032421198-d2441fed", "Throughput progress points", "Pass"),
+    ("20261019T040754718-d668c4c1", "Blocking queue and pipeline profile", "Pass"),
 ]
 
 
@@ -626,11 +629,15 @@ See [the blocking plan](../../../lode/plans/target-local-blocking.md) and [the A
 PROFILE_HISTORY = [
     ("20261019T024109669-c30228ca", "First causal profile run", "Pass"),
     ("20261019T032133781-6cc15ea3", "Throughput progress points", "Fail. `selected-75` and `peer-75` each have one block above 10 points, both in block 1, where the plain arms give 36.0% and 4.5%."),
+    ("20261019T040508680-38464c4a", "Blocking queue and pipeline profile", "Fail. Block 3 is invalid: its `selected` experiment at 75% breaks the 2 ms debt bound."),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
+    ("20261019T040411141-1b17380b", "Blocking queue and pipeline profile", "Pass"),
 ]
-PIPELINE_HISTORY = []
+PIPELINE_HISTORY = [
+    ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
+]
 
 
 def profile(root, run, change, kind="target-local-profile"):
@@ -652,6 +659,8 @@ def profile(root, run, change, kind="target-local-profile"):
                        + " | ".join(pct(b['points'][k]['difference'], suffix=' pp') if b['points'][k]['difference'] is not None else "n/a" for k in
                                     ("selected-25", "selected-50", "selected-75", "peer-25", "peer-50", "peer-75")) + " |"
                        for b in summary["blocks"])
+    ratio = lambda p: ", ".join(f"{v:.3f}" for v in p["medianWorkRatios"]) if p.get("medianWorkRatios") else "n/a"
+    ratios = "\n".join(f"| `{p['point']}` | {ratio(p)} |" for p in summary["points"])
     failed = [p["point"] for p in summary["points"] if not p["passed"]]
     current = "Pass" if summary["passed"] else f"Fail. Points {', '.join(failed) or 'none'} fail, or a run-level criterion fails."
     verdict = "**Result: the current run passes.**" if summary["passed"] else f"**Result: the current run fails.** {current[6:]} The run is kept, and no rerun replaces it."
@@ -687,6 +696,15 @@ The criteria are in {plan}. The runner hashes that file, and all source hashes s
 {rows}
 
 {expected}
+
+## Work ratio
+
+The work ratio of a worker is its wall time outside measured child payments for each visit, divided by the same value of the block baseline. The table shows the median for worker 0 and worker 1.
+All workers share the visits of the progress point. Blocked time, overhead, and the visits of the other worker also change the ratio, so a ratio alone does not show faster work. The ratio is a report, not a criterion.
+
+| Point | Median work ratio |
+| --- | --- |
+{ratios}
 
 ## Blocks
 

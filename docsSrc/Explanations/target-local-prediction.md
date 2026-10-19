@@ -29,7 +29,8 @@ In the first throughput qualification run, real optimizations confirm the predic
 
 A pipeline connects a producer and a consumer through a `TargetQueue`. The slower stage sets the rate, so a faster producer gains only until the consumer is the slower stage.
 A consumer that waits for an item does not run, so it cannot pay delay. When it wakes, it skips the delay up to the token of the item that it takes, as at a barrier.
-In the first pipeline qualification run, real optimizations confirm the producer plateau. The consumer points show a negative bias of a few points, and one of them fails its limit.
+In both pipeline qualification runs, real optimizations confirm the producer plateau. One consumer point fails its limit in each run.
+At `peer` 50%, the prediction is below the actual gain in both runs. In the second run, which records thread data, it tracks the producer time outside measured payments, for each visit. The records do not show what that time is.
 
 ## Why each thread pays its own delay
 

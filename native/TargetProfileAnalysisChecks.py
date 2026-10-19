@@ -1,7 +1,7 @@
 import unittest
 
 from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, prediction,
-                                  profile_complete, timing_consistent, visits_sufficient)
+                                  profile_complete, threads_complete, timing_consistent, visits_sufficient, work_ratios)
 
 
 def experiment(order, candidate, speedup, effective=100, passed=True):
@@ -88,6 +88,27 @@ class ConsistencyChecks(unittest.TestCase):
     def test_fields_name_mode_seed_and_rounds(self):
         fields = expected_fields(20261018, 1)
         self.assertEqual((fields["profile"]["seed"], fields["peer-75"]["peerRounds"], fields["selected-50"]["mode"]), (20261019, 750, "plain"))
+
+
+def threads(wall, payment):
+    return [{"WallNs": wall, "PaymentNs": payment}, {"WallNs": 100, "PaymentNs": 0}]
+
+
+class DiagnosticChecks(unittest.TestCase):
+    def test_passed_experiments_need_two_threads(self):
+        value = record()
+        for e in value["experiments"]:
+            e["Threads"] = threads(100, 0)
+        self.assertTrue(threads_complete(value))
+        value["experiments"][3]["Threads"] = threads(100, 0)[:1]
+        self.assertFalse(threads_complete(value))
+
+    def test_work_ratio_removes_payment_and_divides_by_visits(self):
+        value = record({(SELECTED_NAME, 0): {"Visits": 100}, (PEER_NAME, 50): {"Visits": 80}})
+        for e in value["experiments"]:
+            e["Threads"] = threads(100, 0)
+        next(e for e in value["experiments"] if e["Candidate"] == PEER_NAME and e["Speedup"] == 50)["Threads"] = threads(120, 40)
+        self.assertEqual(work_ratios(value, PEER_NAME, 50), [1.0, 1.25])
 
 
 class ThroughputChecks(unittest.TestCase):

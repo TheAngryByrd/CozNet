@@ -62,6 +62,24 @@ def timing_consistent(record):
     return all(e["EffectiveNs"] == e["ElapsedNs"] - e["GlobalNs"] for e in record["experiments"] if e.get("Passed"))
 
 
+def threads_complete(record):
+    return all(isinstance(e.get("Threads"), list) and len(e["Threads"]) == 2 for e in record["experiments"] if e.get("Passed"))
+
+
+def work_ratios(record, candidate, speedup):
+    experiments = record["experiments"]
+    baseline = next((e for e in experiments if e["Speedup"] == 0), None)
+    point = next((e for e in experiments if e["Candidate"] == candidate and e["Speedup"] == speedup), None)
+    if baseline is None or point is None or not (baseline["Passed"] and point["Passed"]) or not threads_complete(record):
+        return None
+    ratios = []
+    for b, p in zip(baseline["Threads"], point["Threads"]):
+        base = (b["WallNs"] - b["PaymentNs"]) / max(baseline.get("Visits", 1), 1)
+        value = (p["WallNs"] - p["PaymentNs"]) / max(point.get("Visits", 1), 1)
+        ratios.append(value / base if base > 0 else None)
+    return ratios
+
+
 def driver_matches(record):
     points = record.get("points")
     expected = sorted((name, s) for name in CANDIDATES.values() for s in SPEEDUPS)
@@ -129,6 +147,8 @@ def main():
             reasons.append("a passed experiment has an effective duration other than elapsed minus global delay")
         elif not driver_matches(profile):
             reasons.append("the driver predictions differ from the experiments")
+        elif not threads_complete(profile):
+            reasons.append("a passed experiment does not hold two thread records")
         reasons += [f"{arm} not passed" for arm, value in data.items() if value is not None and not value.get("passed")]
         reasons += [f"{arm} has fewer than {MIN_VISITS} visits" for arm, value in data.items() if value is not None and not visits_sufficient(value, workload)]
         points = {}
@@ -138,7 +158,7 @@ def main():
                 predicted = prediction(profile, name, speedup) if complete else None
                 original, optimized = data["original"], data[key]
                 actual = actual_gain(original, optimized, workload)
-                points[key] = {"predicted": predicted, "actual": actual,
+                points[key] = {"predicted": predicted, "actual": actual, "workRatios": work_ratios(profile, name, speedup) if complete else None,
                                "difference": None if predicted is None or actual is None else predicted - actual}
         blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "points": points,
                        "order": [[e["Candidate"], e["Speedup"]] for e in sorted(profile["experiments"], key=lambda e: e["Order"])] if complete else None})
@@ -148,6 +168,7 @@ def main():
             key = f"{label}-{speedup}"
             valid = [b for b in blocks if b["valid"] and b["points"][key]["difference"] is not None]
             differences = [abs(b["points"][key]["difference"]) for b in valid]
+            rows = [b["points"][key]["workRatios"] for b in valid if b["points"][key]["workRatios"] and None not in b["points"][key]["workRatios"]]
             median = statistics.median(differences) if differences else None
             point_passed = len(valid) == BLOCKS and median is not None and median <= MEDIAN_LIMIT and max(differences) <= BLOCK_LIMIT
             passed = passed and point_passed
@@ -156,6 +177,7 @@ def main():
                 "maxAbsoluteDifference": max(differences) if differences else None,
                 "medianPredicted": statistics.median(b["points"][key]["predicted"] for b in valid) if valid else None,
                 "medianActual": statistics.median(b["points"][key]["actual"] for b in valid) if valid else None,
+                "medianWorkRatios": [statistics.median(r[i] for r in rows) for i in range(2)] if rows else None,
                 "passed": point_passed})
     summary = {"passed": passed, "workload": workload, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
                "points": summary_points, "blocks": blocks,

@@ -17,6 +17,17 @@ type TargetProgressCounter() =
     member _.Stopped = Volatile.Read(&stopped) = 1
     member _.Stop() = Volatile.Write(&stopped, 1)
 
+type TargetCausalThread = {
+    CpuNs: uint64
+    WallNs: uint64
+    HandlerNs: uint64
+    PaymentNs: uint64
+    SkipNs: uint64
+    Samples: int
+    Wakes: int
+    RunDelayNs: int64
+}
+
 type TargetCausalExperiment = {
     Block: int
     Order: int
@@ -26,6 +37,7 @@ type TargetCausalExperiment = {
     GlobalNs: uint64
     EffectiveNs: uint64
     Visits: int64
+    Threads: TargetCausalThread array
     Passed: bool
     Error: string
 }
@@ -191,6 +203,31 @@ module TargetCausalProfile =
             | [] -> "The experiment did not pass."
             | parts -> String.Join("; ", parts)
 
+    let internal threads (result: TargetProfileResult) =
+        let count = result.Threads.Length
+        let payment, skip = Array.zeroCreate<uint64> count, Array.zeroCreate<uint64> count
+        let samples, wakes = Array.zeroCreate<int> count, Array.zeroCreate<int> count
+        for e in result.Events do
+            if e.Worker >= 0 && e.Worker < count then
+                match e.Kind with
+                | TargetLedgerEventKind.Child -> payment[e.Worker] <- payment[e.Worker] + e.Amount
+                | TargetLedgerEventKind.Wake ->
+                    skip[e.Worker] <- skip[e.Worker] + e.Amount
+                    wakes[e.Worker] <- wakes[e.Worker] + 1
+                | TargetLedgerEventKind.Sample -> samples[e.Worker] <- samples[e.Worker] + 1
+                | _ -> ()
+        result.Threads
+        |> Array.mapi (fun index outcome ->
+            let ticks = outcome.FinishedTicks - outcome.StartedTicks
+            { CpuNs = outcome.Result.Value
+              WallNs = if outcome.StartedTicks = 0L || ticks < 0L then 0UL else uint64 (Diagnostics.Stopwatch.GetElapsedTime(outcome.StartedTicks, outcome.FinishedTicks).TotalNanoseconds)
+              HandlerNs = outcome.Result.TotalHandlerNs
+              PaymentNs = payment[index]
+              SkipNs = skip[index]
+              Samples = samples[index]
+              Wakes = wakes[index]
+              RunDelayNs = outcome.RunDelayNs })
+
     let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option) (design: TargetCausalDesign) =
         let candidates, speedups, blocks, seed = design.Candidates, design.Speedups, design.Blocks, design.Seed
         let random = Random seed
@@ -209,11 +246,11 @@ module TargetCausalProfile =
                                           | Some message -> message
                                           | None -> () ]
                            { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = r.ElapsedNs; GlobalNs = r.GlobalNs
-                             EffectiveNs = r.EffectiveNs; Visits = visits; Passed = r.Passed && stop.IsNone
+                             EffectiveNs = r.EffectiveNs; Visits = visits; Threads = threads r; Passed = r.Passed && stop.IsNone
                              Error = String.Join("; ", errors) }
                        | Error message ->
                            { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = 0UL; GlobalNs = 0UL
-                             EffectiveNs = 0UL; Visits = 0L; Passed = false; Error = message } |]
+                             EffectiveNs = 0UL; Visits = 0L; Threads = Array.empty; Passed = false; Error = message } |]
         { Progress = design.Progress; Blocks = blocks; Seed = seed; Candidates = candidates; Speedups = speedups; Experiments = experiments
           Points = points blocks candidates speedups experiments }
 

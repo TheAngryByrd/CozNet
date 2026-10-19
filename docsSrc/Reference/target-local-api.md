@@ -125,7 +125,9 @@ Each experiment calls `TargetLocalProfiler.runBound` with one candidate as the s
    A prediction is `None` when the experiment or its baseline did not pass or has no visits. `ValidBlocks` counts the other blocks, and `MedianPrediction` is their median.
 
 `TargetCausalProfile.run` requires Linux x64 through `runBound`. The design and the prediction code are portable.
-Each `TargetCausalExperiment` also holds `Visits`. A throughput experiment counts every visit from the first work start to the last finish.
+Each `TargetCausalExperiment` also holds `Visits`, and `Threads` with one `TargetCausalThread` for each worker.
+A `TargetCausalThread` holds `CpuNs`, `WallNs`, `HandlerNs`, `PaymentNs` (the sum of measured child payments, including the closing payment), `SkipNs` (the sum of wake skips), `Samples`, `Wakes`, and `RunDelayNs`.
+`CpuNs` stops when the native finish disables counting. `WallNs` runs from the work start to the end of the native finish. A throughput experiment counts every visit from the first work start to the last finish.
 
 ## Code binding
 

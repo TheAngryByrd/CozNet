@@ -219,6 +219,21 @@ module TargetCausalProfileTests =
                 Expect.equal (TargetCausalProfile.safetyDelay 120) (TimeSpan.FromMilliseconds 2200.0) "The safety stop must wait 1 s plus ten times the duration."
             }
 
+            test "an experiment keeps the payment, skip, samples, and wakes of each thread" {
+                let event worker kind amount = { Worker = worker; Sequence = 0UL; Kind = kind; ObservedGlobal = 0UL; LocalBefore = 0UL; Amount = amount
+                                                 Requested = 0UL; Ip = 0UL; Detail = 0u; Time = 0UL }
+                let outcome cpu = { RunDelayNs = 7L; StartRunDelayNs = 0L; StartTrace = Array.empty; WaitRunDelayNs = Array.empty; WaitRunDelaysDropped = 0
+                                    Result = TargetThreadResult(Value = cpu, TotalHandlerNs = 3UL); FinishCode = 0; Error = ""; StartedTicks = 0L; FinishedTicks = 0L }
+                let value =
+                    { result 100UL true with
+                        Threads = [| outcome 10UL; outcome 20UL |]
+                        Events = [| event 0 TargetLedgerEventKind.Child 5UL; event 0 TargetLedgerEventKind.Child 6UL; event 1 TargetLedgerEventKind.Wake 4UL
+                                    event 1 TargetLedgerEventKind.Sample 0UL; event 0 TargetLedgerEventKind.Sample 0UL; event 0 TargetLedgerEventKind.Sample 0UL |] }
+                let rows = TargetCausalProfile.threads value
+                Expect.equal (rows |> Array.map (fun t -> t.CpuNs, t.HandlerNs, t.PaymentNs, t.SkipNs, t.Samples, t.Wakes, t.RunDelayNs, t.WallNs))
+                    [| 10UL, 3UL, 11UL, 0UL, 2, 0, 7L, 0UL; 20UL, 3UL, 0UL, 4UL, 1, 1, 7L, 0UL |] "Each thread must keep its own totals."
+            }
+
             test "a design keeps copies of its inputs" {
                 let candidates = [| "a"; "b" |]
                 let design = designOf symbols candidates [| 25u |] 1 0

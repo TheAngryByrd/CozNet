@@ -247,4 +247,21 @@ The other suites on the same tree:
   The other four blocks give median differences of 0.54 to 2.76 points.
 - Transition run `20261019T040604415-1a034540` fails by forced-GC run 9 at the 2 ms debt bound, and every lifecycle check passes. Two GC windows cover 0.68 ms and 0.23 ms, together 0.91 ms, of the 6.50 ms failure interval.
 
+## Experiment diagnostics
+
+[The diagnostics plan](target-local-experiment-diagnostics.md) adds a record for each worker to each causal experiment, and a coarse work ratio for each point.
+Pipeline run `20261019T043536804-514995d6` passes five of six points again. This time `peer-50` passes, and `peer-75` fails by one block of 14.82 points.
+- At `peer` 50%, four of five blocks predict -3.9% to -6.6%. In those blocks, the work ratio of the producer is 1.042 to 1.067. In block 5, the ratio is 0.994 and the prediction is +0.9%.
+  So the prediction tracks the producer time outside measured child payments, for each visit. The producer sets the rate in this pipeline.
+  Both values use the same durations and visits, so this association is descriptive and does not show a cause.
+  The median signed differences are +1.60 points at `peer` 25%, -2.99 points at `peer` 50%, and +3.14 points at `peer` 75%, so only `peer` 50% keeps a negative bias in this run.
+  Hypothesis, not shown: overhead of each payment that the measured child time does not hold.
+- The `selected` points predict 24.71%, 49.61%, and 49.58%. The real optimizations give 24.80%, 49.75%, and 47.70%.
+
+The other suites on the same tree:
+- Throughput run `20261019T043639774-d3af17e6`, transition run `20261019T043835718-5c15e486`, and prediction run `20261019T043903739-5859c385` pass all criteria.
+- Latency profile run `20261019T043738634-485c3ea9` fails `peer-50` and `peer-75`. `peer-50` has a median of 5.52 points and one block of 10.91 points. `peer-75` has one block of 12.72 points. Both work ratios are near 1.
+- Barrier run `20261019T044024104-2513fe0c` fails `barrier-selected-dominant` block 2. The peer breaks the 2 ms debt bound 2 microseconds after a dependency wake.
+  Its wait has 7.40 ms of run-queue delay. The other 14 blocks are within the limits.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).
