@@ -17,6 +17,7 @@ For the experiment driver and the causal profile qualification, read [target-loc
 For throughput progress points and their qualification, read [target-local throughput](plans/target-local-throughput.md).
 For the blocking queue and the pipeline qualification, read [target-local queue](plans/target-local-queue.md).
 For the lock and the lock qualification, read [target-local lock](plans/target-local-lock.md).
+For the lock handoff counts and the knee error of the lock profile, read [target-local lock handoff](plans/target-local-lock-handoff.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).
 For the warm-up experiment and the first-experiment cost in a process, read [target-local warm-up](plans/target-local-warmup.md).
 For the rotated experiment order and the warm-up gate, read [target-local rotation](plans/target-local-rotation.md).

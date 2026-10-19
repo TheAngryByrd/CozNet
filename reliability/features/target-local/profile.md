@@ -1,6 +1,6 @@
 # Target-local causal profile
 
-Evidence: `artifacts/target-local-profile/20261019T063004675-e6636cdf`.
+Evidence: `artifacts/target-local-profile/20261019T070634914-3cd1d60c`.
 
 `TargetLocalProfileVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `causal-profile` process and seven `plain` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the profile plan](../../../lode/plans/target-local-causal-p
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 27.20% | 24.32% | 2.27 pp | 3.58 pp | Pass |
-| `selected-50` | 5 / 5 | 49.52% | 50.04% | 1.49 pp | 1.91 pp | Pass |
-| `selected-75` | 5 / 5 | 49.59% | 49.38% | 0.25 pp | 1.69 pp | Pass |
-| `peer-25` | 5 / 5 | 0.91% | 0.06% | 1.94 pp | 6.46 pp | Pass |
-| `peer-50` | 5 / 5 | 2.49% | -2.08% | 4.34 pp | 5.25 pp | Pass |
-| `peer-75` | 5 / 5 | 1.73% | -0.31% | 2.53 pp | 4.07 pp | Pass |
+| `selected-25` | 5 / 5 | 25.37% | 26.52% | 1.62 pp | 2.68 pp | Pass |
+| `selected-50` | 5 / 5 | 49.41% | 49.78% | 0.79 pp | 2.68 pp | Pass |
+| `selected-75` | 5 / 5 | 50.48% | 50.13% | 1.22 pp | 2.08 pp | Pass |
+| `peer-25` | 5 / 5 | -1.35% | 2.20% | 1.44 pp | 7.70 pp | Pass |
+| `peer-50` | 5 / 5 | 2.03% | -1.10% | 2.92 pp | 6.62 pp | Pass |
+| `peer-75` | 5 / 5 | -1.34% | -1.16% | 0.64 pp | 6.26 pp | Pass |
 
 The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
 
@@ -28,25 +28,27 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.970, 0.989 |
-| `selected-50` | 0.995, 1.013 |
-| `selected-75` | 1.010, 1.011 |
-| `peer-25` | 0.991, 1.007 |
-| `peer-50` | 0.975, 0.980 |
-| `peer-75` | 0.983, 1.016 |
+| `selected-25` | 0.994, 0.979 |
+| `selected-50` | 0.998, 0.982 |
+| `selected-75` | 0.996, 0.974 |
+| `peer-25` | 1.014, 0.992 |
+| `peer-50` | 0.980, 0.963 |
+| `peer-75` | 1.013, 0.992 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.011; order 1: 0.991, 1.006; order 2: 0.995, 1.013; order 3: 0.995, 1.013; order 4: 0.993, 1.000; order 5: 1.007, 0.993; order 6: 0.981, 0.989. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 0.971, 0.992; order 1: 1.011, 1.002; order 2: 0.998, 1.000; order 3: 0.980, 0.969; order 4: 0.994, 0.979; order 5: 1.012, 0.961; order 6: 1.013, 0.992. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
+
+
 
 ## Blocks
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | 3.58 pp | -1.91 pp | 0.60 pp | -3.80 pp | 2.91 pp | 3.12 pp |
-| 2 | Yes | -1.42 pp | 1.49 pp | 1.69 pp | 1.48 pp | 5.07 pp | 1.23 pp |
-| 3 | Yes | 2.04 pp | -1.74 pp | -0.12 pp | 1.94 pp | -4.34 pp | 2.53 pp |
-| 4 | Yes | 2.27 pp | 0.77 pp | -0.13 pp | 1.55 pp | 2.76 pp | 1.00 pp |
-| 5 | Yes | 3.09 pp | -1.04 pp | 0.25 pp | 6.46 pp | 5.25 pp | 4.07 pp |
+| 1 | Yes | -0.87 pp | -0.79 pp | -0.36 pp | 0.63 pp | 6.62 pp | -0.23 pp |
+| 2 | Yes | 1.62 pp | -0.79 pp | -0.12 pp | 0.70 pp | -2.92 pp | 0.41 pp |
+| 3 | Yes | -1.95 pp | 0.12 pp | -1.22 pp | -1.46 pp | -2.03 pp | 0.64 pp |
+| 4 | Yes | 1.38 pp | 1.31 pp | 1.46 pp | -1.44 pp | 4.80 pp | 3.17 pp |
+| 5 | Yes | -2.68 pp | -2.68 pp | -2.08 pp | -7.70 pp | -1.36 pp | -6.26 pp |
 
 ## Run history
 
@@ -59,6 +61,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T051105836-8f4f2ab0` | Profile warm-up experiment | Pass |
 | `20261019T060624408-2e3fb8c4` | Rotated experiment order and warm-up gate | Pass |
 | `20261019T063004675-e6636cdf` | TargetLock and lock profile | Pass |
+| `20261019T070634914-3cd1d60c` | Lock handoff counts | Pass |
 
 ## Limits
 

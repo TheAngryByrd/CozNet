@@ -379,14 +379,33 @@ type TargetQueue<'T>(capacity: int) =
 type TargetLock() =
     let gate = new SemaphoreSlim(1)
     let mutable releaseToken = 0UL
+    let mutable releasedTicks = 0L
     let mutable owner = 0
+    let mutable entries = 0L
+    let mutable waitedEntries = 0L
+    let mutable handoffTicks = 0L
 
     member _.IsHeld = Volatile.Read &owner <> 0
+    member _.Entries = Volatile.Read &entries
+    member _.WaitedEntries = Volatile.Read &waitedEntries
+    member _.HandoffNs = int64 (Stopwatch.GetElapsedTime(0L, Volatile.Read &handoffTicks).TotalNanoseconds)
 
     member _.Enter(timeout: TimeSpan, cancellation: CancellationToken) =
         if Volatile.Read &owner = Environment.CurrentManagedThreadId then
             raise (LockRecursionException "The lock does not support recursion.")
-        if TargetWait.acquire gate timeout cancellation (fun _ -> ValueSome(Volatile.Read &releaseToken)) then
+        let mutable acquired = 0L
+
+        let take blocked =
+            if blocked then acquired <- Stopwatch.GetTimestamp()
+            ValueSome(Volatile.Read &releaseToken)
+
+        if TargetWait.acquire gate timeout cancellation take then
+            if acquired > 0L then
+                let released = Volatile.Read &releasedTicks
+                if released > 0L then
+                    Volatile.Write(&handoffTicks, handoffTicks + max 0L (acquired - released))
+                Volatile.Write(&waitedEntries, waitedEntries + 1L)
+            Volatile.Write(&entries, entries + 1L)
             Volatile.Write(&owner, Environment.CurrentManagedThreadId)
             true
         else
@@ -400,6 +419,7 @@ type TargetLock() =
         if Interlocked.CompareExchange(&owner, 0, Environment.CurrentManagedThreadId) <> Environment.CurrentManagedThreadId then
             raise (SynchronizationLockException "The calling thread does not hold the lock.")
         Volatile.Write(&releaseToken, TargetWait.post ())
+        Volatile.Write(&releasedTicks, Stopwatch.GetTimestamp())
         gate.Release() |> ignore
 
 type TargetWorker = {

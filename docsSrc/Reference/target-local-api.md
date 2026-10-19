@@ -205,6 +205,7 @@ A timeout or a cancellation skips no delay. The abort token of the run cancels e
 | `Enter()` | Waits without a limit. It raises `OperationCanceledException` when the run aborts the wait. |
 | `Exit()` | Frees the lock. It raises `SynchronizationLockException` when the calling thread does not hold the lock. |
 | `IsHeld` | `true` while a thread holds the lock. |
+| `Entries`, `WaitedEntries`, and `HandoffNs` | The entries, the entries that waited, and the time from a release to the acquire of a waiting entry, summed over the waiting entries. |
 
 A second `Enter` by the holder raises `LockRecursionException`.
 In a profiled worker, `Exit` posts a token and stores it before it frees the lock. An `Enter` that waits ends its wait with that token.

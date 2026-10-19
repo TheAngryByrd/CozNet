@@ -28,6 +28,27 @@ module TargetLockTests =
                 Expect.equal (overlap, count) (false, 6000) "No two holders may overlap, and every entry must count."
             }
 
+            test "a lock counts entries, waited entries, and handoff time" {
+                let gate = TargetLock()
+                gate.Enter()
+                gate.Exit()
+                gate.Enter()
+                let waiter = Thread((fun () -> gate.Enter(); gate.Exit()), IsBackground = true)
+                waiter.Start()
+                let watch = Diagnostics.Stopwatch.StartNew()
+                while not (waiter.ThreadState.HasFlag ThreadState.WaitSleepJoin) && watch.Elapsed < TimeSpan.FromSeconds 10.0 do
+                    Thread.Sleep 1
+                Expect.isTrue (waiter.ThreadState.HasFlag ThreadState.WaitSleepJoin) "The waiter must block on the lock."
+                Thread.Sleep 30
+                let released = Diagnostics.Stopwatch.StartNew()
+                gate.Exit()
+                Expect.isTrue (waiter.Join(TimeSpan.FromSeconds 10.0)) "The waiter must finish."
+                let window = released.Elapsed.TotalNanoseconds
+                Expect.equal (gate.Entries, gate.WaitedEntries) (3L, 1L) "Two free entries and one waited entry must count."
+                Expect.isGreaterThan gate.HandoffNs 0L "A waited entry must add handoff time."
+                Expect.isLessThanOrEqual (float gate.HandoffNs) window "Handoff time must start at the release, not at the wait."
+            }
+
             test "a held lock times out another thread and keeps its holder" {
                 let gate = TargetLock()
                 gate.Enter()

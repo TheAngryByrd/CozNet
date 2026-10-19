@@ -44,6 +44,7 @@ PREDICTION_HISTORY = [
     ("20261019T043903739-5859c385", "Same", "Per-thread experiment diagnostics", "Pass"),
     ("20261019T051231424-1e546bce", "Same", "Profile warm-up experiment", "Pass"),
     ("20261019T060749814-6eba8ca5", "Same", "Rotated experiment order and warm-up gate", "Pass"),
+    ("20261019T063130911-86311728", "Same", "TargetLock and lock profile", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -78,6 +79,7 @@ TRANSITION_HISTORY = [
     ("20261019T043835718-5c15e486", "Per-thread experiment diagnostics", "Pass, 10 of 10"),
     ("20261019T051202514-ddf03668", "Profile warm-up experiment", "Fail. Run 1: 2 ms debt bound. One GC window covers 1.31 ms of the 5.26 ms failure interval."),
     ("20261019T060721421-9e406e92", "Rotated experiment order and warm-up gate", "Pass, 10 of 10"),
+    ("20261019T063102813-1448d8f5", "TargetLock and lock profile", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -114,6 +116,7 @@ BARRIER_HISTORY = [
     ("20261019T044024104-2513fe0c", "Per-thread experiment diagnostics", "Fail. `barrier-selected-dominant` block 2 invalid: a debt failure 2 microseconds after a wake whose wait has 7.40 ms of run-queue delay."),
     ("20261019T051353871-0dc405c5", "Profile warm-up experiment", "Pass"),
     ("20261019T060913007-5812aec4", "Rotated experiment order and warm-up gate", "Pass"),
+    ("20261019T063253419-973e8541", "TargetLock and lock profile", "Pass"),
 ]
 
 
@@ -642,6 +645,7 @@ PROFILE_HISTORY = [
     ("20261019T043738634-485c3ea9", "Per-thread experiment diagnostics", "Fail. `peer-50` median 5.52 points and one block of 10.91 points. `peer-75` has one block of 12.72 points."),
     ("20261019T051105836-8f4f2ab0", "Profile warm-up experiment", "Pass"),
     ("20261019T060624408-2e3fb8c4", "Rotated experiment order and warm-up gate", "Pass"),
+    ("20261019T063004675-e6636cdf", "TargetLock and lock profile", "Pass"),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
@@ -649,13 +653,17 @@ THROUGHPUT_HISTORY = [
     ("20261019T043639774-d3af17e6", "Per-thread experiment diagnostics", "Pass"),
     ("20261019T051006922-f2f80c26", "Profile warm-up experiment", "Pass"),
     ("20261019T060526482-e851bced", "Rotated experiment order and warm-up gate", "Pass"),
+    ("20261019T062905608-e6d24e45", "TargetLock and lock profile", "Fail. Block 4 invalid: a 2 ms debt failure, and a handler interval of 5.99 ms with 45.8 ms of run-queue delay."),
 ]
-LOCK_HISTORY = []
+LOCK_HISTORY = [
+    ("20261019T062708436-df83442b", "First lock profile run", "Fail. `selected-50` median 9.13 points, all five blocks below the actual gain. `peer-25` has one block of 11.87 points."),
+]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
     ("20261019T043536804-514995d6", "Per-thread experiment diagnostics", "Fail. `peer-75` has one block of 14.82 points. The `peer-50` prediction tracks the producer work ratio."),
     ("20261019T050900839-0a049f8a", "Profile warm-up experiment", "Fail. `peer-50` median 6.01 points. The order-0 producer work ratio stays 1.041 with the warm-up."),
     ("20261019T060421721-4a882c0a", "Rotated experiment order and warm-up gate", "Pass. `peer-50` median 4.92 points."),
+    ("20261019T062807524-d72126fc", "TargetLock and lock profile", "Pass"),
 ]
 
 
@@ -679,6 +687,10 @@ def profile(root, run, change, kind="target-local-profile"):
                                     ("selected-25", "selected-50", "selected-75", "peer-25", "peer-50", "peer-75")) + " |"
                        for b in summary["blocks"])
     ratio = lambda p: ", ".join(f"{v:.3f}" for v in p["medianWorkRatios"]) if p.get("medianWorkRatios") else "n/a"
+    handoff = "\n".join(f"| `{p['point']}` | {pct(p['medianHandoffShares'][0])} | {pct(p['medianHandoffShares'][1])} |" for p in summary["points"] if p.get("medianHandoffShares"))
+    handoff_text = ("\n\n## Lock handoff\n\nThe handoff share is the time from a release to the acquire of a waiting thread, divided by the elapsed time. "
+                    "The share counts only handoffs to a thread that waited. See [the handoff plan](../../../lode/plans/target-local-lock-handoff.md) for the hypothesis that these handoffs cause the knee error.\n\n"
+                    "| Point | Median handoff share, profile | Median handoff share, real optimization |\n| --- | ---: | ---: |\n" + handoff) if handoff else ""
     ratios = "\n".join(f"| `{p['point']}` | {ratio(p)} |" for p in summary["points"])
     warmup_values = [b.get("warmupPassed") for b in summary["blocks"]]
     if not all("warmupPassed" in b for b in summary["blocks"]):
@@ -738,6 +750,8 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 The median work ratio by run order in the process is {order_text}. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in {warmups}.
+
+{handoff_text}
 
 ## Blocks
 

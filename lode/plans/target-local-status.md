@@ -303,4 +303,21 @@ The other suites on the same tree:
 - Throughput run `20261019T062905608-e6d24e45` fails because block 4 is invalid. The four valid blocks of each point stay within the median and block limits, but each point then has only 4 of 5 valid blocks.
   In block 4, `peer` 75% breaks the 2 ms debt bound. In `peer` 50%, thread 0 has 45.8 ms of whole-run run-queue delay and one handler interval of 5.99 ms, above the 5 ms bound.
 
+## Lock handoff
+
+[The handoff plan](target-local-lock-handoff.md) counts the handoffs of each `TargetLock` and reports the handoff share for each lock point.
+Lock run `20261019T070331580-523cc380` fails, because blocks 1 and 2 are invalid. In each of them, the `selected` experiment at 50% breaks the 2 ms debt bound.
+- In the three valid blocks, `selected-50` predicts 48.17% against a real gain of 51.79%, a median absolute difference of 3.22 points.
+- At `selected-50`, the median handoff share is 7.40% in the profile and 2.18% in the real optimization. At `selected-75`, it is 5.99% and 1.47%.
+  At `selected-25`, both are about 5.5%. So the profile share exceeds the real share at the knee and above it, and the result does not refute the hypothesis.
+- At the `peer` points, the real share is higher than the profile share: 7.33% against 5.88% at 25%, 6.93% against 4.90% at 50%, and 6.29% against 4.61% at 75%.
+The hypothesis stays not shown. The handoff share does not include lock idle time without a waiter, and two of five blocks are invalid.
+
+The other suites on the same tree:
+- Throughput run `20261019T070536063-c1a60568`, latency profile run `20261019T070634914-3cd1d60c`, transition run `20261019T070731753-86c6ac1e`, and barrier run `20261019T070924325-199df270` pass.
+- Pipeline run `20261019T070437097-c99cf6c4` fails `peer-50` by one block of 10.02 points. Its median difference is 2.70 points.
+- Prediction run `20261019T070800008-220def3b` fails `peer-longer`, because block 4 is invalid. The peer breaks the 2 ms debt bound 1.38 ms after its work start.
+  Its start run-queue delay is 3.75 ms, and its residual run-queue delay is 0.11 ms. The peer starts work late, and the failure comes 1.38 ms after the work start, after more credit and payment.
+  The start delay is consistent with the late start, but the records do not show that it causes the failure.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

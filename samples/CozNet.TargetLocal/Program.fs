@@ -275,14 +275,17 @@ let private profileDesign binding seed rotation progress =
     TargetCausalDesign.tryCreate binding period [| Work.selectedName; Work.peerName |] [| Work.selectedName; Work.peerName |] [| 25u; 50u; 75u |] 1 seed rotation progress
     |> Result.defaultWith (fun errors -> failwith (errors |> List.map TargetCausalDesign.describe |> String.concat " "))
 
-let private writeProfile mode seed (rotation: int) selectedRounds peerRounds durationMs (profile: TargetCausalProfileResult) (output: string) =
+let private writeProfileWith mode seed (rotation: int) selectedRounds peerRounds durationMs (lockStats: obj) (profile: TargetCausalProfileResult) (output: string) =
     let passed = profile.Experiments.Length = 7 && profile.Experiments |> Array.forall _.Passed
     let points =
         profile.Points
         |> Array.map (fun p -> {| candidate = p.Candidate; speedup = p.Speedup; prediction = p.Predictions[0] |> Option.toNullable |})
     write output {| mode = mode; seed = seed; rotation = rotation; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = durationMs
-                    warmup = profile.Warmup; experiments = profile.Experiments; points = points; passed = passed |}
+                    warmup = profile.Warmup; experiments = profile.Experiments; points = points; lockStats = lockStats; passed = passed |}
     if passed then 0 else 1
+
+let private writeProfile mode seed rotation selectedRounds peerRounds durationMs profile output =
+    writeProfileWith mode seed rotation selectedRounds peerRounds durationMs null profile output
 
 let private causalProfile (seed: int) (rotation: int) (output: string) =
     let binding = bind ()
@@ -348,12 +351,15 @@ let private lockProfile (seed: int) (rotation: int) (output: string) =
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
     let peerRange = binding.Range Work.peerName
+    let locks = Collections.Generic.List<TargetLock>()
     let workers (counter: TargetProgressCounter) =
         let gate = TargetLock()
+        locks.Add gate
         [| { Work = guarded counter gate 40UL 20UL; PaymentIp = fst selectedRange }
            { Work = guarded counter gate 40UL 20UL; PaymentIp = fst peerRange } |]
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Throughput throughputDuration)) journalCapacity workers
-    writeProfile "lock-profile" seed rotation 40 20 throughputDuration profile output
+    let stats = locks |> Seq.map (fun l -> box {| entries = l.Entries; waitedEntries = l.WaitedEntries; handoffNs = l.HandoffNs |}) |> Seq.toArray
+    writeProfileWith "lock-profile" seed rotation 40 20 throughputDuration (box stats) profile output
 
 let private plainLock selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
@@ -378,7 +384,8 @@ let private plainLock selectedRounds peerRounds (output: string) =
     let elapsed = Stopwatch.GetElapsedTime(Array.min started, Array.max finished).TotalNanoseconds
     let visits = counter.Visits
     write output {| mode = "plain-lock"; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
-                    elapsedNs = uint64 elapsed; visits = visits; passed = visits >= 100L |}
+                    elapsedNs = uint64 elapsed; visits = visits; entries = gate.Entries; waitedEntries = gate.WaitedEntries; handoffNs = gate.HandoffNs
+                    passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
 let private plainPipeline selectedRounds peerRounds (output: string) =

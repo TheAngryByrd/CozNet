@@ -1,6 +1,8 @@
 import unittest
 
-from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, order_ratios, positions_balanced,
+from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, handoff_shares, lock_stats_complete,
+                                  order_ratios,
+                                  positions_balanced,
                                   prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
 
 
@@ -162,6 +164,40 @@ class RotationChecks(unittest.TestCase):
         value["experiments"][3]["Threads"] = []
         ratios = order_ratios(value)
         self.assertEqual((len(ratios), value["experiments"][3]["Order"] in ratios), (6, False))
+
+
+class HandoffChecks(unittest.TestCase):
+    def test_handoff_share_divides_by_elapsed_time(self):
+        value = record()
+        for e in value["experiments"]:
+            e["ElapsedNs"] = 1000
+        value["lockStats"] = [{"handoffNs": 900}] + [{"handoffNs": 10 * (e["Order"] + 1)} for e in sorted(value["experiments"], key=lambda e: e["Order"])]
+        point = next(e for e in value["experiments"] if e["Candidate"] == SELECTED_NAME and e["Speedup"] == 50)
+        shares = handoff_shares(value, {"elapsedNs": 1000, "handoffNs": 30}, SELECTED_NAME, 50)
+        self.assertEqual(shares, [10 * (point["Order"] + 1) / 1000, 0.03])
+
+    def test_lock_stats_must_cover_warmup_experiments_and_plain_arms(self):
+        value = record()
+        stat = {"entries": 1, "waitedEntries": 0, "handoffNs": 0}
+        value["lockStats"] = [dict(stat) for _ in range(8)]
+        arms = {"profile": value, "original": dict(stat), "selected-25": dict(stat)}
+        self.assertTrue(lock_stats_complete(value, arms))
+        value["lockStats"].pop()
+        self.assertFalse(lock_stats_complete(value, arms), "One entry per experiment and the warm-up is required.")
+        value["lockStats"].append(dict(stat))
+        del arms["original"]["handoffNs"]
+        self.assertFalse(lock_stats_complete(value, arms), "Each plain arm must hold its handoff counts.")
+
+    def test_a_treatment_stat_without_handoff_fails_the_check_that_guards_the_share(self):
+        value = record()
+        value["lockStats"] = [{"entries": 1, "waitedEntries": 0, "handoffNs": 0} for _ in range(8)]
+        del value["lockStats"][3]["handoffNs"]
+        self.assertFalse(lock_stats_complete(value, {"profile": value}))
+        value["lockStats"][3]["handoffNs"] = "x"
+        self.assertFalse(lock_stats_complete(value, {"profile": value}))
+
+    def test_missing_lock_stats_give_no_share(self):
+        self.assertIsNone(handoff_shares(record(), {"elapsedNs": 1, "handoffNs": 1}, SELECTED_NAME, 50))
 
 
 class ThroughputChecks(unittest.TestCase):
