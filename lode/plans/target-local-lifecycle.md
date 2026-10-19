@@ -20,7 +20,7 @@ Samples in moved code would then earn no credit and pay nowhere, and the predict
 - `CodeBinding.verify lines binding` repeats the capture and requires the same ranges.
 - `TargetLocalProfiler.runBound` checks configuration, captures, runs, and verifies. A failure sets `BindingError` and makes `Passed` false.
 
-ReJIT is not supported. A ReJIT version writes a new perf-map entry, so `verify` detects it, but no check produces one.
+ReJIT is not supported. A ReJIT version writes a new perf-map entry, so `verify` detects it. [The ReJIT check](target-local-rejit.md) produces one with a test profiler and shows that the run fails.
 
 ## Shutdown
 

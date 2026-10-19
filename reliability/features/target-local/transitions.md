@@ -1,6 +1,6 @@
 # Target-local forced-GC transitions
 
-Evidence: `artifacts/target-local-transitions/20261019T014043978-f7a0ddbc`.
+Evidence: `artifacts/target-local-transitions/20261019T020010673-c0788652`.
 
 `TargetLocalTransitionsVerify` ran `profile-gc 50 6000 3000 5` ten times in the Linux x64 container.
 The run records kernel `5.15.153.1-microsoft-standard-WSL2`, x64, with 4 CPUs. Earlier transition runs did not record the host.
@@ -8,25 +8,25 @@ While at least one profiled thread is in its work phase, the main thread forces 
 The criteria are in [the transition plan](../../../lode/plans/target-local-transitions.md). The runner hashes that file, and all source hashes stay unchanged.
 The sample runs through the checked library entry point `TargetLocalProfiler.runBound` with a `CodeBinding`. `native/WriteTargetLocalEvidence.py` writes this page.
 
-**Result: the current check fails.** 9 of 10 runs pass. Failed criteria: run 7: exit or record, 2 ms debt bound.
+**Result: the current check passes.** Earlier failed checks stay part of the evidence.
 
 | Run | Passed | Ledger failure | Max observed debt (ns) | Forced GCs in work window | Max handler (ns) | Wall minus counted CPU (ms) | Epochs complete, zero loss |
 | ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
-| 1 | Yes | None | 949,967 | 19 | 1,504,061 | 5.7 | Yes |
-| 2 | Yes | None | 999,981 | 19 | 1,503,896 | 6.1 | Yes |
-| 3 | Yes | None | 999,993 | 19 | 1,503,697 | 6.0 | Yes |
-| 4 | Yes | None | 999,995 | 19 | 1,504,809 | 6.6 | Yes |
-| 5 | Yes | None | 1,099,736 | 20 | 1,505,000 | 8.9 | Yes |
-| 6 | Yes | None | 1,000,000 | 19 | 1,504,480 | 6.6 | Yes |
-| 7 | No | `debt_exceeded` | replay rejected | 19 | 2,009,373 | 16.8 | Yes |
-| 8 | Yes | None | 1,000,000 | 19 | 1,506,292 | 6.9 | Yes |
-| 9 | Yes | None | 949,975 | 20 | 1,503,835 | 5.9 | Yes |
-| 10 | Yes | None | 999,983 | 20 | 1,044,144 | 7.4 | Yes |
+| 1 | Yes | None | 949,976 | 20 | 1,007,357 | 7.6 | Yes |
+| 2 | Yes | None | 999,999 | 19 | 1,504,412 | 6.3 | Yes |
+| 3 | Yes | None | 999,973 | 19 | 1,503,790 | 6.5 | Yes |
+| 4 | Yes | None | 999,985 | 19 | 1,504,122 | 5.9 | Yes |
+| 5 | Yes | None | 999,996 | 19 | 1,504,269 | 6.5 | Yes |
+| 6 | Yes | None | 949,941 | 20 | 1,504,208 | 7.1 | Yes |
+| 7 | Yes | None | 949,941 | 19 | 1,506,522 | 6.3 | Yes |
+| 8 | Yes | None | 999,969 | 20 | 1,504,395 | 6.4 | Yes |
+| 9 | Yes | None | 949,982 | 19 | 1,494,845 | 7.2 | Yes |
+| 10 | Yes | None | 999,962 | 19 | 1,504,225 | 6.0 | Yes |
 
 No run crashed or hung. Every run closed both epochs with zero loss, retired both sessions, and restored the handlers.
 The `cleanup` check passes. A profile whose monitor throws raises `AggregateException`, and a second profile in the same process then passes.
 The `barrier-abort` check passes. A worker that throws releases its waiting peer, the run fails within 10 s, and a second profile then passes.
-The longest handler interval is 2,009,373 ns. Each failed run keeps its journal and its replay result.
+Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,506,522 ns.
 Wall minus counted CPU is the largest per-thread difference. Counted CPU stops at disable and wall time includes the closing payment, so it is coarse.
 
 ## GC windows
@@ -37,16 +37,16 @@ A debt failure lists the window time inside the interval from the sample before 
 
 | Run | Complete | Windows | Window total | Pause total | Largest event gap | Debt failures |
 | ---: | --- | ---: | ---: | ---: | --- | --- |
-| 1 | Yes | 19 | 6.8938 ms | 5.6290 ms | worker 0: 1.8257 ms with 0.7474 ms in windows | none |
-| 2 | Yes | 19 | 7.2258 ms | 5.9820 ms | worker 0: 1.8638 ms with 0.8960 ms in windows | none |
-| 3 | Yes | 19 | 7.2746 ms | 6.1560 ms | worker 0: 2.0355 ms with 1.0633 ms in windows | none |
-| 4 | Yes | 19 | 7.8155 ms | 6.6520 ms | worker 0: 1.7457 ms with 0.8276 ms in windows | none |
-| 5 | Yes | 20 | 12.1009 ms | 10.7280 ms | worker 0: 3.6410 ms with 2.6704 ms in windows | none |
-| 6 | Yes | 19 | 8.0245 ms | 6.6410 ms | worker 0: 1.7470 ms with 0.7901 ms in windows | none |
-| 7 | Yes | 19 | 10.0469 ms | 8.8610 ms | worker 0: 8.8771 ms with 0.0000 ms in windows | worker 1: 1 windows, 0.2165 ms of 5.7482 ms |
-| 8 | Yes | 19 | 8.3934 ms | 6.9480 ms | worker 0: 2.1635 ms with 1.2145 ms in windows | none |
-| 9 | Yes | 20 | 7.2771 ms | 6.0570 ms | worker 0: 2.0854 ms with 1.5190 ms in windows | none |
-| 10 | Yes | 20 | 8.4175 ms | 6.9370 ms | worker 0: 1.8703 ms with 0.8613 ms in windows | none |
+| 1 | Yes | 20 | 8.8860 ms | 7.6470 ms | worker 0: 2.0734 ms with 1.1268 ms in windows | none |
+| 2 | Yes | 19 | 7.4748 ms | 6.2470 ms | worker 0: 2.2622 ms with 0.2184 ms in windows | none |
+| 3 | Yes | 19 | 7.6994 ms | 6.4730 ms | worker 0: 1.9225 ms with 0.9662 ms in windows | none |
+| 4 | Yes | 19 | 7.1754 ms | 5.9080 ms | worker 0: 1.8077 ms with 0.8056 ms in windows | none |
+| 5 | Yes | 19 | 8.1630 ms | 6.9850 ms | worker 0: 2.4745 ms with 0.4874 ms in windows | none |
+| 6 | Yes | 20 | 8.5365 ms | 7.1540 ms | worker 0: 2.2004 ms with 1.2303 ms in windows | none |
+| 7 | Yes | 19 | 7.8460 ms | 6.3940 ms | worker 0: 2.1986 ms with 0.2532 ms in windows | none |
+| 8 | Yes | 20 | 7.6785 ms | 6.2210 ms | worker 0: 2.1288 ms with 0.1929 ms in windows | none |
+| 9 | Yes | 19 | 8.5041 ms | 7.3080 ms | worker 0: 2.5693 ms with 1.5985 ms in windows | none |
+| 10 | Yes | 19 | 7.3692 ms | 6.0450 ms | worker 0: 2.1405 ms with 1.1887 ms in windows | none |
 
 ## Run history
 
@@ -73,7 +73,8 @@ A debt failure lists the window time inside the interval from the sample before 
 | `20261019T002340083-c152f4ca` | Start trace with the thread CPU clock | Pass, 10 of 10 |
 | `20261019T004724440-fd9cd00c` | Thread state set before the native start, criterion 27 for barrier runs | Pass, 10 of 10 |
 | `20261019T011520304-41a7c250` | Forced-GC windows | Pass, 10 of 10 |
-| `20261019T014043978-f7a0ddbc` | ReJIT detection check | Fail. run 7: exit or record, 2 ms debt bound. |
+| `20261019T014043978-f7a0ddbc` | ReJIT detection check | Fail. Run 7: 2 ms debt bound. GC windows cover 0.22 ms of the 5.75 ms failure interval. The ReJIT check passes. |
+| `20261019T020010673-c0788652` | Linux backend file split and lifecycle plan update | Pass, 10 of 10 |
 
 ## Earlier failed check
 
@@ -90,7 +91,7 @@ One hypothesis is that the host or the GC deschedules one thread. Profile result
 
 ## Consequence
 
-The passing current-design checks hold 150 runs with no failure. Five current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
+The passing current-design checks hold 160 runs with no failure. Five current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
 A thread can go without samples long enough to break the 2 ms debt bound. The cause is unknown.
 GC-heavy workloads stay outside the supported model. The debt bound stays unchanged.
 

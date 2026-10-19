@@ -65,7 +65,7 @@ The replay types are public so that the sample can use them. They are experiment
 
 ## Managed profiler
 
-`src/CozNet/TargetLocalProfiler.fs` binds the C ABI for managed programs.
+`src/CozNet/TargetLocalLinux.fs` binds the C ABI for managed programs and holds the Linux readers for run-queue delay, thread CPU time, and thread usage. `src/CozNet/TargetLocalProfiler.fs` holds the perf-map binding, `TargetBarrier`, and the run loop. The perf-map parser and the replay are portable, but `run` requires Linux x64.
 
 `PerfMap.tryRange lines symbol` returns `Ok (begin, end)` for exactly one `[Optimized]` perf-map entry that contains `symbol`.
 It ignores entries with a zero size, an overflow, or a field that is not hexadecimal. Zero or several matches return `Error`.

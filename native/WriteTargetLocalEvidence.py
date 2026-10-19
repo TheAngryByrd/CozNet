@@ -36,6 +36,7 @@ PREDICTION_HISTORY = [
     ("20261019T004805873-c97ab2e5", "Same", "Thread state set before the native start, criterion 27 for barrier runs",
      "Fail. Criterion 26: one of 60 setup segments takes 0.60 ms, with a median of 0.0049 ms. All 15 blocks are within the limits."),
     ("20261019T011552600-3ac91378", "Same", "Forced-GC windows", "Pass"),
+    ("20261019T014112845-eec890b5", "Same", "ReJIT detection check", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -61,6 +62,8 @@ TRANSITION_HISTORY = [
     ("20261019T002340083-c152f4ca", "Start trace with the thread CPU clock", "Pass, 10 of 10"),
     ("20261019T004724440-fd9cd00c", "Thread state set before the native start, criterion 27 for barrier runs", "Pass, 10 of 10"),
     ("20261019T011520304-41a7c250", "Forced-GC windows", "Pass, 10 of 10"),
+    ("20261019T014043978-f7a0ddbc", "ReJIT detection check",
+     "Fail. Run 7: 2 ms debt bound. GC windows cover 0.22 ms of the 5.75 ms failure interval. The ReJIT check passes."),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -88,6 +91,7 @@ BARRIER_HISTORY = [
     ("20261019T002531212-f435da11", "Start trace with the thread CPU clock", "Fail. Criterion 14: all 300 wait values are zero. All 15 blocks are within the limits, and 27 of 60 whole-run delays are above zero."),
     ("20261019T004925668-914e6b56", "Thread state set before the native start, criterion 27 for barrier runs", "Pass"),
     ("20261019T011713329-52b0bbca", "Forced-GC windows", "Pass"),
+    ("20261019T014236242-6440bd58", "ReJIT detection check", "Pass"),
 ]
 
 

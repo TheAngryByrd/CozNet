@@ -29,7 +29,7 @@ flowchart LR
 ## Integration
 
 - `native/service/TargetLocalApi.Linux.cpp` exports a C ABI over `LinuxTargetSession<TargetCreditSink>`.
-- `src/CozNet/TargetLocalProfiler.fs` binds the ABI, resolves perf-map ranges, and runs a fork/join profile with managed replay. The sample uses it.
+- `src/CozNet/TargetLocalLinux.fs` binds the ABI and holds the Linux run-queue and thread-usage readers. `src/CozNet/TargetLocalProfiler.fs` resolves perf-map ranges and runs a fork/join profile with managed replay. The sample uses it.
 - The managed program reads method ranges from the runtime perf map, with tiering and ReadyToRun disabled.
   The selected span is the selected method. The eligible spans are both work methods.
 - Each worker thread registers itself, runs, closes its epoch, settles, retires, and copies its own journal. The main thread replays all journals.

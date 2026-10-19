@@ -187,6 +187,16 @@ The transition run fails by forced-GC run 7, which breaks the 2 ms debt bound. I
 - The peer has 9.14 ms of whole-run run-queue delay, with no waits and no start delay. That is consistent with a run-queue wait in the gap, but the records do not place it.
 So forced collections cover at most 0.22 ms of this failure interval. The records do not establish its cause, and the failure stays.
 In the same run, the selected thread has an 8.88 ms event gap from 8.44 ms to 17.31 ms with no window and 8.11 ms of whole-run run-queue delay. It records no debt failure there.
-The lifecycle plan still says that no check produces a ReJIT. It is hashed by the transition runner, so it changes only with the next run.
+The lifecycle plan said that no check produces a ReJIT until the next run, because the transition runner hashes it.
+
+## Linux backend file
+
+The native ABI binding and the Linux readers moved unchanged from `src/CozNet/TargetLocalProfiler.fs` to `src/CozNet/TargetLocalLinux.fs`.
+`TargetLocalProfiler.fs` keeps the perf-map binding, `TargetBarrier`, and the run loop. The lifecycle plan now names the ReJIT check.
+All three suites pass on that tree:
+- Transition run `20261019T020010673-c0788652` passes 10 of 10, with complete GC windows and every lifecycle check, including ReJIT.
+- Prediction run `20261019T020044104-92e8b8b1` passes all three configurations, with median differences of 0.93 to 1.95 points.
+- Barrier run `20261019T020204625-4ef1deb4` passes all three patterns, with median differences of 0.94 to 1.32 points.
+  Its largest `barrier` start segment is 5.04 ms, against 0.47 and 0.52 ms in earlier runs. No criterion covers that segment, and no profile arm records a debt failure.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).
