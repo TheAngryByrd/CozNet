@@ -380,4 +380,36 @@ Two runs fail by one debt failure each. Criterion 77 gives these values:
 The lock run then has 4 valid blocks, so every point fails criterion 62. In the four valid blocks, `selected-50` is below the real gain in each block, from -1.67 to -8.71 points, with a median of 8.32 points.
 Spin lock run `20261019T090601089-7d489720` fails, because block 4 is invalid: `peer` at 75% has 98 visits. So each point has 4 valid blocks.
 
+## Failure context
+
+[The failure context plan](target-local-failure-context.md) keeps the journal events and a summary for each worker in the 10 ms before each failure.
+Throughput run `20261019T094241716-2243c889`, latency profile run `20261019T094341955-4375de13`, transition run `20261019T094438941-7638b960`, and barrier run `20261019T094627976-f1d19c78` pass.
+
+Pipeline run `20261019T094141941-f8894fe3` fails. Block 5 is invalid, and `peer-50` also fails by one valid block of -11.12 points, in block 3.
+In block 5, the `selected` experiment at 75% records ledger failure 1 at 3.97 ms. Criterion 80 gives these values:
+- Worker 1, the consumer, fails with 2.25 ms of debt. Its window holds 13 events.
+- Neither worker has a child payment in the window.
+- The consumer blocks at its first event, 3.97 ms before the failure, on the empty queue.
+- Worker 0, the producer, posts its first item 3.06 ms before the failure, with token 0.
+- The producer then publishes three times, raising the global delay to 0.75 ms, 1.50 ms, and 2.25 ms. Its last publish is 0.89 ms before the failure.
+- The consumer records its wake 3.5 microseconds before the failure, with token 0 and a skip of 0. Token 0 is that of the first post, 3.06 ms earlier.
+The journal wake is an accounting event, not the time at which the kernel woke the thread. The consumer has 3.73 ms of whole-run run-queue delay, and the records do not place it in those 3.06 ms.
+No overshooting payment exists in this window, so the overshoot question of the plan does not apply to this failure.
+The skip is 0 because of the release-token rule of [the blocking plan](target-local-blocking.md): a woken thread skips only up to the token of its release. By that plan, Coz skips the global delay that is added during the wait, which here is 2.25 ms.
+
+Prediction run `20261019T094506888-d9c14620` fails `peer-longer` by one valid block of -12.57 points, in block 5, and `selected-dominant` by one invalid block.
+- In block 5 of `selected-dominant`, the speedup profile records ledger failure 1 on the peer, with 5.50 ms of debt, 10.57 ms after the first journal event.
+- The failure comes 13.4 microseconds after the first sample of the peer, at its first recorded settlement, and 0.99 ms after its work start.
+- The peer has 10.57 ms of start run-queue delay. The global delay is 5.00 ms at its work start and 5.50 ms at the failure. The prediction runner does not record the context fields, so these values come from the raw journal of that record.
+- This is a startup debt failure. No wake is involved.
+
+Three other runs fail without a debt failure:
+- Semaphore run `20261019T093837289-67cf3f9e` fails `selected-50` with a median of 5.09 points and `selected-75` with 5.41. All ten of those blocks are below the real gain.
+- Lock run `20261019T093943719-10b7cd71` fails `selected-50` with a median of 6.09 points and one block of -12.53 points.
+- Spin lock run `20261019T094042685-1d761439` fails, because block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` also fails by its median of 8.59 points.
+
+In both debt failures, the other thread adds global delay before the failing thread next settles its debt, at its start or at its wake. At that settlement, its debt is above 2 ms.
+For the pipeline failure, the release-token rule sets the skip to 0, and the 2 ms bound then turns the debt into a failure. For the startup failure, the bound alone turns the debt into a failure.
+The records do not show whether the thread ran before that settlement in the pipeline case. A change to the wake rule or to the bound needs a decision, because both are fixed requirements.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

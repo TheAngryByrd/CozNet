@@ -132,7 +132,11 @@ A `TargetCausalThread` holds `CpuNs`, `WallNs`, `HandlerNs`, `PaymentNs` (the su
 `CpuNs` stops when the native finish disables counting. `WallNs` runs from the work start to the end of the native finish. A throughput experiment counts every visit from the first work start to the last finish.
 `Failures` holds one `TargetCausalFailure` for each `Failure` event of the journal: `Worker`, `Detail`, `DebtNs` (the event amount), `TimeNs` (from the first journal event with a time), and `GapNs` and `PreviousKind` (from the previous event of the same worker with a time, in sequence order).
 The list follows the journal sequence. `GapNs` can be negative, because a buffered sample can have an earlier time than the event before it.
-Some native failures carry no time. Their `TimeNs` and `GapNs` are null, and `PreviousKind` is empty. A failure without a previous timed event of its worker also has a null `GapNs`.
+The window of a failure holds the timed journal events of all workers that come before it in sequence and no more than 10 ms before it in time. `ContextEvents` counts them.
+`Context` holds the 64 latest events of the window. Each `TargetCausalContextEvent` has `Worker`, `Kind`, `ObservedGlobal`, `LocalBefore`, `Amount`, `Requested`, `Detail`, and `OffsetNs` from the failure.
+An event of another worker can have a positive `OffsetNs`, because the ledger takes its time before its sequence.
+`Workers` holds one `TargetCausalWorkerContext` for each worker over the whole window: `Events`, `Children`, `FailedChildren` (children whose wait failed), `MeasuredNs` and `RequestedNs` of all children, `MaxOvershootNs` and `MaxOvershootOffsetNs` of the completed child with the largest measured minus requested time, `Publishes`, and `LastPublishLocal`, `LastPublishObserved`, and `LastPublishOffsetNs`. A missing child or publish gives null values.
+Some native failures carry no time. Their `TimeNs` and `GapNs` are null, and `PreviousKind` is empty. A failure without a previous timed event of its worker also has a null `GapNs`. A failure without a time has an empty window.
 `Collections` and `GcPauseNs` are the change of `GC.CollectionCount(0)` and of `GC.GetTotalPauseDuration()` across the experiment, after its forced collection. They count all threads of the process. An experiment that raises an exception records -1 for both.
 
 ## Code binding

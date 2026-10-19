@@ -68,7 +68,7 @@ def timing_consistent(record):
 WARMUP_KEYS = ("Block", "Order", "Candidate", "Speedup", "ElapsedNs", "GlobalNs", "EffectiveNs", "Visits", "Threads", "Passed", "Error")
 
 
-FAILURE_KEYS = ("Worker", "Detail", "DebtNs", "TimeNs", "GapNs", "PreviousKind")
+FAILURE_KEYS = ("Worker", "Detail", "DebtNs", "TimeNs", "GapNs", "PreviousKind", "ContextEvents", "Context", "Workers")
 
 
 def failed_experiments(record):

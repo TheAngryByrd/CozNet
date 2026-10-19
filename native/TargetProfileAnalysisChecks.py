@@ -253,7 +253,10 @@ class ThroughputChecks(unittest.TestCase):
         self.assertEqual((args["profile"], args["selected-25"], args["peer-75"]), ("semaphore-profile 20261018 0", "plain-semaphore 18 12", "plain-semaphore 24 3"))
 
     def test_failed_experiments_keep_their_failures_and_gc_values(self):
-        failure = {"Worker": 1, "Detail": 1, "DebtNs": 2100000, "TimeNs": 3200, "GapNs": 2500, "PreviousKind": "Wake"}
+        failure = {"Worker": 1, "Detail": 1, "DebtNs": 2100000, "TimeNs": 3200, "GapNs": 2500, "PreviousKind": "Wake",
+                   "ContextEvents": 1, "Context": [{"Worker": 0, "Kind": "Child", "ObservedGlobal": 10, "LocalBefore": 5, "Amount": 900, "Requested": 500, "Detail": 0, "OffsetNs": -400}],
+                   "Workers": [{"Worker": 0, "Events": 1, "Children": 1, "FailedChildren": 0, "MeasuredNs": 900, "RequestedNs": 500, "MaxOvershootNs": 400, "MaxOvershootOffsetNs": -400,
+                                "Publishes": 0, "LastPublishLocal": None, "LastPublishObserved": None, "LastPublishOffsetNs": None}]}
         record = {"experiments": [{"Candidate": "a", "Speedup": 75, "Order": 3, "Passed": False, "Error": "replay", "Collections": 2, "GcPauseNs": 900,
                                    "Failures": [failure], "Threads": [{"CpuNs": 1, "WallNs": 2, "RunDelayNs": 0, "HandlerNs": 5}]},
                                   {"Candidate": "a", "Speedup": 0, "Order": 0, "Passed": True, "Failures": []}],

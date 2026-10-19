@@ -28,6 +28,32 @@ type TargetCausalThread = {
     RunDelayNs: int64
 }
 
+type TargetCausalContextEvent = {
+    Worker: int
+    Kind: string
+    ObservedGlobal: uint64
+    LocalBefore: uint64
+    Amount: uint64
+    Requested: uint64
+    Detail: uint32
+    OffsetNs: int64
+}
+
+type TargetCausalWorkerContext = {
+    Worker: int
+    Events: int
+    Children: int
+    FailedChildren: int
+    MeasuredNs: uint64
+    RequestedNs: uint64
+    MaxOvershootNs: Nullable<int64>
+    MaxOvershootOffsetNs: Nullable<int64>
+    Publishes: int
+    LastPublishLocal: Nullable<uint64>
+    LastPublishObserved: Nullable<uint64>
+    LastPublishOffsetNs: Nullable<int64>
+}
+
 type TargetCausalFailure = {
     Worker: int
     Detail: uint32
@@ -35,6 +61,9 @@ type TargetCausalFailure = {
     TimeNs: Nullable<int64>
     GapNs: Nullable<int64>
     PreviousKind: string
+    ContextEvents: int
+    Context: TargetCausalContextEvent array
+    Workers: TargetCausalWorkerContext array
 }
 
 type TargetCausalGc = { Collections: int; PauseNs: int64 }
@@ -248,17 +277,49 @@ module TargetCausalProfile =
               Wakes = wakes[index]
               RunDelayNs = outcome.RunDelayNs })
 
+    let internal contextWindowNs = 10_000_000L
+    let internal contextLimit = 64
+
     let internal failures (result: TargetProfileResult) =
         let timed = result.Events |> Array.filter (fun e -> e.Time > 0UL)
         let origin = if timed.Length = 0 then 0UL else timed |> Array.minBy _.Time |> _.Time
         let last = Collections.Generic.Dictionary<int, TargetLedgerEvent>()
-        [| for e in result.Events |> Array.sortBy _.Sequence do
+        let ordered = result.Events |> Array.sortBy _.Sequence
+        let window (failure: TargetLedgerEvent) =
+            if failure.Time = 0UL then Array.empty
+            else ordered |> Array.filter (fun e -> e.Sequence < failure.Sequence && e.Time > 0UL && int64 e.Time - int64 failure.Time >= -contextWindowNs)
+        let offset (failure: TargetLedgerEvent) (e: TargetLedgerEvent) = int64 e.Time - int64 failure.Time
+        let context failure (events: TargetLedgerEvent array) =
+            events[max 0 (events.Length - contextLimit) ..]
+            |> Array.map (fun e -> { Worker = e.Worker; Kind = string e.Kind; ObservedGlobal = e.ObservedGlobal; LocalBefore = e.LocalBefore; Amount = e.Amount
+                                     Requested = e.Requested; Detail = e.Detail; OffsetNs = offset failure e })
+        let workers failure (events: TargetLedgerEvent array) =
+            events
+            |> Array.groupBy _.Worker
+            |> Array.sortBy fst
+            |> Array.map (fun (worker, mine) ->
+                let children = mine |> Array.filter (fun e -> e.Kind = TargetLedgerEventKind.Child)
+                let over = children |> Array.filter (fun e -> e.Detail = 0u) |> Array.sortBy (fun e -> -(int64 e.Amount - int64 e.Requested), e.Sequence) |> Array.tryHead
+                let last = mine |> Array.filter (fun e -> e.Kind = TargetLedgerEventKind.Publish) |> Array.tryLast
+                { Worker = worker; Events = mine.Length; Children = children.Length; FailedChildren = children |> Array.filter (fun e -> e.Detail <> 0u) |> Array.length
+                  MeasuredNs = children |> Array.sumBy _.Amount; RequestedNs = children |> Array.sumBy _.Requested
+                  MaxOvershootNs = (match over with Some e -> Nullable(int64 e.Amount - int64 e.Requested) | None -> Nullable())
+                  MaxOvershootOffsetNs = (match over with Some e -> Nullable(offset failure e) | None -> Nullable())
+                  Publishes = mine |> Array.filter (fun e -> e.Kind = TargetLedgerEventKind.Publish) |> Array.length
+                  LastPublishLocal = (match last with Some e -> Nullable e.Amount | None -> Nullable())
+                  LastPublishObserved = (match last with Some e -> Nullable e.ObservedGlobal | None -> Nullable())
+                  LastPublishOffsetNs = (match last with Some e -> Nullable(offset failure e) | None -> Nullable()) })
+        [| for e in ordered do
                if e.Kind = TargetLedgerEventKind.Failure then
+                   let events = window e
                    let previous = if e.Time = 0UL then None else match last.TryGetValue e.Worker with | true, p -> Some p | _ -> None
                    { Worker = e.Worker; Detail = e.Detail; DebtNs = e.Amount
                      TimeNs = (if e.Time = 0UL then Nullable() else Nullable(int64 (e.Time - origin)))
                      GapNs = (match previous with Some p -> Nullable(int64 e.Time - int64 p.Time) | None -> Nullable())
-                     PreviousKind = (match previous with Some p -> string p.Kind | None -> "") }
+                     PreviousKind = (match previous with Some p -> string p.Kind | None -> "")
+                     ContextEvents = events.Length
+                     Context = context e events
+                     Workers = workers e events }
                if e.Time > 0UL then last[e.Worker] <- e |]
 
     let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option * TargetCausalGc) (design: TargetCausalDesign) =

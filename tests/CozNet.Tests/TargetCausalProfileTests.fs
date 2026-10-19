@@ -272,6 +272,46 @@ module TargetCausalProfileTests =
                 Expect.isEmpty (TargetCausalProfile.failures { value with Events = Array.empty }) "An experiment without events must have no failure."
             }
 
+            test "a failure keeps the latest events of all workers within 10 ms before it" {
+                let event worker sequence kind time amount requested = { Worker = worker; Sequence = sequence; Kind = kind; ObservedGlobal = sequence * 10UL; LocalBefore = sequence * 5UL
+                                                                         Amount = amount; Requested = requested; Ip = 0UL; Detail = 0u; Time = time }
+                let early = event 0 1UL TargetLedgerEventKind.Sample 1_000_000UL 0UL 0UL
+                let child = event 1 2UL TargetLedgerEventKind.Child 15_000_000UL 900_000UL 500_000UL
+                let publish = event 1 3UL TargetLedgerEventKind.Publish 15_100_000UL 0UL 0UL
+                let untimed = event 1 4UL TargetLedgerEventKind.Deferred 0UL 0UL 0UL
+                let late = event 0 6UL TargetLedgerEventKind.Sample 16_000_000UL 0UL 0UL
+                let own = event 0 4UL TargetLedgerEventKind.Sample 15_200_000UL 0UL 0UL
+                let stamped = event 1 5UL TargetLedgerEventKind.Child 15_600_000UL 40_000UL 50_000UL
+                let long = event 1 10UL TargetLedgerEventKind.Child 15_300_000UL 1_000_000UL 950_000UL
+                let broken = { (event 1 11UL TargetLedgerEventKind.Child 15_350_000UL 3_000_000UL 50_000UL) with Detail = 1u }
+                let untimed = { untimed with Sequence = 7UL }
+                let failure = { (event 0 12UL TargetLedgerEventKind.Failure 15_500_000UL 2_100_000UL 0UL) with Detail = 1u }
+                let late = { late with Sequence = 13UL }
+                let value = { result 100UL false with Events = [| late; failure; broken; long; stamped; publish; untimed; own; early; child |] }
+                let found = TargetCausalProfile.failures value |> Array.exactlyOne
+                Expect.equal (found.Context |> Array.map (fun c -> c.Worker, c.Kind, c.ObservedGlobal, c.LocalBefore, c.Amount, c.Requested, c.Detail, c.OffsetNs))
+                    [| 1, "Child", 20UL, 10UL, 900_000UL, 500_000UL, 0u, -500_000L; 1, "Publish", 30UL, 15UL, 0UL, 0UL, 0u, -400_000L
+                       0, "Sample", 40UL, 20UL, 0UL, 0UL, 0u, -300_000L; 1, "Child", 50UL, 25UL, 40_000UL, 50_000UL, 0u, 100_000L
+                       1, "Child", 100UL, 50UL, 1_000_000UL, 950_000UL, 0u, -200_000L; 1, "Child", 110UL, 55UL, 3_000_000UL, 50_000UL, 1u, -150_000L |]
+                    "The context must keep the earlier timed events of all workers within 10 ms, in sequence order, with every field."
+                Expect.equal found.ContextEvents 6 "The failure must count the events in its window."
+                Expect.equal (found.Workers |> Array.map (fun w -> w.Worker, w.Events, w.Children, w.FailedChildren, w.MeasuredNs, w.RequestedNs, w.MaxOvershootNs, w.MaxOvershootOffsetNs, w.Publishes))
+                    [| 0, 1, 0, 0, 0UL, 0UL, Nullable(), Nullable(), 0; 1, 5, 4, 1, 4_940_000UL, 1_550_000UL, Nullable 400_000L, Nullable -500_000L, 1 |]
+                    "Each worker must summarize its window, with the completed child of the largest overshoot, not the longest or a failed child."
+                Expect.equal (found.Workers[1].LastPublishLocal, found.Workers[1].LastPublishObserved, found.Workers[1].LastPublishOffsetNs) (Nullable 0UL, Nullable 30UL, Nullable -400_000L)
+                    "Each worker must keep its last publish."
+                let many = [| for i in 1..70 -> event (i % 2) (uint64 i) (if i <= 6 then TargetLedgerEventKind.Child else TargetLedgerEventKind.Sample) (14_000_000UL + uint64 i) (if i = 3 then 700UL else 0UL) 0UL |]
+                let crowded = { result 100UL false with Events = Array.append many [| { failure with Sequence = 71UL } |] }
+                let crowdedFailure = TargetCausalProfile.failures crowded |> Array.exactlyOne
+                let kept = crowdedFailure.Context
+                Expect.equal (kept.Length, kept[0].ObservedGlobal, (Array.last kept).ObservedGlobal) (64, 70UL, 700UL) "The context must keep only the 64 latest events."
+                Expect.equal (crowdedFailure.ContextEvents, crowdedFailure.Workers |> Array.sumBy _.Events) (70, 70) "The count and the worker summaries must cover the whole window."
+                Expect.equal (crowdedFailure.Workers |> Array.map (fun w -> w.Worker, w.Children, w.MeasuredNs, w.MaxOvershootNs)) [| 0, 3, 0UL, Nullable 0L; 1, 3, 700UL, Nullable 700L |]
+                    "The worker summaries must include children outside the 64 kept events."
+                let blind = { result 100UL false with Events = [| child; { failure with Time = 0UL } |] }
+                Expect.isEmpty (TargetCausalProfile.failures blind |> Array.exactlyOne).Context "A failure without a time must have no context."
+            }
+
             test "an experiment keeps its failures and GC values, and a thrown experiment marks them unknown" {
                 let design =
                     TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 EndToEnd
