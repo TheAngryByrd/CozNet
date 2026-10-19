@@ -168,6 +168,34 @@ def handoff_shares(profile, plain, candidate, speedup):
     return [profiled, real]
 
 
+QUEUE_KEYS = ("handoffs", "handoffNs")
+
+
+def queue_stats_complete(profile, arms):
+    stats = profile.get("queueStats") if isinstance(profile, dict) else None
+    if not isinstance(stats, list) or len(stats) != len(profile["experiments"]) + 1:
+        return False
+    plain = [v for k, v in arms.items() if k != "profile" and v is not None]
+    runs = [profile["warmup"]] + profile["experiments"] if isinstance(profile.get("warmup"), dict) else None
+    if runs is None or not all(isinstance(s, dict) and all(type(s.get(k)) is int and s[k] >= 0 for k in QUEUE_KEYS) for s in stats):
+        return False
+    if not all(s["handoffs"] == e.get("Visits") for s, e in zip(stats, [runs[0]] + sorted(runs[1:], key=lambda e: e.get("Order", 0))) if e.get("Passed")):
+        return False
+    return all(all(type(v.get(k)) is int and v[k] >= 0 for k in QUEUE_KEYS) and v["handoffs"] == v.get("visits") for v in plain)
+
+
+def queue_handoffs(profile, plain, candidate, speedup):
+    stats = profile.get("queueStats") if isinstance(profile, dict) else None
+    experiments = profile.get("experiments") if isinstance(profile, dict) else None
+    if not isinstance(stats, list) or not isinstance(experiments, list) or len(stats) != len(experiments) + 1:
+        return None
+    point = next((e for e in experiments if e["Speedup"] == speedup and (speedup == 0 or e["Candidate"] == candidate)), None)
+    if point is None:
+        return None
+    mean = lambda s: s["handoffNs"] / s["handoffs"] if s.get("handoffs") else None
+    return [mean(stats[point["Order"] + 1]), mean(plain) if plain else None]
+
+
 def driver_matches(record):
     points = record.get("points")
     expected = sorted((name, s) for name in CANDIDATES.values() for s in SPEEDUPS)
@@ -251,6 +279,8 @@ def main():
             reasons.append("the profile record does not hold its warm-up experiment")
         elif workload in ("lock", "spinlock") and not lock_stats_complete(profile, data):
             reasons.append("a lock record does not hold its handoff counts")
+        elif workload == "transaction" and not queue_stats_complete(profile, data):
+            reasons.append("a transaction record does not hold its queue handoffs")
         elif workload == "transaction" and not latency_counts_complete(profile, data):
             reasons.append("a transaction record does not hold its arrivals and latency, or its arrivals differ from its departures")
         reasons += [f"{arm} not passed" for arm, value in data.items() if value is not None and not value.get("passed")]
@@ -265,8 +295,12 @@ def main():
                 points[key] = {"predicted": predicted, "actual": actual, "workRatios": work_ratios(profile, name, speedup) if complete else None,
                                "handoffShares": handoff_shares(profile, optimized, name, speedup)
                                if complete and workload in ("lock", "spinlock") and lock_stats_complete(profile, data) else None,
+                               "queueHandoffNs": queue_handoffs(profile, optimized, name, speedup)
+                               if complete and workload == "transaction" and queue_stats_complete(profile, data) else None,
                                "difference": None if predicted is None or actual is None else predicted - actual}
         blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "points": points,
+                       "baselineQueueHandoffNs": queue_handoffs(profile, data["original"], None, 0)
+                       if complete and workload == "transaction" and queue_stats_complete(profile, data) else None,
                        "orderRatios": order_ratios(profile) if complete else {},
                        "warmupPassed": profile["warmup"]["Passed"] if isinstance(profile, dict) and warmup_present(profile) else None,
                        "failedExperiments": failed_experiments(profile),
@@ -290,6 +324,8 @@ def main():
                 "medianWorkRatios": [statistics.median(r[i] for r in rows) for i in range(2)] if rows else None,
                 "medianHandoffShares": [statistics.median(h[i] for h in shares) for i in range(2)] if (shares := [b["points"][key]["handoffShares"] for b in valid
                     if b["points"][key].get("handoffShares") and None not in b["points"][key]["handoffShares"]]) else None,
+                "medianQueueHandoffNs": [statistics.median(h[i] for h in queued) for i in range(2)] if (queued := [b["points"][key]["queueHandoffNs"] for b in valid
+                    if b["points"][key].get("queueHandoffNs") and None not in b["points"][key]["queueHandoffNs"]]) else None,
                 "passed": point_passed})
     balanced = positions_balanced(blocks)
     warmups = all(b["warmupPassed"] is True for b in blocks)

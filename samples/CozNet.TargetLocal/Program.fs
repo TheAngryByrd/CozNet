@@ -275,17 +275,17 @@ let private profileDesign binding seed rotation progress =
     TargetCausalDesign.tryCreate binding period [| Work.selectedName; Work.peerName |] [| Work.selectedName; Work.peerName |] [| 25u; 50u; 75u |] 1 seed rotation progress
     |> Result.defaultWith (fun errors -> failwith (errors |> List.map TargetCausalDesign.describe |> String.concat " "))
 
-let private writeProfileWith mode seed (rotation: int) selectedRounds peerRounds durationMs (lockStats: obj) (profile: TargetCausalProfileResult) (output: string) =
+let private writeProfileWith mode seed (rotation: int) selectedRounds peerRounds durationMs (lockStats: obj) (queueStats: obj) (profile: TargetCausalProfileResult) (output: string) =
     let passed = profile.Experiments.Length = 7 && profile.Experiments |> Array.forall _.Passed
     let points =
         profile.Points
         |> Array.map (fun p -> {| candidate = p.Candidate; speedup = p.Speedup; prediction = p.Predictions[0] |> Option.toNullable |})
     write output {| mode = mode; seed = seed; rotation = rotation; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = durationMs
-                    warmup = profile.Warmup; experiments = profile.Experiments; points = points; lockStats = lockStats; passed = passed |}
+                    warmup = profile.Warmup; experiments = profile.Experiments; points = points; lockStats = lockStats; queueStats = queueStats; passed = passed |}
     if passed then 0 else 1
 
 let private writeProfile mode seed rotation selectedRounds peerRounds durationMs profile output =
-    writeProfileWith mode seed rotation selectedRounds peerRounds durationMs null profile output
+    writeProfileWith mode seed rotation selectedRounds peerRounds durationMs null null profile output
 
 let private causalProfile (seed: int) (rotation: int) (output: string) =
     let binding = bind ()
@@ -361,7 +361,7 @@ let private lockProfileWith (mode: string) (spin: TimeSpan) (seed: int) (rotatio
            { Work = guarded counter gate 40UL 20UL; PaymentIp = fst peerRange } |]
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Throughput throughputDuration)) journalCapacity workers
     let stats = locks |> Seq.map (fun l -> box {| entries = l.Entries; waitedEntries = l.WaitedEntries; handoffNs = l.HandoffNs |}) |> Seq.toArray
-    writeProfileWith mode seed rotation 40 20 throughputDuration (box stats) profile output
+    writeProfileWith mode seed rotation 40 20 throughputDuration (box stats) null profile output
 
 let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
@@ -390,20 +390,31 @@ let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRou
                     passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
-let private beginTransactions (counter: TargetProgressCounter) (queue: TargetQueue<int64>) rounds () =
+type private QueueHandoffs() =
+    let mutable handoffs = 0L
+    let mutable handoffTicks = 0L
+    member _.Add(enqueued: int64, dequeued: int64) =
+        Interlocked.Increment(&handoffs) |> ignore
+        Interlocked.Add(&handoffTicks, max 0L (dequeued - enqueued)) |> ignore
+    member _.Handoffs = Interlocked.Read(&handoffs)
+    member _.HandoffNs = uint64 (Stopwatch.GetElapsedTime(0L, Interlocked.Read(&handoffTicks)).TotalNanoseconds)
+
+let private beginTransactions (counter: TargetProgressCounter) (queue: TargetQueue<struct (int64 * int64)>) rounds () =
     while not counter.Stopped do
         let ticket = counter.Begin()
         Work.selected rounds |> ignore
-        queue.Enqueue ticket
-    queue.Enqueue -1L
+        queue.Enqueue(struct (ticket, Stopwatch.GetTimestamp()))
+    queue.Enqueue(struct (-1L, 0L))
 
-let private endTransactions (counter: TargetProgressCounter) (queue: TargetQueue<int64>) rounds () =
+let private endTransactions (counter: TargetProgressCounter) (handoffs: QueueHandoffs) (queue: TargetQueue<struct (int64 * int64)>) rounds () =
     let mutable running = true
     while running do
-        let ticket = queue.Dequeue()
+        let struct (ticket, enqueued) = queue.Dequeue()
+        let dequeued = Stopwatch.GetTimestamp()
         if ticket < 0L then
             running <- false
         else
+            handoffs.Add(enqueued, dequeued)
             Work.peer rounds |> ignore
             counter.End ticket
 
@@ -411,18 +422,23 @@ let private transactionProfile (seed: int) (rotation: int) (output: string) =
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
     let peerRange = binding.Range Work.peerName
+    let queues = Collections.Generic.List<QueueHandoffs>()
     let workers (counter: TargetProgressCounter) =
-        let queue = TargetQueue<int64> pipelineCapacity
+        let queue = TargetQueue<struct (int64 * int64)> pipelineCapacity
+        let handoffs = QueueHandoffs()
+        queues.Add handoffs
         [| { Work = beginTransactions counter queue 40UL; PaymentIp = fst selectedRange }
-           { Work = endTransactions counter queue 8UL; PaymentIp = fst peerRange } |]
+           { Work = endTransactions counter handoffs queue 8UL; PaymentIp = fst peerRange } |]
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Latency throughputDuration)) journalCapacity workers
-    writeProfile "transaction-profile" seed rotation 40 8 throughputDuration profile output
+    let stats = queues |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs |}) |> Seq.toArray
+    writeProfileWith "transaction-profile" seed rotation 40 8 throughputDuration null (box stats) profile output
 
 let private plainTransaction selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
     let counter = TargetProgressCounter()
-    let queue = TargetQueue<int64> pipelineCapacity
+    let queue = TargetQueue<struct (int64 * int64)> pipelineCapacity
+    let handoffs = QueueHandoffs()
     let ready = new Barrier(3)
     let started = Array.zeroCreate<int64> 2
     let finished = Array.zeroCreate<int64> 2
@@ -432,7 +448,7 @@ let private plainTransaction selectedRounds peerRounds (output: string) =
             started[index] <- Stopwatch.GetTimestamp()
             body ()
             finished[index] <- Stopwatch.GetTimestamp())
-    let threads = [| run 0 (beginTransactions counter queue selectedRounds); run 1 (endTransactions counter queue peerRounds) |]
+    let threads = [| run 0 (beginTransactions counter queue selectedRounds); run 1 (endTransactions counter handoffs queue peerRounds) |]
     threads |> Array.iter _.Start()
     ready.SignalAndWait()
     Thread.Sleep throughputDuration
@@ -441,7 +457,8 @@ let private plainTransaction selectedRounds peerRounds (output: string) =
     let elapsed = Stopwatch.GetElapsedTime(Array.min started, Array.max finished).TotalNanoseconds
     let visits = counter.Visits
     write output {| mode = "plain-transaction"; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
-                    elapsedNs = uint64 elapsed; visits = visits; arrivals = counter.Arrivals; latencyNs = counter.LatencyNs; passed = visits >= 100L |}
+                    elapsedNs = uint64 elapsed; visits = visits; arrivals = counter.Arrivals; latencyNs = counter.LatencyNs
+                    handoffs = handoffs.Handoffs; handoffNs = handoffs.HandoffNs; passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
 type private Turns() =

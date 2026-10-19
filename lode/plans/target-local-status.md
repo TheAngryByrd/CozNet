@@ -466,4 +466,34 @@ The other suites on the same tree:
 - Semaphore run `20261019T113503667-76dc9109` fails `selected-50` with a median of 5.43 points and `selected-75` with 6.21. All ten of those blocks are below the real gain.
 - Spin lock run `20261019T113703476-df6944a8` fails, because block 4 is invalid: `peer` at 75% has 95 visits. `selected-75` also fails by its median of 6.93 points.
 
+## Transaction handoff
+
+[The transaction handoff plan](target-local-transaction-handoff.md) records the queue handoff of each item in the transaction suite.
+Transaction run `20261019T121118409-e589636a` fails two points. All five blocks are valid, the positions are balanced, and all three `peer` points pass.
+- `selected-25` fails with a median of 7.58 points, and `selected-50` with 10.07 points. The median predictions are above the median real gains.
+- Criterion 90 holds: every block holds the handoff counts, and each count equals the departures.
+
+Criterion 91 gives these values for the baseline of each block:
+
+| Block | Mean wall latency, profile baseline | Mean wall latency, plain original | Gap | Mean handoff, profile baseline | Mean handoff, plain original | Gap |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 858 us | 1031 us | 173 us | 51 us | 212 us | 161 us |
+| 2 | 866 us | 1010 us | 144 us | 49 us | 207 us | 159 us |
+| 3 | 891 us | 995 us | 104 us | 38 us | 189 us | 151 us |
+| 4 | 877 us | 1010 us | 133 us | 62 us | 206 us | 143 us |
+| 5 | 859 us | 1038 us | 179 us | 53 us | 203 us | 150 us |
+
+Over the five blocks, the median mean handoff is 51.34 microseconds in the profile baseline and 205.60 in the plain original arm.
+The median wall-latency gap is 144 microseconds, and the median handoff gap is 151. So the two median gaps are close. In single blocks, the wall-latency gap minus the handoff gap ranges from -47 to +29 microseconds.
+The records do not show why a plain handoff is slower. The hypothesis of the plan stays not shown.
+If the real arms keep this extra handoff, a real optimization that removes the same time from a transaction gives a smaller gain in percent than the prediction. This is consistent with the predictions above the real gains.
+
+The other suites on the same tree:
+- Throughput run `20261019T121628106-2be55ac2`, latency profile run `20261019T121727927-5e679245`, prediction run `20261019T121854888-ee18e87d`, and barrier run `20261019T122016119-859682da` pass.
+- Transition run `20261019T121826636-adddad30` fails 1 of 10. Run 7 breaks the 2 ms debt bound on worker 1. Two GC windows cover 0.84 ms of its 6.51 ms failure interval.
+- Pipeline run `20261019T121528493-e18bd4fd` fails `peer-75` with a median of 6.62 points and one block of -10.53 points.
+- Lock run `20261019T121327119-d95b4f14` fails `selected-50` with a median of 6.84 points, with every block below the real gain, `selected-75` by one block of 12.51 points, and `peer-25` by one block of -15.85 points.
+- Semaphore run `20261019T121226146-ac4f2bea` fails `selected-50` with a median of 6.60 points and `selected-75` with 5.27.
+- Spin lock run `20261019T121428141-2d666768` has 5 valid blocks for the first time, and fails only `selected-75`, with a median of 6.37 points.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

@@ -1,6 +1,6 @@
 # Target-local causal profile
 
-Evidence: `artifacts/target-local-profile/20261019T114214114-cd942bc0`.
+Evidence: `artifacts/target-local-profile/20261019T121727927-5e679245`.
 
 `TargetLocalProfileVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `causal-profile` process and seven `plain` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the profile plan](../../../lode/plans/target-local-causal-p
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 24.91% | 25.14% | 1.54 pp | 2.24 pp | Pass |
-| `selected-50` | 5 / 5 | 49.49% | 49.94% | 0.77 pp | 1.15 pp | Pass |
-| `selected-75` | 5 / 5 | 48.58% | 49.89% | 1.84 pp | 3.91 pp | Pass |
-| `peer-25` | 5 / 5 | 0.68% | -0.51% | 2.10 pp | 2.53 pp | Pass |
-| `peer-50` | 5 / 5 | 0.17% | 0.92% | 1.47 pp | 2.95 pp | Pass |
-| `peer-75` | 5 / 5 | -0.70% | 0.09% | 2.34 pp | 2.96 pp | Pass |
+| `selected-25` | 5 / 5 | 25.75% | 24.48% | 2.85 pp | 3.18 pp | Pass |
+| `selected-50` | 5 / 5 | 49.38% | 49.33% | 1.84 pp | 5.22 pp | Pass |
+| `selected-75` | 5 / 5 | 47.84% | 50.69% | 2.27 pp | 4.55 pp | Pass |
+| `peer-25` | 5 / 5 | 0.77% | 0.38% | 1.60 pp | 3.16 pp | Pass |
+| `peer-50` | 5 / 5 | -1.45% | 1.72% | 3.44 pp | 5.12 pp | Pass |
+| `peer-75` | 5 / 5 | -1.11% | 0.67% | 1.78 pp | 2.24 pp | Pass |
 
 The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 1.000, 0.989 |
-| `selected-50` | 0.997, 0.996 |
-| `selected-75` | 1.012, 1.010 |
-| `peer-25` | 0.993, 0.989 |
-| `peer-50` | 0.998, 1.002 |
-| `peer-75` | 1.007, 1.001 |
+| `selected-25` | 0.988, 1.001 |
+| `selected-50` | 1.007, 1.000 |
+| `selected-75` | 1.034, 1.046 |
+| `peer-25` | 0.992, 1.005 |
+| `peer-50` | 1.014, 1.009 |
+| `peer-75` | 1.011, 1.038 |
 
-The median work ratio by run order in the process is order 0: 1.005, 1.012; order 1: 1.018, 1.001; order 2: 0.999, 1.000; order 3: 1.003, 0.999; order 4: 1.000, 1.000; order 5: 0.997, 1.002; order 6: 0.992, 1.000. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 0.995, 1.000; order 1: 1.005, 1.005; order 2: 1.000, 1.000; order 3: 1.000, 1.000; order 4: 1.014, 1.001; order 5: 0.988, 1.013; order 6: 1.007, 1.000. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -1.54 pp | 0.77 pp | 0.57 pp | 2.10 pp | -1.39 pp | -2.34 pp |
-| 2 | Yes | -0.64 pp | -0.72 pp | -3.52 pp | -0.35 pp | 0.13 pp | 0.66 pp |
-| 3 | Yes | 1.89 pp | -1.15 pp | -3.91 pp | -0.21 pp | -1.47 pp | -2.36 pp |
-| 4 | Yes | 2.24 pp | 0.83 pp | 0.47 pp | 2.53 pp | 2.95 pp | 2.24 pp |
-| 5 | Yes | -0.23 pp | -0.54 pp | -1.84 pp | -2.27 pp | -1.57 pp | -2.96 pp |
+| 1 | Yes | 3.01 pp | 1.35 pp | 1.02 pp | 3.16 pp | 1.12 pp | -1.44 pp |
+| 2 | Yes | 1.67 pp | 1.84 pp | -3.44 pp | 1.13 pp | -2.03 pp | 1.01 pp |
+| 3 | Yes | -2.85 pp | -4.21 pp | -2.27 pp | 0.39 pp | -3.44 pp | -1.78 pp |
+| 4 | Yes | 1.66 pp | 1.19 pp | -0.43 pp | -1.60 pp | -3.81 pp | -1.91 pp |
+| 5 | Yes | -3.18 pp | -5.22 pp | -4.55 pp | -2.75 pp | -5.12 pp | -2.24 pp |
 
 ## Run history
 
@@ -68,6 +68,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T094341955-4375de13` | Failure context | Pass |
 | `20261019T110709359-b184c519` | Latency progress points | Pass |
 | `20261019T114214114-cd942bc0` | Per-transaction virtual latency | Pass |
+| `20261019T121727927-5e679245` | Transaction queue handoff | Pass |
 
 ## Limits
 

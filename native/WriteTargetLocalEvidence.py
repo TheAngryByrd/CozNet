@@ -1,5 +1,6 @@
 """Write the target-local prediction and transition evidence pages from retained run directories."""
 import json
+import statistics
 import pathlib
 import sys
 
@@ -51,6 +52,7 @@ PREDICTION_HISTORY = [
     ("20261019T091027391-fbd17a7d", "Same", "Failure and GC records", "Pass"),
     ("20261019T094506888-d9c14620", "Same", "Failure context", "Fail. `peer-longer` has one block of -12.57 points, and `selected-dominant` block 5 is invalid from a startup debt failure."),
     ("20261019T110837795-78ce6bcb", "Same", "Latency progress points", "Pass"),
+    ("20261019T114345641-a76a3c68", "Same", "Per-transaction virtual latency", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -92,6 +94,7 @@ TRANSITION_HISTORY = [
     ("20261019T090959282-d4b0da38", "Failure and GC records", "Pass, 10 of 10"),
     ("20261019T094438941-7638b960", "Failure context", "Pass, 10 of 10"),
     ("20261019T110806692-b4b671d5", "Latency progress points", "Pass, 10 of 10"),
+    ("20261019T114316513-16ceb9b8", "Per-transaction virtual latency", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -135,6 +138,7 @@ BARRIER_HISTORY = [
     ("20261019T091147974-ff48eb23", "Failure and GC records", "Pass"),
     ("20261019T094627976-f1d19c78", "Failure context", "Pass"),
     ("20261019T111000032-74adbcce", "Latency progress points", "Fail. `barrier-peer-bound` median 5.10 points."),
+    ("20261019T114508965-bf1d556a", "Per-transaction virtual latency", "Pass"),
 ]
 
 
@@ -670,6 +674,7 @@ PROFILE_HISTORY = [
     ("20261019T090901082-03de2f25", "Failure and GC records", "Fail. Block 3 is invalid: `selected` at 25% records ledger failure 1, with no collection and no run-queue delay."),
     ("20261019T094341955-4375de13", "Failure context", "Pass"),
     ("20261019T110709359-b184c519", "Latency progress points", "Pass"),
+    ("20261019T114214114-cd942bc0", "Per-transaction virtual latency", "Pass"),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
@@ -684,15 +689,18 @@ THROUGHPUT_HISTORY = [
     ("20261019T090759533-41316f2b", "Failure and GC records", "Pass"),
     ("20261019T094241716-2243c889", "Failure context", "Pass"),
     ("20261019T110611005-2a35600a", "Latency progress points", "Pass"),
+    ("20261019T113911746-669e1783", "Per-transaction virtual latency", "Fail. `peer-75` has one block of -10.54 points."),
 ]
 TRANSACTION_HISTORY = [
     ("20261019T110105861-414dba20", "First transaction profile run", "Fail. All six points fail. The real gains follow the model, but the `peer` predictions stay near 5% at each speedup."),
+    ("20261019T113356248-f1cbfddc", "Per-transaction virtual latency", "Fail. `selected-50` median 7.09 points and `peer-25` median 5.47 points. The other four points pass."),
 ]
 SEMAPHORE_HISTORY = [
     ("20261019T082323819-903a6cef", "First semaphore profile run", "Fail. `selected-75` has one block of -10.61 points, and `peer-75` median 5.24 points."),
     ("20261019T090345985-b2474637", "Failure and GC records", "Pass"),
     ("20261019T093837289-67cf3f9e", "Failure context", "Fail. `selected-50` median 5.09 points and `selected-75` median 5.41 points."),
     ("20261019T110212880-744018ed", "Latency progress points", "Fail. Five points fail: four by one block each, and `peer-50` by two blocks."),
+    ("20261019T113503667-76dc9109", "Per-transaction virtual latency", "Fail. `selected-50` median 5.43 points and `selected-75` median 6.21 points."),
 ]
 SPINLOCK_HISTORY = [
     ("20261019T074539772-03c40325", "First spin lock profile run", "Fail. Blocks 4 and 5 are invalid: `peer` at 75% has 97 and 98 visits. In the three valid blocks, `selected-50` has a median of 1.77 points, and `selected-75` fails at 6.87 points."),
@@ -700,6 +708,7 @@ SPINLOCK_HISTORY = [
     ("20261019T090601089-7d489720", "Failure and GC records", "Fail. Block 4 is invalid: `peer` at 75% has 98 visits."),
     ("20261019T094042685-1d761439", "Failure context", "Fail. Block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` median 8.59 points."),
     ("20261019T110413189-a8e4bb89", "Latency progress points", "Fail. Block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` median 7.87 points."),
+    ("20261019T113703476-df6944a8", "Per-transaction virtual latency", "Fail. Block 4 is invalid: `peer` at 75% has 95 visits. `selected-75` median 6.93 points."),
 ]
 LOCK_HISTORY = [
     ("20261019T062708436-df83442b", "First lock profile run", "Fail. `selected-50` median 9.13 points, all five blocks below the actual gain. `peer-25` has one block of 11.87 points."),
@@ -709,6 +718,7 @@ LOCK_HISTORY = [
     ("20261019T090501903-273c483d", "Failure and GC records", "Fail. Block 4 is invalid: `peer` at 75% records ledger failure 1. In the four valid blocks, `selected-50` median 8.32 points."),
     ("20261019T093943719-10b7cd71", "Failure context", "Fail. `selected-50` median 6.09 points with one block of -12.53 points."),
     ("20261019T110313420-3292dd51", "Latency progress points", "Pass"),
+    ("20261019T113602781-8f0b3de1", "Per-transaction virtual latency", "Fail. Five points fail. `selected-50` median 7.49 points, `selected-75` median 5.67 points, and the three `peer` points by block 5."),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
@@ -722,6 +732,7 @@ PIPELINE_HISTORY = [
     ("20261019T090700489-b82b1791", "Failure and GC records", "Pass"),
     ("20261019T094141941-f8894fe3", "Failure context", "Fail. Block 5 is invalid from a debt failure after a wake with a skip of 0, and `peer-50` has one block of -11.12 points."),
     ("20261019T110512150-9b6ceb9a", "Latency progress points", "Pass"),
+    ("20261019T113807687-40ce0fab", "Per-transaction virtual latency", "Pass"),
 ]
 
 
@@ -777,6 +788,14 @@ def profile(root, run, change, kind="target-local-profile"):
                     "| Block | Experiment | Failing worker | Window events | Worker | Events | Children | Child time | Largest overshoot | Publishes | Last publish |\n"
                     "| ---: | --- | ---: | ---: | ---: | ---: | ---: | --- | --- | ---: | --- |\n"
                     + "\n".join(context_rows)) if context_rows else ""
+    us = lambda v: f"{v / 1e3:.1f} us" if isinstance(v, (int, float)) else "n/a"
+    queue_rows = "\n".join(f"| `{p['point']}` | {us(p['medianQueueHandoffNs'][0])} | {us(p['medianQueueHandoffNs'][1])} |" for p in summary["points"] if p.get("medianQueueHandoffNs"))
+    base = [b["baselineQueueHandoffNs"] for b in summary["blocks"] if b.get("valid") and b.get("baselineQueueHandoffNs") and None not in b["baselineQueueHandoffNs"]]
+    base_row = f"| baseline | {us(statistics.median(x[0] for x in base))} | {us(statistics.median(x[1] for x in base))} |\n" if base else ""
+    queue_text = ("\n\n## Queue handoff\n\nThe handoff of an item is the time from just before its enqueue to the return of the dequeue that takes it. "
+                  "The table gives the median over valid blocks of the mean handoff, in the profile experiment and in the real arm. The baseline row compares the profile baseline with the plain original arm, and it is the only row that compares equal measures. "
+                  "At a speedup above 0, a profiled handoff also includes the delay that the producer pays in `Enqueue`. At every point, the handoff also includes the time that an item waits in the queue.\n\n"
+                  "| Point | Median mean handoff, profile | Median mean handoff, real arm |\n| --- | ---: | ---: |\n" + base_row + queue_rows) if queue_rows else ""
     ratios = "\n".join(f"| `{p['point']}` | {ratio(p)} |" for p in summary["points"])
     warmup_values = [b.get("warmupPassed") for b in summary["blocks"]]
     if not all("warmupPassed" in b for b in summary["blocks"]):
@@ -851,7 +870,7 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 The median work ratio by run order in the process is {order_text}. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in {warmups}.
 
-{handoff_text}{failure_text}{context_text}
+{handoff_text}{queue_text}{failure_text}{context_text}
 
 ## Blocks
 

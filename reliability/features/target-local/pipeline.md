@@ -1,6 +1,6 @@
 # Target-local pipeline profile
 
-Evidence: `artifacts/target-local-pipeline/20261019T113807687-40ce0fab`.
+Evidence: `artifacts/target-local-pipeline/20261019T121528493-e18bd4fd`.
 
 `TargetLocalPipelineVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `pipeline-profile` process and seven `plain-pipeline` processes in a random order.
@@ -8,16 +8,16 @@ The profile process runs `TargetCausalProfile.run` with candidates `Work.selecte
 The criteria are in [the queue plan](../../../lode/plans/target-local-queue.md). The runner hashes that file, and all source hashes stay unchanged.
 `native/WriteTargetLocalEvidence.py` writes this page.
 
-**Result: the current run passes.**
+**Result: the current run fails.** Points peer-75 fail, or a run-level criterion fails. The run is kept, and no rerun replaces it.
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 25.84% | 23.95% | 3.05 pp | 3.88 pp | Pass |
-| `selected-50` | 5 / 5 | 49.32% | 49.81% | 1.45 pp | 2.46 pp | Pass |
-| `selected-75` | 5 / 5 | 49.25% | 48.29% | 0.95 pp | 2.75 pp | Pass |
-| `peer-25` | 5 / 5 | 1.64% | 1.38% | 3.26 pp | 8.57 pp | Pass |
-| `peer-50` | 5 / 5 | 0.27% | 0.59% | 3.12 pp | 4.53 pp | Pass |
-| `peer-75` | 5 / 5 | 3.52% | 1.25% | 4.39 pp | 7.81 pp | Pass |
+| `selected-25` | 5 / 5 | 24.32% | 24.87% | 1.58 pp | 4.42 pp | Pass |
+| `selected-50` | 5 / 5 | 49.40% | 49.94% | 2.07 pp | 2.55 pp | Pass |
+| `selected-75` | 5 / 5 | 48.92% | 47.45% | 1.35 pp | 4.06 pp | Pass |
+| `peer-25` | 5 / 5 | -2.10% | 1.88% | 2.27 pp | 7.95 pp | Pass |
+| `peer-50` | 5 / 5 | -2.45% | 0.87% | 3.67 pp | 5.48 pp | Pass |
+| `peer-75` | 5 / 5 | -1.58% | 3.07% | 6.62 pp | 10.53 pp | Fail |
 
 The producer is the bottleneck, so the model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. Above 50%, the consumer sets the rate.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.984, 0.860 |
-| `selected-50` | 0.990, 0.520 |
-| `selected-75` | 1.227, 0.507 |
-| `peer-25` | 0.984, 1.095 |
-| `peer-50` | 1.001, 1.248 |
-| `peer-75` | 0.966, 1.341 |
+| `selected-25` | 1.002, 0.872 |
+| `selected-50` | 0.995, 0.533 |
+| `selected-75` | 1.213, 0.511 |
+| `peer-25` | 1.020, 1.147 |
+| `peer-50` | 1.024, 1.278 |
+| `peer-75` | 1.023, 1.386 |
 
-The median work ratio by run order in the process is order 0: 1.014, 1.000; order 1: 0.984, 1.000; order 2: 1.008, 1.000; order 3: 0.990, 1.085; order 4: 0.981, 1.000; order 5: 1.001, 0.838; order 6: 0.995, 0.878. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.024, 1.000; order 1: 1.012, 1.000; order 2: 1.000, 1.000; order 3: 1.013, 1.154; order 4: 1.000, 1.000; order 5: 1.032, 0.876; order 6: 1.000, 0.872. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | 3.88 pp | 0.66 pp | 1.85 pp | 3.87 pp | 2.82 pp | 1.47 pp |
-| 2 | Yes | -0.71 pp | -1.67 pp | -0.60 pp | -3.26 pp | -4.53 pp | -4.39 pp |
-| 3 | Yes | 3.83 pp | 2.46 pp | 2.75 pp | 8.57 pp | 3.12 pp | 6.95 pp |
-| 4 | Yes | 1.95 pp | -1.39 pp | 0.95 pp | 1.35 pp | 4.44 pp | -7.81 pp |
-| 5 | Yes | 3.05 pp | -1.45 pp | 0.31 pp | -1.87 pp | -2.56 pp | 2.85 pp |
+| 1 | Yes | -1.14 pp | -2.55 pp | -0.82 pp | -7.95 pp | -5.08 pp | -7.39 pp |
+| 2 | Yes | 1.91 pp | 0.68 pp | 4.06 pp | -2.27 pp | 3.67 pp | -2.06 pp |
+| 3 | Yes | 4.42 pp | -2.34 pp | -0.23 pp | -2.98 pp | -2.94 pp | -6.62 pp |
+| 4 | Yes | -1.58 pp | -2.07 pp | -1.35 pp | -1.57 pp | -5.48 pp | -10.53 pp |
+| 5 | Yes | 0.85 pp | 0.35 pp | 2.24 pp | 1.43 pp | -0.97 pp | 1.18 pp |
 
 ## Run history
 
@@ -66,6 +66,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T094141941-f8894fe3` | Failure context | Fail. Block 5 is invalid from a debt failure after a wake with a skip of 0, and `peer-50` has one block of -11.12 points. |
 | `20261019T110512150-9b6ceb9a` | Latency progress points | Pass |
 | `20261019T113807687-40ce0fab` | Per-transaction virtual latency | Pass |
+| `20261019T121528493-e18bd4fd` | Transaction queue handoff | Fail. Points peer-75 fail, or a run-level criterion fails. |
 
 ## Limits
 
