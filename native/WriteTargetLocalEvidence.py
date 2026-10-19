@@ -37,6 +37,7 @@ PREDICTION_HISTORY = [
      "Fail. Criterion 26: one of 60 setup segments takes 0.60 ms, with a median of 0.0049 ms. All 15 blocks are within the limits."),
     ("20261019T011552600-3ac91378", "Same", "Forced-GC windows", "Pass"),
     ("20261019T014112845-eec890b5", "Same", "ReJIT detection check", "Pass"),
+    ("20261019T020044104-92e8b8b1", "Same", "Linux backend file split and lifecycle plan update", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -64,6 +65,7 @@ TRANSITION_HISTORY = [
     ("20261019T011520304-41a7c250", "Forced-GC windows", "Pass, 10 of 10"),
     ("20261019T014043978-f7a0ddbc", "ReJIT detection check",
      "Fail. Run 7: 2 ms debt bound. GC windows cover 0.22 ms of the 5.75 ms failure interval. The ReJIT check passes."),
+    ("20261019T020010673-c0788652", "Linux backend file split and lifecycle plan update", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -92,6 +94,7 @@ BARRIER_HISTORY = [
     ("20261019T004925668-914e6b56", "Thread state set before the native start, criterion 27 for barrier runs", "Pass"),
     ("20261019T011713329-52b0bbca", "Forced-GC windows", "Pass"),
     ("20261019T014236242-6440bd58", "ReJIT detection check", "Pass"),
+    ("20261019T020204625-4ef1deb4", "Linux backend file split and lifecycle plan update", "Pass"),
 ]
 
 
@@ -613,12 +616,72 @@ See [the blocking plan](../../../lode/plans/target-local-blocking.md) and [the A
 """
 
 
+PROFILE_HISTORY = []
+
+
+def profile(root, run, change):
+    directory = root / "artifacts/target-local-profile" / run
+    summary, manifest = load(directory / "summary.json"), load(directory / "manifest.json")
+    if not summary["inputsUnchanged"]:
+        raise SystemExit("The profile run changed its inputs.")
+    check_history(root, "target-local-profile", PROFILE_HISTORY, run)
+    kernel, cpus = host(directory)
+    rows = "\n".join(f"| `{p['point']}` | {p['validBlocks']} / 5 | {pct(p['medianPredicted'])} | {pct(p['medianActual'])} | "
+                     f"{pct(p['medianAbsoluteDifference'], suffix=' pp')} | {pct(p['maxAbsoluteDifference'], suffix=' pp')} | {'Pass' if p['passed'] else 'Fail'} |"
+                     for p in summary["points"])
+    blocks = "\n".join(f"| {b['block']} | {'Yes' if b['valid'] else 'No: ' + '; '.join(b['reasons'])} | "
+                       + " | ".join(pct(b['points'][k]['difference'], suffix=' pp') if b['points'][k]['difference'] is not None else "n/a" for k in
+                                    ("selected-25", "selected-50", "selected-75", "peer-25", "peer-50", "peer-75")) + " |"
+                       for b in summary["blocks"])
+    failed = [p["point"] for p in summary["points"] if not p["passed"]]
+    current = "Pass" if summary["passed"] else f"Fail. Points {', '.join(failed) or 'none'} fail, or a run-level criterion fails."
+    verdict = "**Result: the current run passes.**" if summary["passed"] else f"**Result: the current run fails.** {current[6:]} The run is kept, and no rerun replaces it."
+    history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in PROFILE_HISTORY + [(run, change, current)])
+    return f"""# Target-local causal profile
+
+Evidence: `artifacts/target-local-profile/{run}`.
+
+`TargetLocalProfileVerify` ran {manifest["blocks"]} blocks in the Linux x64 container, with kernel `{kernel}`, x64, and {cpus} CPUs.
+Each block runs one `causal-profile` process and seven `plain` processes in a random order.
+The profile process runs `TargetCausalProfile.run` with candidates `Work.selected` and `Work.peer` at speedups 25, 50, and 75. The selected thread runs 6000 rounds and the peer 3000.
+The criteria are in [the profile plan](../../../lode/plans/target-local-causal-profile.md). The runner hashes that file, and all source hashes stay unchanged.
+`native/WriteTargetLocalEvidence.py` writes this page.
+
+{verdict}
+
+| Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+{rows}
+
+The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
+
+## Blocks
+
+| Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+{blocks}
+
+## Run history
+
+| Run | Change before the run | Result |
+| --- | --- | --- |
+{history}
+
+## Limits
+
+The progress point is the end of the workload. Throughput progress points are not supported.
+The profile covers CPU-bound fork/join threads on Linux x64. CLR safety outside this workload is not established.
+"""
+
+
 def main():
     root = pathlib.Path(__file__).resolve().parent.parent
     out = root / "reliability/features/target-local"
     pages = {"prediction.md": prediction(root, sys.argv[1], sys.argv[3]), "transitions.md": transitions(root, sys.argv[2], sys.argv[3])}
     if len(sys.argv) > 5:
         pages["barrier.md"] = barrier(root, sys.argv[4], sys.argv[5])
+    if len(sys.argv) > 7:
+        pages["profile.md"] = profile(root, sys.argv[6], sys.argv[7])
     for name, text in pages.items():
         (out / name).write_text(text, newline="\n")
 

@@ -30,6 +30,21 @@ Your program must match the [supported model](../Explanations/target-local-predi
 7. Check that `zero.Passed` and `half.Passed` are true. Do not use a result that did not pass. A `BindingError` means that the code moved during the run.
 8. Compute the predicted reduction as `1.0 - float half.EffectiveNs / float zero.EffectiveNs`.
 
+To compare several candidates and speedups in one process, call `TargetCausalProfile.run`:
+
+   ```fsharp
+   let workerSet () = [|
+       { Work = (fun () -> Work.parse 1000 |> ignore); PaymentIp = fst (binding.Range parse) }
+       { Work = (fun () -> Work.index 1000 |> ignore); PaymentIp = fst (binding.Range index) }
+   |]
+   let design =
+       TargetCausalDesign.tryCreate binding 1000000UL [| parse; index |] [| parse; index |] [| 25u; 50u; 75u |] 5 42
+       |> Result.defaultWith (fun errors -> failwith (errors |> List.map TargetCausalDesign.describe |> String.concat " "))
+   let profile = TargetCausalProfile.run design (1u <<< 20) workerSet
+   ```
+
+Read `profile.Points`. Use only points whose `ValidBlocks` equals the block count, and keep each failed experiment from `profile.Experiments`.
+
 For a phased program, create one `TargetBarrier` with one participant for each worker. Call `barrier.SignalAndWait()` at the end of each phase inside `Work`.
 
 The selected spans name the candidate code. The eligible spans name every worker method, because a thread pays delay only at an eligible address.

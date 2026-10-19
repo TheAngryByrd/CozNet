@@ -295,7 +295,7 @@ type TargetRunState internal (working: int array, threads: Thread array) =
 
 [<RequireQualifiedAccess>]
 module TargetLocalProfiler =
-    let private handlerLimit = 5000000UL
+    let internal handlerLimit = 5000000UL
 
     let isSupported () =
         OperatingSystem.IsLinux() && RuntimeInformation.ProcessArchitecture = Architecture.X64

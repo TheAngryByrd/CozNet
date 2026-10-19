@@ -1,0 +1,146 @@
+namespace CozNet.Tests
+
+open System
+open CozNet
+open Expecto
+
+module TargetCausalProfileTests =
+    let private symbols = [| "a"; "b" |]
+
+    let private binding =
+        CodeBinding.tryCapture [ "0x1000 10 a[Optimized]"; "0x2000 10 b[Optimized]" ] symbols |> Result.defaultWith failwith
+
+    let private designOf eligible candidates speedups blocks seed =
+        TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks seed
+        |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
+
+    let private result effective passed : TargetProfileResult =
+        { ElapsedNs = effective + 10UL; GlobalNs = 10UL; EffectiveNs = effective; Experiment = TargetExperimentResult(); CloseCode = 0
+          Threads = Array.empty; Events = Array.empty; Replay = Error "unused"; BindingError = (if passed then None else Some "moved"); Passed = passed }
+
+    let private summary : TargetReplaySummary =
+        { GlobalDelay = 10UL; Locals = Array.empty; SelectedSamples = 0UL; Credited = 0UL; Publishes = 0; Children = 0; MeasuredPayment = 0UL
+          Deferred = 0; Failures = 0; MaxObservedDebt = 0UL; Blocks = 0; DependencyWakes = 0; SkippedDelay = 0UL }
+
+    let private profile run blocks =
+        TargetCausalProfile.runWith run (designOf symbols symbols [| 25u; 50u |] blocks 7)
+
+    [<Tests>]
+    let tests =
+        testList "target causal profile" [
+            test "each block runs one baseline and each candidate at each speedup once" {
+                let calls = Collections.Generic.List<string * uint32>()
+                let value = profile (fun c s -> calls.Add((c, s)); result 100UL true) 3
+                for block in 1..3 do
+                    let arms = value.Experiments |> Array.filter (fun e -> e.Block = block)
+                    Expect.equal (arms |> Array.map _.Order) [| 0..4 |] $"Block {block} must record its run order."
+                    Expect.equal (arms |> Array.filter (fun e -> e.Speedup = 0u) |> Array.length) 1 $"Block {block} must hold one baseline."
+                    Expect.equal (arms |> Array.filter (fun e -> e.Speedup > 0u) |> Array.map (fun e -> e.Candidate, e.Speedup) |> Array.sort)
+                        [| "a", 25u; "a", 50u; "b", 25u; "b", 50u |] $"Block {block} must hold each point once."
+                Expect.equal calls.Count 15 "Each experiment must run once."
+            }
+
+            test "the same seed gives the same order and another seed can differ" {
+                let order seed =
+                    (TargetCausalProfile.runWith (fun _ _ -> result 100UL true) (designOf symbols symbols [| 25u; 50u; 75u |] 4 seed)).Experiments
+                    |> Array.map (fun e -> e.Candidate, e.Speedup)
+                Expect.equal (order 7) (order 7) "A seed must fix the order."
+                Expect.notEqual (order 7) (order 8) "These two seeds must give different orders."
+            }
+
+            test "a prediction is one minus the effective duration over the block baseline" {
+                let value = profile (fun c s -> result (if s = 0u then 200UL elif c = "a" then 150UL else 200UL) true) 2
+                let point c s = value.Points |> Array.find (fun p -> p.Candidate = c && p.Speedup = s)
+                Expect.equal (point "a" 25u).Predictions [| Some 0.25; Some 0.25 |] "Candidate a must gain 25%."
+                Expect.equal (point "b" 50u).MedianPrediction (Some 0.0) "Candidate b must gain nothing."
+                Expect.equal (point "a" 50u).ValidBlocks 2 "Both blocks must be valid."
+            }
+
+            test "each block uses its own baseline and the median of an even count is the mean of the middle pair" {
+                let calls = Collections.Generic.Dictionary<int, int>()
+                let mutable block = 0
+                let run c s =
+                    if s = 0u then block <- block + 1
+                    result (if s = 0u then [| 200UL; 400UL; 100UL; 1000UL |][block - 1] else 100UL) true
+                let value = TargetCausalProfile.runWith run (designOf symbols [| "a" |] [| 25u |] 4 7)
+                let point = value.Points |> Array.exactlyOne
+                Expect.equal point.Predictions [| Some 0.5; Some 0.75; Some 0.0; Some 0.9 |] "Each block must divide by its own baseline."
+                Expect.equal point.MedianPrediction (Some 0.625) "The median of four values must be the mean of the middle two."
+            }
+
+            test "a failed run keeps its binding, replay, ledger, close, and thread errors" {
+                let failing =
+                    { result 100UL false with
+                        Replay = Error "gap"; CloseCode = 5
+                        Experiment = TargetExperimentResult(Failure = 1u)
+                        Threads = [| { RunDelayNs = 0L; StartRunDelayNs = 0L; StartTrace = Array.empty; WaitRunDelayNs = Array.empty; WaitRunDelaysDropped = 0
+                                       Result = TargetThreadResult(Complete = 1, Quiescent = 1); FinishCode = 0; Error = "work boom"; StartedTicks = 0L; FinishedTicks = 0L } |] }
+                Expect.equal (TargetCausalProfile.failure failing) "moved; replay: gap; ledger failure 1; close 5; thread 0: work boom" "Every cause must stay in the error."
+                let thread = TargetThreadResult(Complete = 1, Quiescent = 1, Lost = 2UL, MaxHandlerNs = 6000000UL)
+                let native =
+                    { result 100UL true with
+                        Passed = false; Replay = Error "gap"; Experiment = TargetExperimentResult(ForeignSignals = 3UL, SigioFallbacks = 4UL)
+                        Threads = [| { failing.Threads[0] with Error = ""; FinishCode = 9; Result = thread } |] }
+                Expect.equal (TargetCausalProfile.failure native)
+                    "replay: gap; foreign signals 3; SIGIO fallbacks 4; thread 0: finish 9; thread 0: lost 2; thread 0: handler interval 6000000 ns"
+                    "Each native cause must stay in the error."
+                let mismatch =
+                    { result 0UL true with
+                        Passed = false; GlobalNs = 11UL; Replay = Ok summary; Experiment = TargetExperimentResult(Sequences = 3UL)
+                        Threads = [| { failing.Threads[0] with Error = ""; Result = TargetThreadResult() } |] }
+                Expect.equal (TargetCausalProfile.failure mismatch)
+                    "replay global delay 10 differs from native 11; native sequences 3 differ from 0 events; effective duration 0; thread 0: incomplete epoch; thread 0: not quiescent"
+                    "Each replay and epoch cause must stay in the error."
+                Expect.equal (TargetCausalProfile.failure { result 100UL true with Passed = false; Replay = Ok summary; GlobalNs = 10UL }) "The experiment did not pass." "A run with no named cause must say so."
+            }
+
+            test "a failed experiment invalidates only its own point and block and keeps its error" {
+                let mutable count = 0
+                let run c s =
+                    count <- count + 1
+                    if c = "b" && s = 50u && count <= 5 then result 100UL false else result 100UL true
+                let value = profile run 2
+                let failed = value.Experiments |> Array.filter (fun e -> not e.Passed)
+                Expect.equal (failed |> Array.map (fun e -> e.Block, e.Candidate, e.Speedup, e.Error)) [| 1, "b", 50u, "moved; replay: unused" |] "The failure must stay in the record."
+                let point = value.Points |> Array.find (fun p -> p.Candidate = "b" && p.Speedup = 50u)
+                Expect.equal (point.Predictions, point.ValidBlocks) ([| None; Some 0.0 |], 1) "Only block 1 of that point must be invalid."
+                Expect.isTrue (value.Points |> Array.filter (fun p -> p <> point) |> Array.forall (fun p -> p.ValidBlocks = 2)) "Other points must stay valid."
+            }
+
+            test "a failed baseline invalidates every point of its block" {
+                let value = profile (fun _ s -> if s = 0u then result 100UL false else result 100UL true) 1
+                Expect.isTrue (value.Points |> Array.forall (fun p -> p.ValidBlocks = 0 && p.MedianPrediction = None)) "No point may use a failed baseline."
+            }
+
+            test "an exception in an experiment is recorded as a failed experiment" {
+                let value = profile (fun c s -> if c = "a" && s = 25u then raise (InvalidOperationException "boom") else result 100UL true) 1
+                let failed = value.Experiments |> Array.filter (fun e -> not e.Passed)
+                Expect.equal (failed |> Array.map (fun e -> e.Candidate, e.Speedup, e.Error)) [| "a", 25u, "InvalidOperationException: boom" |]
+                    "The exception type and message must stay in the record."
+            }
+
+            test "an invalid design returns each parse error and no design" {
+                let errors eligible candidates speedups blocks =
+                    match TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks 0 with
+                    | Ok _ -> []
+                    | Error values -> values
+                Expect.equal (errors symbols [| "a"; "a" |] [| 25u |] 1) [ DuplicateCandidate "a" ] "A repeated candidate must fail."
+                Expect.equal (errors symbols [| "c" |] [| 25u |] 1) [ UnboundCandidate "c"; IneligibleCandidate "c" ] "An unbound candidate must fail."
+                Expect.equal (errors [| "b" |] [| "a" |] [| 25u |] 1) [ IneligibleCandidate "a" ] "An ineligible candidate must fail."
+                Expect.equal (errors symbols symbols [| 0u; 101u |] 1) [ SpeedupOutOfRange 0u; SpeedupOutOfRange 101u ] "Each speedup must be from 1 to 100."
+                Expect.equal (errors symbols symbols [| 25u; 25u |] 1) [ DuplicateSpeedup 25u ] "A repeated speedup must fail."
+                Expect.equal (errors symbols symbols [| 25u |] 0) [ NoBlocks 0 ] "Zero blocks must fail."
+                Expect.equal (errors symbols [||] [||] 1) [ NoCandidates; NoSpeedups ] "Empty candidates and speedups must fail."
+                Expect.equal (errors [| "a"; "z" |] [| "a" |] [| 25u |] 1) [ UnboundEligible "z" ] "An unbound eligible symbol must fail."
+                Expect.isTrue
+                    (match TargetCausalDesign.tryCreate binding 0UL symbols symbols [| 25u |] 1 0 with Error [ PlanRejected _ ] -> true | _ -> false)
+                    "A period that the replay plan rejects must fail."
+            }
+
+            test "a design keeps copies of its inputs" {
+                let candidates = [| "a"; "b" |]
+                let design = designOf symbols candidates [| 25u |] 1 0
+                candidates[0] <- "b"
+                Expect.equal design.Candidates [| "a"; "b" |] "A later change to the input array must not change the design."
+            }
+        ]

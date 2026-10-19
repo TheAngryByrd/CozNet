@@ -13,6 +13,7 @@ For the start trace, the Coz thread-start rule, and why a startup debt failure s
 For the setup order before the native start and the reader freshness criterion, read [target-local start setup](plans/target-local-start-setup.md).
 For forced-GC windows and their overlap with debt failures, read [target-local GC windows](plans/target-local-gc-windows.md).
 For the ReJIT detection check and its test profiler, read [target-local ReJIT](plans/target-local-rejit.md).
+For the experiment driver and the causal profile qualification, read [target-local causal profile](plans/target-local-causal-profile.md).
 For forced-GC runtime transitions under handler payment, read [target-local transitions](plans/target-local-transitions.md).
 
 For nominal timer credit, the retained controller-preemption backlog, and the next sample-processing design, read [timer nominal credit](plans/timer-nominal-credit.md).

@@ -1,0 +1,94 @@
+import unittest
+
+from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, driver_matches, expected_args, expected_fields, prediction,
+                                  profile_complete, timing_consistent)
+
+
+def experiment(order, candidate, speedup, effective=100, passed=True):
+    return {"Block": 1, "Order": order, "Candidate": candidate, "Speedup": speedup, "EffectiveNs": effective, "ElapsedNs": effective + 7,
+            "GlobalNs": 7, "Passed": passed}
+
+
+def record(changes=None):
+    arms = [(SELECTED_NAME, 0)] + [(name, s) for name in (SELECTED_NAME, PEER_NAME) for s in SPEEDUPS]
+    experiments = [experiment(i, c, s) for i, (c, s) in enumerate(arms)]
+    for (candidate, speedup), values in (changes or {}).items():
+        next(e for e in experiments if e["Candidate"] == candidate and e["Speedup"] == speedup).update(values)
+    value = {"experiments": experiments}
+    value["points"] = [{"candidate": c, "speedup": s, "prediction": prediction(value, c, s)} for c in (SELECTED_NAME, PEER_NAME) for s in SPEEDUPS]
+    return value
+
+
+class DesignChecks(unittest.TestCase):
+    def test_fixed_design_is_complete(self):
+        self.assertTrue(profile_complete(record()))
+
+    def test_missing_experiment_is_incomplete(self):
+        value = record()
+        value["experiments"].pop()
+        self.assertFalse(profile_complete(value))
+
+    def test_second_baseline_is_incomplete(self):
+        self.assertFalse(profile_complete(record({(PEER_NAME, 75): {"Speedup": 0}})))
+
+    def test_repeated_order_is_incomplete(self):
+        self.assertFalse(profile_complete(record({(PEER_NAME, 75): {"Order": 0}})))
+
+    def test_other_block_is_incomplete(self):
+        self.assertFalse(profile_complete(record({(PEER_NAME, 75): {"Block": 2}})))
+
+    def test_arguments_name_each_arm(self):
+        args = expected_args(20261018, 2)
+        self.assertEqual((args["profile"], args["selected-75"], args["peer-25"]),
+                         ("causal-profile 20261020", "plain 1500 3000", "plain 6000 2250"))
+
+
+class PredictionChecks(unittest.TestCase):
+    def test_prediction_uses_the_block_baseline(self):
+        value = record({(SELECTED_NAME, 0): {"EffectiveNs": 200}, (SELECTED_NAME, 25): {"EffectiveNs": 150}})
+        self.assertEqual(prediction(value, SELECTED_NAME, 25), 0.25)
+
+    def test_failed_experiment_has_no_prediction(self):
+        self.assertIsNone(prediction(record({(PEER_NAME, 50): {"Passed": False}}), PEER_NAME, 50))
+
+    def test_failed_baseline_has_no_prediction(self):
+        self.assertIsNone(prediction(record({(SELECTED_NAME, 0): {"Passed": False}}), PEER_NAME, 50))
+
+
+class ConsistencyChecks(unittest.TestCase):
+    def test_written_predictions_match(self):
+        self.assertTrue(driver_matches(record({(SELECTED_NAME, 0): {"EffectiveNs": 200}})))
+
+    def test_changed_written_prediction_fails(self):
+        value = record()
+        value["points"][0]["prediction"] = 0.3
+        self.assertFalse(driver_matches(value))
+
+    def test_missing_written_point_fails(self):
+        value = record()
+        value["points"].pop()
+        self.assertFalse(driver_matches(value))
+
+    def test_duplicate_written_point_fails(self):
+        value = record()
+        value["points"][1] = dict(value["points"][0])
+        self.assertFalse(driver_matches(value))
+
+    def test_unknown_written_point_fails(self):
+        value = record()
+        value["points"][0] = {"candidate": "other", "speedup": 25, "prediction": None}
+        self.assertFalse(driver_matches(value))
+
+    def test_effective_must_be_elapsed_minus_global(self):
+        value = record()
+        self.assertTrue(timing_consistent(value))
+        value["experiments"][2]["GlobalNs"] = 8
+        self.assertFalse(timing_consistent(value))
+
+    def test_fields_name_mode_seed_and_rounds(self):
+        fields = expected_fields(20261018, 1)
+        self.assertEqual((fields["profile"]["seed"], fields["peer-75"]["peerRounds"], fields["selected-50"]["mode"]), (20261019, 750, "plain"))
+
+
+if __name__ == "__main__":
+    unittest.main()

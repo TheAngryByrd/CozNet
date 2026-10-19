@@ -21,6 +21,7 @@
     <Compile Include="TargetLocalReplay.fs" />
     <Compile Include="TargetLocalLinux.fs" />
     <Compile Include="TargetLocalProfiler.fs" />
+    <Compile Include="TargetCausalProfile.fs" />
     <Compile Include="Experiment.fs" />
     <InternalsVisibleTo Include="CozNet.Tests" />
     <InternalsVisibleTo Include="CozNet.Instrumentation" />

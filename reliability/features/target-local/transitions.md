@@ -1,6 +1,6 @@
 # Target-local forced-GC transitions
 
-Evidence: `artifacts/target-local-transitions/20261019T020010673-c0788652`.
+Evidence: `artifacts/target-local-transitions/20261019T024210440-65ed47ee`.
 
 `TargetLocalTransitionsVerify` ran `profile-gc 50 6000 3000 5` ten times in the Linux x64 container.
 The run records kernel `5.15.153.1-microsoft-standard-WSL2`, x64, with 4 CPUs. Earlier transition runs did not record the host.
@@ -12,21 +12,21 @@ The sample runs through the checked library entry point `TargetLocalProfiler.run
 
 | Run | Passed | Ledger failure | Max observed debt (ns) | Forced GCs in work window | Max handler (ns) | Wall minus counted CPU (ms) | Epochs complete, zero loss |
 | ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
-| 1 | Yes | None | 949,976 | 20 | 1,007,357 | 7.6 | Yes |
-| 2 | Yes | None | 999,999 | 19 | 1,504,412 | 6.3 | Yes |
-| 3 | Yes | None | 999,973 | 19 | 1,503,790 | 6.5 | Yes |
-| 4 | Yes | None | 999,985 | 19 | 1,504,122 | 5.9 | Yes |
-| 5 | Yes | None | 999,996 | 19 | 1,504,269 | 6.5 | Yes |
-| 6 | Yes | None | 949,941 | 20 | 1,504,208 | 7.1 | Yes |
-| 7 | Yes | None | 949,941 | 19 | 1,506,522 | 6.3 | Yes |
-| 8 | Yes | None | 999,969 | 20 | 1,504,395 | 6.4 | Yes |
-| 9 | Yes | None | 949,982 | 19 | 1,494,845 | 7.2 | Yes |
-| 10 | Yes | None | 999,962 | 19 | 1,504,225 | 6.0 | Yes |
+| 1 | Yes | None | 999,998 | 20 | 1,504,836 | 7.0 | Yes |
+| 2 | Yes | None | 949,986 | 20 | 1,035,436 | 7.8 | Yes |
+| 3 | Yes | None | 999,981 | 20 | 1,505,362 | 7.4 | Yes |
+| 4 | Yes | None | 999,989 | 19 | 1,503,620 | 7.4 | Yes |
+| 5 | Yes | None | 999,957 | 20 | 1,504,560 | 6.3 | Yes |
+| 6 | Yes | None | 999,977 | 20 | 1,504,652 | 7.6 | Yes |
+| 7 | Yes | None | 999,974 | 19 | 1,503,919 | 5.3 | Yes |
+| 8 | Yes | None | 999,998 | 20 | 1,023,525 | 7.9 | Yes |
+| 9 | Yes | None | 949,956 | 19 | 1,506,145 | 5.9 | Yes |
+| 10 | Yes | None | 999,950 | 20 | 1,006,370 | 7.3 | Yes |
 
 No run crashed or hung. Every run closed both epochs with zero loss, retired both sessions, and restored the handlers.
 The `cleanup` check passes. A profile whose monitor throws raises `AggregateException`, and a second profile in the same process then passes.
 The `barrier-abort` check passes. A worker that throws releases its waiting peer, the run fails within 10 s, and a second profile then passes.
-Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,506,522 ns.
+Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,506,145 ns.
 Wall minus counted CPU is the largest per-thread difference. Counted CPU stops at disable and wall time includes the closing payment, so it is coarse.
 
 ## GC windows
@@ -37,16 +37,16 @@ A debt failure lists the window time inside the interval from the sample before 
 
 | Run | Complete | Windows | Window total | Pause total | Largest event gap | Debt failures |
 | ---: | --- | ---: | ---: | ---: | --- | --- |
-| 1 | Yes | 20 | 8.8860 ms | 7.6470 ms | worker 0: 2.0734 ms with 1.1268 ms in windows | none |
-| 2 | Yes | 19 | 7.4748 ms | 6.2470 ms | worker 0: 2.2622 ms with 0.2184 ms in windows | none |
-| 3 | Yes | 19 | 7.6994 ms | 6.4730 ms | worker 0: 1.9225 ms with 0.9662 ms in windows | none |
-| 4 | Yes | 19 | 7.1754 ms | 5.9080 ms | worker 0: 1.8077 ms with 0.8056 ms in windows | none |
-| 5 | Yes | 19 | 8.1630 ms | 6.9850 ms | worker 0: 2.4745 ms with 0.4874 ms in windows | none |
-| 6 | Yes | 20 | 8.5365 ms | 7.1540 ms | worker 0: 2.2004 ms with 1.2303 ms in windows | none |
-| 7 | Yes | 19 | 7.8460 ms | 6.3940 ms | worker 0: 2.1986 ms with 0.2532 ms in windows | none |
-| 8 | Yes | 20 | 7.6785 ms | 6.2210 ms | worker 0: 2.1288 ms with 0.1929 ms in windows | none |
-| 9 | Yes | 19 | 8.5041 ms | 7.3080 ms | worker 0: 2.5693 ms with 1.5985 ms in windows | none |
-| 10 | Yes | 19 | 7.3692 ms | 6.0450 ms | worker 0: 2.1405 ms with 1.1887 ms in windows | none |
+| 1 | Yes | 20 | 8.6066 ms | 6.9620 ms | worker 0: 2.0581 ms with 1.1206 ms in windows | none |
+| 2 | Yes | 20 | 9.5869 ms | 8.0570 ms | worker 0: 2.0425 ms with 1.1143 ms in windows | none |
+| 3 | Yes | 20 | 9.4301 ms | 7.6880 ms | worker 0: 2.0535 ms with 1.1287 ms in windows | none |
+| 4 | Yes | 19 | 8.9703 ms | 7.4800 ms | worker 0: 1.8587 ms with 0.9163 ms in windows | none |
+| 5 | Yes | 20 | 8.0069 ms | 6.4730 ms | worker 0: 2.2816 ms with 0.4164 ms in windows | none |
+| 6 | Yes | 20 | 9.4463 ms | 7.8080 ms | worker 0: 1.8402 ms with 0.9337 ms in windows | none |
+| 7 | Yes | 19 | 6.5295 ms | 5.3920 ms | worker 0: 1.6616 ms with 0.6958 ms in windows | none |
+| 8 | Yes | 20 | 9.1028 ms | 7.8550 ms | worker 0: 2.2156 ms with 0.2003 ms in windows | none |
+| 9 | Yes | 19 | 7.3288 ms | 5.9280 ms | worker 0: 1.7169 ms with 0.7443 ms in windows | none |
+| 10 | Yes | 20 | 8.9866 ms | 7.3560 ms | worker 0: 1.8132 ms with 0.8786 ms in windows | none |
 
 ## Run history
 
@@ -75,6 +75,7 @@ A debt failure lists the window time inside the interval from the sample before 
 | `20261019T011520304-41a7c250` | Forced-GC windows | Pass, 10 of 10 |
 | `20261019T014043978-f7a0ddbc` | ReJIT detection check | Fail. Run 7: 2 ms debt bound. GC windows cover 0.22 ms of the 5.75 ms failure interval. The ReJIT check passes. |
 | `20261019T020010673-c0788652` | Linux backend file split and lifecycle plan update | Pass, 10 of 10 |
+| `20261019T024210440-65ed47ee` | Causal profile driver | Pass, 10 of 10 |
 
 ## Earlier failed check
 
@@ -91,7 +92,7 @@ One hypothesis is that the host or the GC deschedules one thread. Profile result
 
 ## Consequence
 
-The passing current-design checks hold 160 runs with no failure. Five current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
+The passing current-design checks hold 170 runs with no failure. Five current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
 A thread can go without samples long enough to break the 2 ms debt bound. The cause is unknown.
 GC-heavy workloads stay outside the supported model. The debt bound stays unchanged.
 

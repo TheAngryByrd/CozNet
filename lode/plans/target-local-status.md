@@ -199,4 +199,18 @@ All three suites pass on that tree:
 - Barrier run `20261019T020204625-4ef1deb4` passes all three patterns, with median differences of 0.94 to 1.32 points.
   Its largest `barrier` start segment is 5.04 ms, against 0.47 and 0.52 ms in earlier runs. No criterion covers that segment, and no profile arm records a debt failure.
 
+## Causal profile
+
+[The causal profile plan](target-local-causal-profile.md) adds `TargetCausalDesign.tryCreate` and `TargetCausalProfile.run`. The driver runs a seeded random design of experiments in one process.
+Profile run `20261019T024109669-c30228ca` passes all six points on its first run. Each point has 5 valid blocks.
+- `Work.selected` predicts 24.43%, 49.17%, and 48.73% at speedups 25, 50, and 75. The real optimizations give 24.74%, 50.43%, and 50.24%.
+- `Work.peer` predicts 0.38%, -1.20%, and -1.70%. The real optimizations give 1.06%, -0.11%, and 1.15%.
+- The median absolute differences are 0.96 to 3.60 points, and the largest block difference is 6.28 points.
+So the profile shows the plateau of `Work.selected` and the zero line of `Work.peer`, and real optimizations confirm both.
+
+On the same tree, transition run `20261019T024210440-65ed47ee` passes 10 of 10, and prediction run `20261019T024239257-fae8a160` passes.
+Barrier run `20261019T024401530-b69ae382` keeps all 15 blocks within the limits, but it fails criterion 26.
+One of its 60 setup segments takes 0.70 ms, with 9.3 microseconds on a CPU. Its counters record no run-queue delay, no switch, and no fault. The other 59 take at most 0.0074 ms.
+This is the second such stall. The retained records do not establish its cause. Both stalls are in block 1, in the `profile-speedup` arm, on worker 0. Two cases do not establish a pattern.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

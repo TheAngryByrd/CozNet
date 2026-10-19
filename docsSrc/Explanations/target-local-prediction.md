@@ -15,6 +15,13 @@ A real optimization gives `max(A * (1 - s), B)`. The two values agree.
 If B is larger than A, the peer is the critical thread. Both values equal B, so the profiler predicts no gain.
 This is the result that a conventional CPU profile cannot give. It shows the same selected CPU time in both cases.
 
+## Why a causal profile is not a straight line
+
+A causal profile shows the program gain for each candidate at several virtual speedups. `TargetCausalProfile.run` measures each point against a baseline in the same block.
+Take a selected thread with 6000 rounds and a peer with 3000. At 25%, the selected thread is still the critical thread, so the program gains 25%.
+At 50%, both threads finish together, so the program gains 50%. At 75%, the peer sets the end time, so the gain stays at 50%.
+A faster peer gives no gain at any speedup, because the peer is not on the critical path. A CPU profile shows neither the plateau nor the zero line. In the first qualification run, real optimizations confirm the predicted profile at all six points, within 3.6 points at the median.
+
 ## Why each thread pays its own delay
 
 Earlier CozNet backends used a managed controller to read samples and request payment.

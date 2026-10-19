@@ -527,9 +527,10 @@ let linuxPerfRingVerify _ = nativeScript "VerifyPerfRing.ps1"
 let targetLocalPredictionVerify _ = nativeScript "VerifyTargetLocalPrediction.ps1"
 let targetLocalTransitionsVerify _ = nativeScript "VerifyTargetLocalTransitions.ps1"
 let targetLocalBarrierVerify _ = nativeScript "VerifyTargetLocalBarrier.ps1"
+let targetLocalProfileVerify _ = nativeScript "VerifyTargetLocalProfile.ps1"
 
 let targetPredictionAnalysisChecks _ =
-    for script in [ "native/TargetPredictionAnalysisChecks.py"; "native/TargetGcAnalysisChecks.py" ] do
+    for script in [ "native/TargetPredictionAnalysisChecks.py"; "native/TargetGcAnalysisChecks.py"; "native/TargetProfileAnalysisChecks.py" ] do
         CreateProcess.fromRawCommand (Environment.environVarOrDefault "COZNET_PYTHON" "python") [
             rootDirectory
             </> script
@@ -1314,6 +1315,7 @@ let initTargets () =
     Target.create "TargetLocalPredictionVerify" targetLocalPredictionVerify
     Target.create "TargetLocalTransitionsVerify" targetLocalTransitionsVerify
     Target.create "TargetLocalBarrierVerify" targetLocalBarrierVerify
+    Target.create "TargetLocalProfileVerify" targetLocalProfileVerify
     Target.create "TargetPredictionAnalysisChecks" targetPredictionAnalysisChecks
     Target.create "LinuxTimerInterop" linuxTimerInterop
     Target.create "LinuxTimerManaged" linuxTimerManaged

@@ -102,6 +102,26 @@ The qualification runners hash each text source after they replace CRLF with LF,
 and the replay is valid with the native global delay and event count. An exception in `Work` makes the run fail.
 See [the how-to](../How_Tos/profile-fork-join-program.md).
 
+## Causal profile
+
+`TargetCausalDesign.tryCreate binding period eligible candidates speedups blocks seed` parses the experiment design. It returns `Ok TargetCausalDesign` or `Error` with a list of `TargetCausalDesignError` values:
+`NoCandidates`, `DuplicateCandidate`, `UnboundCandidate`, `IneligibleCandidate`, `UnboundEligible`, `NoSpeedups`, `DuplicateSpeedup`, `SpeedupOutOfRange`, `NoBlocks`, and `PlanRejected`.
+`TargetCausalDesign.describe` gives the message for one error. A design has a private representation, and it keeps copies of its input arrays.
+
+`TargetCausalProfile.run design journalCapacity workers` runs the design in one process. `workers` is a function that returns new workers for each experiment.
+Each experiment calls `TargetLocalProfiler.runBound` with one candidate as the selected symbol.
+
+1. Only `tryCreate` makes a design, so `run` receives only valid candidates, speedups, blocks, and a period that the replay plan accepts.
+2. Each block runs one baseline at speedup 0 and one experiment for each candidate and speedup, in a random order from `seed`.
+   Before each experiment, it runs a full blocking collection, outside the measured span. `workers` must return workers with fresh state for each call.
+3. Each `TargetCausalExperiment` holds `Block`, `Order`, `Candidate`, `Speedup`, `ElapsedNs`, `GlobalNs`, `EffectiveNs`, `Passed`, and `Error`.
+   An experiment that raises an exception keeps the exception type and message. An experiment that does not pass keeps each cause that rejected it: binding, replay, ledger, close, signal, and thread errors, including handler intervals of 5 ms or more. `Passed` is then false.
+4. Each `TargetCausalPoint` holds one prediction for each block, `1 - E / E0`, where E0 is the baseline of the same block.
+   A prediction is `None` when the experiment or its baseline did not pass. `ValidBlocks` counts the other blocks, and `MedianPrediction` is their median.
+
+`TargetCausalProfile.run` requires Linux x64 through `runBound`. The design and the prediction code are portable.
+The progress point is the end of the workload. Throughput progress points are not supported.
+
 ## Code binding
 
 `CodeBinding` checks that the selected and eligible code stays at one native range during a run.
@@ -160,6 +180,8 @@ No `publish`, `child`, or `deferred` event can belong to a blocked worker, and n
 | `shutdown <out>` | Writes the work state to `<out>.marker` 30 ms after the work starts, then calls `Environment.Exit`. The exit code is 0 only when a worker is still working. |
 | `profile-phases <speedup> <pattern> <out>` | The profile result for 10 barrier phases. Patterns are `alternating`, `selected-dominant`, and `peer-bound`. |
 | `profile-gc <speedup> <selectedRounds> <peerRounds> <intervalMs> <out>` | The profile result, with a forced blocking gen-2 GC every `intervalMs` from the main thread |
+| `rejit <out>` | The ReJIT check. It requires the test profiler from `native/rejit/ReJitProbe.Linux.cpp`. |
+| `causal-profile <seed> <out>` | One block of `TargetCausalProfile.run` with candidates `Work.selected` and `Work.peer` at speedups 25, 50, and 75, with 6000 and 3000 rounds |
 
 The profile mode requires `DOTNET_TieredCompilation=0`, `DOTNET_ReadyToRun=0`, `DOTNET_PerfMapEnabled=3`, and `DOTNET_PerfMapShowOptimizationTiers=1`.
 It uses `TargetLocalProfiler.runBound` and gets the optimized method ranges from a `CodeBinding`.

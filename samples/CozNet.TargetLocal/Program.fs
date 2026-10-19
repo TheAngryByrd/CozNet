@@ -264,6 +264,26 @@ let private barrierAbort (output: string) =
                     secondRunPassed = second.Passed; passed = passed |}
     if passed then 0 else 1
 
+let private causalProfile (seed: int) (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
+    let workers () = [|
+        { Work = (fun () -> Work.selected 6000UL |> ignore); PaymentIp = fst selectedRange }
+        { Work = (fun () -> Work.peer 3000UL |> ignore); PaymentIp = fst peerRange }
+    |]
+    let design =
+        TargetCausalDesign.tryCreate binding period [| Work.selectedName; Work.peerName |] [| Work.selectedName; Work.peerName |] [| 25u; 50u; 75u |] 1 seed
+        |> Result.defaultWith (fun errors -> failwith (errors |> List.map TargetCausalDesign.describe |> String.concat " "))
+    let profile = TargetCausalProfile.run design journalCapacity workers
+    let passed = profile.Experiments.Length = 7 && profile.Experiments |> Array.forall _.Passed
+    let points =
+        profile.Points
+        |> Array.map (fun p -> {| candidate = p.Candidate; speedup = p.Speedup; prediction = p.Predictions[0] |> Option.toNullable |})
+    write output {| mode = "causal-profile"; seed = seed; selectedRounds = 6000; peerRounds = 3000
+                    experiments = profile.Experiments; points = points; passed = passed |}
+    if passed then 0 else 1
+
 module private ReJitProbe =
     [<System.Runtime.InteropServices.DllImport("CozNet.ReJitProbe", EntryPoint = "coz_rejit_request")>]
     extern int request(unativeint functionId)
@@ -371,6 +391,7 @@ let main argv =
     | [| "cleanup"; output |] -> cleanup output
     | [| "binding"; output |] -> bindingCheck output
     | [| "rejit"; output |] -> rejitCheck output
+    | [| "causal-profile"; seed; output |] -> causalProfile (Int32.Parse seed) output
     | [| "shutdown"; output |] -> shutdown output
     | [| "barrier-abort"; output |] -> barrierAbort output
     | [| "plain-phases"; pattern; selectedPercent; output |] -> plainPhases pattern (UInt64.Parse selectedPercent) output
