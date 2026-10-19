@@ -410,6 +410,7 @@ Three other runs fail without a debt failure:
 
 In both debt failures, the other thread adds global delay before the failing thread next settles its debt, at its start or at its wake. At that settlement, its debt is above 2 ms.
 For the pipeline failure, the release-token rule sets the skip to 0, and the 2 ms bound then turns the debt into a failure. For the startup failure, the bound alone turns the debt into a failure.
-The records do not show whether the thread ran before that settlement in the pipeline case. A change to the wake rule or to the bound needs a decision, because both are fixed requirements.
+The records do not show whether the thread ran before that settlement in the pipeline case.
+The release-token rule is a design choice of the blocking plan, not a user requirement. Under it, the consumer owes the delay that the producer added after its post. The 2 ms bound is a user requirement. A change to the bound needs a user decision. The [roadmap](roadmap.md) lists the options.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).
