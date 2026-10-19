@@ -56,6 +56,7 @@ PREDICTION_HISTORY = [
     ("20261019T121854888-ee18e87d", "Same", "Transaction queue handoff", "Pass"),
     ("20261019T125645104-7e8dced4", "Same", "Spin before a queue wait", "Pass"),
     ("20261019T132443343-058778d3", "Same", "Handoff parts", "Pass"),
+    ("20261019T151134794-7a258cc6", "Same", "Worker pinning", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -101,6 +102,7 @@ TRANSITION_HISTORY = [
     ("20261019T121826636-adddad30", "Transaction queue handoff", "Fail, 9 of 10. Run 7 breaks the 2 ms debt bound."),
     ("20261019T125615160-ba0dd35e", "Spin before a queue wait", "Pass, 10 of 10"),
     ("20261019T132415383-4b7b1039", "Handoff parts", "Pass, 10 of 10"),
+    ("20261019T151104175-85ce5931", "Worker pinning", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -148,6 +150,7 @@ BARRIER_HISTORY = [
     ("20261019T122016119-859682da", "Transaction queue handoff", "Pass"),
     ("20261019T125807312-5f10cdcc", "Spin before a queue wait", "Pass"),
     ("20261019T132604565-2f365b47", "Handoff parts", "Pass"),
+    ("20261019T151300669-5a77b643", "Worker pinning", "Pass"),
 ]
 
 
@@ -687,6 +690,7 @@ PROFILE_HISTORY = [
     ("20261019T121727927-5e679245", "Transaction queue handoff", "Pass"),
     ("20261019T125516048-6470f3c8", "Spin before a queue wait", "Pass"),
     ("20261019T132316833-16878b7d", "Handoff parts", "Pass"),
+    ("20261019T151001061-8a5886f5", "Worker pinning", "Pass"),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
@@ -706,12 +710,14 @@ THROUGHPUT_HISTORY = [
     ("20261019T125416608-a58c20e0", "Spin before a queue wait", "Pass"),
     ("20261019T132215488-c111dbb5", "Handoff parts", "Pass"),
     ("20261019T150855392-75711219", "Worker pinning", "Fail. `peer-25` one block of 10.25 points."),
+    ("20261019T175557605-53b30f6d", "Matched plain warm-up", "Pass"),
 ]
 SPINTRANSACTION_HISTORY = [
     ("20261019T124806158-79f85b15", "First spin transaction profile run", "Fail. `peer-25` median 5.34 points and `peer-75` median 6.92 points. The three `selected` points pass."),
     ("20261019T131601688-284620fc", "Handoff parts", "Fail. `peer-75` median 7.29 points. The other five points pass."),
     ("20261019T150209127-dbb260bc", "Worker pinning", "Fail. `peer-25` median 9.56 points and `peer-50` median 5.06 points."),
     ("20261019T175441808-251c8262", "Matched plain warm-up", "Fail. `peer-25` median 9.22 points, `selected-50` one block of 25.47 points, and `peer-50` median 6.25 points. The other three points pass."),
+    ("20261019T183747700-877bf50a", "Payment before each progress stamp", "Fail. Five points pass, and `selected-75` fails with a median of 5.44 points."),
 ]
 TRANSACTION_HISTORY = [
     ("20261019T110105861-414dba20", "First transaction profile run", "Fail. All six points fail. The real gains follow the model, but the `peer` predictions stay near 5% at each speedup."),
@@ -724,6 +730,7 @@ TRANSACTION_HISTORY = [
     ("20261019T183627302-c5843c4c", "Payment before each progress stamp", "Fail. Block 3 is invalid from a debt failure after a wake. With four valid blocks, `selected-75` has a signed median of -11.83 points."),
     ("20261019T191349654-efea55a8", "Diagnostic sample period (1 ms run)", "Fail. Block 2 is invalid from a debt failure after a wake. With four valid blocks, `selected-75` has a signed median of -10.92 points."),
     ("20261019T193820084-e379d1a4", "Handoff placement", "Fail. Five valid blocks. Five points pass, and `selected-75` fails with a signed median of -10.48 points."),
+    ("20261019T195335859-ea098418", "Wake after idle", "Fail. Five valid blocks. Two points pass, and `selected-75` fails with a signed median of -17.22 points."),
 ]
 SEMAPHORE_HISTORY = [
     ("20261019T082323819-903a6cef", "First semaphore profile run", "Fail. `selected-75` has one block of -10.61 points, and `peer-75` median 5.24 points."),
@@ -735,6 +742,7 @@ SEMAPHORE_HISTORY = [
     ("20261019T125015330-52253802", "Spin before a queue wait", "Fail. `selected-50` median 5.51 points."),
     ("20261019T131809935-75def747", "Handoff parts", "Pass"),
     ("20261019T150434417-1c70a9de", "Worker pinning", "Pass"),
+    ("20261019T180046890-a1022fcb", "Matched plain warm-up", "Pass"),
 ]
 SPINLOCK_HISTORY = [
     ("20261019T074539772-03c40325", "First spin lock profile run", "Fail. Blocks 4 and 5 are invalid: `peer` at 75% has 97 and 98 visits. In the three valid blocks, `selected-50` has a median of 1.77 points, and `selected-75` fails at 6.87 points."),
@@ -747,6 +755,7 @@ SPINLOCK_HISTORY = [
     ("20261019T125215820-36780b18", "Spin before a queue wait", "Fail. Block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` median 5.60 points."),
     ("20261019T132014752-3e849f73", "Handoff parts", "Fail. `selected-75` one block of 12.34 points. All five blocks are valid."),
     ("20261019T150642975-999bd98a", "Worker pinning", "Fail. Block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` median 8.09 points."),
+    ("20261019T175936455-d8d0f784", "Matched plain warm-up", "Fail. Blocks 1, 2, 4, and 5 are invalid: the profile `peer` experiment at 75% has 95 to 98 visits."),
 ]
 LOCK_HISTORY = [
     ("20261019T062708436-df83442b", "First lock profile run", "Fail. `selected-50` median 9.13 points, all five blocks below the actual gain. `peer-25` has one block of 11.87 points."),
@@ -761,6 +770,7 @@ LOCK_HISTORY = [
     ("20261019T125115354-73f1edc7", "Spin before a queue wait", "Fail. `selected-50` median 6.28 points, `peer-50` median 5.18, `peer-75` median 5.74, and `peer-25` one block of -13.92 points."),
     ("20261019T131912794-bfae28ce", "Handoff parts", "Fail. Block 1 is invalid: a debt failure after one child payment of 3.35 ms for a request of 50 microseconds."),
     ("20261019T150538269-4c383533", "Worker pinning", "Fail. `selected-50` median 9.20 points and `selected-75` median 6.47 points."),
+    ("20261019T175822524-6025b0d2", "Matched plain warm-up", "Fail. Five points fail with 5 valid blocks. Block 1 is below the real gain at every point."),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
@@ -779,6 +789,7 @@ PIPELINE_HISTORY = [
     ("20261019T125316611-20aa9ebf", "Spin before a queue wait", "Fail. `peer-50` one block of 12.29 points and `peer-75` median 5.13 points."),
     ("20261019T132114927-617f3dac", "Handoff parts", "Pass"),
     ("20261019T150749398-6a7afb49", "Worker pinning", "Fail. `peer-25` one block of 12.47 points and `peer-75` one block of 10.19 points."),
+    ("20261019T175709589-cf20a6d1", "Matched plain warm-up", "Pass"),
 ]
 
 

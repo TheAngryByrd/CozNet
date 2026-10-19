@@ -743,4 +743,27 @@ The run has five valid blocks and no debt failure, and it fails four points:
 - `selected-75` has a signed median of -11.83, -10.92, -10.48, and -17.22 points in the four runs at 1 ms after the settlement change.
 - The previous run passed five points, and this run passes two, so that result did not repeat. `peer-25` fails by one block of 12.61 points, and `peer-50` and `peer-75` fail by medians of 5.77 and 5.36 points.
 
+## Qualification package
+
+[The qualification package plan](target-local-qualification-package.md) runs every suite once on one tree. Package `20261019T201321485-824b711b` ran on commit `6564ca2` with the package files uncommitted, so `treeClean` is false.
+Each suite had one new run, unchanged inputs, and source hashes equal to the start hashes, and no file changed during the package. The package fails, because six suites fail.
+
+| Suite | Run | Result |
+| --- | --- | --- |
+| prediction | `20261019T201340616-ed91a842` | Fail. `selected-longer` block 2 and `selected-dominant` block 4 are invalid from debt failures, so each has 4 valid blocks. |
+| transitions | `20261019T201506921-5d37ee7e` | Pass |
+| barrier | `20261019T201536207-a9b5ec9c` | Fail. `barrier-alternating` block 3 is invalid from a debt failure, so it has 4 valid blocks. |
+| latency | `20261019T201702327-550c14a4` | Pass |
+| throughput | `20261019T201802551-f2b9dc02` | Pass |
+| pipeline | `20261019T201909123-194c33c4` | Pass |
+| lock | `20261019T202014566-1b99bdb4` | Fail. `selected-50` has a signed median of -6.0 points with 5 valid blocks. |
+| spinlock | `20261019T202120350-c3aa911b` | Fail. Block 4 is invalid, because its profile has fewer than 100 visits, so each point has 4 valid blocks. |
+| semaphore | `20261019T202227960-03fedade` | Pass |
+| transaction | `20261019T202333518-e70c6219` | Fail. `selected-75` has a signed median of -10.8 points with 5 valid blocks. |
+| spintransaction | `20261019T202443887-6584ede4` | Fail. `peer-50` and `peer-75` have signed medians of -5.5 and -5.7 points with 5 valid blocks. |
+
+- Three suites fail from capacity failures: prediction, barrier, and spinlock. The prediction and barrier failures are debt failures in speedup experiments, and the spinlock failure has too few visits.
+- Three suites fail from prediction errors in valid blocks: lock, transaction, and spintransaction.
+- So the port is not qualified on this host. A qualification needs a package with `passed` and `treeClean` both true.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

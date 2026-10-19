@@ -55,6 +55,7 @@ The target-local profiler predicts optimizations in two-thread CPU-bound fork/jo
 - [Verify native service accounting](How_Tos/verify-native-service.md).
 - [Verify the Linux perf ring adapter](How_Tos/verify-perf-ring.md).
 - [Check target-local payment under forced GC](How_Tos/verify-target-local-transitions.md).
+- [Run every target-local suite as one package](How_Tos/qualify-target-local.md).
 - [Profile your own fork/join program](How_Tos/profile-fork-join-program.md).
 - [Run the native sampled service experiment](How_Tos/run-native-sampled-service.md).
 - [Check target-local timer delivery](How_Tos/run-target-lease-delivery.md).

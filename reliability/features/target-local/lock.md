@@ -1,6 +1,6 @@
 # Target-local lock profile
 
-Evidence: `artifacts/target-local-lock/20261019T175822524-6025b0d2`.
+Evidence: `artifacts/target-local-lock/20261019T202014566-1b99bdb4`.
 
 `TargetLocalLockVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `lock-profile` process and seven `plain-lock` processes in a random order.
@@ -8,16 +8,16 @@ The profile process runs `TargetCausalProfile.run` with candidates `Work.selecte
 The criteria are in [the lock plan](../../../lode/plans/target-local-lock.md). The runner hashes that file, and all source hashes stay unchanged.
 `native/WriteTargetLocalEvidence.py` writes this page.
 
-**Result: the current run fails.** Points selected-25, selected-50, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. The run is kept, and no rerun replaces it.
+**Result: the current run fails.** Points selected-50 fail, or a run-level criterion fails. The run is kept, and no rerun replaces it.
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 24.88% | 27.65% | 4.23 pp | 12.07 pp | Fail |
-| `selected-50` | 5 / 5 | 47.01% | 51.86% | 5.86 pp | 14.86 pp | Fail |
-| `selected-75` | 5 / 5 | 64.48% | 65.18% | 3.68 pp | 8.60 pp | Pass |
-| `peer-25` | 5 / 5 | -1.25% | 1.73% | 11.28 pp | 11.60 pp | Fail |
-| `peer-50` | 5 / 5 | 1.98% | 1.50% | 5.81 pp | 8.15 pp | Fail |
-| `peer-75` | 5 / 5 | -0.30% | 1.44% | 5.90 pp | 9.77 pp | Fail |
+| `selected-25` | 5 / 5 | 24.09% | 27.08% | 2.20 pp | 6.20 pp | Pass |
+| `selected-50` | 5 / 5 | 45.24% | 50.84% | 5.97 pp | 8.80 pp | Fail |
+| `selected-75` | 5 / 5 | 67.82% | 64.43% | 3.57 pp | 8.67 pp | Pass |
+| `peer-25` | 5 / 5 | -0.66% | 0.41% | 2.14 pp | 7.18 pp | Pass |
+| `peer-50` | 5 / 5 | 0.95% | 0.76% | 0.66 pp | 2.04 pp | Pass |
+| `peer-75` | 5 / 5 | -1.17% | 1.95% | 2.43 pp | 4.74 pp | Pass |
 
 The lock sets the rate, so the model gives `Work.selected` 25%, 50%, and 62.5%, and `Work.peer` 0% at each speedup. At 75%, the work outside the lock sets the rate.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.925, 0.911 |
-| `selected-50` | 0.909, 0.902 |
-| `selected-75` | 0.955, 0.966 |
-| `peer-25` | 1.058, 1.053 |
-| `peer-50` | 1.084, 1.070 |
-| `peer-75` | 1.169, 1.142 |
+| `selected-25` | 0.940, 0.936 |
+| `selected-50` | 0.926, 0.924 |
+| `selected-75` | 0.954, 0.974 |
+| `peer-25` | 1.068, 1.060 |
+| `peer-50` | 1.097, 1.100 |
+| `peer-75` | 1.184, 1.187 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.025, 1.023; order 2: 1.000, 1.025; order 3: 1.058, 1.053; order 4: 1.000, 1.000; order 5: 1.052, 1.070; order 6: 1.026, 1.007. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 1.069, 1.068; order 4: 1.000, 1.000; order 5: 0.975, 0.978; order 6: 0.982, 0.993. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -46,22 +46,22 @@ The handoff share is the time from a release to the acquire of a waiting thread,
 
 | Point | Median handoff share, profile | Median handoff share, real optimization |
 | --- | ---: | ---: |
-| `selected-25` | 5.09% | 5.40% |
-| `selected-50` | 7.80% | 0.91% |
-| `selected-75` | 6.54% | 0.38% |
-| `peer-25` | 5.40% | 5.20% |
-| `peer-50` | 4.59% | 5.59% |
-| `peer-75` | 5.01% | 5.49% |
+| `selected-25` | 5.04% | 4.02% |
+| `selected-50` | 7.57% | 1.16% |
+| `selected-75` | 5.91% | 0.41% |
+| `peer-25` | 4.88% | 5.87% |
+| `peer-50` | 5.30% | 5.87% |
+| `peer-75` | 4.56% | 5.40% |
 
 ## Blocks
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -10.82 pp | -14.86 pp | -8.60 pp | -11.60 pp | -7.51 pp | -5.90 pp |
-| 2 | Yes | 2.73 pp | -1.97 pp | -7.93 pp | 2.47 pp | 5.81 pp | 0.92 pp |
-| 3 | Yes | -4.23 pp | -1.14 pp | -3.68 pp | -11.41 pp | -8.15 pp | -9.77 pp |
-| 4 | Yes | -12.07 pp | -5.86 pp | 1.06 pp | -11.28 pp | 2.11 pp | -0.93 pp |
-| 5 | Yes | 0.24 pp | -6.33 pp | 0.06 pp | 2.82 pp | 4.07 pp | -8.48 pp |
+| 1 | Yes | 1.09 pp | -6.97 pp | 8.67 pp | 1.32 pp | 2.04 pp | -1.73 pp |
+| 2 | Yes | -2.20 pp | -8.80 pp | -3.57 pp | -1.08 pp | -0.13 pp | -4.74 pp |
+| 3 | Yes | 0.77 pp | -0.94 pp | 3.23 pp | 3.73 pp | 0.66 pp | -2.43 pp |
+| 4 | Yes | -6.20 pp | -5.97 pp | 0.75 pp | -7.18 pp | 0.19 pp | -3.53 pp |
+| 5 | Yes | -5.48 pp | -5.61 pp | 7.16 pp | -2.14 pp | -1.16 pp | 0.03 pp |
 
 ## Run history
 
@@ -79,7 +79,8 @@ The handoff share is the time from a release to the acquire of a waiting thread,
 | `20261019T125115354-73f1edc7` | Spin before a queue wait | Fail. `selected-50` median 6.28 points, `peer-50` median 5.18, `peer-75` median 5.74, and `peer-25` one block of -13.92 points. |
 | `20261019T131912794-bfae28ce` | Handoff parts | Fail. Block 1 is invalid: a debt failure after one child payment of 3.35 ms for a request of 50 microseconds. |
 | `20261019T150538269-4c383533` | Worker pinning | Fail. `selected-50` median 9.20 points and `selected-75` median 6.47 points. |
-| `20261019T175822524-6025b0d2` | Matched plain warm-up | Fail. Points selected-25, selected-50, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. |
+| `20261019T175822524-6025b0d2` | Matched plain warm-up | Fail. Five points fail with 5 valid blocks. Block 1 is below the real gain at every point. |
+| `20261019T202014566-1b99bdb4` | Qualification package | Fail. Points selected-50 fail, or a run-level criterion fails. |
 
 ## Limits
 

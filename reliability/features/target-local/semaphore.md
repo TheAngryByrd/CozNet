@@ -1,6 +1,6 @@
 # Target-local semaphore profile
 
-Evidence: `artifacts/target-local-semaphore/20261019T180046890-a1022fcb`.
+Evidence: `artifacts/target-local-semaphore/20261019T202227960-03fedade`.
 
 `TargetLocalSemaphoreVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `semaphore-profile` process and seven `plain-semaphore` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the semaphore plan](../../../lode/plans/target-local-semaph
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 15.60% | 14.58% | 1.70 pp | 3.62 pp | Pass |
-| `selected-50` | 5 / 5 | 29.31% | 30.99% | 1.51 pp | 5.11 pp | Pass |
-| `selected-75` | 5 / 5 | 42.73% | 46.35% | 3.73 pp | 9.15 pp | Pass |
-| `peer-25` | 5 / 5 | 8.56% | 6.91% | 1.66 pp | 6.86 pp | Pass |
-| `peer-50` | 5 / 5 | 13.74% | 14.53% | 2.10 pp | 5.40 pp | Pass |
-| `peer-75` | 5 / 5 | 22.88% | 22.31% | 2.72 pp | 8.21 pp | Pass |
+| `selected-25` | 5 / 5 | 14.97% | 13.94% | 3.84 pp | 4.09 pp | Pass |
+| `selected-50` | 5 / 5 | 31.63% | 33.92% | 1.01 pp | 6.08 pp | Pass |
+| `selected-75` | 5 / 5 | 46.27% | 47.66% | 1.59 pp | 4.80 pp | Pass |
+| `peer-25` | 5 / 5 | 8.58% | 6.98% | 3.38 pp | 3.81 pp | Pass |
+| `peer-50` | 5 / 5 | 18.44% | 13.91% | 4.57 pp | 8.12 pp | Pass |
+| `peer-75` | 5 / 5 | 23.25% | 19.99% | 1.72 pp | 6.64 pp | Pass |
 
 No work runs in parallel, so the model gives `Work.selected` 16.7%, 33.3%, and 50%, and `Work.peer` 8.3%, 16.7%, and 25%. The model leaves out the two handoffs of each visit.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.999, 0.999 |
-| `selected-50` | 1.002, 1.003 |
-| `selected-75` | 1.006, 1.006 |
-| `peer-25` | 0.995, 0.995 |
-| `peer-50` | 1.004, 1.004 |
-| `peer-75` | 0.991, 0.993 |
+| `selected-25` | 0.997, 0.997 |
+| `selected-50` | 0.986, 0.983 |
+| `selected-75` | 0.973, 0.972 |
+| `peer-25` | 0.986, 0.986 |
+| `peer-50` | 0.982, 0.982 |
+| `peer-75` | 0.977, 0.978 |
 
-The median work ratio by run order in the process is order 0: 0.997, 1.000; order 1: 1.000, 1.000; order 2: 1.001, 1.001; order 3: 1.016, 1.020; order 4: 1.000, 1.000; order 5: 0.997, 0.997; order 6: 0.985, 0.985. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 0.973, 0.974; order 1: 0.983, 0.983; order 2: 0.986, 0.986; order 3: 0.990, 0.989; order 4: 0.988, 0.988; order 5: 0.991, 0.983; order 6: 0.982, 0.981. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -0.33 pp | 0.14 pp | -1.22 pp | 1.00 pp | 2.10 pp | -0.70 pp |
-| 2 | Yes | 3.62 pp | -0.15 pp | -4.78 pp | 6.86 pp | -1.06 pp | -1.25 pp |
-| 3 | Yes | 1.07 pp | -5.11 pp | -9.15 pp | -2.60 pp | -4.65 pp | -2.72 pp |
-| 4 | Yes | 1.70 pp | -4.20 pp | -0.60 pp | 1.66 pp | -0.75 pp | 8.21 pp |
-| 5 | Yes | 2.41 pp | -1.51 pp | -3.73 pp | 0.96 pp | -5.40 pp | 3.98 pp |
+| 1 | Yes | 4.09 pp | 0.83 pp | -0.80 pp | 3.59 pp | 8.12 pp | 0.38 pp |
+| 2 | Yes | 0.28 pp | -3.50 pp | -1.59 pp | 3.38 pp | 3.17 pp | 5.41 pp |
+| 3 | Yes | 0.21 pp | -1.01 pp | -1.86 pp | 3.81 pp | 4.57 pp | 6.64 pp |
+| 4 | Yes | 4.05 pp | 0.37 pp | -0.80 pp | -0.99 pp | 2.31 pp | 1.05 pp |
+| 5 | Yes | -3.84 pp | -6.08 pp | -4.80 pp | -0.57 pp | -5.55 pp | -1.72 pp |
 
 ## Run history
 
@@ -64,6 +64,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T131809935-75def747` | Handoff parts | Pass |
 | `20261019T150434417-1c70a9de` | Worker pinning | Pass |
 | `20261019T180046890-a1022fcb` | Matched plain warm-up | Pass |
+| `20261019T202227960-03fedade` | Qualification package | Pass |
 
 ## Limits
 

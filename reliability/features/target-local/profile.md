@@ -1,6 +1,6 @@
 # Target-local causal profile
 
-Evidence: `artifacts/target-local-profile/20261019T151001061-8a5886f5`.
+Evidence: `artifacts/target-local-profile/20261019T201702327-550c14a4`.
 
 `TargetLocalProfileVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `causal-profile` process and seven `plain` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the profile plan](../../../lode/plans/target-local-causal-p
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 23.96% | 25.21% | 2.20 pp | 2.92 pp | Pass |
-| `selected-50` | 5 / 5 | 49.28% | 48.46% | 1.15 pp | 1.92 pp | Pass |
-| `selected-75` | 5 / 5 | 48.65% | 49.60% | 2.62 pp | 2.71 pp | Pass |
-| `peer-25` | 5 / 5 | 0.08% | -1.80% | 2.54 pp | 5.09 pp | Pass |
-| `peer-50` | 5 / 5 | -1.01% | -1.10% | 1.09 pp | 2.50 pp | Pass |
-| `peer-75` | 5 / 5 | -1.94% | 0.30% | 1.11 pp | 3.90 pp | Pass |
+| `selected-25` | 5 / 5 | 25.14% | 25.62% | 1.35 pp | 3.28 pp | Pass |
+| `selected-50` | 5 / 5 | 48.42% | 50.52% | 1.67 pp | 3.80 pp | Pass |
+| `selected-75` | 5 / 5 | 49.52% | 49.73% | 0.89 pp | 3.61 pp | Pass |
+| `peer-25` | 5 / 5 | -0.72% | 0.89% | 0.83 pp | 4.45 pp | Pass |
+| `peer-50` | 5 / 5 | -0.16% | -0.69% | 1.91 pp | 2.23 pp | Pass |
+| `peer-75` | 5 / 5 | -0.70% | -0.68% | 2.59 pp | 4.44 pp | Pass |
 
 The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 1.011, 1.009 |
-| `selected-50` | 1.010, 1.001 |
-| `selected-75` | 1.013, 1.017 |
-| `peer-25` | 0.999, 0.990 |
-| `peer-50` | 1.010, 0.993 |
-| `peer-75` | 1.019, 1.013 |
+| `selected-25` | 0.996, 1.024 |
+| `selected-50` | 1.007, 1.014 |
+| `selected-75` | 1.019, 1.003 |
+| `peer-25` | 1.007, 1.019 |
+| `peer-50` | 1.002, 1.022 |
+| `peer-75` | 1.007, 1.013 |
 
-The median work ratio by run order in the process is order 0: 1.004, 1.000; order 1: 1.000, 1.009; order 2: 1.000, 1.000; order 3: 1.010, 1.000; order 4: 1.000, 1.000; order 5: 0.995, 1.009; order 6: 1.013, 1.005. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.007, 1.004; order 2: 1.005, 1.019; order 3: 1.007, 1.013; order 4: 1.000, 1.000; order 5: 1.010, 1.024; order 6: 1.020, 1.034. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -2.20 pp | -1.35 pp | -2.62 pp | 2.54 pp | -1.41 pp | -3.24 pp |
-| 2 | Yes | 2.92 pp | 1.92 pp | 2.71 pp | 2.79 pp | 2.50 pp | 0.33 pp |
-| 3 | Yes | -2.42 pp | 0.22 pp | -2.67 pp | -0.42 pp | 1.09 pp | -0.14 pp |
-| 4 | Yes | 0.75 pp | 1.15 pp | 0.05 pp | -5.09 pp | 0.41 pp | -3.90 pp |
-| 5 | Yes | -1.09 pp | -0.29 pp | -0.95 pp | 1.88 pp | -1.09 pp | 1.11 pp |
+| 1 | Yes | 0.81 pp | -2.09 pp | 0.89 pp | -0.45 pp | 2.23 pp | 2.16 pp |
+| 2 | Yes | -1.35 pp | -0.99 pp | -3.61 pp | 0.83 pp | -1.49 pp | -4.44 pp |
+| 3 | Yes | -3.28 pp | -1.06 pp | -0.54 pp | -4.45 pp | 0.84 pp | -3.52 pp |
+| 4 | Yes | -1.13 pp | -1.67 pp | 0.53 pp | -0.37 pp | -2.04 pp | 2.59 pp |
+| 5 | Yes | -1.86 pp | -3.80 pp | -1.00 pp | -3.88 pp | -1.91 pp | 1.00 pp |
 
 ## Run history
 
@@ -72,6 +72,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T125516048-6470f3c8` | Spin before a queue wait | Pass |
 | `20261019T132316833-16878b7d` | Handoff parts | Pass |
 | `20261019T151001061-8a5886f5` | Worker pinning | Pass |
+| `20261019T201702327-550c14a4` | Qualification package | Pass |
 
 ## Limits
 

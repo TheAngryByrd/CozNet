@@ -1,6 +1,6 @@
 # Target-local spin lock profile
 
-Evidence: `artifacts/target-local-spinlock/20261019T175936455-d8d0f784`.
+Evidence: `artifacts/target-local-spinlock/20261019T202120350-c3aa911b`.
 
 `TargetLocalSpinLockVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `spin-lock-profile` process and seven `plain-spin-lock` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the spin lock plan](../../../lode/plans/target-local-spin-l
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 1 / 5 | 25.75% | 23.36% | 2.38 pp | 2.38 pp | Fail |
-| `selected-50` | 1 / 5 | 46.30% | 51.88% | 5.59 pp | 5.59 pp | Fail |
-| `selected-75` | 1 / 5 | 67.05% | 62.21% | 4.84 pp | 4.84 pp | Fail |
-| `peer-25` | 1 / 5 | -2.89% | 2.95% | 5.84 pp | 5.84 pp | Fail |
-| `peer-50` | 1 / 5 | 0.76% | 2.91% | 2.15 pp | 2.15 pp | Fail |
-| `peer-75` | 1 / 5 | -6.36% | 3.69% | 10.05 pp | 10.05 pp | Fail |
+| `selected-25` | 4 / 5 | 23.24% | 23.82% | 1.34 pp | 2.75 pp | Fail |
+| `selected-50` | 4 / 5 | 45.67% | 48.74% | 3.00 pp | 4.34 pp | Fail |
+| `selected-75` | 4 / 5 | 66.81% | 62.20% | 4.96 pp | 9.66 pp | Fail |
+| `peer-25` | 4 / 5 | -0.52% | -1.59% | 1.38 pp | 3.66 pp | Fail |
+| `peer-50` | 4 / 5 | -1.88% | 0.05% | 1.32 pp | 5.34 pp | Fail |
+| `peer-75` | 4 / 5 | -2.48% | 0.70% | 2.39 pp | 8.20 pp | Fail |
 
 The lock sets the rate, so the model gives `Work.selected` 25%, 50%, and 62.5%, and `Work.peer` 0% at each speedup. At 75%, the work outside the lock sets the rate.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.924, 0.933 |
-| `selected-50` | 0.925, 0.971 |
-| `selected-75` | 0.962, 0.940 |
-| `peer-25` | 1.063, 1.112 |
-| `peer-50` | 1.186, 1.152 |
-| `peer-75` | 1.306, 1.333 |
+| `selected-25` | 0.963, 0.955 |
+| `selected-50` | 0.977, 0.962 |
+| `selected-75` | 0.992, 0.973 |
+| `peer-25` | 1.098, 1.104 |
+| `peer-50` | 1.230, 1.252 |
+| `peer-75` | 1.319, 1.357 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 1.063, 1.112; order 4: 1.000, 1.000; order 5: 0.983, 0.988; order 6: 1.010, 0.933. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.005, 1.000; order 2: 1.000, 1.000; order 3: 1.086, 1.037; order 4: 1.005, 1.000; order 5: 1.022, 1.027; order 6: 0.977, 1.022. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -46,22 +46,22 @@ The handoff share is the time from a release to the acquire of a waiting thread,
 
 | Point | Median handoff share, profile | Median handoff share, real optimization |
 | --- | ---: | ---: |
-| `selected-25` | 0.15% | 0.38% |
-| `selected-50` | 3.12% | 0.10% |
-| `selected-75` | 1.22% | 0.04% |
-| `peer-25` | 0.73% | 0.21% |
-| `peer-50` | 0.22% | 0.08% |
-| `peer-75` | 2.16% | 0.14% |
+| `selected-25` | 0.15% | 0.22% |
+| `selected-50` | 2.73% | 0.09% |
+| `selected-75` | 0.58% | 0.02% |
+| `peer-25` | 0.19% | 0.22% |
+| `peer-50` | 0.10% | 0.18% |
+| `peer-75` | 1.28% | 0.11% |
 
 ## Blocks
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | No: profile has fewer than 100 visits | 1.13 pp | 0.24 pp | 8.52 pp | 2.17 pp | 2.28 pp | -0.07 pp |
-| 2 | No: profile has fewer than 100 visits | 0.22 pp | -2.73 pp | 3.45 pp | 4.63 pp | 5.64 pp | -5.31 pp |
-| 3 | Yes | 2.38 pp | -5.59 pp | 4.84 pp | -5.84 pp | -2.15 pp | -10.05 pp |
-| 4 | No: profile has fewer than 100 visits | -1.15 pp | 1.10 pp | 3.48 pp | 0.52 pp | 1.04 pp | -8.50 pp |
-| 5 | No: profile has fewer than 100 visits | 0.27 pp | -0.85 pp | 4.90 pp | 4.59 pp | -2.34 pp | -0.14 pp |
+| 1 | Yes | 1.51 pp | -1.48 pp | 5.95 pp | 1.91 pp | 0.85 pp | -0.65 pp |
+| 2 | Yes | -1.17 pp | -2.92 pp | 9.66 pp | 3.66 pp | 1.79 pp | -1.45 pp |
+| 3 | Yes | -2.75 pp | -4.34 pp | 3.98 pp | 0.85 pp | -0.71 pp | -3.34 pp |
+| 4 | No: profile has fewer than 100 visits | -1.17 pp | -4.18 pp | 1.07 pp | -3.74 pp | -0.82 pp | -4.79 pp |
+| 5 | Yes | 0.93 pp | -3.08 pp | 0.51 pp | -0.09 pp | -5.34 pp | -8.20 pp |
 
 ## Run history
 
@@ -77,7 +77,8 @@ The handoff share is the time from a release to the acquire of a waiting thread,
 | `20261019T125215820-36780b18` | Spin before a queue wait | Fail. Block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` median 5.60 points. |
 | `20261019T132014752-3e849f73` | Handoff parts | Fail. `selected-75` one block of 12.34 points. All five blocks are valid. |
 | `20261019T150642975-999bd98a` | Worker pinning | Fail. Block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` median 8.09 points. |
-| `20261019T175936455-d8d0f784` | Matched plain warm-up | Fail. Points selected-25, selected-50, selected-75, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. |
+| `20261019T175936455-d8d0f784` | Matched plain warm-up | Fail. Blocks 1, 2, 4, and 5 are invalid: the profile `peer` experiment at 75% has 95 to 98 visits. |
+| `20261019T202120350-c3aa911b` | Qualification package | Fail. Points selected-25, selected-50, selected-75, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. |
 
 ## Limits
 

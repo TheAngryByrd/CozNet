@@ -1,6 +1,6 @@
 # Target-local throughput profile
 
-Evidence: `artifacts/target-local-throughput/20261019T175557605-53b30f6d`.
+Evidence: `artifacts/target-local-throughput/20261019T201802551-f2b9dc02`.
 
 `TargetLocalThroughputVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `throughput-profile` process and seven `plain-throughput` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the throughput plan](../../../lode/plans/target-local-throu
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 9.52% | 8.28% | 3.20 pp | 5.21 pp | Pass |
-| `selected-50` | 5 / 5 | 23.72% | 24.63% | 1.19 pp | 3.27 pp | Pass |
-| `selected-75` | 5 / 5 | 48.28% | 49.40% | 1.25 pp | 2.43 pp | Pass |
-| `peer-25` | 5 / 5 | 16.47% | 16.81% | 1.12 pp | 3.32 pp | Pass |
-| `peer-50` | 5 / 5 | 39.38% | 39.66% | 0.49 pp | 1.98 pp | Pass |
-| `peer-75` | 5 / 5 | 65.39% | 66.71% | 1.32 pp | 2.41 pp | Pass |
+| `selected-25` | 5 / 5 | 9.72% | 7.14% | 1.25 pp | 9.77 pp | Pass |
+| `selected-50` | 5 / 5 | 24.45% | 23.47% | 0.98 pp | 3.12 pp | Pass |
+| `selected-75` | 5 / 5 | 47.83% | 49.15% | 1.04 pp | 2.83 pp | Pass |
+| `peer-25` | 5 / 5 | 17.54% | 17.64% | 0.61 pp | 3.17 pp | Pass |
+| `peer-50` | 5 / 5 | 39.04% | 40.01% | 1.24 pp | 2.79 pp | Pass |
+| `peer-75` | 5 / 5 | 65.27% | 65.76% | 0.85 pp | 1.71 pp | Pass |
 
 If both workers have the same cost for each round, the expected gains are 10%, 25%, and 50% for `Work.selected` and 18.2%, 40%, and 66.7% for `Work.peer`. The criteria use the measured gains.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 1.202, 0.904 |
-| `selected-50` | 1.516, 0.766 |
-| `selected-75` | 2.000, 0.517 |
-| `peer-25` | 0.835, 1.110 |
-| `peer-50` | 0.606, 1.198 |
-| `peer-75` | 0.347, 1.335 |
+| `selected-25` | 1.201, 0.903 |
+| `selected-50` | 1.496, 0.756 |
+| `selected-75` | 1.973, 0.523 |
+| `peer-25` | 0.827, 1.089 |
+| `peer-50` | 0.610, 1.201 |
+| `peer-75` | 0.347, 1.330 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.821, 1.092; order 4: 1.000, 1.000; order 5: 1.183, 0.885; order 6: 1.202, 0.904. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.827, 1.089; order 4: 1.000, 1.000; order 5: 1.193, 0.903; order 6: 1.201, 0.903. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -3.20 pp | -3.27 pp | -1.25 pp | -2.21 pp | -1.86 pp | -2.41 pp |
-| 2 | Yes | 3.21 pp | -0.55 pp | -2.43 pp | 0.56 pp | -0.49 pp | -0.74 pp |
-| 3 | Yes | 5.21 pp | 1.19 pp | -0.37 pp | 1.12 pp | 0.35 pp | -2.27 pp |
-| 4 | Yes | 1.83 pp | -1.54 pp | -0.29 pp | -3.32 pp | -1.98 pp | -1.32 pp |
-| 5 | Yes | -0.34 pp | -0.08 pp | -1.41 pp | -0.94 pp | 0.45 pp | -0.50 pp |
+| 1 | Yes | -0.26 pp | 0.28 pp | -2.83 pp | 0.61 pp | -2.79 pp | -1.25 pp |
+| 2 | Yes | 9.77 pp | 2.90 pp | -1.04 pp | -2.72 pp | 0.82 pp | -1.71 pp |
+| 3 | Yes | 2.29 pp | 0.98 pp | 0.77 pp | -0.10 pp | 1.02 pp | -0.49 pp |
+| 4 | Yes | -1.25 pp | 0.68 pp | -2.18 pp | -0.30 pp | -1.90 pp | 0.06 pp |
+| 5 | Yes | 0.32 pp | 3.12 pp | 0.04 pp | 3.17 pp | 1.24 pp | -0.85 pp |
 
 ## Run history
 
@@ -72,6 +72,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T132215488-c111dbb5` | Handoff parts | Pass |
 | `20261019T150855392-75711219` | Worker pinning | Fail. `peer-25` one block of 10.25 points. |
 | `20261019T175557605-53b30f6d` | Matched plain warm-up | Pass |
+| `20261019T201802551-f2b9dc02` | Qualification package | Pass |
 
 ## Limits
 
