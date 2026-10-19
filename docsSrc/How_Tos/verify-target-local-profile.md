@@ -22,6 +22,7 @@ It requires the .NET 10 SDK, PowerShell 7, Python 3, Docker, and the images `coz
 12. To check a latency progress point, run `TargetLocalTransactionVerify` and open the new directory under `artifacts/target-local-transaction`. Repeat steps 3 to 6.
 13. To check the same workload with a consumer that spins up to 1 ms, run `TargetLocalSpinTransactionVerify` and open the new directory under `artifacts/target-local-spintransaction`. Repeat steps 3 to 6.
 14. To pin each worker to one CPU, run `VerifyTargetLocalProfile.ps1` with `-WorkerCpus '0,2'` and a lock or transaction workload. The runner accepts only `'0,2'`, one CPU on each physical core. Open the new directory under `artifacts/target-local-<workload>-pinned`. Repeat steps 3 to 6.
+15. To sample every 0.25 ms, run `VerifyTargetLocalProfile.ps1` with `-PeriodNs 250000` and a transaction workload. The runner accepts only `250000`. Open the new directory under `artifacts/target-local-<workload>-period`. Repeat steps 3 to 6. This run is a diagnostic, not a qualification run.
 
 Each block runs one profile process and seven plain processes in a random order.
 The profile process runs a baseline and six experiments: `Work.selected` and `Work.peer` at speedups 25, 50, and 75.

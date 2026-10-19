@@ -656,4 +656,26 @@ The `transaction` run still fails all six points, because block 3 is invalid:
 - In block 1, the plain `selected-25` arm is slow, with a mean handoff of 166.9 microseconds. So long handoffs also occur in plain processes.
 - In block 4, the plain `original` arm is 11.2% above the median of the four valid blocks. With that median `original`, the block 4 differences fall to -1.3 to 2.8 points, apart from `selected-75`.
 
+## Sample period
+
+[The sample period plan](target-local-sample-period.md) compares a period of 0.25 ms with 1 ms in the `transaction` suite. Both runs used the reviewed tree, and both are retained.
+
+| Run | Period | Valid blocks | `selected-25` | `selected-50` | `selected-75` | `peer-25` | `peer-50` | `peer-75` |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `20261019T191349654-efea55a8` | 1 ms | 4 | -9.70 | -1.58 | -10.92 | -10.29 | -8.27 | -5.87 |
+| `20261019T191500032-2322f71e` | 0.25 ms | 5 | -0.14 | -2.08 | -6.42 | 0.98 | -2.05 | 1.83 |
+
+The values are signed medians over the valid blocks, in points.
+- Criterion 115 fails. At 0.25 ms, `selected-75` has a signed median of -6.42 points, outside the limit of 5.9. So this intervention did not halve the error, and this line of work stops. That result alone does not show that H4 is false.
+- At 1 ms, `selected-75` has -10.92 points, so the over-correction of the earlier run repeats. H6 does not explain it.
+- At 0.25 ms, the median virtual latency of `selected-75` falls from 415.8 to 377.1 microseconds. The handler time of the busiest thread grows from 1.27% to 10.66% of the experiment. The records do not separate the step size from this cost.
+- The 0.25 ms run has five valid blocks, and `selected-50`, `peer-50`, and `peer-75` pass. It is a diagnostic run, not a qualification run.
+
+The 1 ms run fails all six points:
+- Block 2 is invalid. The `peer` thread fails with a debt of 2.25 ms after a wake, in the `selected` experiment at 75%, as in run `20261019T183627302-c5843c4c`.
+  The 13 runs of the transaction suites before the settlement change have no debt failure. Two of the four runs after it have one. These counts cannot show that the change raises the rate.
+- In blocks 1 and 3, the plain `original` arms take 1194.1 and 1148.7 microseconds, with mean handoffs of 309 and 312 microseconds. In block 5, the plain `selected-25` and `peer-25` arms have mean handoffs of 252 and 232 microseconds.
+  The other 31 plain arms of the run have mean handoffs of 11.0 to 192.0 microseconds, and 27 of them are below 100. Each slow arm ran after a passed warm-up, and the plain processes do not run the profiler.
+  So a slow plain `original` arm moves its whole block, and a slow treatment arm moves its own point. The records do not show the cause of the long handoffs.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

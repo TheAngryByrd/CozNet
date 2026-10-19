@@ -1,6 +1,6 @@
 import unittest
 
-from AnalyzeTargetProfile import (plain_warmups_passed, pinning_complete, handoff_parts, queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
+from AnalyzeTargetProfile import (period_matches, plain_warmups_passed, pinning_complete, handoff_parts, queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
                                   order_ratios,
                                   positions_balanced,
                                   prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
@@ -325,6 +325,14 @@ class ThroughputChecks(unittest.TestCase):
         self.assertFalse(pinning_complete({**profile, "workerCpusSeen": [[0, 2]]}, plain, [0, 2]))
         same = {**profile, "workerCpus": [0, 0], "workerCpusSeen": [[0, 0], [0, 0], [-1, -1]]}
         self.assertFalse(pinning_complete(same, {"original": {"workerCpus": [0, 0], "workerCpusSeen": [[0, 0]]}}, [0, 0]))
+
+    def test_profile_period_must_match_the_run(self):
+        self.assertTrue(period_matches({}, None))
+        self.assertTrue(period_matches({"periodNs": 1000000}, None))
+        self.assertFalse(period_matches({"periodNs": 250000}, None))
+        self.assertTrue(period_matches({"periodNs": 250000}, 250000))
+        self.assertFalse(period_matches({}, 250000))
+        self.assertFalse(period_matches(None, None))
 
     def test_plain_warmups_must_exist_and_pass(self):
         import tempfile, json, pathlib

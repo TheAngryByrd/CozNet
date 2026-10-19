@@ -7,7 +7,16 @@ open System.Text.Json
 open System.Threading
 open CozNet
 
-let private period = 1000000UL
+let private period =
+    match Environment.GetEnvironmentVariable "COZNET_SAMPLE_PERIOD_NS" with
+    | null
+    | "" -> 1000000UL
+    | text ->
+        match UInt64.TryParse text with
+        | true, value when value >= 1UL && value <= 1000000000UL -> value
+        | _ ->
+            eprintfn "COZNET_SAMPLE_PERIOD_NS must be a whole number of nanoseconds from 1 through 1000000000."
+            exit 3
 let private journalCapacity = 1u <<< 20
 
 module private Pinning =
@@ -317,7 +326,7 @@ let private writeProfileWith mode seed (rotation: int) selectedRounds peerRounds
         |> Array.map (fun p -> {| candidate = p.Candidate; speedup = p.Speedup; prediction = p.Predictions[0] |> Option.toNullable |})
     write output {| mode = mode; seed = seed; rotation = rotation; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = durationMs
                     warmup = profile.Warmup; experiments = profile.Experiments; points = points; lockStats = lockStats; queueStats = queueStats
-                    workerCpus = Pinning.requested; workerCpusSeen = Pinning.recorded (); passed = passed |}
+                    workerCpus = Pinning.requested; workerCpusSeen = Pinning.recorded (); periodNs = period; passed = passed |}
     if passed then 0 else 1
 
 let private writeProfile mode seed rotation selectedRounds peerRounds durationMs profile output =

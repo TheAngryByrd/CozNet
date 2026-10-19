@@ -18,6 +18,7 @@ WORKLOADS = {"latency": {"profile": "causal-profile", "plain": "plain", "selecte
              "spintransaction": {"profile": "spin-transaction-profile", "plain": "plain-spin-transaction", "selected": 40, "peer": 8, "durationMs": 120}}
 MIN_VISITS = 100
 SPEEDUPS = (25, 50, 75)
+PERIOD_NS = 1000000
 SELECTED_NAME = "CozNet.TargetLocal.Work::selected(uint64)"
 PEER_NAME = "CozNet.TargetLocal.Work::peer(uint64)"
 CANDIDATES = {"selected": SELECTED_NAME, "peer": PEER_NAME}
@@ -215,6 +216,10 @@ def queue_handoffs(profile, plain, candidate, speedup):
 PINNED_CPUS = [0, 2]
 
 
+def period_matches(profile, requested):
+    return isinstance(profile, dict) and profile.get("periodNs", PERIOD_NS) == (requested or PERIOD_NS)
+
+
 def pinning_complete(profile, arms, requested):
     if not requested:
         return True
@@ -322,6 +327,8 @@ def main():
             reasons.append("the profile record does not hold its warm-up experiment")
         elif not pinning_complete(profile, data, manifest.get("workerCpus")):
             reasons.append("a pinned record does not hold its worker CPUs")
+        elif not period_matches(profile, manifest.get("periodNs")):
+            reasons.append("the profile record does not hold the sample period of the run")
         elif workload in ("lock", "spinlock") and not lock_stats_complete(profile, data):
             reasons.append("a lock record does not hold its handoff counts")
         elif workload in TRANSACTIONS and not queue_stats_complete(profile, data):
