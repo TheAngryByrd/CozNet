@@ -41,11 +41,12 @@ Let N(t) be the transactions in flight, A the arrivals, T the elapsed time, ΔG 
 - When each transaction begins and ends in the window, `Σ (e_i - b_i) = ∫ N dt` and `Σ (G(e_i) - G(b_i)) = ∫ N dG`. The identities below hold only when `NegativeTransactions` is 0. The run before the settlement has clipped transactions at `selected-75`.
 - So the CozNet rule gives `VL / V = ∫ N (dt - dG) / A`. This is Little's law in virtual time, with the exact time average of the occupancy and no edge transactions.
   It is an algebraic identity of signed measures for complete transactions without clipped values, not a causal latency of each transaction. `t - G(t)` jumps backward when G steps, so one transaction can have a negative value. See [the clipping export plan](target-local-clipping-export.md).
-- The expected upstream value, with the occupancy sampled at a random wall-clock instant, is `(∫ N dt / T) / (A / D)`. With every transaction in the window, this equals `W * D / T`, the earlier CozNet rule.
-- The difference of the two rules is `(∫ N dG - N̄ ΔG) / A`, where N̄ is the wall-time mean occupancy. It is 0 when the delay rate is not correlated with the occupancy.
-  The CozNet rule is lower than the upstream rule when delay is added at a high occupancy, and higher when delay is added at a low occupancy.
+- The occupancy surrogate is `(∫ N dt / T) / (A / D)`. With every transaction in the window, it equals `W * D / T`, the earlier CozNet rule.
+  Correction from the [latency model plan](target-local-latency-model.md): this is not in general the expectation of the upstream rule over random stops, because the arrivals and the effective duration also change with the stop.
+- The difference of the CozNet rule and the surrogate is `(∫ N dG - N̄ ΔG) / A`, where N̄ is the wall-time mean occupancy. It is 0 when the delay rate is not correlated with the occupancy.
+  The CozNet rule is lower than the surrogate when delay is added at a high occupancy, and higher when delay is added at a low occupancy.
 
-So the per-transaction rule is an intentional extension, not a port of the upstream estimator. The two agree when the covariance of the occupancy and the delay rate is 0.
+So the per-transaction rule is an intentional extension, not a port of the upstream estimator. It agrees with the occupancy surrogate when the covariance of the occupancy and the delay rate is 0. That condition does not show agreement with the upstream rule.
 
 ## Hand-worked trace
 
@@ -64,14 +65,14 @@ The window is 0 to 100 ns. The global delay steps to 10 at t = 25 and to 30 at t
 - Earlier CozNet rule `W * D / T`: `(115 / 3) × 70 / 100 = 26.83` ns. The difference from 25 is `(40 - 1.15 × 30) / 3 = 1.83` ns, the term above.
 - The upstream formula, evaluated on this trace: arrivals 4, departures 3, difference 1, D = 70, so `1 / (4 / 70) = 17.5` ns. This is one sample of the occupancy, at the end.
   Upstream would not log this experiment, because it has fewer than 5 visits on each counter. The value only shows the formula.
-- Expected upstream value with T4: `∫ N dt = 135`, so `(135 / 100) / (4 / 70) = 23.63` ns.
+- Occupancy surrogate with T4: `∫ N dt = 135`, so `(135 / 100) / (4 / 70) = 23.63` ns.
 - Exact virtual Little's law with T4: `(75 + 20) / 4 = 23.75` ns.
 
 The trace shows no porting defect in `virtualLatency`. It gives the virtual-time identity for complete transactions without clipped values, and the outstanding transaction does not occur in the suites, because the consumer drains the queue. The identity does not show a causal latency.
 
 ## Comparison on the retained runs
 
-These are the signed medians over the valid blocks, in points. "Upstream" is the earlier `W * E / T` rule, computed from `LatencyNs`, `EffectiveNs`, `ElapsedNs`, and `Visits` of the same experiments. "CozNet" is the per-transaction rule.
+These are the signed medians over the valid blocks, in points. "Upstream" in this table is the earlier `W * E / T` rule, the occupancy surrogate, not the pinned upstream rule. It is computed from `LatencyNs`, `EffectiveNs`, `ElapsedNs`, and `Visits` of the same experiments. "CozNet" is the per-transaction rule.
 
 | Run | `selected-25` upstream / CozNet | `selected-50` | `selected-75` | `peer-25` | `peer-50` | `peer-75` |
 | --- | --- | --- | --- | --- | --- | --- |

@@ -878,4 +878,11 @@ The prediction results:
 - In the checked coarse case (p 40, c 16, K 4, s 3/4, T 160), with credit coarser than a transaction, 96 of 160 phases make no payment and 64 do. Every estimator then depends on the phase.
 - These are observations of finite model runs at a stated tick resolution, in a domain without payment overshoot. They do not establish a live mechanism or an estimator fix.
 
+## Boundary export
+
+[The boundary export plan](target-local-boundary-export.md) adds ordered reads of the counters and the clock at the start and the stop of each experiment of the diagnostic mode.
+- The reads follow the upstream read order. Upstream also takes no common-instant snapshot, so the export does not claim one.
+- G at those times comes from the journal publishes ordered by time.
+- Deterministic tests cover the races between counts and stamps, the boundary publishes, and the undefined cases. No capture has used the export yet.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

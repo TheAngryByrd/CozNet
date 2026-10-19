@@ -3,7 +3,7 @@ import pathlib
 import tempfile
 import unittest
 
-from AnalyzeTargetBottleneck import SEED, block_reasons, block_values, diagnostics_complete, evidence_reasons, evidence_values, paired_outcome, plain_matches, expected_args, outcome, profile_complete
+from AnalyzeTargetBottleneck import SEED, block_reasons, block_values, boundary_of, summarize_boundaries, upstream_gain, upstream_latency, viewer_aggregate, diagnostics_complete, evidence_reasons, evidence_values, paired_outcome, plain_matches, expected_args, outcome, profile_complete
 from AnalyzeTargetProfile import SELECTED_NAME
 
 
@@ -170,6 +170,52 @@ class BottleneckAnalysisTests(unittest.TestCase):
             profile, evidence = self.evidence_case(signed75=signed, clipped75=12_000)
             self.assertEqual(evidence_reasons(profile, evidence), [])
             self.assertIsNone(evidence_values(profile, data, evidence, True)[75]["unclippedDifference"])
+
+    def test_boundary_observations_are_checked_before_use(self):
+        good = {"arrivals": 5, "departures": 2, "difference": 4, "effectiveDurationNs": 830, "startArrivals": 1, "startVisits": 0, "stopArrivals": 6, "stopVisits": 2,
+                "startNs": 100, "stopReadStartNs": 1000, "stopReadEndNs": 1010, "stopCalledNs": 1020, "globalAtStartNs": 50, "globalAtStopReadStartNs": 120, "reasons": []}
+        self.assertEqual(boundary_of({"boundary": good}), (good, None))
+        self.assertEqual(boundary_of({"boundary": None}), (None, "no boundary observation"))
+        self.assertEqual(boundary_of({}), (None, "no boundary observation"))
+        self.assertEqual(boundary_of({"boundary": {**good, "arrivals": None}})[1], "the boundary observation has the wrong shape")
+        self.assertEqual(boundary_of({"boundary": {**good, "stopReadEndNs": 999}})[1], "the boundary reads are out of order")
+        self.assertEqual(boundary_of({"boundary": {**good, "reasons": ["no arrivals between the boundary observations"]}})[1], "no arrivals between the boundary observations")
+        self.assertEqual(boundary_of({"boundary": {**good, "reasons": [1]}})[1], "the boundary observation has the wrong shape")
+        self.assertEqual(boundary_of({"boundary": {**good, "reasons": [""]}})[1], "the boundary observation has the wrong shape")
+        self.assertEqual(boundary_of({"boundary": {**good, "reasons": ["  "]}})[1], "the boundary observation has the wrong shape")
+        idle = {**good, "stopArrivals": 1, "arrivals": 0, "difference": -1}
+        self.assertEqual(boundary_of({"boundary": idle})[1], "no arrivals between the boundary observations; the stop counts give a negative occupancy")
+        slow = {**good, "globalAtStopReadStartNs": 1000, "effectiveDurationNs": (1000 - 100) - (1000 - 50)}
+        self.assertEqual(boundary_of({"boundary": slow})[1], "the effective duration is not positive")
+        for key in ("arrivals", "departures", "difference", "effectiveDurationNs"):
+            self.assertEqual(boundary_of({"boundary": {**good, key: good[key] + 1}})[1], "the derived boundary values differ from the reads", key)
+
+    def test_the_boundary_summary_pairs_each_treatment_with_its_own_baseline_blocks(self):
+        per_block = {1: {0: (2, 10, 100), 75: (1, 10, 100)}, 2: {0: (4, 10, 100), 75: (2, 10, 100)}, 3: {0: (8, 10, 100)}, 4: {75: (1, 10, 100)}, 5: {}}
+        out = summarize_boundaries(per_block)
+        self.assertEqual(out["75"]["blocks"], [1, 2])
+        self.assertEqual(out["75"]["perBlockGain"], {"1": 0.5, "2": 0.5})
+        self.assertAlmostEqual(out["75"]["viewerGain"], 0.5)
+        self.assertEqual((out["25"]["blocks"], out["25"]["viewerGain"], out["25"]["undefinedPerBlock"]), ([], None, 0))
+        zero = summarize_boundaries({1: {0: (0, 10, 100), 50: (1, 10, 100)}})
+        self.assertEqual((zero["50"]["perBlockGain"], zero["50"]["undefinedPerBlock"], zero["50"]["viewerGain"]), ({"1": None}, 1, None))
+
+    def test_the_upstream_values_are_undefined_without_arrivals_or_duration(self):
+        self.assertAlmostEqual(upstream_latency(4, 5, 830), 664)
+        self.assertEqual(upstream_latency(0, 5, 830), 0)
+        self.assertIsNone(upstream_latency(4, 0, 830))
+        self.assertIsNone(upstream_latency(4, 5, 0))
+        self.assertIsNone(upstream_latency(-1, 5, 830))
+        self.assertEqual(upstream_gain(0, 10), 1)
+        self.assertIsNone(upstream_gain(1, 0))
+        self.assertIsNone(upstream_gain(None, 10))
+
+    def test_the_viewer_aggregate_weights_the_difference_by_duration(self):
+        items = [(2, 10, 100), (4, 30, 300)]
+        self.assertAlmostEqual(viewer_aggregate(items), ((2 * 100 + 4 * 300) / 400) / (40 / 400))
+        self.assertAlmostEqual(viewer_aggregate(items + [(9, 0, 50), (9, 3, 0)]), viewer_aggregate(items))
+        self.assertIsNone(viewer_aggregate([(1, 0, 10)]))
+        self.assertIsNone(viewer_aggregate([]))
 
     def test_the_outcome_follows_the_predeclared_limits(self):
         self.assertEqual(outcome(-11.0, -2.0, 0.05, 5, 5), "congestion supported")

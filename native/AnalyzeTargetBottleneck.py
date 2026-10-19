@@ -227,6 +227,91 @@ def unclipped_summary(blocks8, blocks2, common):
     return result
 
 
+BOUNDARY_KEYS = ("arrivals", "departures", "difference", "effectiveDurationNs", "startArrivals", "startVisits", "stopArrivals", "stopVisits",
+                 "startNs", "stopReadStartNs", "stopReadEndNs", "stopCalledNs", "globalAtStartNs", "globalAtStopReadStartNs")
+
+
+def boundary_of(entry):
+    boundary = entry.get("boundary") if isinstance(entry, dict) else None
+    if boundary is None:
+        return None, "no boundary observation"
+    if (not isinstance(boundary, dict) or not all(type(boundary.get(k)) is int for k in BOUNDARY_KEYS)
+            or not isinstance(boundary.get("reasons"), list) or not all(isinstance(r, str) and r.strip() for r in boundary["reasons"])):
+        return None, "the boundary observation has the wrong shape"
+    if not boundary["startNs"] <= boundary["stopReadStartNs"] <= boundary["stopReadEndNs"] <= boundary["stopCalledNs"]:
+        return None, "the boundary reads are out of order"
+    b = boundary
+    duration = (b["stopReadStartNs"] - b["startNs"]) - (b["globalAtStopReadStartNs"] - b["globalAtStartNs"])
+    if (b["arrivals"] != b["stopArrivals"] - b["startArrivals"] or b["departures"] != b["stopVisits"] - b["startVisits"]
+            or b["difference"] != b["stopArrivals"] - b["stopVisits"] or b["effectiveDurationNs"] != duration):
+        return None, "the derived boundary values differ from the reads"
+    derived = [reason for reason, failed in (("no arrivals between the boundary observations", b["arrivals"] <= 0),
+                                             ("the effective duration is not positive", b["effectiveDurationNs"] <= 0),
+                                             ("the stop counts give a negative occupancy", b["difference"] < 0)) if failed]
+    if boundary["reasons"] or derived:
+        return None, "; ".join(boundary["reasons"] or derived)
+    return boundary, None
+
+
+def upstream_latency(difference, arrivals, duration):
+    if arrivals <= 0 or duration <= 0 or difference < 0:
+        return None
+    return difference / (arrivals / duration)
+
+
+def viewer_aggregate(items):
+    """Coz viewer combination: the difference averaged by duration, divided by the summed arrivals over the summed durations."""
+    items = [(d, a, u) for d, a, u in items if a > 0 and u > 0 and d >= 0]
+    if not items:
+        return None
+    total = sum(u for _, _, u in items)
+    return (sum(d * u for d, _, u in items) / total) / (sum(a for _, a, _ in items) / total)
+
+
+def upstream_gain(treatment, baseline):
+    if treatment is None or baseline is None or baseline <= 0 or treatment < 0:
+        return None
+    return 1 - treatment / baseline
+
+
+def block_boundaries(profile, evidence, peer, block):
+    """Return ({speedup: (difference, arrivals, duration)}, [exclusions]) for one profile record and its evidence."""
+    if not isinstance(profile, dict) or not profile_complete(profile, peer, block) or not warmup_present(profile) or evidence_reasons(profile, evidence):
+        return {}, [{"block": block, "reason": "the profile or its evidence is incomplete"}]
+    entries = {(e["block"], e["order"]): e for e in evidence["experiments"]}
+    values, excluded = {}, []
+    for e in profile["experiments"]:
+        if e.get("Passed") is not True:
+            excluded.append({"block": block, "speedup": e["Speedup"], "reason": "the experiment failed"})
+            continue
+        boundary, reason = boundary_of(entries[(e["Block"], e["Order"])])
+        if reason is not None:
+            excluded.append({"block": block, "speedup": e["Speedup"], "reason": reason})
+            continue
+        values[e["Speedup"]] = (boundary["difference"], boundary["arrivals"], boundary["effectiveDurationNs"])
+    return values, excluded
+
+
+def summarize_boundaries(per_block):
+    """per_block maps a block to its {speedup: (difference, arrivals, duration)}. The baseline and each treatment use the same blocks."""
+    out = {}
+    for speed in SPEEDUPS:
+        paired = sorted(b for b, v in per_block.items() if 0 in v and speed in v)
+        per_gain = {str(b): upstream_gain(upstream_latency(*per_block[b][speed]), upstream_latency(*per_block[b][0])) for b in paired}
+        out[str(speed)] = {"blocks": paired, "perBlockGain": per_gain, "undefinedPerBlock": sum(1 for g in per_gain.values() if g is None),
+                           "viewerGain": upstream_gain(viewer_aggregate([per_block[b][speed] for b in paired]), viewer_aggregate([per_block[b][0] for b in paired]))}
+    return out
+
+
+def upstream_summary(run, peer):
+    per_block, excluded = {}, []
+    for block in range(1, BLOCKS + 1):
+        values, dropped = block_boundaries(load(run / f"{block}-p{peer}-profile.json"), load(run / f"{block}-p{peer}-profile.json.evidence.json"), peer, block)
+        per_block[block] = values
+        excluded += dropped
+    return {"excluded": excluded, **summarize_boundaries(per_block)}
+
+
 def main():
     run = pathlib.Path(sys.argv[1]).resolve()
     manifest = load(run / "manifest.json")
@@ -256,8 +341,9 @@ def main():
         peers[peer] = {"validBlocks": len(valid), "blocks": blocks, "points": points, "plainSelected75Idle": idle}
     common, paired, result = paired_outcome(peers[8]["blocks"], peers[2]["blocks"])
     unclipped = unclipped_summary(peers[8]["blocks"], peers[2]["blocks"], common)
+    upstream = {str(peer): upstream_summary(run, peer) for peer in PEERS}
     summary = {"inputsUnchanged": manifest["inputsUnchanged"], "complete": complete, "stopped": manifest.get("stopped"), "outcome": result if complete else "not decisive: run incomplete",
-               "commonValidBlocks": common, "paired": {str(k): v for k, v in paired.items()}, "unclipped": unclipped,
+               "commonValidBlocks": common, "paired": {str(k): v for k, v in paired.items()}, "unclipped": unclipped, "upstreamBoundary": upstream,
                "peers": {str(k): v for k, v in peers.items()}, "diagnostic": True, "qualification": False}
     (run / "summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps({"outcome": summary["outcome"], "commonValidBlocks": common, "paired": paired, "unclipped": unclipped}))

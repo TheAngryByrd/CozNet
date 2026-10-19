@@ -123,6 +123,36 @@ type internal TargetLatencyWindow = {
     Steps: int
 }
 
+type internal TargetBoundaryObservation = {
+    StartArrivals: int64
+    StartVisits: int64
+    StartNs: int64
+    RequestedDurationMs: int
+    StopReadStartNs: int64
+    StopArrivals: int64
+    StopVisits: int64
+    StopReadEndNs: int64
+    StopCalledNs: int64
+}
+
+type internal TargetBoundaryEvidence = {
+    Observation: TargetBoundaryObservation
+    GlobalAtStartNs: int64
+    GlobalAtStopReadStartNs: int64
+    GlobalAtStopReadEndNs: int64
+    Arrivals: int64
+    Departures: int64
+    Difference: int64
+    EffectiveDurationNs: int64
+    UpstreamLatencyNs: float option
+    Reasons: string array
+    TimestampDifferenceAtStop: int
+    CountMinusStampedBegins: int
+    CountMinusStampedEnds: int
+    BeginsStampedAfterStopCalled: int
+    DrainEndNs: int64 option
+}
+
 type internal TargetLatencyEvidence = {
     Transactions: int
     SignedTotalNs: int64
@@ -278,6 +308,42 @@ module TargetCausalProfile =
             total, negative
 
     let internal latencyWindowLimit = 4096
+
+    let internal stopwatchNanoseconds (ticks: int64) =
+        let frequency = Diagnostics.Stopwatch.Frequency
+        ticks / frequency * 1_000_000_000L + ticks % frequency * 1_000_000_000L / frequency
+
+    let internal globalAtTimes (events: TargetLedgerEvent array) =
+        let publishes = events |> Array.filter (fun e -> e.Kind = TargetLedgerEventKind.Publish && e.Time > 0UL) |> Array.sortBy (fun e -> e.Time, e.Sequence)
+        let times = publishes |> Array.map (fun e -> int64 e.Time)
+        let values = publishes |> Array.scan (fun high e -> max high e.Amount) 0UL |> Array.tail
+        fun (time: int64) ->
+            let mutable low, high = 0, times.Length
+            while low < high do
+                let middle = (low + high) / 2
+                if times[middle] <= time then low <- middle + 1 else high <- middle
+            if low = 0 then 0L else int64 values[low - 1]
+
+    let internal boundaryEvidence (events: TargetLedgerEvent array) (transactions: struct (int64 * int64) array) (o: TargetBoundaryObservation) =
+        let globalAt = globalAtTimes events
+        let atStart, atStop, atStopEnd = globalAt o.StartNs, globalAt o.StopReadStartNs, globalAt o.StopReadEndNs
+        let arrivals, departures, difference = o.StopArrivals - o.StartArrivals, o.StopVisits - o.StartVisits, o.StopArrivals - o.StopVisits
+        let duration = (o.StopReadStartNs - o.StartNs) - (atStop - atStart)
+        let reasons =
+            [| if arrivals <= 0L then "no arrivals between the boundary observations"
+               if duration <= 0L then "the effective duration is not positive"
+               if difference < 0L then "the stop counts give a negative occupancy" |]
+        let begun time = transactions |> Array.sumBy (fun (struct (b, _)) -> if b <= time then 1 else 0)
+        let ended time = transactions |> Array.sumBy (fun (struct (_, e)) -> if e <= time then 1 else 0)
+        { Observation = o; GlobalAtStartNs = atStart; GlobalAtStopReadStartNs = atStop; GlobalAtStopReadEndNs = atStopEnd
+          Arrivals = arrivals; Departures = departures; Difference = difference; EffectiveDurationNs = duration
+          UpstreamLatencyNs = (if reasons.Length = 0 then Some(float difference / (float arrivals / float duration)) else None)
+          Reasons = reasons
+          TimestampDifferenceAtStop = begun o.StopReadStartNs - ended o.StopReadStartNs
+          CountMinusStampedBegins = int (o.StopArrivals - int64 (begun o.StopReadStartNs))
+          CountMinusStampedEnds = int (o.StopVisits - int64 (ended o.StopReadStartNs))
+          BeginsStampedAfterStopCalled = transactions |> Array.sumBy (fun (struct (b, _)) -> if b > o.StopCalledNs then 1 else 0)
+          DrainEndNs = (if transactions.Length = 0 then None else Some(transactions |> Array.map (fun (struct (_, e)) -> e) |> Array.max)) }
 
     let internal latencyEvidence (limit: int) (events: TargetLedgerEvent array) (transactions: struct (int64 * int64) array) =
         let publishes = events |> Array.filter (fun e -> e.Kind = TargetLedgerEventKind.Publish && e.Time > 0UL) |> Array.sortBy (fun e -> e.Time, e.Sequence)
@@ -454,7 +520,7 @@ module TargetCausalProfile =
                      Workers = workers e events }
                if e.Time > 0UL then last[e.Worker] <- e |]
 
-    let internal runWithEvidence (sink: (int -> int -> TargetLatencyEvidence -> unit) option)
+    let internal runWithEvidence (sink: (int -> int -> TargetLedgerEvent array -> struct (int64 * int64) array -> unit) option)
                                  (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option * TargetCausalGc * struct (int64 * uint64 * struct (int64 * int64) array))
                                  (design: TargetCausalDesign) =
         let candidates, speedups, blocks, seed = design.Candidates, design.Speedups, design.Blocks, design.Seed
@@ -470,7 +536,7 @@ module TargetCausalProfile =
             match result with
             | Ok(r, visits, stop, gc, struct (arrivals, latencyNs, transactions)) ->
                 let virtualNs, negative = virtualLatency r.Events transactions
-                sink |> Option.iter (fun write -> write block order (latencyEvidence latencyWindowLimit r.Events transactions))
+                sink |> Option.iter (fun write -> write block order r.Events transactions)
                 let errors = [ if not r.Passed then failure r
                                match stop with
                                | Some message -> message
@@ -504,6 +570,32 @@ module TargetCausalProfile =
         finally
             counter.Stop()
 
+    let internal stopAfterObservedWith (now: unit -> int64) (counts: unit -> int64 * int64) (sleep: int -> unit) (stop: unit -> unit)
+                                       (duration: int) (working: unit -> bool) (running: unit -> bool) (record: TargetBoundaryObservation -> unit) =
+        let mutable started = None
+        let mutable stopping = None
+        try
+            while not (working ()) && running () do
+                Thread.SpinWait 100
+            if working () then
+                let arrivals, visits = counts ()
+                started <- Some(arrivals, visits, now ())
+                sleep duration
+                let readStart = now ()
+                let arrivals, visits = counts ()
+                stopping <- Some(readStart, arrivals, visits, now ())
+        finally
+            stop ()
+            match started, stopping with
+            | Some(a0, v0, t0), Some(t1, a1, v1, t2) ->
+                record { StartArrivals = a0; StartVisits = v0; StartNs = t0; RequestedDurationMs = duration; StopReadStartNs = t1
+                         StopArrivals = a1; StopVisits = v1; StopReadEndNs = t2; StopCalledNs = now () }
+            | _ -> ()
+
+    let internal stopAfterObserved (duration: int) (counter: TargetProgressCounter) working running record =
+        let now () = stopwatchNanoseconds (Diagnostics.Stopwatch.GetTimestamp())
+        stopAfterObservedWith now (fun () -> counter.Arrivals, counter.Visits) (fun (ms: int) -> Thread.Sleep ms) counter.Stop duration working running record
+
     let internal safetyDelay (duration: int) = TimeSpan.FromMilliseconds(1000.0 + 10.0 * float duration)
 
     let internal guard (delay: TimeSpan) (counter: TargetProgressCounter) (action: unit -> 'a) =
@@ -532,13 +624,19 @@ module TargetCausalProfile =
             raise (ThreadInterruptedException "The calling thread was interrupted while it joined the safety watcher.")
         value, Volatile.Read(&fired[0]) = 1
 
-    let internal runCollecting sink (design: TargetCausalDesign) (journalCapacity: uint32) (workers: TargetProgressCounter -> TargetWorker array) =
+    let internal runCollecting (sink: (int -> int -> TargetLatencyEvidence -> TargetBoundaryEvidence option -> unit) option)
+                               (design: TargetCausalDesign) (journalCapacity: uint32) (workers: TargetProgressCounter -> TargetWorker array) =
         let eligible = design.Eligible
+        let observed = ref None
         let experiment candidate speedup =
             let counter = TargetProgressCounter()
+            observed.Value <- None
             let monitor (state: TargetRunState) =
                 match design.Progress with
                 | EndToEnd -> ()
+                | Throughput duration
+                | Latency duration when sink.IsSome ->
+                    stopAfterObserved duration counter (fun () -> state.Working) (fun () -> state.Running) (fun o -> observed.Value <- Some o)
                 | Throughput duration
                 | Latency duration -> stopAfter duration counter (fun () -> state.Working) (fun () -> state.Running)
             let built = workers counter
@@ -555,7 +653,10 @@ module TargetCausalProfile =
                 let result, fired = guard (safetyDelay duration) counter profile
                 result, counter.Visits, (if fired then Some $"The safety stop ended the run after {safetyDelay duration}." else None), gc (),
                 struct (counter.Arrivals, counter.LatencyNs, counter.Transactions)
-        runWithEvidence sink experiment design
+        let collect =
+            sink |> Option.map (fun write -> fun block order events transactions ->
+                write block order (latencyEvidence latencyWindowLimit events transactions) (observed.Value |> Option.map (boundaryEvidence events transactions)))
+        runWithEvidence collect experiment design
 
     let run (design: TargetCausalDesign) (journalCapacity: uint32) (workers: TargetProgressCounter -> TargetWorker array) =
         runCollecting None design journalCapacity workers

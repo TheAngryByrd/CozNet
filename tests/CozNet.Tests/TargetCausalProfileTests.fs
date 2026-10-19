@@ -255,12 +255,68 @@ module TargetCausalProfileTests =
                     let events = if s = 0u then Array.empty else [| publish 150UL 300UL |]
                     { result 1000UL true with Events = events }, 2L, None, noGc, struct (2L, 0UL, [| struct (100L, 200L); struct (100L, 1100L) |])
                 let seen = Collections.Generic.List<int * int * TargetLatencyEvidence>()
-                let value = TargetCausalProfile.runWithEvidence (Some(fun block order evidence -> seen.Add((block, order, evidence)))) run design
+                let collect block order events transactions =
+                    seen.Add((block, order, TargetCausalProfile.latencyEvidence TargetCausalProfile.latencyWindowLimit events transactions))
+                let value = TargetCausalProfile.runWithEvidence (Some collect) run design
                 Expect.equal seen.Count (value.Experiments.Length + 1) "The callback must receive the warm-up and each experiment."
                 for e in value.Experiments do
                     let _, _, evidence = seen |> Seq.find (fun (b, o, _) -> b = e.Block && o = e.Order)
                     Expect.equal (evidence.ClippedTotalNs, evidence.NegativeTransactions) (e.VirtualLatencyNs, e.NegativeTransactions) "The evidence must match the experiment."
                     Expect.equal evidence.ClippedNs (if e.Speedup = 0u then 0UL else 200UL) "The baseline must clip nothing, and the step must clip 300 - 100 ns."
+            }
+
+            test "the boundary evidence follows the ordered reads and shows count and stamp races" {
+                let publish sequence time value = { Worker = 0; Sequence = sequence; Kind = TargetLedgerEventKind.Publish; ObservedGlobal = 0UL; LocalBefore = value; Amount = value
+                                                    Requested = 0UL; Ip = 0UL; Detail = 0u; Time = time }
+                let events = [| publish 1UL 100UL 50UL; publish 2UL 300UL 120UL; publish 3UL 1005UL 200UL |]
+                let transactions = [| struct (50L, 400L); struct (200L, 600L); struct (300L, 990L); struct (500L, 1005L)
+                                      struct (700L, 2000L); struct (1002L, 2100L); struct (1030L, 2200L) |]
+                let o = { StartArrivals = 1L; StartVisits = 0L; StartNs = 100L; RequestedDurationMs = 1; StopReadStartNs = 1000L
+                          StopArrivals = 6L; StopVisits = 2L; StopReadEndNs = 1010L; StopCalledNs = 1020L }
+                let b = TargetCausalProfile.boundaryEvidence events transactions o
+                Expect.equal (b.GlobalAtStartNs, b.GlobalAtStopReadStartNs, b.GlobalAtStopReadEndNs) (50L, 120L, 200L)
+                    "A publish at a read time must count at that time, and a publish inside the stop reads must show as a change between them."
+                Expect.equal (b.Arrivals, b.Departures, b.Difference, b.EffectiveDurationNs) (5L, 2L, 4L, 830L) "The counters must come from the two observations."
+                Expect.equal b.UpstreamLatencyNs (Some(4.0 / (5.0 / 830.0))) "The upstream latency must be the difference over the arrival rate."
+                Expect.equal b.Reasons [||] "A complete observation must have no reason."
+                Expect.equal (b.TimestampDifferenceAtStop, b.CountMinusStampedBegins, b.CountMinusStampedEnds, b.BeginsStampedAfterStopCalled) (2, 1, -1, 1)
+                    "A begin counted before its stamp, an end stamped before its count, and a begin after Stop must each show."
+                let late = TargetCausalProfile.boundaryEvidence events transactions { o with StopVisits = 4L }
+                Expect.equal late.CountMinusStampedEnds 1 "An end counted during the reads but stamped after the first stop clock must give a positive value."
+                Expect.equal b.DrainEndNs (Some 2200L) "The drain end must be the last end."
+                let none = TargetCausalProfile.boundaryEvidence events transactions { o with StopArrivals = 1L; StopVisits = 1L }
+                Expect.equal (none.UpstreamLatencyNs, none.Reasons) (None, [| "no arrivals between the boundary observations" |]) "No arrivals must give no latency."
+                let crowded = TargetCausalProfile.boundaryEvidence [| publish 1UL 500UL 5000UL |] transactions o
+                Expect.equal (crowded.EffectiveDurationNs, crowded.UpstreamLatencyNs) (-4100L, None) "A delay above the elapsed time must give no latency."
+                Expect.contains crowded.Reasons "the effective duration is not positive" "The reason must be stated."
+                let negative = TargetCausalProfile.boundaryEvidence events transactions { o with StopVisits = 7L }
+                Expect.contains negative.Reasons "the stop counts give a negative occupancy" "A negative occupancy must be stated."
+                let empty = TargetCausalProfile.boundaryEvidence events Array.empty o
+                Expect.equal (empty.DrainEndNs, empty.TimestampDifferenceAtStop) (None, 0) "Without transactions there must be no drain end."
+            }
+
+            test "the observed stop reads its counts in order and records nothing for a run that never works" {
+                let log = Collections.Generic.List<string>()
+                let mutable clock, arrivals, visits = 100L, 2L, 1L
+                let now () = log.Add "clock"; clock <- clock + 10L; clock
+                let counts () = log.Add "counts"; arrivals, visits
+                let sleep ms = log.Add $"sleep {ms}"; arrivals <- 7L; visits <- 4L
+                let stop () = log.Add "stop"
+                let seen = Collections.Generic.List<TargetBoundaryObservation>()
+                TargetCausalProfile.stopAfterObservedWith now counts sleep stop 5 (fun () -> true) (fun () -> true) seen.Add
+                Expect.equal (List.ofSeq log) [ "counts"; "clock"; "sleep 5"; "clock"; "counts"; "clock"; "stop"; "clock" ] "The reads must follow the upstream order and come before Stop."
+                let o = seen[0]
+                Expect.equal (o.StartArrivals, o.StartVisits, o.StartNs, o.StopReadStartNs, o.StopArrivals, o.StopVisits, o.StopReadEndNs, o.StopCalledNs)
+                    (2L, 1L, 110L, 120L, 7L, 4L, 130L, 140L) "Each observation must keep its own counts and clocks."
+                let counter = TargetProgressCounter(fun () -> ())
+                let real = Collections.Generic.List<TargetBoundaryObservation>()
+                TargetCausalProfile.stopAfterObserved 5 counter (fun () -> true) (fun () -> true) real.Add
+                Expect.isGreaterThanOrEqual (real[0].StopReadStartNs - real[0].StartNs) 5_000_000L "The stop read must follow the requested duration."
+                Expect.isTrue counter.Stopped "The counter must stop."
+                let idle = TargetProgressCounter(fun () -> ())
+                let none = Collections.Generic.List<TargetBoundaryObservation>()
+                TargetCausalProfile.stopAfterObserved 5 idle (fun () -> false) (fun () -> false) none.Add
+                Expect.equal (none.Count, idle.Stopped) (0, true) "A run that never works must record nothing and must still stop."
             }
 
             test "the virtual latency subtracts the global delay added during each transaction" {

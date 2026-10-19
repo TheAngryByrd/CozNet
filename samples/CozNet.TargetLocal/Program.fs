@@ -599,11 +599,27 @@ let private transactionProfileWith (mode: string) (spin: TimeSpan) (candidates: 
     let evidence = Collections.Generic.List<obj>()
     let sink =
         if mode = "transaction-selected-profile" then
-            Some(fun (block: int) (order: int) (e: TargetLatencyEvidence) ->
+            Some(fun (block: int) (order: int) (e: TargetLatencyEvidence) (boundary: TargetBoundaryEvidence option) ->
+                let boundary =
+                    match boundary with
+                    | None -> null
+                    | Some b ->
+                        let o = b.Observation
+                        box {| contract = "upstream-like ordered reads: start counts then clock; stop clock, counts, clock, then Stop"
+                               startArrivals = o.StartArrivals; startVisits = o.StartVisits; startNs = o.StartNs; requestedDurationMs = o.RequestedDurationMs
+                               stopReadStartNs = o.StopReadStartNs; stopArrivals = o.StopArrivals; stopVisits = o.StopVisits; stopReadEndNs = o.StopReadEndNs
+                               stopCalledNs = o.StopCalledNs; globalSource = "journal publishes ordered by time, not a concurrent read"
+                               globalAtStartNs = b.GlobalAtStartNs; globalAtStopReadStartNs = b.GlobalAtStopReadStartNs; globalAtStopReadEndNs = b.GlobalAtStopReadEndNs
+                               arrivals = b.Arrivals; departures = b.Departures; difference = b.Difference; effectiveDurationNs = b.EffectiveDurationNs
+                               upstreamLatencyNs = Option.toNullable b.UpstreamLatencyNs; reasons = b.Reasons
+                               timestampDifferenceAtStop = b.TimestampDifferenceAtStop; countMinusStampedBegins = b.CountMinusStampedBegins
+                               countMinusStampedEnds = b.CountMinusStampedEnds; beginsStampedAfterStopCalled = b.BeginsStampedAfterStopCalled
+                               drainEndNs = Option.toNullable b.DrainEndNs |}
                 evidence.Add(box {| block = block; order = order; transactions = e.Transactions; signedTotalNs = e.SignedTotalNs; clippedNs = e.ClippedNs
                                     clippedTotalNs = e.ClippedTotalNs; negativeTransactions = e.NegativeTransactions; stepHistogram = e.StepHistogram
                                     exported = e.Windows.Length; omitted = e.Omitted; exportLimit = TargetCausalProfile.latencyWindowLimit
-                                    windows = e.Windows |> Array.map (fun w -> [| w.BeginNs; w.EndNs; w.GlobalAtBeginNs; w.GlobalAtEndNs; w.SignedNs; int64 w.Steps |]) |}))
+                                    windows = e.Windows |> Array.map (fun w -> [| w.BeginNs; w.EndNs; w.GlobalAtBeginNs; w.GlobalAtEndNs; w.SignedNs; int64 w.Steps |])
+                                    boundary = boundary |}))
         else None
     let profile = TargetCausalProfile.runCollecting sink (profileDesignFor candidates binding seed rotation (Latency throughputDuration)) journalCapacity workers
     if sink.IsSome then write (output + ".evidence.json") {| windowFields = [| "beginNs"; "endNs"; "globalAtBeginNs"; "globalAtEndNs"; "signedNs"; "steps" |]; experiments = evidence.ToArray() |}
