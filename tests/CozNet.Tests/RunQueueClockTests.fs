@@ -20,6 +20,19 @@ module RunQueueClockTests =
     [<Tests>]
     let tests =
         testList "run-queue clock" [
+            test "a start trace without a run-queue clock keeps each point in order with an unreadable delay" {
+                let trace = StartTrace null
+                let delays = [ for index in 0..2 -> trace.Record index ]
+                let points = trace.Points()
+                let counters (p: TargetStartPoint) = [ p.MinorFaults; p.MajorFaults; p.VoluntarySwitches; p.InvoluntarySwitches ]
+                Expect.equal delays [ -1L; -1L; -1L ] "Each record without a clock must return -1."
+                Expect.equal points.Length 3 "The trace must hold three points."
+                Expect.isTrue (points |> Array.pairwise |> Array.forall (fun (a, b) -> a.Ticks > 0L && a.Ticks <= b.Ticks)) $"The point times must not decrease: %A{points}"
+                Expect.isTrue (points |> Array.forall (fun p -> p.RunDelayNs = -1L && (p.CpuTimeNs = -1L || p.CpuTimeNs > 0L))) $"The delay must be -1 and the CPU time unreadable or positive: %A{points}"
+                Expect.isTrue (points |> Array.forall (fun p -> counters p |> List.forall ((=) -1L) || counters p |> List.forall (fun v -> v >= 0L)))
+                    $"The counters of a point must be all unreadable or all readable: %A{points}"
+            }
+
             test "schedstat fields parse as run time and run-queue delay" {
                 Expect.equal (parse "123456 7890 42\n") (struct (123456L, 7890L)) "Both leading fields must parse."
                 Expect.equal (parse "0 0 0\n") (struct (0L, 0L)) "Zero values must parse."

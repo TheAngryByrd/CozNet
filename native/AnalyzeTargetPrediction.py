@@ -59,6 +59,37 @@ def start_complete(thread):
             and 0 <= thread["startRunDelayNs"] <= thread["runDelayNs"])
 
 
+TRACE_KEYS = ("ticks", "cpuTimeNs", "runDelayNs", "minorFaults", "majorFaults", "voluntarySwitches", "involuntarySwitches")
+SEGMENTS = ("setup", "barrier")
+
+
+def trace_complete(thread):
+    points = thread.get("startTrace")
+    if not start_complete(thread) or not isinstance(points, list) or len(points) != 3:
+        return False
+    if not all(isinstance(p, dict) and all(type(p.get(k)) is int and p[k] >= 0 for k in TRACE_KEYS) for p in points):
+        return False
+    return (thread["startedNs"] <= points[0]["ticks"] and points[-1]["ticks"] <= thread["workStartedNs"]
+            and all(points[i + 1][k] >= points[i][k] for i in range(2) for k in TRACE_KEYS))
+
+
+def trace_segments(thread):
+    points = thread["startTrace"]
+    segments = {"nativeToFirstNs": points[0]["ticks"] - thread["startedNs"]}
+    for name, a, b in zip(SEGMENTS, points, points[1:]):
+        wall, cpu, queue = b["ticks"] - a["ticks"], b["cpuTimeNs"] - a["cpuTimeNs"], b["runDelayNs"] - a["runDelayNs"]
+        segments[name] = {"wallNs": wall, "onCpuNs": cpu, "runQueueNs": queue, "offCpuNs": wall - cpu - queue,
+                          **{k: b[k] - a[k] for k in TRACE_KEYS[3:]}}
+    return segments
+
+
+def add_largest(largest, diagnostics):
+    for segments in (t for d in diagnostics.values() if d for t in d["startSegments"] if t):
+        largest["nativeToFirstNs"] = max(largest["nativeToFirstNs"], segments["nativeToFirstNs"])
+        for segment in SEGMENTS:
+            largest[segment] = max(largest[segment], segments[segment]["wallNs"])
+
+
 def residual_run_delay(thread, complete):
     waits = thread.get("waitRunDelayNs", [])
     if not complete or any(d < 0 for d in waits):
@@ -70,12 +101,13 @@ def wait_diagnostics(data):
     if data is None:
         return None
     if "threads" not in data or "events" not in data:
-        return {"complete": False, "startComplete": False, "workStartNs": [], "waits": 0, "maxWaitRunDelayNs": None,
+        return {"complete": False, "startComplete": False, "startTraceComplete": False, "startSegments": [], "workStartNs": [], "waits": 0, "maxWaitRunDelayNs": None,
                 "totalWaitRunDelayNs": 0, "unreadWaits": 0, "debtFailures": []}
     events = sorted(data["events"], key=lambda e: e[9])
     origin = events[0][9] if events else 0
     threads = data["threads"]
     starts = [start_complete(t) for t in threads]
+    traces = [trace_segments(t) if trace_complete(t) else None for t in threads]
     wakes = {i: [e for e in events if e[0] == i and e[2] == WAKE] for i in range(len(threads))}
     complete = all("waitRunDelayNs" in t and len(t["waitRunDelayNs"]) == len(wakes[i]) and t.get("waitRunDelaysDropped") == 0
                    for i, t in enumerate(threads))
@@ -94,10 +126,11 @@ def wait_diagnostics(data):
             thread, started = threads[failure[0]], starts[failure[0]]
             item.update({"startRunDelayNs": thread["startRunDelayNs"] if started else None,
                          "workStartToFailureNs": failure[9] - thread["workStartedNs"] if started else None,
-                         "firstSampleNs": first_samples, "residualRunDelayNs": residual_run_delay(thread, started)})
+                         "firstSampleNs": first_samples, "residualRunDelayNs": residual_run_delay(thread, started),
+                         "startSegments": traces[failure[0]]})
         failures.append(item)
     values = [d for t in threads for d in t.get("waitRunDelayNs", []) if d >= 0]
-    return {"complete": complete, "startComplete": all(starts),
+    return {"complete": complete, "startComplete": all(starts), "startTraceComplete": all(t is not None for t in traces), "startSegments": traces,
             "workStartNs": [t["workStartedNs"] - origin if ok else None for t, ok in zip(threads, starts)], "waits": sum(len(w) for w in wakes.values()), "maxWaitRunDelayNs": max(values, default=None),
             "totalWaitRunDelayNs": sum(values), "unreadWaits": sum(1 for t in threads for d in t.get("waitRunDelayNs", []) if d < 0),
             "debtFailures": failures}
@@ -119,6 +152,8 @@ def main():
               and declared == table and len(manifest["configurations"]) == len(table) and not unknown)
     diagnostics_complete = True
     start_diagnostics_complete = True
+    start_trace_complete = True
+    largest = {"nativeToFirstNs": 0, "setup": 0, "barrier": 0}
     for configuration in manifest["configurations"]:
         name = configuration["name"]
         blocks = []
@@ -146,6 +181,8 @@ def main():
                       "waitDiagnostics": {arm: wait_diagnostics(arms[arm]) for arm in ("profile-zero", "profile-speedup")}}
             diagnostics_complete = diagnostics_complete and all(d is None or d["complete"] for d in record["waitDiagnostics"].values())
             start_diagnostics_complete = start_diagnostics_complete and all(d is None or d["startComplete"] for d in record["waitDiagnostics"].values())
+            start_trace_complete = start_trace_complete and all(d is None or d["startTraceComplete"] for d in record["waitDiagnostics"].values())
+            add_largest(largest, record["waitDiagnostics"])
             if not reasons:
                 zero, speed, original, optimized = (arms[a] for a in ("profile-zero", "profile-speedup", "original", "optimized"))
                 predicted = 1 - speed["effectiveNs"] / zero["effectiveNs"]
@@ -190,8 +227,9 @@ def main():
                    for d in b["waitDiagnostics"].values() if d is not None)
     if barrier:
         passed = passed and observed > 0
-    passed = passed and diagnostics_complete and start_diagnostics_complete
-    summary = {"passed": passed, "waitDiagnosticsComplete": diagnostics_complete, "startDiagnosticsComplete": start_diagnostics_complete, "totalWaitRunDelayNs": observed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT,
+    passed = passed and diagnostics_complete and start_diagnostics_complete and start_trace_complete
+    summary = {"passed": passed, "waitDiagnosticsComplete": diagnostics_complete, "startDiagnosticsComplete": start_diagnostics_complete,
+               "startTraceComplete": start_trace_complete, "largestStartSegmentNs": largest, "totalWaitRunDelayNs": observed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT,
                "blockLimit": BLOCK_LIMIT, "speedup": manifest["speedup"], "configurations": configurations,
                "supportedModel": "Linux x64 CPU-bound managed fork/join threads registered through CozNet",
                "generalClrSafetyEstablished": False}

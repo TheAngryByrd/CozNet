@@ -89,6 +89,9 @@ A worker keeps at most 1024 values. `WaitRunDelaysDropped` counts each later wai
 `TargetThreadOutcome.StartRunDelayNs` is the change in run-queue delay from the read before the start barrier to a read after that barrier returns.
 The second read comes before `StartedTicks`, so it is outside the measured span. It is -1 when a read fails.
 The difference `RunDelayNs - StartRunDelayNs - sum(WaitRunDelayNs)` is an upper bound on the run-queue delay during `Work` outside the waits.
+`TargetThreadOutcome.StartTrace` holds three `TargetStartPoint` values: after the native start, before the start barrier, and after the start barrier returns.
+Each point holds `Ticks` from `Stopwatch`, `CpuTimeNs` from `CLOCK_THREAD_CPUTIME_ID`, `RunDelayNs` from `/proc/thread-self/schedstat`, and `MinorFaults`, `MajorFaults`, `VoluntarySwitches`, and `InvoluntarySwitches` from `getrusage(RUSAGE_THREAD)`.
+A failed read records -1. A thread that cannot register has an empty trace. All three points come before `StartedTicks`.
 
 The qualification runners hash each text source after they replace CRLF with LF, and each manifest records `sourceHash`. A hash then equals the SHA-256 of the committed blob.
 `TargetLedgerEvent.Time` is the native event time. For a sample, it is the perf sample time.

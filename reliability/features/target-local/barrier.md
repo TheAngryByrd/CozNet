@@ -1,6 +1,6 @@
 # Target-local barrier qualification
 
-Evidence: `artifacts/target-local-barrier/20261018T234001547-747aae56`.
+Evidence: `artifacts/target-local-barrier/20261019T002531212-f435da11`.
 
 `TargetLocalBarrierVerify` ran once with seed 20261018 on kernel `5.15.153.1-microsoft-standard-WSL2`, x64, with 4 CPUs.
 The criteria are in [the prediction plan](../../../lode/plans/target-local-prediction.md#barrier-qualification), fixed before the first barrier run.
@@ -12,32 +12,32 @@ Each block runs `profile-phases 0`, `profile-phases 50`, `plain-phases <pattern>
 
 | Configuration | Pattern | Expected actual | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Median skipped delay | Result |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| `barrier-alternating` | `alternating` | about 40% | 5 / 5 | 38.95% | 38.84% | 1.45 pp | 2.57 pp | 52.0 ms | Pass |
-| `barrier-selected-dominant` | `selected-dominant` | about 50% | 5 / 5 | 50.33% | 49.36% | 1.66 pp | 2.43 pp | 100.4 ms | Pass |
-| `barrier-peer-bound` | `peer-bound` | about 0% | 5 / 5 | 1.34% | 1.51% | 3.78 pp | 5.97 pp | 0.0 ms | Pass |
+| `barrier-alternating` | `alternating` | about 40% | 5 / 5 | 40.29% | 39.41% | 0.88 pp | 2.26 pp | 51.0 ms | Pass |
+| `barrier-selected-dominant` | `selected-dominant` | about 50% | 5 / 5 | 48.82% | 50.86% | 2.04 pp | 2.55 pp | 102.5 ms | Pass |
+| `barrier-peer-bound` | `peer-bound` | about 0% | 5 / 5 | 1.56% | 0.66% | 3.57 pp | 6.70 pp | 0.0 ms | Pass |
 
 | Configuration | Block | Predicted | Actual | Difference | Global delay (ms) | Skipped delay (ms) | Handler share at 0% | Run-queue delay at 0% (ms) | Run-queue delay at 50% (ms) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `barrier-alternating` | 1 | 39.15% | 40.68% | -1.53 pp | 116.5 | 52.0 | 0.099% | 0.00 | 0.55 |
-| `barrier-alternating` | 2 | 38.95% | 39.28% | -0.33 pp | 115.0 | 51.5 | 0.073% | 0.01 | 0.00 |
-| `barrier-alternating` | 3 | 36.79% | 38.24% | -1.45 pp | 120.5 | 55.5 | 0.109% | 0.34 | 0.69 |
-| `barrier-alternating` | 4 | 41.41% | 38.84% | +2.57 pp | 113.5 | 50.5 | 0.088% | 0.05 | 0.00 |
-| `barrier-alternating` | 5 | 38.04% | 37.93% | +0.10 pp | 118.0 | 52.0 | 0.080% | 0.03 | 0.00 |
-| `barrier-selected-dominant` | 1 | 50.98% | 48.55% | +2.43 pp | 203.0 | 100.4 | 0.084% | 0.00 | 0.06 |
-| `barrier-selected-dominant` | 2 | 51.28% | 49.36% | +1.91 pp | 202.0 | 98.0 | 0.082% | 0.04 | 0.04 |
-| `barrier-selected-dominant` | 3 | 48.81% | 49.72% | -0.92 pp | 205.5 | 104.0 | 0.081% | 0.05 | 0.54 |
-| `barrier-selected-dominant` | 4 | 50.33% | 51.43% | -1.11 pp | 204.0 | 98.9 | 0.063% | 0.01 | 0.02 |
-| `barrier-selected-dominant` | 5 | 49.98% | 48.32% | +1.66 pp | 203.0 | 101.5 | 0.073% | 0.39 | 0.31 |
-| `barrier-peer-bound` | 1 | -1.59% | 1.51% | -3.10 pp | 26.0 | 0.0 | 0.097% | 0.00 | 0.02 |
-| `barrier-peer-bound` | 2 | 3.29% | 7.07% | -3.78 pp | 25.0 | 0.0 | 0.090% | 0.00 | 0.00 |
-| `barrier-peer-bound` | 3 | 0.52% | 3.44% | -2.93 pp | 25.5 | 0.0 | 0.106% | 0.01 | 0.00 |
-| `barrier-peer-bound` | 4 | 4.64% | -1.33% | +5.97 pp | 25.5 | 0.0 | 0.104% | 2.15 | 0.00 |
-| `barrier-peer-bound` | 5 | 1.34% | -2.76% | +4.10 pp | 25.5 | 0.0 | 0.078% | 0.00 | 0.00 |
+| `barrier-alternating` | 1 | 40.70% | 39.99% | +0.72 pp | 115.5 | 51.0 | 0.105% | 0.00 | 0.04 |
+| `barrier-alternating` | 2 | 39.94% | 41.42% | -1.48 pp | 116.5 | 51.5 | 0.106% | 0.01 | 0.03 |
+| `barrier-alternating` | 3 | 38.17% | 38.60% | -0.43 pp | 114.5 | 51.0 | 0.078% | 0.94 | 0.01 |
+| `barrier-alternating` | 4 | 40.29% | 39.41% | +0.88 pp | 114.5 | 51.4 | 0.097% | 0.01 | 0.02 |
+| `barrier-alternating` | 5 | 40.96% | 38.70% | +2.26 pp | 115.0 | 50.0 | 0.097% | 0.01 | 0.00 |
+| `barrier-selected-dominant` | 1 | 48.82% | 50.86% | -2.04 pp | 206.0 | 102.5 | 0.074% | 0.00 | 0.61 |
+| `barrier-selected-dominant` | 2 | 48.67% | 51.14% | -2.46 pp | 207.0 | 100.0 | 0.070% | 0.02 | 0.01 |
+| `barrier-selected-dominant` | 3 | 47.72% | 50.26% | -2.55 pp | 207.5 | 106.5 | 0.070% | 0.01 | 0.07 |
+| `barrier-selected-dominant` | 4 | 51.29% | 51.00% | +0.29 pp | 205.0 | 101.5 | 0.096% | 0.01 | 0.01 |
+| `barrier-selected-dominant` | 5 | 50.48% | 50.31% | +0.17 pp | 205.0 | 103.5 | 0.078% | 0.07 | 0.01 |
+| `barrier-peer-bound` | 1 | 1.56% | 1.98% | -0.42 pp | 24.5 | 0.0 | 0.101% | 0.00 | 0.02 |
+| `barrier-peer-bound` | 2 | 2.49% | -1.09% | +3.57 pp | 25.5 | 0.0 | 0.132% | 0.00 | 0.00 |
+| `barrier-peer-bound` | 3 | -3.38% | 3.33% | -6.70 pp | 26.5 | 0.0 | 0.104% | 0.00 | 0.06 |
+| `barrier-peer-bound` | 4 | 0.44% | 0.66% | -0.22 pp | 25.5 | 0.0 | 0.101% | 0.01 | 0.01 |
+| `barrier-peer-bound` | 5 | 3.93% | 0.13% | +3.80 pp | 25.0 | 0.0 | 0.106% | 0.01 | 0.01 |
 
-**Result: the current run passes.**
+**Result: the current run fails.** Failed criteria: The readable wait values sum to zero, so criterion 14 fails.
 The gate stays unchanged. Each failing block is recorded with its run-queue delays.
 A valid block has runs that all exit 0, both epochs complete with zero loss, a valid managed replay, no ledger failure, and all 10 phases complete.
-Each profiled run in a valid block records at least one dependency wake. The longest handler interval in a valid block is 2,005,970 ns.
+Each profiled run in a valid block records at least one dependency wake. The longest handler interval in a valid block is 2,012,053 ns.
 
 ## What the skipped delay shows
 
@@ -49,7 +49,7 @@ In `alternating`, the critical thread changes in every phase. The prediction fol
 
 ## Run-queue delay
 
-The wait records are complete: each profile arm must hold one value for each wake, with none dropped. The readable wait values sum to 2.32 ms across the run. The start records are complete: each profile thread must hold a start run-queue delay and a work start time in the order of its native start and finish.
+The wait records are complete: each profile arm must hold one value for each wake, with none dropped. The readable wait values sum to 0.00 ms across the run. The start trace is complete. Across all profile arms, the largest native start to first point is 0.0204 ms, the largest setup segment is 0.9764 ms, and the largest barrier segment is 0.1507 ms. The start records are complete: each profile thread must hold a start run-queue delay and a work start time in the order of its native start and finish.
 
 No profile arm records a debt failure.
 
@@ -87,6 +87,8 @@ If so, the wake rule is correct here: the credit after the post belongs to time 
 | `20261018T214145452-1972f479` | Per-wait run-queue delay, pread reader, and LF-normalized source hashes, before review fixes | Fail. `peer-bound` block 5 +12.18 pp. Its arms vary by about 7%, with at most 0.34 ms of run-queue delay in the profiled arms. |
 | `20261018T221415876-73afdb27` | Review fixes: wait copy after the finish time, scalar parser, debt-exceeded and dependency-wake pairing | Fail. `barrier-alternating` block 3 invalid: a 3 ms debt failure at the peer's first sample, before its first wake, with 6.7 ms of whole-run run-queue delay. |
 | `20261018T234001547-747aae56` | Start run-queue delay diagnostic | Pass |
+| `20261019T001733954-3bae192a` | Start trace, with on-CPU time from schedstat field 1, before the revision | Pass |
+| `20261019T002531212-f435da11` | Start trace with the thread CPU clock | Fail. The readable wait values sum to zero, so criterion 14 fails. |
 
 Exploratory smoke runs before the criteria used other pattern names and are not part of any result.
 
@@ -97,7 +99,7 @@ Only `TargetBarrier` uses the wait protocol. Locks, `Monitor`, tasks, and other 
 A timed-out or cancelled barrier wait skips nothing. Deterministic checks cover it, but no qualified run exercises a timeout.
 A worker that is preempted between its arrival and its block skips nothing for the delay inserted in that window. That biases the prediction low.
 The failed run shows that a runnable thread can go without samples long enough to break the 2 ms debt bound, even without forced GC.
-Each worker records its kernel run-queue delay. In this run the largest value is 0.69 ms in a 50% arm and 2.15 ms in a 0% arm.
+Each worker records its kernel run-queue delay. In this run the largest value is 0.61 ms in a 50% arm and 0.94 ms in a 0% arm.
 Every worker read its run-queue delay.
 Run-queue delay adds wall time that the profiler does not remove. A long delay in a 0% arm raises E0 and the prediction. A long delay in a 50% arm lowers it.
 

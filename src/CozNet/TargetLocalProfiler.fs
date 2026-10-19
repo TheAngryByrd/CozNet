@@ -250,6 +250,51 @@ type internal RunQueueClock private (handle: Microsoft.Win32.SafeHandles.SafeFil
     interface IDisposable with
         member _.Dispose() = handle.Dispose()
 
+module internal LinuxThreadUsage =
+    [<DllImport("libc", EntryPoint = "getrusage")>]
+    extern int getrusage(int who, int64[] usage)
+
+    [<DllImport("libc", EntryPoint = "clock_gettime")>]
+    extern int clock_gettime(int clock, int64[] time)
+
+type TargetStartPoint = {
+    Ticks: int64
+    CpuTimeNs: int64
+    RunDelayNs: int64
+    MinorFaults: int64
+    MajorFaults: int64
+    VoluntarySwitches: int64
+    InvoluntarySwitches: int64
+}
+
+type internal StartTrace(clock: RunQueueClock) =
+    static let fields = 7
+    // struct rusage on Linux x64: ru_minflt, ru_majflt, ru_nvcsw, and ru_nivcsw are longs 8, 9, 16, and 17.
+    let usage = Array.zeroCreate<int64> 18
+    let time = Array.zeroCreate<int64> 2
+    let values = Array.create (3 * fields) -1L
+
+    member _.Record(index: int) =
+        let offset = index * fields
+        values[offset] <- Stopwatch.GetTimestamp()
+        // CLOCK_THREAD_CPUTIME_ID is 3. Schedstat field 1 lags for a running thread, so it is not used here.
+        let cpu = try LinuxThreadUsage.clock_gettime(3, time) with _ -> -1
+        values[offset + 1] <- (if cpu = 0 then time[0] * 1_000_000_000L + time[1] else -1L)
+        let delay = if isNull clock then -1L else clock.Delay()
+        values[offset + 2] <- delay
+        let read = try LinuxThreadUsage.getrusage(1, usage) with _ -> -1
+        values[offset + 3] <- (if read = 0 then usage[8] else -1L)
+        values[offset + 4] <- (if read = 0 then usage[9] else -1L)
+        values[offset + 5] <- (if read = 0 then usage[16] else -1L)
+        values[offset + 6] <- (if read = 0 then usage[17] else -1L)
+        delay
+
+    member _.Points() =
+        Array.init 3 (fun index ->
+            let offset = index * fields
+            { Ticks = values[offset]; CpuTimeNs = values[offset + 1]; RunDelayNs = values[offset + 2]; MinorFaults = values[offset + 3]
+              MajorFaults = values[offset + 4]; VoluntarySwitches = values[offset + 5]; InvoluntarySwitches = values[offset + 6] })
+
 type internal TargetCurrent() =
     [<ThreadStatic; DefaultValue>]
     static val mutable private handle: nativeint
@@ -404,6 +449,7 @@ type TargetWorker = {
 type TargetThreadOutcome = {
     RunDelayNs: int64
     StartRunDelayNs: int64
+    StartTrace: TargetStartPoint array
     WaitRunDelayNs: int64 array
     WaitRunDelaysDropped: int
     Result: TargetThreadResult
@@ -490,21 +536,23 @@ module TargetLocalProfiler =
                 let mutable handle = 0n
                 let registered = TargetLocalNative.Register(experiment, journalCapacity, &handle)
                 use clock = RunQueueClock.Open()
-                delayOf clock |> ignore
+                let trace = StartTrace clock
+                trace.Record 0 |> ignore
                 ready.SignalAndWait()
 
                 if registered <> 0 then
                     abort.Cancel()
                     ready.SignalAndWait()
-                    outcomes[index] <- { RunDelayNs = -1L; StartRunDelayNs = -1L; WaitRunDelayNs = Array.empty; WaitRunDelaysDropped = 0; Result = TargetThreadResult(); FinishCode = registered; Error = $"register {registered}"; StartedTicks = 0L; FinishedTicks = 0L }
+                    outcomes[index] <- { RunDelayNs = -1L; StartRunDelayNs = -1L; StartTrace = Array.empty; WaitRunDelayNs = Array.empty; WaitRunDelaysDropped = 0; Result = TargetThreadResult(); FinishCode = registered; Error = $"register {registered}"; StartedTicks = 0L; FinishedTicks = 0L }
                 else
                     let started = TargetLocalNative.Start handle
+                    trace.Record 0 |> ignore
                     TargetCurrent.Set(handle, worker.PaymentIp, abort)
                     TargetCurrent.Track(clock, waitCapacity)
                     if started <> 0 then abort.Cancel()
-                    let delayBefore = delayOf clock
+                    let delayBefore = trace.Record 1
                     ready.SignalAndWait()
-                    let delayStarted = delayOf clock
+                    let delayStarted = trace.Record 2
                     let startedTicks = Stopwatch.GetTimestamp()
                     let workError =
                         if started <> 0 then
@@ -542,6 +590,7 @@ module TargetLocalProfiler =
                         |> String.concat ", "
                     outcomes[index] <- { RunDelayNs = (if delayBefore < 0L || delayAfter < 0L then -1L else delayAfter - delayBefore)
                                          StartRunDelayNs = (if delayBefore < 0L || delayStarted < 0L then -1L else delayStarted - delayBefore)
+                                         StartTrace = trace.Points()
                                          WaitRunDelayNs = waits; WaitRunDelaysDropped = waitsDropped; Result = result; FinishCode = code; Error = error; StartedTicks = startedTicks; FinishedTicks = finishedTicks })
 
         let threads = workers |> Array.mapi thread

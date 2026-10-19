@@ -29,6 +29,9 @@ PREDICTION_HISTORY = [
     ("20261018T214023824-28b274dc", "Same", "Per-wait run-queue delay, pread reader, and LF-normalized source hashes, before review fixes",
      "Fail. `peer-longer` block 1 +16.79 pp: its plain `optimized` arm ran 118.5 ms against 104.1 ms for `original`."),
     ("20261018T221254076-9a1e3880", "Same", "Review fixes: wait copy after the finish time, scalar parser, debt-exceeded and dependency-wake pairing", "Pass"),
+    ("20261018T233840885-22a9d378", "Same", "Start run-queue delay diagnostic",
+     "Fail. `selected-dominant` block 5 invalid: the peer started work 5.3 ms late, with 8.3 microseconds of start run-queue delay, and its first sample recorded a 3 ms debt failure."),
+    ("20261019T001613652-a3f06d98", "Same", "Start trace, with on-CPU time from schedstat field 1, before the revision", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -48,6 +51,9 @@ TRANSITION_HISTORY = [
     ("20261018T210459943-dfa8e472", "Review fixes: perf-map setting check, checked-run seam, shutdown work-state marker, and wording", "Pass, 10 of 10"),
     ("20261018T213950841-bc5dbc42", "Per-wait run-queue delay, pread reader, and LF-normalized source hashes, before review fixes", "Fail. Run 4: 2 ms debt bound under 19 forced GCs."),
     ("20261018T221219867-6603996f", "Review fixes: wait copy after the finish time, scalar parser, debt-exceeded and dependency-wake pairing", "Pass, 10 of 10"),
+    ("20261018T233751688-5acdb8cc", "Start run-queue delay diagnostic", "Pass, 10 of 10"),
+    ("20261019T001542478-b4d2cdb6", "Start trace, with on-CPU time from schedstat field 1, before the revision",
+     "Fail. Run 8: 2 ms debt bound at 39 ms, after a 6.5 ms peer gap with no event. The peer has 5.3 ms of residual run-queue delay."),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -70,6 +76,8 @@ BARRIER_HISTORY = [
      "Fail. `peer-bound` block 5 +12.18 pp. Its arms vary by about 7%, with at most 0.34 ms of run-queue delay in the profiled arms."),
     ("20261018T221415876-73afdb27", "Review fixes: wait copy after the finish time, scalar parser, debt-exceeded and dependency-wake pairing",
      "Fail. `barrier-alternating` block 3 invalid: a 3 ms debt failure at the peer's first sample, before its first wake, with 6.7 ms of whole-run run-queue delay."),
+    ("20261018T234001547-747aae56", "Start run-queue delay diagnostic", "Pass"),
+    ("20261019T001733954-3bae192a", "Start trace, with on-CPU time from schedstat field 1, before the revision", "Pass"),
 ]
 
 
@@ -323,11 +331,15 @@ See [the support boundary](../../../docsSrc/Explanations/target-local-prediction
 CPUSET_RUN = "20261018T203443644-3be38dc4"
 
 
-def run_level_detail(summary):
+def run_level_detail(summary, barrier=False):
+    if barrier and summary.get("totalWaitRunDelayNs", 1) == 0:
+        return "the readable wait values sum to zero, so criterion 14 fails"
     if not summary.get("waitDiagnosticsComplete", True):
         return "the wait diagnostics are incomplete"
     if not summary.get("startDiagnosticsComplete", True):
         return "the start diagnostics are incomplete"
+    if not summary.get("startTraceComplete", True):
+        return "the start trace is incomplete"
     return "a run-level criterion failed"
 
 
@@ -336,7 +348,20 @@ def start_place(f, work_starts):
     workers = ", ".join(f"worker {i} starts work at {signed_ms(work_starts[i] if i < len(work_starts) else None)} and takes its first sample at {ms(v)}"
                         for i, v in enumerate(samples))
     return (f"before the first wake: start run-queue delay {fine_ms(f.get('startRunDelayNs'))}, work start to failure {signed_ms(f.get('workStartToFailureNs'))}, "
-            f"residual run-queue delay {fine_ms(f.get('residualRunDelayNs'))}. Times from the first event: {workers or 'unknown'}")
+            f"residual run-queue delay {fine_ms(f.get('residualRunDelayNs'))}. Times from the first event: {workers or 'unknown'}"
+            + segment_text(f.get("startSegments")))
+
+
+def segment_text(segments):
+    if not segments:
+        return ""
+    parts = [f"native start to first point {fine_ms(segments['nativeToFirstNs'])}"]
+    for name in ("setup", "barrier"):
+        s = segments[name]
+        parts.append(f"{name} {fine_ms(s['wallNs'])} wall, {fine_ms(s['onCpuNs'])} on a CPU, {fine_ms(s['runQueueNs'])} in the run queue, "
+                     f"{signed_ms(s['offCpuNs'])} off the CPU, {s['minorFaults']} minor faults, {s['majorFaults']} major faults, "
+                     f"{s['voluntarySwitches']} voluntary and {s['involuntarySwitches']} involuntary switches")
+    return ". Start segments: " + "; ".join(parts)
 
 
 def fine_ms(value):
@@ -379,6 +404,10 @@ def wait_section(summary):
     complete = "complete" if summary["waitDiagnosticsComplete"] else "incomplete"
     text = (f"The wait records are {complete}: each profile arm must hold one value for each wake, with none dropped. "
             f"The readable wait values sum to {summary.get('totalWaitRunDelayNs', 0)/1e6:.2f} ms across the run.")
+    if "startTraceComplete" in summary:
+        largest = summary["largestStartSegmentNs"]
+        text += (f" The start trace is {'complete' if summary['startTraceComplete'] else 'incomplete'}. Across all profile arms, the largest native start to first point is "
+                 f"{fine_ms(largest['nativeToFirstNs'])}, the largest setup segment is {fine_ms(largest['setup'])}, and the largest barrier segment is {fine_ms(largest['barrier'])}.")
     if "startDiagnosticsComplete" in summary:
         text += (f" The start records are {'complete' if summary['startDiagnosticsComplete'] else 'incomplete'}: each profile thread must hold "
                  "a start run-queue delay and a work start time in the order of its native start and finish.")
@@ -463,7 +492,7 @@ def barrier(root, run, change):
                  for name, b in failing]
         medians = "; ".join(f"`{c['name']}` median {c['medianAbsoluteDifference']*100:.2f} pp" for c in summary["configurations"]
                             if not c["passed"] and c["medianAbsoluteDifference"] is not None and c["medianAbsoluteDifference"] > 0.05)
-        detail = "; ".join(x for x in [medians, "; ".join(parts)] if x) or run_level_detail(summary).capitalize()
+        detail = "; ".join(x for x in [medians, "; ".join(parts)] if x) or run_level_detail(summary, barrier=True).capitalize()
         verdict = (f"**Result: the current run fails** in {', '.join(f'`{n}`' for n in failed_configs)}. Failed criteria: {detail}." if failed_configs
                    else f"**Result: the current run fails.** Failed criteria: {detail}.")
         current = f"Fail. {detail}."

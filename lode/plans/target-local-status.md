@@ -120,6 +120,27 @@ Fact: the perf event sets `exclude_kernel`, so a sample in kernel mode is not re
 
 In the other 59 profile arms of both suites, the work start skew is at most 0.13 ms, except one of 1.19 ms. That arm has 1.30 ms of start run-queue delay.
 Three captured debt failures now occur at a first sample. Only the latest run has start records, so the two earlier failures stay unplaced.
-Next step: find what holds a worker for milliseconds between its native start and its work start, and decide how delay published before every worker starts its work is handled. The bounds do not change.
+
+## Start trace
+
+[The start-trace plan](target-local-start-trace.md) records three start points for each worker. Coz also keeps the debt of a new thread, so the late-start failure is legitimate under the CozNet debt bound.
+
+The first runs read the on-CPU time from schedstat field 1, which lags for a running thread. Forced-GC run `20261019T001542478-b4d2cdb6` shows 3.94 ms on a CPU in a 0.77 ms segment.
+That run fails run 8 by the 2 ms debt bound at 39 ms, after a 6.5 ms gap with no peer event. The peer has 5.3 ms of residual run-queue delay, which is consistent with a wait in that gap but does not place it.
+Prediction run `20261019T001613652-a3f06d98` and barrier run `20261019T001733954-3bae192a` pass on that earlier tree.
+
+The on-CPU time now comes from `CLOCK_THREAD_CPUTIME_ID`. The runs on the revised tree:
+- Transition run `20261019T002340083-c152f4ca` passes 10 of 10.
+- Prediction run `20261019T002411461-b833589f` passes all three configurations, with median differences of 0.93 to 2.62 points.
+- Barrier run `20261019T002531212-f435da11` fails criterion 14. All 15 blocks are within the limits, but the 300 wait values are all zero.
+  The same handle gives a whole-run run-queue delay above zero in 27 of 60 threads, so the reads are not stale. In the two previous barrier runs, only 8 and 6 of 300 waits had any delay.
+  Criterion 14 can therefore fail with a correct reader on a quiet host. It stays fixed for this run, and the failure is kept.
+
+No profile arm records a startup debt failure in these runs. The trace shows profiler work in the start path:
+the `setup` segment, from the native start to the start barrier, has a median of 0.70 ms per worker and a largest value of 0.98 ms.
+Its median on-CPU share is 64%, and 60 of the 120 setup segments have a major fault. It holds only `TargetCurrent.Set`, `TargetCurrent.Track`, and one trace point, after sampling starts.
+The `barrier` segment is at most 0.19 ms, and the interval from the native start stamp to the first point is at most 20 microseconds.
+
+Next step, from the plan decision: move the per-thread setup before the native start, and fix a replacement for criterion 14 that uses any read on the same handle, before the next runs. The bounds do not change.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

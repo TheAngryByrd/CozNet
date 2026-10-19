@@ -1,6 +1,7 @@
 import unittest
 
-from AnalyzeTargetPrediction import DEBT_EXCEEDED, FAILURE, SAMPLE, residual_run_delay, start_complete, wait_diagnostics
+from AnalyzeTargetPrediction import (DEBT_EXCEEDED, FAILURE, SAMPLE, add_largest, residual_run_delay, start_complete, trace_complete, trace_segments,
+                                     wait_diagnostics)
 
 
 def thread(**changes):
@@ -8,6 +9,15 @@ def thread(**changes):
              "waitRunDelayNs": [], "waitRunDelaysDropped": 0}
     value.update(changes)
     return value
+
+
+def point(ticks, run_time=0, delay=0, minor=0, voluntary=0):
+    return {"ticks": ticks, "cpuTimeNs": run_time, "runDelayNs": delay, "minorFaults": minor, "majorFaults": 0,
+            "voluntarySwitches": voluntary, "involuntarySwitches": 0}
+
+
+def traced(**changes):
+    return thread(startTrace=[point(1100), point(1200, 50, 10, 2), point(1900, 450, 30, 5, 1)], **changes)
 
 
 def event(worker, kind, time, amount=0, detail=0):
@@ -48,6 +58,61 @@ class StartGateChecks(unittest.TestCase):
         result = wait_diagnostics({"threads": [thread()]})
         self.assertFalse(result["complete"])
         self.assertFalse(result["startComplete"])
+
+
+class StartTraceChecks(unittest.TestCase):
+    def test_ordered_trace_is_complete(self):
+        self.assertTrue(trace_complete(traced()))
+
+    def test_trace_needs_three_points(self):
+        record = traced()
+        record["startTrace"] = record["startTrace"][:2]
+        self.assertFalse(trace_complete(record))
+
+    def test_first_point_before_native_start_is_incomplete(self):
+        record = traced()
+        record["startTrace"][0]["ticks"] = 999
+        self.assertFalse(trace_complete(record))
+
+    def test_last_point_after_work_start_is_incomplete(self):
+        record = traced()
+        record["startTrace"][2]["ticks"] = 2001
+        self.assertFalse(trace_complete(record))
+
+    def test_decreasing_counter_is_incomplete(self):
+        record = traced()
+        record["startTrace"][2]["minorFaults"] = 1
+        self.assertFalse(trace_complete(record))
+
+    def test_failed_counter_read_is_incomplete(self):
+        record = traced()
+        record["startTrace"][1]["voluntarySwitches"] = -1
+        self.assertFalse(trace_complete(record))
+
+    def test_segments_split_wall_time(self):
+        segments = trace_segments(traced())
+        self.assertEqual(segments["nativeToFirstNs"], 100)
+        self.assertEqual(segments["setup"], {"wallNs": 100, "onCpuNs": 50, "runQueueNs": 10, "offCpuNs": 40, "minorFaults": 2,
+                                             "majorFaults": 0, "voluntarySwitches": 0, "involuntarySwitches": 0})
+        self.assertEqual(segments["barrier"], {"wallNs": 700, "onCpuNs": 400, "runQueueNs": 20, "offCpuNs": 280, "minorFaults": 3,
+                                               "majorFaults": 0, "voluntarySwitches": 1, "involuntarySwitches": 0})
+
+    def test_largest_keeps_the_maximum_of_each_segment(self):
+        largest = {"nativeToFirstNs": 0, "setup": 0, "barrier": 0}
+        longer = traced()
+        longer["startTrace"][2]["ticks"] = 1950
+        add_largest(largest, {"profile-zero": wait_diagnostics({"threads": [traced(), longer], "events": []}), "profile-speedup": None})
+        add_largest(largest, {"profile-zero": wait_diagnostics({"threads": [traced()], "events": []}), "profile-speedup": None})
+        self.assertEqual(largest, {"nativeToFirstNs": 100, "setup": 100, "barrier": 750})
+
+    def test_record_without_trace_fails_trace_gate(self):
+        result = wait_diagnostics({"threads": [thread()], "events": []})
+        self.assertEqual((result["startComplete"], result["startTraceComplete"]), (True, False), f"result {result}")
+
+    def test_startup_failure_reports_its_segments(self):
+        record = {"threads": [traced()], "events": [event(0, FAILURE, 3000, 3000000, DEBT_EXCEEDED)]}
+        failure = wait_diagnostics(record)["debtFailures"][0]
+        self.assertEqual(failure["startSegments"]["barrier"]["onCpuNs"], 400, f"failure {failure}")
 
 
 class StartupFailureChecks(unittest.TestCase):
