@@ -1,7 +1,7 @@
 import unittest
 
-from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, prediction,
-                                  profile_complete, threads_complete, timing_consistent, visits_sufficient, work_ratios)
+from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, order_ratios,
+                                  prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
 
 
 def experiment(order, candidate, speedup, effective=100, passed=True):
@@ -109,6 +109,29 @@ class DiagnosticChecks(unittest.TestCase):
             e["Threads"] = threads(100, 0)
         next(e for e in value["experiments"] if e["Candidate"] == PEER_NAME and e["Speedup"] == 50)["Threads"] = threads(120, 40)
         self.assertEqual(work_ratios(value, PEER_NAME, 50), [1.0, 1.25])
+
+
+class WarmupChecks(unittest.TestCase):
+    def test_warmup_must_be_present_at_speedup_zero(self):
+        value = record()
+        self.assertFalse(warmup_present(value))
+        value["warmup"] = {"Block": 0, "Order": -1, "Speedup": 0}
+        self.assertFalse(warmup_present(value), "A placeholder warm-up must not count.")
+        value["warmup"] = {"Block": 0, "Order": -1, "Candidate": SELECTED_NAME, "Speedup": 0, "ElapsedNs": 1, "GlobalNs": 0, "EffectiveNs": 1,
+                           "Visits": 1, "Threads": [], "Passed": False, "Error": "debt"}
+        self.assertTrue(warmup_present(value), "A failed but complete warm-up must count.")
+        value["warmup"]["Speedup"] = 25
+        self.assertFalse(warmup_present(value))
+
+    def test_order_ratios_compare_each_experiment_with_the_baseline(self):
+        value = record({(SELECTED_NAME, 0): {"Visits": 100}, (PEER_NAME, 50): {"Visits": 100}})
+        for e in value["experiments"]:
+            e["Threads"] = threads(100, 0)
+            e.setdefault("Visits", 100)
+        peer = next(e for e in value["experiments"] if e["Candidate"] == PEER_NAME and e["Speedup"] == 50)
+        peer["Threads"] = threads(110, 0)
+        ratios = order_ratios(value)
+        self.assertEqual((ratios[0], ratios[peer["Order"]]), ([1.0, 1.0], [1.1, 1.0]))
 
 
 class ThroughputChecks(unittest.TestCase):

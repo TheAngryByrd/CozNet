@@ -281,7 +281,7 @@ let private writeProfile mode seed selectedRounds peerRounds durationMs (profile
         profile.Points
         |> Array.map (fun p -> {| candidate = p.Candidate; speedup = p.Speedup; prediction = p.Predictions[0] |> Option.toNullable |})
     write output {| mode = mode; seed = seed; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = durationMs
-                    experiments = profile.Experiments; points = points; passed = passed |}
+                    warmup = profile.Warmup; experiments = profile.Experiments; points = points; passed = passed |}
     if passed then 0 else 1
 
 let private causalProfile (seed: int) (output: string) =

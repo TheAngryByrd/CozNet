@@ -116,7 +116,8 @@ An experiment that the watcher stops does not pass, and its error names the safe
 Each experiment calls `TargetLocalProfiler.runBound` with one candidate as the selected symbol.
 
 1. Only `tryCreate` makes a design, so `run` receives only valid candidates, speedups, blocks, and a period that the replay plan accepts.
-2. Each block runs one baseline at speedup 0 and one experiment for each candidate and speedup, in a random order from `seed`.
+2. Before the first block, it runs one warm-up experiment at speedup 0 with the first candidate. The result keeps it as `Warmup`, and no prediction uses it.
+   Each block runs one baseline at speedup 0 and one experiment for each candidate and speedup, in a random order from `seed`.
    Before each experiment, it runs a full blocking collection, outside the measured span. `workers` must return workers with fresh state for each call.
 3. Each `TargetCausalExperiment` holds `Block`, `Order`, `Candidate`, `Speedup`, `ElapsedNs`, `GlobalNs`, `EffectiveNs`, `Passed`, and `Error`.
    An experiment that raises an exception keeps the exception type and message. An experiment that does not pass keeps each cause that rejected it: binding, replay, ledger, close, signal, and thread errors, including handler intervals of 5 ms or more. `Passed` is then false.

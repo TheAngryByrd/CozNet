@@ -62,6 +62,25 @@ def timing_consistent(record):
     return all(e["EffectiveNs"] == e["ElapsedNs"] - e["GlobalNs"] for e in record["experiments"] if e.get("Passed"))
 
 
+WARMUP_KEYS = ("Block", "Order", "Candidate", "Speedup", "ElapsedNs", "GlobalNs", "EffectiveNs", "Visits", "Threads", "Passed", "Error")
+
+
+def warmup_present(record):
+    warmup = record.get("warmup")
+    return (isinstance(warmup, dict) and all(k in warmup for k in WARMUP_KEYS) and warmup["Speedup"] == 0 and warmup["Block"] == 0
+            and warmup["Order"] == -1 and type(warmup["Passed"]) is bool)
+
+
+def order_ratios(record):
+    experiments = record["experiments"]
+    baseline = next((e for e in experiments if e["Speedup"] == 0), None)
+    if baseline is None or not baseline["Passed"] or not threads_complete(record):
+        return {}
+    base = [(t["WallNs"] - t["PaymentNs"]) / max(baseline.get("Visits", 1), 1) for t in baseline["Threads"]]
+    return {e["Order"]: [((t["WallNs"] - t["PaymentNs"]) / max(e.get("Visits", 1), 1)) / b if b > 0 else None for t, b in zip(e["Threads"], base)]
+            for e in experiments if e["Passed"]}
+
+
 def threads_complete(record):
     return all(isinstance(e.get("Threads"), list) and len(e["Threads"]) == 2 for e in record["experiments"] if e.get("Passed"))
 
@@ -149,6 +168,8 @@ def main():
             reasons.append("the driver predictions differ from the experiments")
         elif not threads_complete(profile):
             reasons.append("a passed experiment does not hold two thread records")
+        elif not warmup_present(profile):
+            reasons.append("the profile record does not hold its warm-up experiment")
         reasons += [f"{arm} not passed" for arm, value in data.items() if value is not None and not value.get("passed")]
         reasons += [f"{arm} has fewer than {MIN_VISITS} visits" for arm, value in data.items() if value is not None and not visits_sufficient(value, workload)]
         points = {}
@@ -161,6 +182,8 @@ def main():
                 points[key] = {"predicted": predicted, "actual": actual, "workRatios": work_ratios(profile, name, speedup) if complete else None,
                                "difference": None if predicted is None or actual is None else predicted - actual}
         blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "points": points,
+                       "orderRatios": order_ratios(profile) if complete else {},
+                       "warmupPassed": profile["warmup"]["Passed"] if isinstance(profile, dict) and warmup_present(profile) else None,
                        "order": [[e["Candidate"], e["Speedup"]] for e in sorted(profile["experiments"], key=lambda e: e["Order"])] if complete else None})
     summary_points = []
     for label in CANDIDATES:
@@ -179,7 +202,13 @@ def main():
                 "medianActual": statistics.median(b["points"][key]["actual"] for b in valid) if valid else None,
                 "medianWorkRatios": [statistics.median(r[i] for r in rows) for i in range(2)] if rows else None,
                 "passed": point_passed})
-    summary = {"passed": passed, "workload": workload, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
+    by_order = {}
+    for b in blocks:
+        for order, ratios in b["orderRatios"].items():
+            if None not in ratios:
+                by_order.setdefault(order, []).append(ratios)
+    order_summary = {str(o): [statistics.median(r[i] for r in rows) for i in range(2)] for o, rows in sorted(by_order.items())}
+    summary = {"passed": passed, "workload": workload, "medianWorkRatioByOrder": order_summary, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
                "points": summary_points, "blocks": blocks,
                "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + {"throughput": "throughput progress point", "pipeline": "throughput progress point behind a TargetQueue"}.get(workload, "end-to-end progress point"),
                "generalClrSafetyEstablished": False}

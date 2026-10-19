@@ -29,8 +29,8 @@ In the first throughput qualification run, real optimizations confirm the predic
 
 A pipeline connects a producer and a consumer through a `TargetQueue`. The slower stage sets the rate, so a faster producer gains only until the consumer is the slower stage.
 A consumer that waits for an item does not run, so it cannot pay delay. When it wakes, it skips the delay up to the token of the item that it takes, as at a barrier.
-In both pipeline qualification runs, real optimizations confirm the producer plateau. One consumer point fails its limit in each run.
-At `peer` 50%, the prediction is below the actual gain in both runs. In the second run, which records thread data, it tracks the producer time outside measured payments, for each visit. The records do not show what that time is.
+In all three pipeline qualification runs, real optimizations confirm the producer plateau. One consumer point fails its limit in each run.
+At `peer` 50%, the median prediction is below the median actual gain in all three runs. In the latest run, two blocks are above their actual gains by 8.99 and 8.42 points, so the error does not have one stable sign. In the second run, which records thread data, the prediction tracks the producer time outside measured payments, for each visit. The records do not show what that time is.
 
 ## Why each thread pays its own delay
 
@@ -56,7 +56,7 @@ The qualified model is narrow. It is a model of what CozNet can predict today, n
 | No waits before the final join, or waits through `TargetBarrier` | Locks, `Monitor`, `System.Threading.Barrier`, I/O, and any other blocking |
 | Tiered compilation and ReadyToRun disabled, checked by `CodeBinding` | Tiered code replacement, OSR, and ReadyToRun images, which `runBound` rejects. ReJIT, which `runBound` detects and fails. A test profiler shows this. |
 | Selected code as named method ranges from the perf map | Source lines, inlined callees, and code that the JIT moves |
-| Workloads with little allocation | GC-heavy workloads. Seven current-design forced-GC checks each broke the 2 ms debt bound in 1 of 10 runs. |
+| Workloads with little allocation | GC-heavy workloads. Eight current-design forced-GC checks each broke the 2 ms debt bound in 1 of 10 runs. |
 | One profiled thread for each physical core, on hosts with spare CPUs | Loaded hosts. A runnable thread that waits in the kernel run queue adds wall time that the profiler cannot remove. One barrier run had blocks off by 11 points with 17 to 81 ms of run-queue delay. Another broke the 2 ms debt bound with no forced GC. |
 
 ## Why a woken thread skips only to the release token
@@ -68,7 +68,7 @@ A timeout, a cancellation, or a spurious wake skips nothing, because no other th
 The [barrier qualification](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/target-local/barrier.md) shows the effect: in `selected-dominant`, the wakes skip about half of the global delay.
 The handler pays delay with a spin at managed instruction addresses inside the work methods. Other addresses defer payment.
 Forced-GC checks run ten profiled runs each, with a blocking gen-2 GC every 5 ms of work. No run crashes or loses samples.
-Seven current-design checks each fail 1 of 10 runs by the 2 ms debt bound. An earlier check with a flawed collection count also failed 1 of 10. In one failure, the peer is 1.65 ms behind when the selected thread publishes 0.5 ms. In another, the peer has no event for 6.5 ms before the failure and 5.3 ms of run-queue delay outside its start. Neither journal shows why the peer fell behind. The check now records a window around each forced collection. In the first failure with windows, the peer has no event for 5.24 ms and 9.14 ms of whole-run run-queue delay. The windows cover only 0.22 ms of its 5.75 ms failure interval, and the other worker keeps its 1 ms sample rate. In the latest failure, two windows cover 0.91 ms of the 6.50 ms failure interval. The others pass 10 of 10.
+Eight current-design checks each fail 1 of 10 runs by the 2 ms debt bound. An earlier check with a flawed collection count also failed 1 of 10. In one failure, the peer is 1.65 ms behind when the selected thread publishes 0.5 ms. In another, the peer has no event for 6.5 ms before the failure and 5.3 ms of run-queue delay outside its start. Neither journal shows why the peer fell behind. The check now records a window around each forced collection. In the first failure with windows, the peer has no event for 5.24 ms and 9.14 ms of whole-run run-queue delay. The windows cover only 0.22 ms of its 5.75 ms failure interval, and the other worker keeps its 1 ms sample rate. In the latest failure, one window covers 1.31 ms of the 5.26 ms failure interval. The others pass 10 of 10.
 One barrier run with no forced GC broke the same bound, so forced GC is not the only trigger. See [the transition evidence](https://github.com/TheAngryByrd/CozNet/blob/master/reliability/features/target-local/transitions.md).
 `runBound` rejects tiered compilation before the run and detects a moved code range after it. A checked run with tiering on rejects both ways.
 `Environment.Exit` during the profiled work exits with code 0. The check does not show that a handler was inside a payment spin at the exit. A ReJIT of a bound method during the run fails the run with `BindingError`. Thread abort is not checked.
@@ -95,7 +95,7 @@ and [the callback-reuse comparison](https://github.com/TheAngryByrd/CozNet/blob/
 | --- | --- | --- |
 | Coverage | Probe sites inside rewritten methods | Any sampled instruction. Payment needs an eligible address. |
 | Profile-zero overhead | Not isolated. Probe cost was the largest measured stage. | Handler share about 0.1% of elapsed time. Elapsed ratio medians from about 0.96 to 1.04. |
-| Runtime safety | Managed controller with native requests. Controller preemption broke the debt bound. | Native handler at managed addresses. Seven current-design forced-GC checks each fail 1 of 10 runs. One barrier run without forced GC also broke the debt bound. |
+| Runtime safety | Managed controller with native requests. Controller preemption broke the debt bound. | Native handler at managed addresses. Eight current-design forced-GC checks each fail 1 of 10 runs. One barrier run without forced GC also broke the debt bound. |
 | Prediction error | About 10 to 30 points of shortfall | Median absolute difference about 1 to 3 points in the qualified model |
 
 The comparison does not use the same workload. The target-local path removes the managed controller from each sample and payment.

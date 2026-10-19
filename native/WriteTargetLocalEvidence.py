@@ -41,6 +41,7 @@ PREDICTION_HISTORY = [
     ("20261019T024239257-fae8a160", "Same", "Causal profile driver", "Pass"),
     ("20261019T032259730-367c4746", "Same", "Throughput progress points", "Pass"),
     ("20261019T040632196-702f8052", "Same", "Blocking queue and pipeline profile", "Pass"),
+    ("20261019T043903739-5859c385", "Same", "Per-thread experiment diagnostics", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -72,6 +73,7 @@ TRANSITION_HISTORY = [
     ("20261019T024210440-65ed47ee", "Causal profile driver", "Pass, 10 of 10"),
     ("20261019T032230942-d027dbb5", "Throughput progress points", "Fail. Run 10: 2 ms debt bound. One GC window covers 1.16 ms of the 5.77 ms failure interval."),
     ("20261019T040604415-1a034540", "Blocking queue and pipeline profile", "Fail. Run 9: 2 ms debt bound. Two GC windows cover 0.91 ms of the 6.50 ms failure interval."),
+    ("20261019T043835718-5c15e486", "Per-thread experiment diagnostics", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -105,6 +107,7 @@ BARRIER_HISTORY = [
      "Fail. Criterion 26: one of 60 setup segments takes 0.70 ms, with 9.3 microseconds on a CPU. All 15 blocks are within the limits."),
     ("20261019T032421198-d2441fed", "Throughput progress points", "Pass"),
     ("20261019T040754718-d668c4c1", "Blocking queue and pipeline profile", "Pass"),
+    ("20261019T044024104-2513fe0c", "Per-thread experiment diagnostics", "Fail. `barrier-selected-dominant` block 2 invalid: a debt failure 2 microseconds after a wake whose wait has 7.40 ms of run-queue delay."),
 ]
 
 
@@ -630,13 +633,16 @@ PROFILE_HISTORY = [
     ("20261019T024109669-c30228ca", "First causal profile run", "Pass"),
     ("20261019T032133781-6cc15ea3", "Throughput progress points", "Fail. `selected-75` and `peer-75` each have one block above 10 points, both in block 1, where the plain arms give 36.0% and 4.5%."),
     ("20261019T040508680-38464c4a", "Blocking queue and pipeline profile", "Fail. Block 3 is invalid: its `selected` experiment at 75% breaks the 2 ms debt bound."),
+    ("20261019T043738634-485c3ea9", "Per-thread experiment diagnostics", "Fail. `peer-50` median 5.52 points and one block of 10.91 points. `peer-75` has one block of 12.72 points."),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
     ("20261019T040411141-1b17380b", "Blocking queue and pipeline profile", "Pass"),
+    ("20261019T043639774-d3af17e6", "Per-thread experiment diagnostics", "Pass"),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
+    ("20261019T043536804-514995d6", "Per-thread experiment diagnostics", "Fail. `peer-75` has one block of 14.82 points. The `peer-50` prediction tracks the producer work ratio."),
 ]
 
 
@@ -661,6 +667,13 @@ def profile(root, run, change, kind="target-local-profile"):
                        for b in summary["blocks"])
     ratio = lambda p: ", ".join(f"{v:.3f}" for v in p["medianWorkRatios"]) if p.get("medianWorkRatios") else "n/a"
     ratios = "\n".join(f"| `{p['point']}` | {ratio(p)} |" for p in summary["points"])
+    warmup_values = [b.get("warmupPassed") for b in summary["blocks"]]
+    if not all("warmupPassed" in b for b in summary["blocks"]):
+        warmups = "no block, because this run predates the warm-up"
+    else:
+        unknown = sum(1 for v in warmup_values if v is None)
+        warmups = f"{sum(1 for v in warmup_values if v is True)} of {len(warmup_values)} blocks" + (f", and {unknown} blocks have no complete warm-up record" if unknown else "")
+    order_text = "; ".join(f"order {o}: " + ", ".join(f"{v:.3f}" for v in r) for o, r in summary.get("medianWorkRatioByOrder", {}).items()) or "not recorded in this run"
     failed = [p["point"] for p in summary["points"] if not p["passed"]]
     current = "Pass" if summary["passed"] else f"Fail. Points {', '.join(failed) or 'none'} fail, or a run-level criterion fails."
     verdict = "**Result: the current run passes.**" if summary["passed"] else f"**Result: the current run fails.** {current[6:]} The run is kept, and no rerun replaces it."
@@ -705,6 +718,9 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 | Point | Median work ratio |
 | --- | --- |
 {ratios}
+
+The median work ratio by run order in the process is {order_text}. The seed fixes the order of each block, so order and point are confounded.
+The warm-up experiment passed in {warmups}.
 
 ## Blocks
 

@@ -264,4 +264,17 @@ The other suites on the same tree:
 - Barrier run `20261019T044024104-2513fe0c` fails `barrier-selected-dominant` block 2. The peer breaks the 2 ms debt bound 2 microseconds after a dependency wake.
   Its wait has 7.40 ms of run-queue delay. The other 14 blocks are within the limits.
 
+## Warm-up
+
+[The warm-up plan](target-local-warmup.md) runs one experiment at speedup 0 before the first block of each profile process. No prediction uses it.
+In all three profile suites, the warm-up passes in 5 of 5 blocks.
+- Pipeline run `20261019T050900839-0a049f8a` passes five of six points and fails `peer-50` by a median of 6.01 points.
+  Its order-0 producer work ratio is still 1.041, orders 1 to 5 stay from 0.989 to 1.000, and order 6 is 1.043. So the high ratio occurs at the first and the last order, and the first-experiment hypothesis is not supported.
+  `peer-50` still runs first in four of five blocks, so order and point stay confounded. Its block differences are -3.1, -3.4, -6.0, +9.0, and +8.4 points.
+- Latency profile run `20261019T051105836-8f4f2ab0` passes all six points, with median differences of 0.95 to 1.76 points.
+- Throughput run `20261019T051006922-f2f80c26`, prediction run `20261019T051231424-1e546bce`, and barrier run `20261019T051353871-0dc405c5` pass all criteria.
+- Transition run `20261019T051202514-ddf03668` fails by forced-GC run 1 at the 2 ms debt bound, and every lifecycle check passes. One GC window covers 1.31 ms of the 5.26 ms failure interval.
+Next step: a design that moves each point through each order across blocks, so the `peer-50` effect can be separated from the order.
+Accepted risk until that change: the analyzer reports `warmupPassed` but does not fail a run when a warm-up fails, and a block with one partial thread record drops out of the order report.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

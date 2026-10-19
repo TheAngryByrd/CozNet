@@ -56,6 +56,7 @@ type TargetCausalProfileResult = {
     Seed: int
     Candidates: string array
     Speedups: uint32 array
+    Warmup: TargetCausalExperiment
     Experiments: TargetCausalExperiment array
     Points: TargetCausalPoint array
 }
@@ -231,28 +232,34 @@ module TargetCausalProfile =
     let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option) (design: TargetCausalDesign) =
         let candidates, speedups, blocks, seed = design.Candidates, design.Speedups, design.Blocks, design.Seed
         let random = Random seed
+
+        let measure block order candidate speedup =
+            let result =
+                try
+                    Ok(runExperiment candidate speedup)
+                with error ->
+                    Error $"{error.GetType().Name}: {error.Message}"
+
+            match result with
+            | Ok(r, visits, stop) ->
+                let errors = [ if not r.Passed then failure r
+                               match stop with
+                               | Some message -> message
+                               | None -> () ]
+                { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = r.ElapsedNs; GlobalNs = r.GlobalNs
+                  EffectiveNs = r.EffectiveNs; Visits = visits; Threads = threads r; Passed = r.Passed && stop.IsNone
+                  Error = String.Join("; ", errors) }
+            | Error message ->
+                { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = 0UL; GlobalNs = 0UL
+                  EffectiveNs = 0UL; Visits = 0L; Threads = Array.empty; Passed = false; Error = message }
+
+        let warmup = measure 0 -1 candidates[0] 0u
         let experiments =
             [| for block in 1 .. blocks do
                    for order, (candidate, speedup) in arms random candidates speedups |> Array.indexed do
-                       let result =
-                           try
-                               Ok(runExperiment candidate speedup)
-                           with error ->
-                               Error $"{error.GetType().Name}: {error.Message}"
-                       match result with
-                       | Ok(r, visits, stop) ->
-                           let errors = [ if not r.Passed then failure r
-                                          match stop with
-                                          | Some message -> message
-                                          | None -> () ]
-                           { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = r.ElapsedNs; GlobalNs = r.GlobalNs
-                             EffectiveNs = r.EffectiveNs; Visits = visits; Threads = threads r; Passed = r.Passed && stop.IsNone
-                             Error = String.Join("; ", errors) }
-                       | Error message ->
-                           { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = 0UL; GlobalNs = 0UL
-                             EffectiveNs = 0UL; Visits = 0L; Threads = Array.empty; Passed = false; Error = message } |]
-        { Progress = design.Progress; Blocks = blocks; Seed = seed; Candidates = candidates; Speedups = speedups; Experiments = experiments
-          Points = points blocks candidates speedups experiments }
+                       measure block order candidate speedup |]
+        { Progress = design.Progress; Blocks = blocks; Seed = seed; Candidates = candidates; Speedups = speedups; Warmup = warmup
+          Experiments = experiments; Points = points blocks candidates speedups experiments }
 
     let internal stopAfter (duration: int) (counter: TargetProgressCounter) (working: unit -> bool) (running: unit -> bool) =
         try

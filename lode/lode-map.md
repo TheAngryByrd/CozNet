@@ -17,6 +17,7 @@ For the experiment driver and the causal profile qualification, read [target-loc
 For throughput progress points and their qualification, read [target-local throughput](plans/target-local-throughput.md).
 For the blocking queue and the pipeline qualification, read [target-local queue](plans/target-local-queue.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).
+For the warm-up experiment and the first-experiment cost in a process, read [target-local warm-up](plans/target-local-warmup.md).
 For forced-GC runtime transitions under handler payment, read [target-local transitions](plans/target-local-transitions.md).
 
 For nominal timer credit, the retained controller-preemption backlog, and the next sample-processing design, read [timer nominal credit](plans/timer-nominal-credit.md).

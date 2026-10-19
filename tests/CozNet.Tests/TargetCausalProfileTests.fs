@@ -39,7 +39,20 @@ module TargetCausalProfileTests =
                     Expect.equal (arms |> Array.filter (fun e -> e.Speedup = 0u) |> Array.length) 1 $"Block {block} must hold one baseline."
                     Expect.equal (arms |> Array.filter (fun e -> e.Speedup > 0u) |> Array.map (fun e -> e.Candidate, e.Speedup) |> Array.sort)
                         [| "a", 25u; "a", 50u; "b", 25u; "b", 50u |] $"Block {block} must hold each point once."
-                Expect.equal calls.Count 15 "Each experiment must run once."
+                Expect.equal calls.Count 16 "The warm-up and each experiment must run once."
+                Expect.equal calls[0] ("a", 0u) "The warm-up must run first, at speedup 0, with the first candidate."
+            }
+
+            test "the warm-up stays in the result and no prediction uses it" {
+                let mutable first = true
+                let run _ s =
+                    let effective = if first then 1000UL elif s = 0u then 200UL else 150UL
+                    first <- false
+                    result effective true
+                let value = profile run 1
+                Expect.equal (value.Warmup.Block, value.Warmup.Order, value.Warmup.Speedup, value.Warmup.EffectiveNs) (0, -1, 0u, 1000UL) "The warm-up must be kept."
+                Expect.isTrue (value.Points |> Array.forall (fun p -> p.Predictions = [| Some 0.25 |])) "Predictions must use the block baseline, not the warm-up."
+                Expect.equal value.Experiments.Length 5 "The warm-up must not count as a design experiment."
             }
 
             test "the same seed gives the same order and another seed can differ" {
@@ -60,10 +73,10 @@ module TargetCausalProfileTests =
 
             test "each block uses its own baseline and the median of an even count is the mean of the middle pair" {
                 let calls = Collections.Generic.Dictionary<int, int>()
-                let mutable block = 0
+                let mutable block = -1
                 let run c s =
                     if s = 0u then block <- block + 1
-                    result (if s = 0u then [| 200UL; 400UL; 100UL; 1000UL |][block - 1] else 100UL) true
+                    result (if s = 0u then [| 300UL; 200UL; 400UL; 100UL; 1000UL |][block] else 100UL) true
                 let value = runResults run (designOf symbols [| "a" |] [| 25u |] 4 7)
                 let point = value.Points |> Array.exactlyOne
                 Expect.equal point.Predictions [| Some 0.5; Some 0.75; Some 0.0; Some 0.9 |] "Each block must divide by its own baseline."
@@ -100,7 +113,7 @@ module TargetCausalProfileTests =
                 let mutable count = 0
                 let run c s =
                     count <- count + 1
-                    if c = "b" && s = 50u && count <= 5 then result 100UL false else result 100UL true
+                    if c = "b" && s = 50u && count <= 6 then result 100UL false else result 100UL true
                 let value = profile run 2
                 let failed = value.Experiments |> Array.filter (fun e -> not e.Passed)
                 Expect.equal (failed |> Array.map (fun e -> e.Block, e.Candidate, e.Speedup, e.Error)) [| 1, "b", 50u, "moved; replay: unused" |] "The failure must stay in the record."
