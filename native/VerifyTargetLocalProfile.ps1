@@ -1,7 +1,7 @@
-param([ValidateSet('latency', 'throughput', 'pipeline')][string]$Workload = 'latency', [string]$EvidenceDirectory = '', [int]$Blocks = 5, [int]$Seed = 20261018,
+param([ValidateSet('latency', 'throughput', 'pipeline', 'lock')][string]$Workload = 'latency', [string]$EvidenceDirectory = '', [int]$Blocks = 5, [int]$Seed = 20261018,
     [string]$PythonCommand = $(if ($env:COZNET_PYTHON) { $env:COZNET_PYTHON } elseif ($IsWindows) { 'py' } else { 'python3' }))
 $ErrorActionPreference = 'Stop'
-if (-not $EvidenceDirectory) { $EvidenceDirectory = Join-Path $PSScriptRoot $(switch ($Workload) { 'throughput' { '../artifacts/target-local-throughput' } 'pipeline' { '../artifacts/target-local-pipeline' } default { '../artifacts/target-local-profile' } }) }
+if (-not $EvidenceDirectory) { $EvidenceDirectory = Join-Path $PSScriptRoot $(switch ($Workload) { 'throughput' { '../artifacts/target-local-throughput' } 'pipeline' { '../artifacts/target-local-pipeline' } 'lock' { '../artifacts/target-local-lock' } default { '../artifacts/target-local-profile' } }) }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 $app = Join-Path $run 'app'
@@ -14,7 +14,7 @@ $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.L
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'native/service/PerfRing.Linux.h', 'native/service/PerfSampleRing.h',
     'src/CozNet/TargetLocalReplay.fs', 'src/CozNet/TargetLocalLinux.fs', 'src/CozNet/TargetLocalProfiler.fs', 'src/CozNet/TargetCausalProfile.fs', 'samples/CozNet.TargetLocal/Work.fs',
     'samples/CozNet.TargetLocal/Program.fs', 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj',
-    'native/VerifyTargetLocalProfile.ps1', 'native/AnalyzeTargetProfile.py', 'lode/plans/target-local-causal-profile.md', 'lode/plans/target-local-throughput.md', 'lode/plans/target-local-queue.md', 'lode/plans/target-local-experiment-diagnostics.md', 'lode/plans/target-local-warmup.md', 'lode/plans/target-local-rotation.md', 'build/build.fs')
+    'native/VerifyTargetLocalProfile.ps1', 'native/AnalyzeTargetProfile.py', 'lode/plans/target-local-causal-profile.md', 'lode/plans/target-local-throughput.md', 'lode/plans/target-local-queue.md', 'lode/plans/target-local-experiment-diagnostics.md', 'lode/plans/target-local-warmup.md', 'lode/plans/target-local-rotation.md', 'lode/plans/target-local-lock.md', 'build/build.fs')
 $hashes = @{}
 function Get-SourceHash([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)
@@ -41,8 +41,8 @@ $container = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-dro
 & docker @container sh -c 'uname -a > /out/kernel.txt && nproc > /out/cpus.txt'
 $selected = if ($Workload -eq 'latency') { 6000 } else { 40 }
 $peer = if ($Workload -eq 'latency') { 3000 } else { 20 }
-$profileMode = switch ($Workload) { 'throughput' { 'throughput-profile' } 'pipeline' { 'pipeline-profile' } default { 'causal-profile' } }
-$plainMode = switch ($Workload) { 'throughput' { 'plain-throughput' } 'pipeline' { 'plain-pipeline' } default { 'plain' } }
+$profileMode = switch ($Workload) { 'throughput' { 'throughput-profile' } 'pipeline' { 'pipeline-profile' } 'lock' { 'lock-profile' } default { 'causal-profile' } }
+$plainMode = switch ($Workload) { 'throughput' { 'plain-throughput' } 'pipeline' { 'plain-pipeline' } 'lock' { 'plain-lock' } default { 'plain' } }
 $speedups = @(25, 50, 75)
 $random = [Random]::new($Seed)
 $runs = @()

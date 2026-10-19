@@ -203,6 +203,11 @@ class ThroughputChecks(unittest.TestCase):
         self.assertEqual(actual_gain({"elapsedNs": 1000, "visits": 100}, {"elapsedNs": 1000, "visits": 200}, "pipeline"), 0.5)
         self.assertFalse(visits_sufficient({"visits": 99}, "pipeline"))
 
+    def test_lock_arms_use_the_lock_modes(self):
+        args = expected_args(20261018, 2, "lock")
+        self.assertEqual((args["profile"], args["selected-50"], args["peer-75"]), ("lock-profile 20261018 1", "plain-lock 20 20", "plain-lock 40 5"))
+        self.assertEqual(expected_fields(20261018, 1, "lock")["original"]["mode"], "plain-lock")
+
     def test_latency_experiments_need_one_visit(self):
         self.assertTrue(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 1}}), "latency"))
         self.assertFalse(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 2}}), "latency"))

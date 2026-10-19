@@ -8,7 +8,7 @@
 - Randomized paired experiments, raw observations, and bounded settings.
 - Deterministic tests and a real CPU comparison sample.
 - Lode Coding project knowledge.
-- Experimental Linux x64 target-local profiler: `TargetLocalProfiler.runBound`, `CodeBinding`, `TargetBarrier`, and `TargetQueue`.
+- Experimental Linux x64 target-local profiler: `TargetLocalProfiler.runBound`, `CodeBinding`, `TargetBarrier`, `TargetQueue`, and `TargetLock`.
 - `TargetCausalDesign.tryCreate` and `TargetCausalProfile.run` for seeded causal profiles with `EndToEnd` and `Throughput` progress points.
 
 ### Changed

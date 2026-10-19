@@ -16,6 +16,7 @@
 - **Start run-queue delay:** The run-queue delay of a worker from the read before the start barrier to the read after that barrier returns. `StartRunDelayNs` holds it.
 - **GC window:** The interval from the `Stopwatch` read before a forced `GC.Collect` call to the read after it, on the monitor thread.
 - **Causal profile:** The predicted program gain for each candidate method at each virtual speedup, from `TargetCausalProfile.run`.
+- **Target lock:** A non-recursive `TargetLock` whose waits follow the wake rule. A waiter wakes with the token of the release that freed the lock.
 - **Target queue:** A bounded `TargetQueue` whose waits follow the wake rule. Each item carries the token of its post.
 - **Progress point:** The event that a profile measures. `EndToEnd` is the end of the workload. `Throughput` counts visits during a fixed run time.
 - **Causal design:** A parsed `TargetCausalDesign`: the binding, period, eligible symbols, candidates, speedups, blocks, and seed of a causal profile.

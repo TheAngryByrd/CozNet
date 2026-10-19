@@ -334,6 +334,53 @@ let private pipelineProfile (seed: int) (rotation: int) (output: string) =
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Throughput throughputDuration)) journalCapacity workers
     writeProfile "pipeline-profile" seed rotation 40 20 throughputDuration profile output
 
+let private guarded (counter: TargetProgressCounter) (gate: TargetLock) inside outside () =
+    while not counter.Stopped do
+        Work.peer outside |> ignore
+        gate.Enter()
+        try
+            Work.selected inside |> ignore
+        finally
+            gate.Exit()
+        counter.Visit()
+
+let private lockProfile (seed: int) (rotation: int) (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
+    let workers (counter: TargetProgressCounter) =
+        let gate = TargetLock()
+        [| { Work = guarded counter gate 40UL 20UL; PaymentIp = fst selectedRange }
+           { Work = guarded counter gate 40UL 20UL; PaymentIp = fst peerRange } |]
+    let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Throughput throughputDuration)) journalCapacity workers
+    writeProfile "lock-profile" seed rotation 40 20 throughputDuration profile output
+
+let private plainLock selectedRounds peerRounds (output: string) =
+    Work.selected 1UL |> ignore
+    Work.peer 1UL |> ignore
+    let counter = TargetProgressCounter()
+    let gate = TargetLock()
+    let ready = new Barrier(3)
+    let started = Array.zeroCreate<int64> 2
+    let finished = Array.zeroCreate<int64> 2
+    let run index =
+        Thread(fun () ->
+            ready.SignalAndWait()
+            started[index] <- Stopwatch.GetTimestamp()
+            guarded counter gate selectedRounds peerRounds ()
+            finished[index] <- Stopwatch.GetTimestamp())
+    let threads = [| run 0; run 1 |]
+    threads |> Array.iter _.Start()
+    ready.SignalAndWait()
+    Thread.Sleep throughputDuration
+    counter.Stop()
+    threads |> Array.iter _.Join()
+    let elapsed = Stopwatch.GetElapsedTime(Array.min started, Array.max finished).TotalNanoseconds
+    let visits = counter.Visits
+    write output {| mode = "plain-lock"; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
+                    elapsedNs = uint64 elapsed; visits = visits; passed = visits >= 100L |}
+    if visits >= 100L then 0 else 1
+
 let private plainPipeline selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
@@ -495,6 +542,8 @@ let main argv =
     | [| "causal-profile"; seed; rotation; output |] -> causalProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "throughput-profile"; seed; rotation; output |] -> throughputProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "lock-profile"; seed; rotation; output |] -> lockProfile (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "plain-lock"; selectedRounds; peerRounds; output |] -> plainLock (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "pipeline-profile"; seed; rotation; output |] -> pipelineProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-pipeline"; selectedRounds; peerRounds; output |] -> plainPipeline (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "shutdown"; output |] -> shutdown output

@@ -16,6 +16,7 @@ For the ReJIT detection check and its test profiler, read [target-local ReJIT](p
 For the experiment driver and the causal profile qualification, read [target-local causal profile](plans/target-local-causal-profile.md).
 For throughput progress points and their qualification, read [target-local throughput](plans/target-local-throughput.md).
 For the blocking queue and the pipeline qualification, read [target-local queue](plans/target-local-queue.md).
+For the lock and the lock qualification, read [target-local lock](plans/target-local-lock.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).
 For the warm-up experiment and the first-experiment cost in a process, read [target-local warm-up](plans/target-local-warmup.md).
 For the rotated experiment order and the warm-up gate, read [target-local rotation](plans/target-local-rotation.md).

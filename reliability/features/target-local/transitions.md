@@ -1,6 +1,6 @@
 # Target-local forced-GC transitions
 
-Evidence: `artifacts/target-local-transitions/20261019T060721421-9e406e92`.
+Evidence: `artifacts/target-local-transitions/20261019T063102813-1448d8f5`.
 
 `TargetLocalTransitionsVerify` ran `profile-gc 50 6000 3000 5` ten times in the Linux x64 container.
 The run records kernel `5.15.153.1-microsoft-standard-WSL2`, x64, with 4 CPUs. Earlier transition runs did not record the host.
@@ -12,21 +12,21 @@ The sample runs through the checked library entry point `TargetLocalProfiler.run
 
 | Run | Passed | Ledger failure | Max observed debt (ns) | Forced GCs in work window | Max handler (ns) | Wall minus counted CPU (ms) | Epochs complete, zero loss |
 | ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
-| 1 | Yes | None | 999,976 | 19 | 1,504,165 | 6.6 | Yes |
-| 2 | Yes | None | 899,980 | 19 | 1,009,795 | 6.7 | Yes |
-| 3 | Yes | None | 949,970 | 19 | 1,503,846 | 6.5 | Yes |
-| 4 | Yes | None | 999,987 | 19 | 1,503,464 | 6.1 | Yes |
-| 5 | Yes | None | 1,000,000 | 19 | 1,504,537 | 6.9 | Yes |
-| 6 | Yes | None | 999,973 | 19 | 1,503,619 | 5.6 | Yes |
-| 7 | Yes | None | 949,920 | 20 | 1,503,514 | 7.0 | Yes |
-| 8 | Yes | None | 949,954 | 19 | 1,366,034 | 6.1 | Yes |
-| 9 | Yes | None | 949,954 | 20 | 1,053,878 | 8.2 | Yes |
-| 10 | Yes | None | 999,988 | 20 | 1,044,522 | 6.7 | Yes |
+| 1 | Yes | None | 949,995 | 19 | 1,504,186 | 7.3 | Yes |
+| 2 | Yes | None | 999,957 | 19 | 1,504,205 | 6.4 | Yes |
+| 3 | Yes | None | 949,994 | 19 | 1,503,975 | 7.0 | Yes |
+| 4 | Yes | None | 999,969 | 19 | 1,504,486 | 6.2 | Yes |
+| 5 | Yes | None | 1,000,000 | 20 | 1,016,381 | 8.6 | Yes |
+| 6 | Yes | None | 949,970 | 20 | 1,013,138 | 8.3 | Yes |
+| 7 | Yes | None | 999,974 | 19 | 1,505,848 | 5.3 | Yes |
+| 8 | Yes | None | 999,955 | 19 | 1,504,249 | 5.3 | Yes |
+| 9 | Yes | None | 949,964 | 19 | 1,010,760 | 8.2 | Yes |
+| 10 | Yes | None | 1,476,871 | 19 | 1,503,981 | 7.5 | Yes |
 
 No run crashed or hung. Every run closed both epochs with zero loss, retired both sessions, and restored the handlers.
 The `cleanup` check passes. A profile whose monitor throws raises `AggregateException`, and a second profile in the same process then passes.
 The `barrier-abort` check passes. A worker that throws releases its waiting peer, the run fails within 10 s, and a second profile then passes.
-Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,504,537 ns.
+Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,505,848 ns.
 Wall minus counted CPU is the largest per-thread difference. Counted CPU stops at disable and wall time includes the closing payment, so it is coarse.
 
 ## GC windows
@@ -37,16 +37,16 @@ A debt failure lists the window time inside the interval from the sample before 
 
 | Run | Complete | Windows | Window total | Pause total | Largest event gap | Debt failures |
 | ---: | --- | ---: | ---: | ---: | --- | --- |
-| 1 | Yes | 19 | 8.2260 ms | 6.7360 ms | worker 0: 2.1360 ms with 1.8441 ms in windows | none |
-| 2 | Yes | 19 | 7.9382 ms | 6.7320 ms | worker 0: 1.8695 ms with 0.9262 ms in windows | none |
-| 3 | Yes | 19 | 7.7617 ms | 6.4120 ms | worker 0: 2.1363 ms with 0.1654 ms in windows | none |
-| 4 | Yes | 19 | 7.5803 ms | 6.3250 ms | worker 0: 1.7877 ms with 0.9314 ms in windows | none |
-| 5 | Yes | 19 | 8.2276 ms | 7.0510 ms | worker 0: 2.0465 ms with 1.4609 ms in windows | none |
-| 6 | Yes | 19 | 6.8210 ms | 5.6240 ms | worker 0: 1.9205 ms with 0.9702 ms in windows | none |
-| 7 | Yes | 20 | 8.7849 ms | 7.3050 ms | worker 0: 1.8658 ms with 0.9407 ms in windows | none |
-| 8 | Yes | 19 | 7.4134 ms | 6.2720 ms | worker 0: 2.0036 ms with 1.4959 ms in windows | none |
-| 9 | Yes | 20 | 10.1787 ms | 8.3650 ms | worker 0: 2.1924 ms with 1.2665 ms in windows | none |
-| 10 | Yes | 20 | 8.4202 ms | 6.8320 ms | worker 0: 2.0149 ms with 1.0721 ms in windows | none |
+| 1 | Yes | 19 | 8.6710 ms | 7.3580 ms | worker 0: 2.2575 ms with 1.3644 ms in windows | none |
+| 2 | Yes | 19 | 8.8405 ms | 7.5740 ms | worker 0: 1.7092 ms with 0.7833 ms in windows | none |
+| 3 | Yes | 19 | 8.2182 ms | 7.1050 ms | worker 0: 2.1822 ms with 1.6326 ms in windows | none |
+| 4 | Yes | 19 | 7.2836 ms | 6.1660 ms | worker 0: 2.1019 ms with 1.1491 ms in windows | none |
+| 5 | Yes | 20 | 10.7229 ms | 8.9900 ms | worker 0: 2.5038 ms with 1.5304 ms in windows | none |
+| 6 | Yes | 20 | 9.8147 ms | 8.2070 ms | worker 0: 1.9556 ms with 0.9927 ms in windows | none |
+| 7 | Yes | 19 | 7.2451 ms | 5.9910 ms | worker 0: 1.6532 ms with 0.7475 ms in windows | none |
+| 8 | Yes | 19 | 6.4917 ms | 5.2930 ms | worker 0: 1.6784 ms with 0.6901 ms in windows | none |
+| 9 | Yes | 19 | 9.7289 ms | 8.2450 ms | worker 0: 2.0500 ms with 1.0737 ms in windows | none |
+| 10 | Yes | 19 | 8.1584 ms | 7.0600 ms | worker 0: 2.6215 ms with 1.6719 ms in windows | none |
 
 ## Run history
 
@@ -81,6 +81,7 @@ A debt failure lists the window time inside the interval from the sample before 
 | `20261019T043835718-5c15e486` | Per-thread experiment diagnostics | Pass, 10 of 10 |
 | `20261019T051202514-ddf03668` | Profile warm-up experiment | Fail. Run 1: 2 ms debt bound. One GC window covers 1.31 ms of the 5.26 ms failure interval. |
 | `20261019T060721421-9e406e92` | Rotated experiment order and warm-up gate | Pass, 10 of 10 |
+| `20261019T063102813-1448d8f5` | TargetLock and lock profile | Pass, 10 of 10 |
 
 ## Earlier failed check
 
@@ -97,7 +98,7 @@ One hypothesis is that the host or the GC deschedules one thread. Profile result
 
 ## Consequence
 
-The passing current-design checks hold 190 runs with no failure. Eight current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
+The passing current-design checks hold 200 runs with no failure. Eight current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
 A thread can go without samples long enough to break the 2 ms debt bound. The cause is unknown.
 GC-heavy workloads stay outside the supported model. The debt bound stays unchanged.
 

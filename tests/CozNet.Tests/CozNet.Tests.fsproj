@@ -29,6 +29,7 @@
         <Compile Include="RunQueueClockTests.fs" />
         <Compile Include="TargetCausalProfileTests.fs" />
         <Compile Include="TargetQueueTests.fs" />
+        <Compile Include="TargetLockTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>

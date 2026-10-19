@@ -28,9 +28,11 @@ The effective time removes the inserted delay, so a worker that pays delay keeps
 In the first throughput qualification run, real optimizations confirm the predicted gains at all six points, within 3.1 points at the median.
 
 A pipeline connects a producer and a consumer through a `TargetQueue`. The slower stage sets the rate, so a faster producer gains only until the consumer is the slower stage.
+A lock works in the same way. When work inside a `TargetLock` sets the rate, a faster critical section gains, and faster work outside it gains nothing until the lock is no longer the bottleneck.
+In the first lock qualification run, the `Work.selected` prediction is about 9 points below the real gain at the knee, where the critical section equals the work outside it. Its other speedups pass. `peer-25` also fails, by one block of 11.87 points.
 A consumer that waits for an item does not run, so it cannot pay delay. When it wakes, it skips the delay up to the token of the item that it takes, as at a barrier.
-In all four pipeline qualification runs, real optimizations confirm the producer plateau. One consumer point fails its limit in each of the first three runs, and the fourth run passes all six points.
-At `peer` 50%, the median prediction is below the median actual gain in all four runs. In the third run, two blocks are above their actual gains by 8.99 and 8.42 points. In the fourth, two blocks are above by 4.03 and 1.98 points. So the error does not have one stable sign. In the second run, which records thread data, the prediction tracks the producer time outside measured payments, for each visit. The records do not show what that time is.
+In all five pipeline qualification runs, real optimizations confirm the producer plateau. One consumer point fails its limit in each of the first three runs, and the fourth and fifth runs pass all six points.
+At `peer` 50%, the median prediction is below the median actual gain in all five runs. In the third run, two blocks are above their actual gains by 8.99 and 8.42 points. In the fourth, two blocks are above by 4.03 and 1.98 points. In the fifth, one block is above by 0.75 points. So the error does not have one stable sign. In the second run, which records thread data, the prediction tracks the producer time outside measured payments, for each visit. The records do not show what that time is.
 
 ## Why each thread pays its own delay
 

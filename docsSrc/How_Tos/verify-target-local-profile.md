@@ -16,6 +16,7 @@ It requires the .NET 10 SDK, PowerShell 7, Python 3, Docker, and the images `coz
 6. For a failed experiment, open `<block>-profile.json` and read `experiments`.
 7. To check the throughput progress point, run `TargetLocalThroughputVerify` and open the new directory under `artifacts/target-local-throughput`. Repeat steps 3 to 6.
 8. To check a pipeline with blocking waits, run `TargetLocalPipelineVerify` and open the new directory under `artifacts/target-local-pipeline`. Repeat steps 3 to 6.
+9. To check workers that contend for a lock, run `TargetLocalLockVerify` and open the new directory under `artifacts/target-local-lock`. Repeat steps 3 to 6.
 
 Each block runs one profile process and seven plain processes in a random order.
 The profile process runs a baseline and six experiments: `Work.selected` and `Work.peer` at speedups 25, 50, and 75.

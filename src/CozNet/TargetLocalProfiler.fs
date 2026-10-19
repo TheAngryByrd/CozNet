@@ -258,19 +258,8 @@ type TargetBarrier(participants: int) =
     member this.SignalAndWait() =
         this.SignalAndWait(Timeout.InfiniteTimeSpan, CancellationToken.None) |> ignore
 
-type TargetQueue<'T>(capacity: int) =
-    do
-        if capacity < 1 then
-            raise (ArgumentOutOfRangeException(nameof capacity))
-
-    let items = Collections.Concurrent.ConcurrentQueue<struct ('T * uint64)>()
-    let available = new SemaphoreSlim(0)
-    let spaces = new SemaphoreSlim(capacity)
-    let gate = obj ()
-    let releases = Collections.Generic.Queue<uint64>()
-    let mutable initialSpaces = capacity
-
-    static let post () =
+module internal TargetWait =
+    let internal post () =
         let handle = TargetCurrent.Handle
 
         if handle = 0n then
@@ -280,7 +269,7 @@ type TargetQueue<'T>(capacity: int) =
             TargetCurrent.Record(TargetLocalNative.Post(handle, TargetCurrent.PaymentIp, &posted))
             posted
 
-    static let acquire (semaphore: SemaphoreSlim) (timeout: TimeSpan) (cancellation: CancellationToken) (onAcquired: bool -> uint64 voption) =
+    let internal acquire (semaphore: SemaphoreSlim) (timeout: TimeSpan) (cancellation: CancellationToken) (onAcquired: bool -> uint64 voption) =
         if cancellation.IsCancellationRequested || TargetCurrent.Abort.IsCancellationRequested then
             false
         elif semaphore.Wait 0 then
@@ -322,6 +311,18 @@ type TargetQueue<'T>(capacity: int) =
 
             reason = TargetWakeReason.Dependency || reason = TargetWakeReason.Spurious
 
+type TargetQueue<'T>(capacity: int) =
+    do
+        if capacity < 1 then
+            raise (ArgumentOutOfRangeException(nameof capacity))
+
+    let items = Collections.Concurrent.ConcurrentQueue<struct ('T * uint64)>()
+    let available = new SemaphoreSlim(0)
+    let spaces = new SemaphoreSlim(capacity)
+    let gate = obj ()
+    let releases = Collections.Generic.Queue<uint64>()
+    let mutable initialSpaces = capacity
+
     member _.Capacity = capacity
     member _.Count = items.Count
 
@@ -338,8 +339,8 @@ type TargetQueue<'T>(capacity: int) =
                 else
                     raise (InvalidOperationException "The queue freed a space that it does not hold."))
 
-        if acquire spaces timeout cancellation space then
-            items.Enqueue(struct (item, post ()))
+        if TargetWait.acquire spaces timeout cancellation space then
+            items.Enqueue(struct (item, TargetWait.post ()))
             available.Release() |> ignore
             true
         else
@@ -355,10 +356,10 @@ type TargetQueue<'T>(capacity: int) =
                 ValueSome token
             | _ -> ValueNone
 
-        if acquire available timeout cancellation take then
+        if TargetWait.acquire available timeout cancellation take then
             match taken.Value with
             | ValueSome item ->
-                let token = post ()
+                let token = TargetWait.post ()
                 lock gate (fun () -> releases.Enqueue token)
                 spaces.Release() |> ignore
                 ValueSome item
@@ -374,6 +375,32 @@ type TargetQueue<'T>(capacity: int) =
         match this.Dequeue(Timeout.InfiniteTimeSpan, CancellationToken.None) with
         | ValueSome item -> item
         | ValueNone -> raise (OperationCanceledException "The run aborted the dequeue.")
+
+type TargetLock() =
+    let gate = new SemaphoreSlim(1)
+    let mutable releaseToken = 0UL
+    let mutable owner = 0
+
+    member _.IsHeld = Volatile.Read &owner <> 0
+
+    member _.Enter(timeout: TimeSpan, cancellation: CancellationToken) =
+        if Volatile.Read &owner = Environment.CurrentManagedThreadId then
+            raise (LockRecursionException "The lock does not support recursion.")
+        if TargetWait.acquire gate timeout cancellation (fun _ -> ValueSome(Volatile.Read &releaseToken)) then
+            Volatile.Write(&owner, Environment.CurrentManagedThreadId)
+            true
+        else
+            false
+
+    member this.Enter() =
+        if not (this.Enter(Timeout.InfiniteTimeSpan, CancellationToken.None)) then
+            raise (OperationCanceledException "The run aborted the lock wait.")
+
+    member _.Exit() =
+        if Interlocked.CompareExchange(&owner, 0, Environment.CurrentManagedThreadId) <> Environment.CurrentManagedThreadId then
+            raise (SynchronizationLockException "The calling thread does not hold the lock.")
+        Volatile.Write(&releaseToken, TargetWait.post ())
+        gate.Release() |> ignore
 
 type TargetWorker = {
     Work: unit -> unit

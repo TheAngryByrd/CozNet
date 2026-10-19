@@ -10,7 +10,8 @@ BLOCKS = 5
 SEED = 20261018
 WORKLOADS = {"latency": {"profile": "causal-profile", "plain": "plain", "selected": 6000, "peer": 3000, "durationMs": 0},
              "throughput": {"profile": "throughput-profile", "plain": "plain-throughput", "selected": 40, "peer": 20, "durationMs": 120},
-             "pipeline": {"profile": "pipeline-profile", "plain": "plain-pipeline", "selected": 40, "peer": 20, "durationMs": 120}}
+             "pipeline": {"profile": "pipeline-profile", "plain": "plain-pipeline", "selected": 40, "peer": 20, "durationMs": 120},
+             "lock": {"profile": "lock-profile", "plain": "plain-lock", "selected": 40, "peer": 20, "durationMs": 120}}
 MIN_VISITS = 100
 SPEEDUPS = (25, 50, 75)
 SELECTED_NAME = "CozNet.TargetLocal.Work::selected(uint64)"
@@ -224,7 +225,7 @@ def main():
     order_summary = {str(o): [statistics.median(r[i] for r in rows) for i in range(2)] for o, rows in sorted(by_order.items())}
     summary = {"passed": passed, "workload": workload, "positionsBalanced": balanced, "warmupsPassed": warmups, "medianWorkRatioByOrder": order_summary, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
                "points": summary_points, "blocks": blocks,
-               "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + {"throughput": "throughput progress point", "pipeline": "throughput progress point behind a TargetQueue"}.get(workload, "end-to-end progress point"),
+               "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + {"throughput": "throughput progress point", "pipeline": "throughput progress point behind a TargetQueue", "lock": "throughput progress point with a TargetLock"}.get(workload, "end-to-end progress point"),
                "generalClrSafetyEstablished": False}
     (run / "summary.json").write_text(json.dumps(summary, indent=2))
     return 0 if passed else 1

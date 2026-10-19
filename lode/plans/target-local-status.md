@@ -288,4 +288,19 @@ Accepted risk until that change: the analyzer reports `warmupPassed` but does no
 - Transition run `20261019T060721421-9e406e92` passes 10 of 10. Prediction run `20261019T060749814-6eba8ca5` and barrier run `20261019T060913007-5812aec4` pass.
 The remaining `peer-50` error in the pipeline is not placed. The records do not show its cause.
 
+## Lock
+
+[The lock plan](target-local-lock.md) adds `TargetLock` and a lock workload with two workers. Lock run `20261019T062708436-df83442b` fails.
+- `Work.selected` predicts 24.55%, 42.62%, and 67.34% at speedups 25, 50, and 75. The real optimizations give 26.31%, 52.02%, and 64.84%.
+- `selected-50` fails by a median of 9.13 points. All five block predictions are below their actual gains, by 5.2 to 13.0 points.
+- `peer-25` fails by one block of 11.87 points. The other `peer` points pass.
+At 50%, the critical section of 20 rounds equals the 20 rounds outside the lock, so this point is the knee where the lock stops setting the rate.
+In the profile, the visits are 158 to 168 at baseline and 151 to 161 at 50%, and they fall in four of five blocks. A matching real optimization raises the visit rate instead.
+Hypothesis, not shown: a worker outside the lock pays its delay late, at its next sample, so it reaches the lock late and the lock waits idle.
+
+The other suites on the same tree:
+- Pipeline run `20261019T062807524-d72126fc`, latency profile run `20261019T063004675-e6636cdf`, transition run `20261019T063102813-1448d8f5`, prediction run `20261019T063130911-86311728`, and barrier run `20261019T063253419-973e8541` pass.
+- Throughput run `20261019T062905608-e6d24e45` fails because block 4 is invalid. The four valid blocks of each point stay within the median and block limits, but each point then has only 4 of 5 valid blocks.
+  In block 4, `peer` 75% breaks the 2 ms debt bound. In `peer` 50%, thread 0 has 45.8 ms of whole-run run-queue delay and one handler interval of 5.99 ms, above the 5 ms bound.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

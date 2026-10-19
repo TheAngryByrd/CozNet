@@ -195,6 +195,21 @@ With several producers or consumers, a waiting producer can take the token of a 
 Create a new queue for each run, and use it only from registered workers of that run. Other use is not supported. It can fail the run, or skip delay by the wrong token.
 A timeout or a cancellation skips no delay. The abort token of the run cancels each wait. Without a profiler handle, the queue makes no native call.
 
+## Lock
+
+`TargetLock()` is a non-recursive mutual-exclusion lock for profiled workers.
+
+| Member | Result |
+| --- | --- |
+| `Enter(timeout, cancellation)` | `true` after it takes the lock. `false` after a timeout or a cancellation, without the lock. |
+| `Enter()` | Waits without a limit. It raises `OperationCanceledException` when the run aborts the wait. |
+| `Exit()` | Frees the lock. It raises `SynchronizationLockException` when the calling thread does not hold the lock. |
+| `IsHeld` | `true` while a thread holds the lock. |
+
+A second `Enter` by the holder raises `LockRecursionException`.
+In a profiled worker, `Exit` posts a token and stores it before it frees the lock. An `Enter` that waits ends its wait with that token.
+Only the holder writes the token, so the token is always that of the release that freed the lock. A timeout or a cancellation skips no delay.
+
 ## Sample program
 
 `samples/CozNet.TargetLocal` has three modes:
@@ -214,6 +229,8 @@ A timeout or a cancellation skips no delay. The abort token of the run cancels e
 | `throughput-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. The workers repeat `Work.selected 40` and `Work.peer 20` with one visit after each call. |
 | `plain-throughput <selectedRounds> <peerRounds> <out>` | The same loops without the profiler for 120 ms, with the elapsed time and the visits |
 | `pipeline-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. A producer runs `Work.selected 40` for each item of a `TargetQueue` of 4 items, and a consumer runs `Work.peer 20` and visits for each item. |
+| `lock-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. Two workers each run `Work.peer 20` outside a `TargetLock` and `Work.selected 40` inside it, and visit once per cycle. |
+| `plain-lock <selectedRounds> <peerRounds> <out>` | The same lock workload without the profiler for 120 ms, with the elapsed time and the visits |
 | `plain-pipeline <selectedRounds> <peerRounds> <out>` | The same pipeline without the profiler for 120 ms, with the elapsed time and the visits |
 
 The profile mode requires `DOTNET_TieredCompilation=0`, `DOTNET_ReadyToRun=0`, `DOTNET_PerfMapEnabled=3`, and `DOTNET_PerfMapShowOptimizationTiers=1`.
