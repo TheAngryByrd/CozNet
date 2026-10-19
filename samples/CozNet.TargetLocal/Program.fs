@@ -82,6 +82,19 @@ module private Placement =
         let index = limitsNs |> Array.tryFindIndex (fun limit -> ns < limit)
         defaultArg index limitsNs.Length
 
+    let idleNames = [| "ready"; "below100us"; "below400us"; "atLeast400us" |]
+    let idleLimitsNs = [| 100_000.0; 400_000.0 |]
+    let wakeLimitsNs = [| 10_000.0; 25_000.0; 50_000.0; 150_000.0 |]
+
+    let idleClass (waiting: int64) (enqueued: int64) =
+        if enqueued <= waiting then 0
+        else
+            let ns = Stopwatch.GetElapsedTime(waiting, enqueued).TotalNanoseconds
+            1 + defaultArg (idleLimitsNs |> Array.tryFindIndex (fun limit -> ns < limit)) idleLimitsNs.Length
+
+    let wakeClass (ns: float) =
+        defaultArg (wakeLimitsNs |> Array.tryFindIndex (fun limit -> ns < limit)) wakeLimitsNs.Length
+
 let private write (path: string) value =
     File.WriteAllText(path, JsonSerializer.Serialize(value, JsonSerializerOptions(WriteIndented = false)))
 
@@ -473,6 +486,7 @@ type private QueueHandoffs(queue: TargetQueue<struct (int64 * int64 * int)>) =
     let mutable enqueueTicks = 0L
     let mutable spun = 0L
     let placements = Array2D.zeroCreate<int64> Placement.names.Length (Placement.limitsNs.Length + 1)
+    let idles = Array2D.zeroCreate<int64> Placement.idleNames.Length (Placement.wakeLimitsNs.Length + 1)
     member _.Queue = queue
     member _.AddSpun() = Interlocked.Increment(&spun) |> ignore
     member _.Spun = Interlocked.Read(&spun)
@@ -481,13 +495,16 @@ type private QueueHandoffs(queue: TargetQueue<struct (int64 * int64 * int)>) =
         Interlocked.Add(&enqueueTicks, max 0L (finished - started)) |> ignore
     member _.Enqueues = Interlocked.Read(&enqueues)
     member _.EnqueueNs = uint64 (Stopwatch.GetElapsedTime(0L, Interlocked.Read(&enqueueTicks)).TotalNanoseconds)
-    member _.Add(enqueued: int64, dequeued: int64, producer: int, consumer: int) =
+    member _.Add(waiting: int64, enqueued: int64, dequeued: int64, producer: int, consumer: int) =
         Interlocked.Increment(&handoffs) |> ignore
         Interlocked.Add(&handoffTicks, max 0L (dequeued - enqueued)) |> ignore
         let ns = Stopwatch.GetElapsedTime(0L, max 0L (dequeued - enqueued)).TotalNanoseconds
         Interlocked.Increment(&placements[Placement.classify producer consumer, Placement.bucket ns]) |> ignore
+        Interlocked.Increment(&idles[Placement.idleClass waiting enqueued, Placement.wakeClass ns]) |> ignore
     member _.Placements =
         Placement.names |> Array.mapi (fun row name -> name, Array.init (Placement.limitsNs.Length + 1) (fun column -> Interlocked.Read(&placements[row, column]))) |> dict
+    member _.Idles =
+        Placement.idleNames |> Array.mapi (fun row name -> name, Array.init (Placement.wakeLimitsNs.Length + 1) (fun column -> Interlocked.Read(&idles[row, column]))) |> dict
     member _.Handoffs = Interlocked.Read(&handoffs)
     member _.HandoffNs = uint64 (Stopwatch.GetElapsedTime(0L, Interlocked.Read(&handoffTicks)).TotalNanoseconds)
 
@@ -507,6 +524,7 @@ let private endTransactions (counter: TargetProgressCounter) (handoffs: QueueHan
     let mutable running = true
     while running do
         let spunBefore = queue.SpunDequeues
+        let waiting = Stopwatch.GetTimestamp()
         let struct (ticket, enqueued, producer) = queue.Dequeue()
         let dequeued = Stopwatch.GetTimestamp()
         let consumer = Pinning.sched_getcpu ()
@@ -514,7 +532,7 @@ let private endTransactions (counter: TargetProgressCounter) (handoffs: QueueHan
             running <- false
         else
             if queue.SpunDequeues > spunBefore then handoffs.AddSpun()
-            handoffs.Add(enqueued, dequeued, producer, consumer)
+            handoffs.Add(waiting, enqueued, dequeued, producer, consumer)
             Work.peer rounds |> ignore
             counter.End ticket
 
@@ -536,7 +554,7 @@ let private transactionProfileWith (mode: string) (spin: TimeSpan) (seed: int) (
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Latency throughputDuration)) journalCapacity workers
     let stats =
         queues
-        |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs; enqueues = q.Enqueues; enqueueNs = q.EnqueueNs; spunDequeues = q.Spun; handoffPlacement = q.Placements |})
+        |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs; enqueues = q.Enqueues; enqueueNs = q.EnqueueNs; spunDequeues = q.Spun; handoffPlacement = q.Placements; handoffIdle = q.Idles |})
         |> Seq.toArray
     writeProfileWith mode seed rotation 40 8 throughputDuration null (box stats) profile output
 
@@ -568,7 +586,7 @@ let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds 
     write output {| mode = mode; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
                     elapsedNs = uint64 elapsed; visits = visits; arrivals = counter.Arrivals; latencyNs = counter.LatencyNs
                     handoffs = handoffs.Handoffs; handoffNs = handoffs.HandoffNs; enqueues = handoffs.Enqueues; enqueueNs = handoffs.EnqueueNs
-                    spunDequeues = handoffs.Spun; handoffPlacement = handoffs.Placements; workerCpus = Pinning.requested; workerCpusSeen = Pinning.recorded (); passed = visits >= 100L |}
+                    spunDequeues = handoffs.Spun; handoffPlacement = handoffs.Placements; handoffIdle = handoffs.Idles; workerCpus = Pinning.requested; workerCpusSeen = Pinning.recorded (); passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
 type private Turns() =

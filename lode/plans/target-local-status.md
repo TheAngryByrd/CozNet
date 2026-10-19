@@ -706,4 +706,41 @@ The run has five valid blocks and no debt failure. Five points pass, the first `
 - This run has no slow plain arm, and it passes the other five points. One run cannot show that the five points pass in general.
 - Two of the five runs of the transaction suites after the settlement change have a debt failure.
 
+## Wake after idle
+
+[The wake after idle plan](target-local-wake-idle.md) records the idle time of the consumer before each handoff. `transaction` run `20261019T195335859-ea098418` ran once on the reviewed tree.
+
+These counts pool the 35 plain arms. A slow handoff is one of at least 25 microseconds:
+
+| Idle class | Handoffs | Slow handoffs | Share |
+| --- | ---: | ---: | ---: |
+| `ready` | 185 | 114 | 0.616 |
+| `below100us` | 3254 | 122 | 0.037 |
+| `below400us` | 2786 | 816 | 0.293 |
+| `atLeast400us` | 3509 | 2381 | 0.679 |
+
+- Criterion 124 supports H10 as a pooled association. The ratio of the shares after at least 400 and after less than 100 microseconds of idle time is 18.1.
+- The idle class of a handoff follows the period of its arm. In the `original` and `peer` arms, 3421 of the 3449 handoffs have at least 400 microseconds of idle time. In `selected-75`, 3247 of the 3439 handoffs have less than 100.
+  So the result does not exclude H11. No plain arm has 200 handoffs in both classes, so criterion 125 reports no ratio within an arm.
+  `original` has 1 handoff after less than 100 microseconds, with no slow handoff, and `selected-75` has 2 after at least 400, both slow. These groups are too small for a conclusion within an arm.
+- In `original` the share is 0.655 after at least 400 microseconds, and in `selected-75` it is 0.037 after less than 100.
+- Within the class of 100 to 400 microseconds, the share is 0.542 in `selected-25` and 0.133 in `selected-50`. So the four classes do not fully describe the relation.
+- In run `20261019T175316141-ec3885bd`, the same plain `selected-75` program had a median handoff of 31 microseconds. This line of work stops after this run, and the cause of the slow wakes stays open.
+
+If H10 holds, the profile cannot show the shorter wake of the real `selected-75` program, because a virtual speedup does not shorten the real idle time of the consumer. The records are consistent with this, but they do not establish it.
+
+The run has five valid blocks and no debt failure, and it fails four points:
+
+| Point | Signed median | Median of absolute values | Largest absolute value |
+| --- | ---: | ---: | ---: |
+| `selected-25` | -1.92 | 1.92 | 8.29 |
+| `selected-50` | -4.61 | 4.61 | 9.17 |
+| `selected-75` | -17.22 | 17.22 | 21.00 |
+| `peer-25` | -4.58 | 4.58 | 12.61 |
+| `peer-50` | -5.77 | 5.77 | 9.57 |
+| `peer-75` | -5.36 | 5.36 | 13.16 |
+
+- `selected-75` has a signed median of -11.83, -10.92, -10.48, and -17.22 points in the four runs at 1 ms after the settlement change.
+- The previous run passed five points, and this run passes two, so that result did not repeat. `peer-25` fails by one block of 12.61 points, and `peer-50` and `peer-75` fail by medians of 5.77 and 5.36 points.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

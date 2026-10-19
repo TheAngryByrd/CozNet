@@ -335,6 +335,15 @@ class ThroughputChecks(unittest.TestCase):
         self.assertFalse(placement_complete({"handoffs": 9, "handoffPlacement": {**rows, "sameCpu": [-1, 0, 2, 0, 0]}}))
         self.assertTrue(placement_complete({"handoffs": 5}))
 
+    def test_handoff_idle_must_add_up_to_the_handoffs(self):
+        idle = {"ready": [2, 0, 0, 0, 0], "below100us": [3, 1, 0, 0, 0], "below400us": [0, 2, 0, 0, 0], "atLeast400us": [0, 0, 2, 1, 0]}
+        self.assertTrue(placement_complete({"handoffs": 11, "handoffIdle": idle}))
+        self.assertFalse(placement_complete({"handoffs": 12, "handoffIdle": idle}))
+        self.assertFalse(placement_complete({"handoffs": 11, "handoffIdle": {**idle, "ready": [2, 0, 0, 0]}}))
+        self.assertFalse(placement_complete({"handoffs": 9, "handoffIdle": {k: v for k, v in idle.items() if k != "ready"}}))
+        placed = {"sameCpu": [0] * 5, "sameCore": [0] * 5, "otherCore": [11, 0, 0, 0, 0], "unknown": [0] * 5}
+        self.assertFalse(placement_complete({"handoffs": 11, "handoffPlacement": placed, "handoffIdle": {**idle, "ready": [1, 0, 0, 0, 0]}}))
+
     def test_profile_period_must_match_the_run(self):
         self.assertTrue(period_matches({}, None))
         self.assertTrue(period_matches({"periodNs": 1000000}, None))

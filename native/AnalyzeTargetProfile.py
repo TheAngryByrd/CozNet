@@ -175,13 +175,18 @@ QUEUE_KEYS = ("handoffs", "handoffNs", "enqueues", "enqueueNs", "spunDequeues")
 
 
 PLACEMENTS = ("sameCpu", "sameCore", "otherCore", "unknown")
+IDLES = ("ready", "below100us", "below400us", "atLeast400us")
 
 
 def placement_complete(record):
-    if "handoffPlacement" not in record:
+    return counts_complete(record, "handoffPlacement", PLACEMENTS) and counts_complete(record, "handoffIdle", IDLES)
+
+
+def counts_complete(record, field, names):
+    if field not in record:
         return True
-    counts = record["handoffPlacement"]
-    if not isinstance(counts, dict) or sorted(counts) != sorted(PLACEMENTS):
+    counts = record[field]
+    if not isinstance(counts, dict) or sorted(counts) != sorted(names):
         return False
     if not all(isinstance(row, list) and len(row) == 5 and all(type(c) is int and c >= 0 for c in row) for row in counts.values()):
         return False

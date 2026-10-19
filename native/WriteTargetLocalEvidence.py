@@ -723,6 +723,7 @@ TRANSACTION_HISTORY = [
     ("20261019T175316141-ec3885bd", "Matched plain warm-up", "Fail. All six points fail. Block 3 is above the real gain at every point, by 12.01 to 16.26 points."),
     ("20261019T183627302-c5843c4c", "Payment before each progress stamp", "Fail. Block 3 is invalid from a debt failure after a wake. With four valid blocks, `selected-75` has a signed median of -11.83 points."),
     ("20261019T191349654-efea55a8", "Diagnostic sample period (1 ms run)", "Fail. Block 2 is invalid from a debt failure after a wake. With four valid blocks, `selected-75` has a signed median of -10.92 points."),
+    ("20261019T193820084-e379d1a4", "Handoff placement", "Fail. Five valid blocks. Five points pass, and `selected-75` fails with a signed median of -10.48 points."),
 ]
 SEMAPHORE_HISTORY = [
     ("20261019T082323819-903a6cef", "First semaphore profile run", "Fail. `selected-75` has one block of -10.61 points, and `peer-75` median 5.24 points."),
