@@ -14,6 +14,7 @@
 - **Bound run:** A target-local run through `TargetLocalProfiler.runBound`. It rejects a bad configuration before the run, and a moved range sets `BindingError`.
 - **Run-queue delay:** Time that a runnable thread waits for a CPU, from `/proc/thread-self/schedstat` field 2.
 - **Start run-queue delay:** The run-queue delay of a worker from the read before the start barrier to the read after that barrier returns. `StartRunDelayNs` holds it.
+- **GC window:** The interval from the `Stopwatch` read before a forced `GC.Collect` call to the read after it, on the monitor thread.
 - **Start trace:** Three start points of a worker, from its native start to its work start. Each point holds the wall time, on-CPU time, run-queue delay, faults, and context switches.
 - **Start segment:** The interval between two start points. `setup` runs from the native start to the start barrier, and `barrier` covers the start barrier.
 - **Residual run-queue delay:** The whole-run run-queue delay minus the start run-queue delay and the wait values. It bounds the run-queue delay during work outside the waits.

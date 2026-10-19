@@ -75,6 +75,9 @@ let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (outpu
     |]
     let collections = GC.CollectionCount 2
     let forced = [| 0 |]
+    let windows = Array.zeroCreate<int64> 2048
+    let dropped = [| 0 |]
+    let pauseBefore = GC.GetTotalPauseDuration()
     let monitor (state: TargetRunState) =
         if gcIntervalMs > 0 then
             while not state.Working && state.Running do
@@ -82,11 +85,20 @@ let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (outpu
             while state.Working do
                 Thread.Sleep gcIntervalMs
                 if state.Working then
+                    let start = Stopwatch.GetTimestamp()
                     GC.Collect(2, GCCollectionMode.Forced, true)
+                    let finish = Stopwatch.GetTimestamp()
+                    if 2 * forced[0] < windows.Length then
+                        windows[2 * forced[0]] <- start
+                        windows[2 * forced[0] + 1] <- finish
+                    else
+                        dropped[0] <- dropped[0] + 1
                     forced[0] <- forced[0] + 1
     let result =
         boundRun binding speedup workers monitor
     let gen2 = GC.CollectionCount 2 - collections
+    let pauseNs = int64 ((GC.GetTotalPauseDuration() - pauseBefore).TotalNanoseconds)
+    let kept = min forced[0] (windows.Length / 2)
     let replayError, summary =
         match result.Replay with
         | Ok value -> "", Some value
@@ -103,6 +115,10 @@ let private profile speedup selectedRounds peerRounds (gcIntervalMs: int) (outpu
         totalHandlerNs = result.Threads |> Array.sumBy _.Result.TotalHandlerNs
         gcIntervalMs = gcIntervalMs
         forcedCollections = forced[0]
+        gcWindows = Array.init kept (fun index -> [| windows[2 * index]; windows[2 * index + 1] |])
+        gcWindowsDropped = dropped[0]
+        gcPauseNs = pauseNs
+        stopwatchFrequency = Stopwatch.Frequency
         gen2Collections = gen2
         startedTicks = result.Threads |> Array.map _.StartedTicks
         finishedTicks = result.Threads |> Array.map _.FinishedTicks

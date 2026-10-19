@@ -157,6 +157,22 @@ The runs on the reviewed tree:
 
 The move removes the profiler setup from the sampled interval: the median setup segment falls from 0.70 ms to 0.0049 ms in both suites.
 Criterion 26 also fails on one stall of unknown cause. No profile arm in these runs records a debt failure.
-Next step: find the cause of such stalls before any change to criterion 26, and qualify with one profiled thread per physical core. The bounds do not change.
+The retained records do not establish the cause of such stalls. Guest-side causes stay open.
+A manual check in the same container image on 2026-10-19, outside the qualification runs, read zero steal time on every CPU in `/proc/stat` before and after a 2 s sleep.
+So this guest gives no record that can confirm or exclude a host pause of a virtual CPU. A host with steal-time accounting, or bare metal, can test that hypothesis.
+Criterion 26 does not change.
+
+## GC windows
+
+[The GC-window plan](target-local-gc-windows.md) records a `Stopwatch` window around each forced collection and reports the window time in each debt-failure interval and each worker's largest event gap.
+
+All three suites pass on the reviewed tree:
+- Transition run `20261019T011520304-41a7c250` passes 10 of 10, with complete GC window records. No run records a debt failure.
+  Each run has 19 or 20 windows, with 6.75 to 10.28 ms of window time and 5.55 to 8.87 ms of pause time from `GC.GetTotalPauseDuration`.
+  The largest event gap of each run is 1.59 to 2.49 ms, and 0.12 to 1.39 ms of window time falls inside it. A window is an upper bound on its collection time.
+- Prediction run `20261019T011552600-3ac91378` passes all three configurations, with median differences of 0.80 to 3.22 points. The largest setup segment is 0.023 ms.
+- Barrier run `20261019T011713329-52b0bbca` passes all three patterns, with median differences of 1.10 to 4.22 points. The largest barrier segment is 0.52 ms, which no criterion covers.
+
+The four retained forced-GC debt failures predate the windows, so their collections stay unplaced.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

@@ -1,4 +1,5 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/target-local-transitions'), [int]$Runs = 10)
+param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/target-local-transitions'), [int]$Runs = 10,
+    [string]$PythonCommand = $(if ($env:COZNET_PYTHON) { $env:COZNET_PYTHON } elseif ($IsWindows) { 'py' } else { 'python3' }))
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -11,7 +12,7 @@ if ($LASTEXITCODE -ne 0) { throw 'The Linux SDK image is unavailable.' }
 $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.Linux.cpp', 'native/service/TargetSampleSession.Linux.h',
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'src/CozNet/TargetLocalReplay.fs',
     'src/CozNet/TargetLocalProfiler.fs', 'samples/CozNet.TargetLocal/Work.fs', 'samples/CozNet.TargetLocal/Program.fs',
-    'native/VerifyTargetLocalTransitions.ps1', 'lode/plans/target-local-transitions.md', 'lode/plans/target-local-lifecycle.md', 'lode/plans/target-local-wait-delay.md', 'lode/plans/target-local-start-delay.md', 'lode/plans/target-local-start-trace.md', 'lode/plans/target-local-start-setup.md')
+    'native/VerifyTargetLocalTransitions.ps1', 'lode/plans/target-local-transitions.md', 'lode/plans/target-local-lifecycle.md', 'lode/plans/target-local-wait-delay.md', 'lode/plans/target-local-start-delay.md', 'lode/plans/target-local-start-trace.md', 'lode/plans/target-local-start-setup.md', 'lode/plans/target-local-gc-windows.md', 'native/AnalyzeTargetGc.py')
 $hashes = @{}
 function Get-SourceHash([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)
@@ -68,11 +69,15 @@ $lifecycle = [ordered]@{
     bindingDefaultPassed = $defaultExit -eq 0 -and $null -ne $bindingDefault -and $bindingDefault.passed -and -not $bindingDefault.tiered
     shutdownPassed = $shutdownExit -eq 0 -and $shutdownSeconds -lt 10 -and (Test-Path -LiteralPath (Join-Path $run 'shutdown.json.marker')) -and -not (Test-Path -LiteralPath (Join-Path $run 'shutdown.json')) -and (Get-Content (Join-Path $run 'shutdown.json.marker') -Raw | ConvertFrom-Json).working
     shutdownExitCode = $shutdownExit; shutdownSeconds = $shutdownSeconds }
+& $PythonCommand -I (Join-Path $root 'native/AnalyzeTargetGc.py') $run *> (Join-Path $run 'gc-analysis.log')
+$gcExit = $LASTEXITCODE
+$gc = & $read 'gc-summary.json'
+$gcComplete = $gcExit -eq 0 -and $null -ne $gc -and [bool]$gc.gcWindowsComplete
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-SourceHash (Join-Path $root $name)) -eq $hashes[$name] }
-$passed = $unchanged -and $lifecycle.bindingTieredPassed -and $lifecycle.bindingDefaultPassed -and $lifecycle.shutdownPassed -and $cleanupExit -eq 0 -and $null -ne $cleanup -and $cleanup.passed -and $abortExit -eq 0 -and $null -ne $abort -and $abort.passed -and $Runs -eq 10 -and @($outcomes).Count -eq 10 -and @($outcomes | Where-Object {
+$passed = $unchanged -and $gcComplete -and $lifecycle.bindingTieredPassed -and $lifecycle.bindingDefaultPassed -and $lifecycle.shutdownPassed -and $cleanupExit -eq 0 -and $null -ne $cleanup -and $cleanup.passed -and $abortExit -eq 0 -and $null -ne $abort -and $abort.passed -and $Runs -eq 10 -and @($outcomes).Count -eq 10 -and @($outcomes | Where-Object {
     $_.exitCode -ne 0 -or -not $_.recordExists -or -not $_.passed -or $_.forcedCollections -lt 10 -or $_.maxHandlerNs -ge 5000000 }).Count -eq 0
-@{ passed = $passed; inputsUnchanged = $unchanged; cleanupExitCode = $cleanupExit; cleanupPassed = [bool]$cleanup.passed; barrierAbortPassed = [bool]$abort.passed; lifecycle = $lifecycle; sourceHash = 'sha256 after CRLF to LF'; sources = $hashes; runs = $Runs; outcomes = $outcomes
+@{ passed = $passed; inputsUnchanged = $unchanged; gcWindowsComplete = $gcComplete; cleanupExitCode = $cleanupExit; cleanupPassed = [bool]$cleanup.passed; barrierAbortPassed = [bool]$abort.passed; lifecycle = $lifecycle; sourceHash = 'sha256 after CRLF to LF'; sources = $hashes; runs = $Runs; outcomes = $outcomes
     compilerImage = $compilerImage; runtimeImage = $runtimeImage; generalClrSafetyEstablished = $false } |
     ConvertTo-Json -Depth 5 | Set-Content (Join-Path $run 'summary.json')
 Write-Output $run

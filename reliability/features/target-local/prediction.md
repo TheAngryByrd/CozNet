@@ -1,11 +1,11 @@
 # Target-local prediction qualification
 
-Evidence: `artifacts/target-local-prediction/20261019T004805873-c97ab2e5`.
+Evidence: `artifacts/target-local-prediction/20261019T011552600-3ac91378`.
 
 `TargetLocalPredictionVerify` ran once with seed 20261018 on kernel `5.15.153.1-microsoft-standard-WSL2`, x64, with 4 CPUs.
 The container drops all capabilities, has no network, and uses `seccomp=unconfined`.
 The acceptance criteria are in [the prediction plan](../../../lode/plans/target-local-prediction.md). The runner hashes that file with the sources.
-All 20 source hashes and 3 binary hashes stay unchanged during the run.
+All 21 source hashes and 3 binary hashes stay unchanged during the run.
 The sample runs through the checked library entry point `TargetLocalProfiler.runBound` with a `CodeBinding`. `native/WriteTargetLocalEvidence.py` writes this page.
 
 Each block runs `profile-zero`, `profile-speedup` at 50%, `original`, and `optimized` in a random order.
@@ -13,48 +13,48 @@ The prediction is `1 - Es / E0` from effective durations. The actual reduction i
 
 | Configuration | Selected rounds | Peer rounds | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-longer` | 6000 | 3000 | 5 / 5 | 50.49% | 50.30% | 3.22 pp | 4.95 pp | Pass |
-| `peer-longer` | 3000 | 6000 | 5 / 5 | -2.45% | 1.34% | 2.79 pp | 5.13 pp | Pass |
-| `selected-dominant` | 8000 | 2000 | 5 / 5 | 48.05% | 50.67% | 2.62 pp | 4.57 pp | Pass |
+| `selected-longer` | 6000 | 3000 | 5 / 5 | 48.90% | 48.08% | 0.80 pp | 4.90 pp | Pass |
+| `peer-longer` | 3000 | 6000 | 5 / 5 | -0.96% | -0.10% | 3.22 pp | 4.96 pp | Pass |
+| `selected-dominant` | 8000 | 2000 | 5 / 5 | 49.50% | 50.42% | 2.00 pp | 2.35 pp | Pass |
 
 | Configuration | Block | Predicted | Actual | Difference | Overhead ratio | Handler share at 0% | Global delay (ns) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `selected-longer` | 1 | 47.77% | 50.30% | -2.53 pp | 0.9768 | 0.127% | 50,501,151 |
-| `selected-longer` | 2 | 46.82% | 51.19% | -4.37 pp | 0.9837 | 0.091% | 52,000,035 |
-| `selected-longer` | 3 | 50.49% | 47.27% | +3.22 pp | 1.0387 | 0.131% | 50,000,000 |
-| `selected-longer` | 4 | 52.85% | 47.90% | +4.95 pp | 1.0837 | 0.158% | 50,500,044 |
-| `selected-longer` | 5 | 52.70% | 50.72% | +1.98 pp | 1.0467 | 0.247% | 49,500,002 |
-| `peer-longer` | 1 | -3.45% | -0.06% | -3.39 pp | 1.0029 | 0.088% | 26,000,134 |
-| `peer-longer` | 2 | -2.45% | -1.13% | -1.33 pp | 0.9825 | 0.089% | 26,500,015 |
-| `peer-longer` | 3 | -3.29% | 1.84% | -5.13 pp | 0.9875 | 0.084% | 25,500,001 |
-| `peer-longer` | 4 | 0.99% | 3.78% | -2.79 pp | 0.9897 | 0.091% | 25,500,004 |
-| `peer-longer` | 5 | 0.92% | 1.34% | -0.42 pp | 1.0186 | 0.132% | 26,000,044 |
-| `selected-dominant` | 1 | 49.51% | 52.94% | -3.44 pp | 0.9716 | 0.105% | 69,000,000 |
-| `selected-dominant` | 2 | 48.05% | 49.58% | -1.53 pp | 1.0158 | 0.089% | 70,500,000 |
-| `selected-dominant` | 3 | 47.42% | 51.99% | -4.57 pp | 0.9800 | 0.064% | 71,500,000 |
-| `selected-dominant` | 4 | 47.36% | 49.99% | -2.62 pp | 1.0188 | 0.097% | 70,000,000 |
-| `selected-dominant` | 5 | 51.93% | 50.67% | +1.27 pp | 1.0412 | 0.098% | 67,000,000 |
+| `selected-longer` | 1 | 50.39% | 49.60% | +0.80 pp | 1.0443 | 0.156% | 51,500,051 |
+| `selected-longer` | 2 | 48.90% | 49.06% | -0.16 pp | 0.9903 | 0.108% | 50,500,029 |
+| `selected-longer` | 3 | 47.90% | 47.86% | +0.04 pp | 0.9979 | 0.091% | 52,000,000 |
+| `selected-longer` | 4 | 43.18% | 48.08% | -4.90 pp | 1.0307 | 0.131% | 55,000,000 |
+| `selected-longer` | 5 | 49.06% | 47.31% | +1.75 pp | 1.0094 | 0.095% | 50,500,046 |
+| `peer-longer` | 1 | 3.80% | 0.58% | +3.22 pp | 1.0235 | 0.125% | 25,000,092 |
+| `peer-longer` | 2 | -0.96% | -2.71% | +1.75 pp | 1.0316 | 0.136% | 26,000,041 |
+| `peer-longer` | 3 | -4.15% | 0.81% | -4.96 pp | 0.9986 | 0.098% | 26,000,050 |
+| `peer-longer` | 4 | 0.18% | -1.65% | +1.84 pp | 1.0579 | 0.159% | 25,500,044 |
+| `peer-longer` | 5 | -4.81% | -0.10% | -4.71 pp | 0.9712 | 0.098% | 26,000,053 |
+| `selected-dominant` | 1 | 50.15% | 49.37% | +0.78 pp | 1.0258 | 0.103% | 69,219,212 |
+| `selected-dominant` | 2 | 50.09% | 52.44% | -2.35 pp | 0.9593 | 0.089% | 67,000,000 |
+| `selected-dominant` | 3 | 49.50% | 50.09% | -0.59 pp | 1.0005 | 0.097% | 67,500,000 |
+| `selected-dominant` | 4 | 48.25% | 50.42% | -2.17 pp | 0.9829 | 0.086% | 69,000,000 |
+| `selected-dominant` | 5 | 49.28% | 51.28% | -2.00 pp | 0.9918 | 0.096% | 69,500,000 |
 
 The pass rule requires 5 valid blocks in each of the three configurations, a median absolute difference of at most 5 percentage points, and every block within 10.
-**Result: the current run fails.** The setup segments are outside the limits of criterion 26, with a median of 0.0049 ms and a largest value of 0.5967 ms. The run is kept, and no rerun replaces it.
-The longest handler interval in any profile run of a valid block is 2,243,775 ns.
+All three configurations pass. Every profile run has complete epochs, zero loss, a valid managed replay, matching global delay and event count, and no ledger failure.
+The longest handler interval in any profile run of a valid block is 1,568,890 ns.
 
 In `selected-dominant`, a 50% optimization leaves the selected thread longer than the peer. Over-credit would show as a prediction above 50%.
-The median prediction is 48.05%. The highest block prediction is 51.93%. Every block is inside the block limit.
+The median prediction is 49.50%. The highest block prediction is 50.15%. Every block is inside the block limit.
 The median does not show the over-credit signature.
 
 ## Run-queue delay
 
-The wait records are complete: each profile arm must hold one value for each wake, with none dropped. The readable wait values sum to 0.00 ms across the run. The start trace is complete. Across all profile arms, the largest native start to first point is 0.0169 ms, the largest setup segment is 0.5967 ms, with a median of 0.0049 ms, and the largest barrier segment is 0.4660 ms. The start records are complete: each profile thread must hold a start run-queue delay and a work start time in the order of its native start and finish.
+The wait records are complete: each profile arm must hold one value for each wake, with none dropped. The readable wait values sum to 0.00 ms across the run. The start trace is complete. Across all profile arms, the largest native start to first point is 0.0118 ms, the largest setup segment is 0.0227 ms, with a median of 0.0045 ms, and the largest barrier segment is 0.1701 ms. The start records are complete: each profile thread must hold a start run-queue delay and a work start time in the order of its native start and finish.
 
 No profile arm records a debt failure.
 
 ## Overhead
 
 The handler share is the sum of every handler interval in both threads divided by elapsed time.
-At 0% speedup the handler inserts no delay. Its share is then the measured handler time, and its median is 0.089% to 0.131% across the three configurations.
-At 50% speedup the share also holds the inserted delay, so it is not overhead. Its median is 20.2% to 49.1%.
-The ratio of `profile-zero` elapsed time to `original` elapsed time has medians from 0.9897 to 1.0387. That ratio also holds run-to-run variation.
+At 0% speedup the handler inserts no delay. Its share is then the measured handler time, and its median is 0.096% to 0.125% across the three configurations.
+At 50% speedup the share also holds the inserted delay, so it is not overhead. Its median is 19.9% to 48.9%.
+The ratio of `profile-zero` elapsed time to `original` elapsed time has medians from 0.9918 to 1.0235. That ratio also holds run-to-run variation.
 The handler interval excludes signal entry, exit, and kernel work. It can include descheduling inside the handler.
 Neither value covers process startup, perf-map writing, or journal copying after the work.
 
@@ -88,7 +88,8 @@ Every qualification run is kept. Each change to a hashed source caused one rerun
 | `20261018T233840885-22a9d378` | Same | Start run-queue delay diagnostic | Fail. `selected-dominant` block 5 invalid: the peer started work 5.3 ms late, with 8.3 microseconds of start run-queue delay, and its first sample recorded a 3 ms debt failure. |
 | `20261019T001613652-a3f06d98` | Same | Start trace, with on-CPU time from schedstat field 1, before the revision | Pass |
 | `20261019T002411461-b833589f` | Same | Start trace with the thread CPU clock | Pass |
-| `20261019T004805873-c97ab2e5` | Same | Thread state set before the native start, criterion 27 for barrier runs | Fail. The setup segments are outside the limits of criterion 26, with a median of 0.0049 ms and a largest value of 0.5967 ms. |
+| `20261019T004805873-c97ab2e5` | Same | Thread state set before the native start, criterion 27 for barrier runs | Fail. Criterion 26: one of 60 setup segments takes 0.60 ms, with a median of 0.0049 ms. All 15 blocks are within the limits. |
+| `20261019T011552600-3ac91378` | Same | Forced-GC windows | Pass |
 
 Three exploratory blocks for each of the first two configurations ran before any qualification. They are not part of any result.
 
@@ -97,7 +98,7 @@ Three exploratory blocks for each of the first two configurations ran before any
 One host and one kernel. Five blocks for each configuration cannot establish a general error bound.
 The program is two CPU-bound threads with no waits before the join. Its methods allocate nothing, so GC is not exercised here.
 The `actual` values also vary by several points between blocks with the same work.
-Positive differences per configuration: `selected-longer` 3 of 5, `peer-longer` 0 of 5, `selected-dominant` 1 of 5. Five blocks cannot separate a small bias from variation.
+Positive differences per configuration: `selected-longer` 3 of 5, `peer-longer` 3 of 5, `selected-dominant` 1 of 5. Five blocks cannot separate a small bias from variation.
 The peer pays by spinning, so payment uses CPU. A host with fewer free CPUs than threads can change the result.
 
 See [the tutorial](../../../docsSrc/Tutorials/Target_Local_Prediction.md) and [the support boundary](../../../docsSrc/Explanations/target-local-prediction.md).

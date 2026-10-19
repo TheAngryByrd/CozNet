@@ -11,6 +11,7 @@ For the per-wait run-queue delay, the debt rule for a thread that waits for a CP
 For the start run-queue delay and the placement of a debt failure before the first wake, read [target-local start delay](plans/target-local-start-delay.md).
 For the start trace, the Coz thread-start rule, and why a startup debt failure stays a failure, read [target-local start trace](plans/target-local-start-trace.md).
 For the setup order before the native start and the reader freshness criterion, read [target-local start setup](plans/target-local-start-setup.md).
+For forced-GC windows and their overlap with debt failures, read [target-local GC windows](plans/target-local-gc-windows.md).
 For forced-GC runtime transitions under handler payment, read [target-local transitions](plans/target-local-transitions.md).
 
 For nominal timer credit, the retained controller-preemption backlog, and the next sample-processing design, read [timer nominal credit](plans/timer-nominal-credit.md).

@@ -33,6 +33,8 @@ PREDICTION_HISTORY = [
      "Fail. `selected-dominant` block 5 invalid: the peer started work 5.3 ms late, with 8.3 microseconds of start run-queue delay, and its first sample recorded a 3 ms debt failure."),
     ("20261019T001613652-a3f06d98", "Same", "Start trace, with on-CPU time from schedstat field 1, before the revision", "Pass"),
     ("20261019T002411461-b833589f", "Same", "Start trace with the thread CPU clock", "Pass"),
+    ("20261019T004805873-c97ab2e5", "Same", "Thread state set before the native start, criterion 27 for barrier runs",
+     "Fail. Criterion 26: one of 60 setup segments takes 0.60 ms, with a median of 0.0049 ms. All 15 blocks are within the limits."),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -56,6 +58,7 @@ TRANSITION_HISTORY = [
     ("20261019T001542478-b4d2cdb6", "Start trace, with on-CPU time from schedstat field 1, before the revision",
      "Fail. Run 8: 2 ms debt bound at 39 ms, after a 6.5 ms peer gap with no event. The peer has 5.3 ms of residual run-queue delay."),
     ("20261019T002340083-c152f4ca", "Start trace with the thread CPU clock", "Pass, 10 of 10"),
+    ("20261019T004724440-fd9cd00c", "Thread state set before the native start, criterion 27 for barrier runs", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -81,6 +84,7 @@ BARRIER_HISTORY = [
     ("20261018T234001547-747aae56", "Start run-queue delay diagnostic", "Pass"),
     ("20261019T001733954-3bae192a", "Start trace, with on-CPU time from schedstat field 1, before the revision", "Pass"),
     ("20261019T002531212-f435da11", "Start trace with the thread CPU clock", "Fail. Criterion 14: all 300 wait values are zero. All 15 blocks are within the limits, and 27 of 60 whole-run delays are above zero."),
+    ("20261019T004925668-914e6b56", "Thread state set before the native start, criterion 27 for barrier runs", "Pass"),
 ]
 
 
@@ -253,7 +257,8 @@ def transitions(root, run, change):
         rows.append(f"| {o['run']} | {'Yes' if run_ok else 'No'} | {failure} | {debt} | {o['forcedCollections']} | {int(o['maxHandlerNs']):,} | {gap:.1f} | {'Yes' if complete else 'No'} |")
     lifecycle = summary.get("lifecycle", {})
     lifecycle_failed = [k[:-len("Passed")] for k, v in lifecycle.items() if k.endswith("Passed") and not v]
-    failed_text = "; ".join([f"run {r}: {why}" for r, why in failed_runs] + [f"lifecycle check {k}" for k in lifecycle_failed])
+    failed_text = "; ".join([f"run {r}: {why}" for r, why in failed_runs] + [f"lifecycle check {k}" for k in lifecycle_failed]
+                            + (["the GC window records are incomplete"] if summary.get("gcWindowsComplete") is False else []))
     current = "Pass, 10 of 10" if summary["passed"] else f"Fail. {failed_text}."
     total = 10 * sum(1 for _, _, result in TRANSITION_HISTORY + [(run, change, current)] if result.startswith("Pass"))
     debt_failures = ["No", "One", "Two", "Three", "Four", "Five", "Six"][sum(1 for _, _, result in (TRANSITION_HISTORY + [(run, change, current)])[1:] if "debt bound" in result)]
@@ -287,6 +292,10 @@ The `cleanup` check passes. A profile whose monitor throws raises `AggregateExce
 The `barrier-abort` check passes. A worker that throws releases its waiting peer, the run fails within 10 s, and a second profile then passes.
 {outcome}
 Wall minus counted CPU is the largest per-thread difference. Counted CPU stops at disable and wall time includes the closing payment, so it is coarse.
+
+## GC windows
+
+{gc_section(directory)}
 
 ## Run history
 
@@ -332,6 +341,29 @@ See [the support boundary](../../../docsSrc/Explanations/target-local-prediction
 
 
 CPUSET_RUN = "20261018T203443644-3be38dc4"
+
+
+def gc_section(directory):
+    path = directory / "gc-summary.json"
+    if not path.exists():
+        if "gcWindowsComplete" in load(directory / "summary.json"):
+            return "The GC analyzer wrote no summary. See `gc-analysis.log` in the run directory."
+        return "This run predates the GC window records."
+    gc = load(path)
+    state = "complete" if gc["gcWindowsComplete"] else "incomplete"
+    rows = []
+    for r in gc["runs"]:
+        gap = max(r["largestGaps"], key=lambda g: g["gapNs"], default=None)
+        failures = "; ".join(f"worker {f['worker']}: {len(f['windows'])} windows, {fine_ms(f['overlapNs'])} of {fine_ms(f['intervalNs'])}"
+                             for f in r["debtFailures"]) or "none"
+        rows.append(f"| {r['run']} | {'Yes' if r['complete'] else 'No'} | {r['windows']} | {fine_ms(r['windowNs'])} | {fine_ms(r['pauseNs'])} | "
+                    + (f"worker {gap['worker']}: {fine_ms(gap['gapNs'])} with {fine_ms(gap['overlapNs'])} in windows" if gap else "none")
+                    + f" | {failures} |")
+    return (f"The GC window records are {state}. Each forced `GC.Collect` call is bracketed by `Stopwatch` reads on the monitor thread.\n"
+            "The pause total from `GC.GetTotalPauseDuration` also counts collections that the sample does not force.\n"
+            "A debt failure lists the window time inside the interval from the sample before the failing sample to the failure. For a failure at the first sample of a worker, the interval starts at the native start of that worker. An incomplete record reports no windows.\n\n"
+            "| Run | Complete | Windows | Window total | Pause total | Largest event gap | Debt failures |\n"
+            "| ---: | --- | ---: | ---: | ---: | --- | --- |\n" + "\n".join(rows))
 
 
 def run_level_detail(summary, barrier=False):
