@@ -255,6 +255,25 @@ module TargetCausalProfileTests =
                 Expect.isTrue (kept[0] >= 300_000_000L && kept[1] >= 500_000_000L && kept[1] < 1_000_000_000L) "Each kept transaction must hold its begin and end in nanoseconds."
             }
 
+            test "a counter settles the calling thread before it stamps a begin or an end" {
+                let settled = Collections.Generic.List<int64>()
+                let settle () =
+                    let now = Diagnostics.Stopwatch.GetTimestamp()
+                    settled.Add now
+                    while Diagnostics.Stopwatch.GetTimestamp() = now do ()
+                let counter = TargetProgressCounter settle
+                let ticket = counter.Begin()
+                Expect.equal settled.Count 1 "A begin must settle once."
+                Expect.isLessThan settled[0] ticket "A begin must settle before it reads the clock."
+                counter.End ticket
+                Expect.equal settled.Count 2 "An end must settle once."
+                let struct (_, finished) = counter.Transactions[0]
+                let frequency = Diagnostics.Stopwatch.Frequency
+                Expect.isLessThan (settled[1] / frequency * 1_000_000_000L + settled[1] % frequency * 1_000_000_000L / frequency) finished "An end must settle before it reads the clock."
+                counter.Visit()
+                Expect.equal settled.Count 2 "A visit must not settle."
+            }
+
             test "an experiment or baseline with no visits gives no prediction and stays in the record" {
                 let design =
                     TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)

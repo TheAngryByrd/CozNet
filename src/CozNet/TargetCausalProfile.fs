@@ -9,7 +9,7 @@ type TargetProgressPoint =
     | Latency of durationMs: int
 
 [<Sealed; AllowNullLiteral>]
-type TargetProgressCounter() =
+type TargetProgressCounter internal (settle: unit -> unit) =
     let mutable visits = 0L
     let mutable arrivals = 0L
     let mutable latencyTicks = 0L
@@ -21,11 +21,15 @@ type TargetProgressCounter() =
     member _.Visit() = Interlocked.Increment(&visits) |> ignore
     member _.Visits = Interlocked.Read(&visits)
 
+    new() = TargetProgressCounter(fun () -> TargetWait.post () |> ignore)
+
     member _.Begin() =
+        settle ()
         Interlocked.Increment(&arrivals) |> ignore
         Diagnostics.Stopwatch.GetTimestamp()
 
     member this.End(ticket: int64) =
+        settle ()
         let finished = Diagnostics.Stopwatch.GetTimestamp()
         Interlocked.Add(&latencyTicks, max 0L (finished - ticket)) |> ignore
         lock transactions (fun () -> transactions.Add(struct (nanoseconds ticket, nanoseconds finished)))

@@ -711,6 +711,7 @@ SPINTRANSACTION_HISTORY = [
     ("20261019T124806158-79f85b15", "First spin transaction profile run", "Fail. `peer-25` median 5.34 points and `peer-75` median 6.92 points. The three `selected` points pass."),
     ("20261019T131601688-284620fc", "Handoff parts", "Fail. `peer-75` median 7.29 points. The other five points pass."),
     ("20261019T150209127-dbb260bc", "Worker pinning", "Fail. `peer-25` median 9.56 points and `peer-50` median 5.06 points."),
+    ("20261019T175441808-251c8262", "Matched plain warm-up", "Fail. `peer-25` median 9.22 points, `selected-50` one block of 25.47 points, and `peer-50` median 6.25 points. The other three points pass."),
 ]
 TRANSACTION_HISTORY = [
     ("20261019T110105861-414dba20", "First transaction profile run", "Fail. All six points fail. The real gains follow the model, but the `peer` predictions stay near 5% at each speedup."),
@@ -719,6 +720,7 @@ TRANSACTION_HISTORY = [
     ("20261019T124914850-b10c2f47", "Spin before a queue wait", "Fail. `selected-25` one block of 27.61 points, `selected-50` median 8.32 points, and `peer-50` one block of -12.59 points."),
     ("20261019T131709144-4aa0a3ef", "Handoff parts", "Fail. `selected-25` median 7.25 points and `selected-50` median 7.76 points."),
     ("20261019T150326902-04963faa", "Worker pinning", "Fail. Five points fail. Only `selected-75` passes."),
+    ("20261019T175316141-ec3885bd", "Matched plain warm-up", "Fail. All six points fail. Block 3 is above the real gain at every point, by 12.01 to 16.26 points."),
 ]
 SEMAPHORE_HISTORY = [
     ("20261019T082323819-903a6cef", "First semaphore profile run", "Fail. `selected-75` has one block of -10.61 points, and `peer-75` median 5.24 points."),

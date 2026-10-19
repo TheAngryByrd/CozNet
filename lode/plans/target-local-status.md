@@ -627,4 +627,33 @@ The other changed suites:
 - Spin lock run `20261019T175936455-d8d0f784` fails, because blocks 1, 2, 4, and 5 are invalid: the profile `peer` experiment at 75% has 95 to 98 visits. This is a capacity failure of the profile arm, which the change does not touch.
 The latency profile, transition, prediction, and barrier suites do not change, so they did not run again.
 
+## Progress settlement
+
+[The progress settlement plan](target-local-progress-settlement.md) makes a thread pay its debt before it stamps a transaction begin or end.
+The `transaction` and `spintransaction` suites ran once each on the reviewed tree.
+
+Criterion 110 holds in `transaction` run `20261019T183627302-c5843c4c`. These are the signed medians over its four valid blocks. The values before are medians of the one-decimal run medians in the plan:
+
+| Point | Before, median of six runs | After |
+| --- | ---: | ---: |
+| `selected-25` | 4.65 | 0.37 |
+| `selected-50` | 7.45 | -1.98 |
+| `selected-75` | 2.45 | -11.83 |
+| `peer-25` | 1.65 | -1.38 |
+| `peer-50` | 0.30 | 0.35 |
+| `peer-75` | 0.55 | 1.11 |
+
+- The `selected-25` and `selected-50` limits hold, and the `peer` medians stay inside 5 points. The records are consistent with H1 at these speedups.
+- `selected-75` changes from a small positive bias to -10.0 to -13.1 points in every valid block. The prior run medians were 0.3 to 4.6 points.
+  The records are consistent with the payments at the stamps correcting too much at 75%. One run cannot exclude variation between runs, and the records do not show the mechanism.
+- In `spintransaction` run `20261019T183747700-877bf50a`, the signed medians are -2.73, -1.00, and -5.44 points for the `selected` points. Five points pass, against three in the prior run. Only `selected-75` fails, with a median of 5.44 points.
+- The median baseline latency goes from 888.0 to 890.7 microseconds in `transaction`, and from 862.1 to 856.2 in `spintransaction`. These values do not isolate the cost of the added calls.
+
+The `transaction` run still fails all six points, because block 3 is invalid:
+- In block 3, the `peer` thread fails with a debt of 2.25 ms in the `selected` experiment at 75%. It blocked with a local delay of 38.25 ms, and the `selected` thread posted that token 2.97 ms before the wake.
+  Meanwhile the `selected` thread enqueued three more items, and the global delay rose to 40.5 ms. This is a capacity failure. The wake is recorded 2.97 ms after its release, and the records do not separate scheduling delay from other work before the wake.
+  The new post at `Begin` does not change this debt, because the wake skips only to the release token. It is the only debt failure in the 15 retained runs of the transaction, spin transaction, and pinned transaction suites.
+- In block 1, the plain `selected-25` arm is slow, with a mean handoff of 166.9 microseconds. So long handoffs also occur in plain processes.
+- In block 4, the plain `original` arm is 11.2% above the median of the four valid blocks. With that median `original`, the block 4 differences fall to -1.3 to 2.8 points, apart from `selected-75`.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).
