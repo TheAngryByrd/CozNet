@@ -15,6 +15,7 @@ For forced-GC windows and their overlap with debt failures, read [target-local G
 For the ReJIT detection check and its test profiler, read [target-local ReJIT](plans/target-local-rejit.md).
 For the experiment driver and the causal profile qualification, read [target-local causal profile](plans/target-local-causal-profile.md).
 For throughput progress points and their qualification, read [target-local throughput](plans/target-local-throughput.md).
+For the blocking queue and the pipeline qualification, read [target-local queue](plans/target-local-queue.md).
 For forced-GC runtime transitions under handler payment, read [target-local transitions](plans/target-local-transitions.md).
 
 For nominal timer credit, the retained controller-preemption backlog, and the next sample-processing design, read [timer nominal credit](plans/timer-nominal-credit.md).

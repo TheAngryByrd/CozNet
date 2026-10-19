@@ -9,7 +9,8 @@ BLOCK_LIMIT = 0.10
 BLOCKS = 5
 SEED = 20261018
 WORKLOADS = {"latency": {"profile": "causal-profile", "plain": "plain", "selected": 6000, "peer": 3000, "durationMs": 0},
-             "throughput": {"profile": "throughput-profile", "plain": "plain-throughput", "selected": 40, "peer": 20, "durationMs": 120}}
+             "throughput": {"profile": "throughput-profile", "plain": "plain-throughput", "selected": 40, "peer": 20, "durationMs": 120},
+             "pipeline": {"profile": "pipeline-profile", "plain": "plain-pipeline", "selected": 40, "peer": 20, "durationMs": 120}}
 MIN_VISITS = 100
 SPEEDUPS = (25, 50, 75)
 SELECTED_NAME = "CozNet.TargetLocal.Work::selected(uint64)"
@@ -30,7 +31,7 @@ def expected_args(seed, block, workload="latency"):
 def expected_fields(seed, block, workload="latency"):
     w = WORKLOADS[workload]
     selected, peer, plain = w["selected"], w["peer"], w["plain"]
-    extra = {"durationMs": w["durationMs"]} if workload == "throughput" else {}
+    extra = {"durationMs": w["durationMs"]} if workload != "latency" else {}
     fields = {"profile": {"mode": w["profile"], "seed": seed + block, "selectedRounds": selected, "peerRounds": peer, **extra},
               "original": {"mode": plain, "selectedRounds": selected, "peerRounds": peer, **extra}}
     for speedup in SPEEDUPS:
@@ -40,7 +41,7 @@ def expected_fields(seed, block, workload="latency"):
 
 
 def visits_sufficient(record, workload):
-    if workload != "throughput":
+    if workload == "latency":
         return all(e.get("Visits", 1) == 1 for e in record.get("experiments", []) if e.get("Passed"))
     if "experiments" in record:
         return all(e.get("Visits", 0) >= MIN_VISITS for e in record["experiments"] if e.get("Passed"))
@@ -50,7 +51,7 @@ def visits_sufficient(record, workload):
 def actual_gain(original, optimized, workload):
     if not original or not optimized or not original.get("elapsedNs") or not optimized.get("elapsedNs"):
         return None
-    if workload != "throughput":
+    if workload == "latency":
         return 1 - optimized["elapsedNs"] / original["elapsedNs"]
     if not original.get("visits") or not optimized.get("visits"):
         return None
@@ -158,7 +159,7 @@ def main():
                 "passed": point_passed})
     summary = {"passed": passed, "workload": workload, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
                "points": summary_points, "blocks": blocks,
-               "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + ("throughput progress point" if workload == "throughput" else "end-to-end progress point"),
+               "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + {"throughput": "throughput progress point", "pipeline": "throughput progress point behind a TargetQueue"}.get(workload, "end-to-end progress point"),
                "generalClrSafetyEstablished": False}
     (run / "summary.json").write_text(json.dumps(summary, indent=2))
     return 0 if passed else 1

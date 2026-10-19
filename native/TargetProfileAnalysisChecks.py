@@ -121,6 +121,14 @@ class ThroughputChecks(unittest.TestCase):
         self.assertFalse(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 99}}), "throughput"))
         self.assertTrue(visits_sufficient({"visits": 0}, "latency"))
 
+    def test_pipeline_arms_use_the_pipeline_modes(self):
+        args = expected_args(20261018, 1, "pipeline")
+        fields = expected_fields(20261018, 1, "pipeline")
+        self.assertEqual((args["profile"], args["selected-75"], fields["peer-25"]["mode"], fields["original"]["durationMs"]),
+                         ("pipeline-profile 20261019", "plain-pipeline 10 20", "plain-pipeline", 120))
+        self.assertEqual(actual_gain({"elapsedNs": 1000, "visits": 100}, {"elapsedNs": 1000, "visits": 200}, "pipeline"), 0.5)
+        self.assertFalse(visits_sufficient({"visits": 99}, "pipeline"))
+
     def test_latency_experiments_need_one_visit(self):
         self.assertTrue(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 1}}), "latency"))
         self.assertFalse(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 2}}), "latency"))

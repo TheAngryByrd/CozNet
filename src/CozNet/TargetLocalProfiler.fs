@@ -258,6 +258,123 @@ type TargetBarrier(participants: int) =
     member this.SignalAndWait() =
         this.SignalAndWait(Timeout.InfiniteTimeSpan, CancellationToken.None) |> ignore
 
+type TargetQueue<'T>(capacity: int) =
+    do
+        if capacity < 1 then
+            raise (ArgumentOutOfRangeException(nameof capacity))
+
+    let items = Collections.Concurrent.ConcurrentQueue<struct ('T * uint64)>()
+    let available = new SemaphoreSlim(0)
+    let spaces = new SemaphoreSlim(capacity)
+    let gate = obj ()
+    let releases = Collections.Generic.Queue<uint64>()
+    let mutable initialSpaces = capacity
+
+    static let post () =
+        let handle = TargetCurrent.Handle
+
+        if handle = 0n then
+            0UL
+        else
+            let mutable posted = 0UL
+            TargetCurrent.Record(TargetLocalNative.Post(handle, TargetCurrent.PaymentIp, &posted))
+            posted
+
+    static let acquire (semaphore: SemaphoreSlim) (timeout: TimeSpan) (cancellation: CancellationToken) (onAcquired: bool -> uint64 voption) =
+        if cancellation.IsCancellationRequested || TargetCurrent.Abort.IsCancellationRequested then
+            false
+        elif semaphore.Wait 0 then
+            onAcquired false |> ignore
+            true
+        else
+            let handle = TargetCurrent.Handle
+            let ip = TargetCurrent.PaymentIp
+            let before = if handle <> 0n then TargetCurrent.RunQueue() else -1L
+
+            if handle <> 0n then
+                TargetCurrent.Record(TargetLocalNative.WaitBegin(handle, ip))
+
+            let mutable reason = TargetWakeReason.Cancelled
+            let mutable token = 0UL
+            use linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, TargetCurrent.Abort)
+
+            try
+                let acquired =
+                    try
+                        if semaphore.Wait(timeout, linked.Token) then TargetWakeReason.Dependency else TargetWakeReason.Timeout
+                    with :? OperationCanceledException ->
+                        TargetWakeReason.Cancelled
+
+                reason <-
+                    if acquired = TargetWakeReason.Dependency then
+                        match onAcquired true with
+                        | ValueSome value ->
+                            token <- value
+                            TargetWakeReason.Dependency
+                        | ValueNone -> TargetWakeReason.Spurious
+                    else
+                        acquired
+            finally
+                if handle <> 0n then
+                    let wakeToken = if reason = TargetWakeReason.Dependency then token else 0UL
+                    TargetCurrent.Record(TargetLocalNative.WaitEnd(handle, ip, wakeToken, uint32 reason))
+                    TargetCurrent.RecordWait(before, TargetCurrent.RunQueue())
+
+            reason = TargetWakeReason.Dependency || reason = TargetWakeReason.Spurious
+
+    member _.Capacity = capacity
+    member _.Count = items.Count
+
+    member _.Enqueue(item: 'T, timeout: TimeSpan, cancellation: CancellationToken) =
+        let space waited =
+            lock gate (fun () ->
+                if waited && releases.Count > 0 then
+                    ValueSome(releases.Dequeue())
+                elif initialSpaces > 0 then
+                    initialSpaces <- initialSpaces - 1
+                    ValueNone
+                elif releases.Count > 0 then
+                    ValueSome(releases.Dequeue())
+                else
+                    raise (InvalidOperationException "The queue freed a space that it does not hold."))
+
+        if acquire spaces timeout cancellation space then
+            items.Enqueue(struct (item, post ()))
+            available.Release() |> ignore
+            true
+        else
+            false
+
+    member _.Dequeue(timeout: TimeSpan, cancellation: CancellationToken) =
+        let taken = ref ValueNone
+
+        let take _ =
+            match items.TryDequeue() with
+            | true, struct (item, token) ->
+                taken.Value <- ValueSome item
+                ValueSome token
+            | _ -> ValueNone
+
+        if acquire available timeout cancellation take then
+            match taken.Value with
+            | ValueSome item ->
+                let token = post ()
+                lock gate (fun () -> releases.Enqueue token)
+                spaces.Release() |> ignore
+                ValueSome item
+            | ValueNone -> raise (InvalidOperationException "The queue released an item that it does not hold.")
+        else
+            ValueNone
+
+    member this.Enqueue(item: 'T) =
+        if not (this.Enqueue(item, Timeout.InfiniteTimeSpan, CancellationToken.None)) then
+            raise (OperationCanceledException "The run aborted the enqueue.")
+
+    member this.Dequeue() =
+        match this.Dequeue(Timeout.InfiniteTimeSpan, CancellationToken.None) with
+        | ValueSome item -> item
+        | ValueNone -> raise (OperationCanceledException "The run aborted the dequeue.")
+
 type TargetWorker = {
     Work: unit -> unit
     PaymentIp: uint64

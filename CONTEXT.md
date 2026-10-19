@@ -2,7 +2,7 @@
 
 CozNet is an experimental .NET causal profiling library. It uses F# and targets .NET 10.
 The initial engine supports serial, synchronous CPU regions only.
-The target-local profiler passes builds and runtime checks on Linux x64 only. It supports CPU-bound fork/join threads that wait only at a `TargetBarrier` before the join. Barrier qualification runs pass and fail on this host. The failures correlate with run-queue delay and possible SMT contention. One failure predates the diagnostics. The latest prediction, barrier, and throughput profile runs pass. The latest latency profile fails two points by one block each, and the latest forced-GC check fails 1 of 10 by the debt bound. A ReJIT check shows that a ReJIT of a bound method fails the run.
+The target-local profiler passes builds and runtime checks on Linux x64 only. It supports CPU-bound fork/join threads that wait only at a `TargetBarrier` before the join. Barrier qualification runs pass and fail on this host. The failures correlate with run-queue delay and possible SMT contention. One failure predates the diagnostics. The latest prediction, barrier, and throughput profile runs pass. The first pipeline run with `TargetQueue` passes five of six points. The latest latency profile has one invalid block from a debt failure, and the latest forced-GC check fails 1 of 10 by the debt bound. A ReJIT check shows that a ReJIT of a bound method fails the run.
 See `docsSrc/Tutorials/Target_Local_Prediction.md` and `docsSrc/Explanations/target-local-prediction.md`.
 Read `terminology.md` and `docsSrc/Explanations/Background.md` before changing the experiment model.
 

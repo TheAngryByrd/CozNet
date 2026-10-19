@@ -28,6 +28,7 @@
         <Compile Include="CodeBindingTests.fs" />
         <Compile Include="RunQueueClockTests.fs" />
         <Compile Include="TargetCausalProfileTests.fs" />
+        <Compile Include="TargetQueueTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>

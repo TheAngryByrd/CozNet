@@ -529,6 +529,7 @@ let targetLocalTransitionsVerify _ = nativeScript "VerifyTargetLocalTransitions.
 let targetLocalBarrierVerify _ = nativeScript "VerifyTargetLocalBarrier.ps1"
 let targetLocalProfileVerify _ = nativeScript "VerifyTargetLocalProfile.ps1"
 let targetLocalThroughputVerify _ = nativeScriptWithArgs "VerifyTargetLocalProfile.ps1" [ "-Workload"; "throughput" ]
+let targetLocalPipelineVerify _ = nativeScriptWithArgs "VerifyTargetLocalProfile.ps1" [ "-Workload"; "pipeline" ]
 
 let targetPredictionAnalysisChecks _ =
     for script in [ "native/TargetPredictionAnalysisChecks.py"; "native/TargetGcAnalysisChecks.py"; "native/TargetProfileAnalysisChecks.py" ] do
@@ -1318,6 +1319,7 @@ let initTargets () =
     Target.create "TargetLocalBarrierVerify" targetLocalBarrierVerify
     Target.create "TargetLocalProfileVerify" targetLocalProfileVerify
     Target.create "TargetLocalThroughputVerify" targetLocalThroughputVerify
+    Target.create "TargetLocalPipelineVerify" targetLocalPipelineVerify
     Target.create "TargetPredictionAnalysisChecks" targetPredictionAnalysisChecks
     Target.create "LinuxTimerInterop" linuxTimerInterop
     Target.create "LinuxTimerManaged" linuxTimerManaged

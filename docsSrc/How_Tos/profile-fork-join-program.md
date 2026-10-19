@@ -45,6 +45,8 @@ To compare several candidates and speedups in one process, call `TargetCausalPro
 
 Read `profile.Points`. Use only points whose `ValidBlocks` equals the block count, and keep each failed experiment from `profile.Experiments`.
 
+For a pipeline, pass items between workers through a `TargetQueue`. A worker that waits on the queue then follows the wake rule.
+
 For a phased program, create one `TargetBarrier` with one participant for each worker. Call `barrier.SignalAndWait()` at the end of each phase inside `Work`.
 
 The selected spans name the candidate code. The eligible spans name every worker method, because a thread pays delay only at an eligible address.

@@ -171,6 +171,26 @@ The replay checks every `block`, `wake`, and `post` event. A dependency wake mus
 No `publish`, `child`, or `deferred` event can belong to a blocked worker, and no worker can stay blocked at the end.
 `TargetReplaySummary` reports `Blocks`, `DependencyWakes`, and `SkippedDelay`.
 
+## Queue
+
+`TargetQueue<'T>(capacity)` is a bounded FIFO queue for profiled workers. It raises `ArgumentOutOfRangeException` when `capacity` is below 1.
+
+| Member | Result |
+| --- | --- |
+| `Enqueue(item, timeout, cancellation)` | `true` after it adds the item. `false` after a timeout or a cancellation, without the item. |
+| `Dequeue(timeout, cancellation)` | `ValueSome item`, or `ValueNone` after a timeout or a cancellation. |
+| `Enqueue(item)` and `Dequeue()` | Wait without a limit. They raise `OperationCanceledException` when the run aborts the wait. |
+| `Capacity` and `Count` | The capacity and the number of items now in the queue. |
+
+In a profiled worker, `Enqueue` posts a token after it takes a space, and stores the token with the item.
+A `Dequeue` that waits ends its wait with the token of the item that it takes. Each dequeue then posts and stores the token with the space that it frees.
+An `Enqueue` that waits takes a stored release token, and an `Enqueue` that does not wait takes one of the first `capacity` spaces first. So a waiting `Enqueue` ends its wait with the token of a release before its wake.
+If a waiting `Enqueue` finds no stored token, it ends its wait as spurious and skips no delay.
+With one producer and one consumer, the token is that of the release that freed its space.
+With several producers or consumers, a waiting producer can take the token of a later or an earlier release, before its own wake. Its skip can then be too large or too small.
+Create a new queue for each run, and use it only from registered workers of that run. Other use is not supported. It can fail the run, or skip delay by the wrong token.
+A timeout or a cancellation skips no delay. The abort token of the run cancels each wait. Without a profiler handle, the queue makes no native call.
+
 ## Sample program
 
 `samples/CozNet.TargetLocal` has three modes:
@@ -189,6 +209,8 @@ No `publish`, `child`, or `deferred` event can belong to a blocked worker, and n
 | `causal-profile <seed> <out>` | One block of `TargetCausalProfile.run` with candidates `Work.selected` and `Work.peer` at speedups 25, 50, and 75, with 6000 and 3000 rounds |
 | `throughput-profile <seed> <out>` | One throughput block of 120 ms experiments. The workers repeat `Work.selected 40` and `Work.peer 20` with one visit after each call. |
 | `plain-throughput <selectedRounds> <peerRounds> <out>` | The same loops without the profiler for 120 ms, with the elapsed time and the visits |
+| `pipeline-profile <seed> <out>` | One throughput block of 120 ms experiments. A producer runs `Work.selected 40` for each item of a `TargetQueue` of 4 items, and a consumer runs `Work.peer 20` and visits for each item. |
+| `plain-pipeline <selectedRounds> <peerRounds> <out>` | The same pipeline without the profiler for 120 ms, with the elapsed time and the visits |
 
 The profile mode requires `DOTNET_TieredCompilation=0`, `DOTNET_ReadyToRun=0`, `DOTNET_PerfMapEnabled=3`, and `DOTNET_PerfMapShowOptimizationTiers=1`.
 It uses `TargetLocalProfiler.runBound` and gets the optimized method ranges from a `CodeBinding`.

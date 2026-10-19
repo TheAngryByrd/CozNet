@@ -230,4 +230,21 @@ The other suites on the same tree:
 - Transition run `20261019T032230942-d027dbb5` fails by forced-GC run 10 at the 2 ms debt bound, and every lifecycle check passes.
   One GC window covers 1.16 ms of the 5.77 ms failure interval. The failing worker has 3.69 ms of whole-run run-queue delay. The records do not establish the cause.
 
+## Blocking queue
+
+[The queue plan](target-local-queue.md) adds `TargetQueue`, a bounded queue whose waits follow the wake rule, and a pipeline qualification with one producer and one consumer.
+Pipeline run `20261019T040306290-64463c6b` passes five of its six points and fails `peer-50` by its median.
+- `Work.selected` predicts 23.84%, 49.72%, and 48.62% at speedups 25, 50, and 75. The real optimizations give 26.50%, 49.95%, and 49.71%.
+  So the profile shows the plateau of the producer through real blocking waits, and real optimizations confirm it.
+- `Work.peer` predicts -0.70%, -3.91%, and -2.53%. The real optimizations give 0.97%, 2.85%, and 1.22%.
+  `peer-50` has a median absolute difference of 6.76 points, above the 5-point limit. Across the three `peer` points, 13 of 15 block predictions are below their actual gains.
+  In block 1 at `peer` 50%, the effective time falls from 120.6 ms to 99.0 ms, but the visits fall from 168 to 130.
+  Hypothesis, not shown: the producer, which sets the rate, pays the delay of the consumer with overhead that the delay does not count.
+
+The other suites on the same tree:
+- Throughput run `20261019T040411141-1b17380b`, prediction run `20261019T040632196-702f8052`, and barrier run `20261019T040754718-d668c4c1` pass all criteria.
+- Latency profile run `20261019T040508680-38464c4a` fails, because block 3 is invalid. Its `selected` experiment at 75% breaks the 2 ms debt bound.
+  The other four blocks give median differences of 0.54 to 2.76 points.
+- Transition run `20261019T040604415-1a034540` fails by forced-GC run 9 at the 2 ms debt bound, and every lifecycle check passes. Two GC windows cover 0.68 ms and 0.23 ms, together 0.91 ms, of the 6.50 ms failure interval.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).
