@@ -390,30 +390,47 @@ let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRou
                     passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
-type private QueueHandoffs() =
+type private QueueHandoffs(queue: TargetQueue<struct (int64 * int64)>) =
     let mutable handoffs = 0L
     let mutable handoffTicks = 0L
+    let mutable enqueues = 0L
+    let mutable enqueueTicks = 0L
+    let mutable spun = 0L
+    member _.Queue = queue
+    member _.AddSpun() = Interlocked.Increment(&spun) |> ignore
+    member _.Spun = Interlocked.Read(&spun)
+    member _.AddEnqueue(started: int64, finished: int64) =
+        Interlocked.Increment(&enqueues) |> ignore
+        Interlocked.Add(&enqueueTicks, max 0L (finished - started)) |> ignore
+    member _.Enqueues = Interlocked.Read(&enqueues)
+    member _.EnqueueNs = uint64 (Stopwatch.GetElapsedTime(0L, Interlocked.Read(&enqueueTicks)).TotalNanoseconds)
     member _.Add(enqueued: int64, dequeued: int64) =
         Interlocked.Increment(&handoffs) |> ignore
         Interlocked.Add(&handoffTicks, max 0L (dequeued - enqueued)) |> ignore
     member _.Handoffs = Interlocked.Read(&handoffs)
     member _.HandoffNs = uint64 (Stopwatch.GetElapsedTime(0L, Interlocked.Read(&handoffTicks)).TotalNanoseconds)
 
-let private beginTransactions (counter: TargetProgressCounter) (queue: TargetQueue<struct (int64 * int64)>) rounds () =
+let private beginTransactions (counter: TargetProgressCounter) (handoffs: QueueHandoffs) rounds () =
+    let queue = handoffs.Queue
     while not counter.Stopped do
         let ticket = counter.Begin()
         Work.selected rounds |> ignore
-        queue.Enqueue(struct (ticket, Stopwatch.GetTimestamp()))
+        let started = Stopwatch.GetTimestamp()
+        queue.Enqueue(struct (ticket, started))
+        handoffs.AddEnqueue(started, Stopwatch.GetTimestamp())
     queue.Enqueue(struct (-1L, 0L))
 
-let private endTransactions (counter: TargetProgressCounter) (handoffs: QueueHandoffs) (queue: TargetQueue<struct (int64 * int64)>) rounds () =
+let private endTransactions (counter: TargetProgressCounter) (handoffs: QueueHandoffs) rounds () =
+    let queue = handoffs.Queue
     let mutable running = true
     while running do
+        let spunBefore = queue.SpunDequeues
         let struct (ticket, enqueued) = queue.Dequeue()
         let dequeued = Stopwatch.GetTimestamp()
         if ticket < 0L then
             running <- false
         else
+            if queue.SpunDequeues > spunBefore then handoffs.AddSpun()
             handoffs.Add(enqueued, dequeued)
             Work.peer rounds |> ignore
             counter.End ticket
@@ -427,12 +444,15 @@ let private transactionProfileWith (mode: string) (spin: TimeSpan) (seed: int) (
     let queues = Collections.Generic.List<QueueHandoffs>()
     let workers (counter: TargetProgressCounter) =
         let queue = TargetQueue<struct (int64 * int64)>(pipelineCapacity, spin)
-        let handoffs = QueueHandoffs()
+        let handoffs = QueueHandoffs queue
         queues.Add handoffs
-        [| { Work = beginTransactions counter queue 40UL; PaymentIp = fst selectedRange }
-           { Work = endTransactions counter handoffs queue 8UL; PaymentIp = fst peerRange } |]
+        [| { Work = beginTransactions counter handoffs 40UL; PaymentIp = fst selectedRange }
+           { Work = endTransactions counter handoffs 8UL; PaymentIp = fst peerRange } |]
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Latency throughputDuration)) journalCapacity workers
-    let stats = queues |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs |}) |> Seq.toArray
+    let stats =
+        queues
+        |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs; enqueues = q.Enqueues; enqueueNs = q.EnqueueNs; spunDequeues = q.Spun |})
+        |> Seq.toArray
     writeProfileWith mode seed rotation 40 8 throughputDuration null (box stats) profile output
 
 let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds peerRounds (output: string) =
@@ -440,7 +460,7 @@ let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds 
     Work.peer 1UL |> ignore
     let counter = TargetProgressCounter()
     let queue = TargetQueue<struct (int64 * int64)>(pipelineCapacity, spin)
-    let handoffs = QueueHandoffs()
+    let handoffs = QueueHandoffs queue
     let ready = new Barrier(3)
     let started = Array.zeroCreate<int64> 2
     let finished = Array.zeroCreate<int64> 2
@@ -450,7 +470,7 @@ let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds 
             started[index] <- Stopwatch.GetTimestamp()
             body ()
             finished[index] <- Stopwatch.GetTimestamp())
-    let threads = [| run 0 (beginTransactions counter queue selectedRounds); run 1 (endTransactions counter handoffs queue peerRounds) |]
+    let threads = [| run 0 (beginTransactions counter handoffs selectedRounds); run 1 (endTransactions counter handoffs peerRounds) |]
     threads |> Array.iter _.Start()
     ready.SignalAndWait()
     Thread.Sleep throughputDuration
@@ -460,7 +480,8 @@ let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds 
     let visits = counter.Visits
     write output {| mode = mode; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
                     elapsedNs = uint64 elapsed; visits = visits; arrivals = counter.Arrivals; latencyNs = counter.LatencyNs
-                    handoffs = handoffs.Handoffs; handoffNs = handoffs.HandoffNs; passed = visits >= 100L |}
+                    handoffs = handoffs.Handoffs; handoffNs = handoffs.HandoffNs; enqueues = handoffs.Enqueues; enqueueNs = handoffs.EnqueueNs
+                    spunDequeues = handoffs.Spun; passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
 type private Turns() =

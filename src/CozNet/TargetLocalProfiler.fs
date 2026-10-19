@@ -359,7 +359,7 @@ type TargetQueue<'T>(capacity: int, spin: TimeSpan) =
 
     member _.Capacity = capacity
     member _.Spin = spin
-    member internal _.SpunTakes = Interlocked.Read(&spunTakes)
+    member _.SpunDequeues = Interlocked.Read(&spunTakes)
     member _.Count = items.Count
 
     member _.Enqueue(item: 'T, timeout: TimeSpan, cancellation: CancellationToken) =

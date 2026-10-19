@@ -1,6 +1,6 @@
 import unittest
 
-from AnalyzeTargetProfile import (queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
+from AnalyzeTargetProfile import (handoff_parts, queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
                                   order_ratios,
                                   positions_balanced,
                                   prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
@@ -291,15 +291,19 @@ class ThroughputChecks(unittest.TestCase):
 
     def test_queue_handoffs_compare_the_mean_handoff_of_each_arm(self):
         experiments = [{"Candidate": "a", "Speedup": 0, "Order": 0, "Passed": True, "Visits": 4}, {"Candidate": "a", "Speedup": 50, "Order": 1, "Passed": True, "Visits": 2}]
+        stat = lambda n, ns, enq: {"handoffs": n, "handoffNs": ns, "enqueues": n, "enqueueNs": enq, "spunDequeues": n // 2}
         profile = {"experiments": experiments, "warmup": {"Passed": True, "Visits": 1},
-                   "queueStats": [{"handoffs": 1, "handoffNs": 9}, {"handoffs": 4, "handoffNs": 400}, {"handoffs": 2, "handoffNs": 300}]}
-        plain = {"handoffs": 10, "handoffNs": 2000, "visits": 10}
+                   "queueStats": [stat(1, 9, 1), stat(4, 400, 40), stat(2, 300, 20)]}
+        plain = {**stat(10, 2000, 500), "visits": 10}
         self.assertEqual(queue_handoffs(profile, plain, None, 0), [100, 200])
         self.assertEqual(queue_handoffs(profile, plain, "a", 50), [150, 200])
         self.assertTrue(queue_stats_complete(profile, {"profile": profile, "original": plain}))
         self.assertFalse(queue_stats_complete({**profile, "queueStats": profile["queueStats"][:2]}, {"original": plain}))
         self.assertFalse(queue_stats_complete(profile, {"original": {"handoffs": 1}}))
         self.assertFalse(queue_stats_complete(profile, {"original": {**plain, "handoffs": 0}}))
+        self.assertFalse(queue_stats_complete(profile, {"original": {**plain, "enqueues": 9}}))
+        self.assertFalse(queue_stats_complete(profile, {"original": {**plain, "spunDequeues": 11}}))
+        self.assertEqual(handoff_parts(profile, plain), {"profile": [10, 90, 0.5], "plain": [50, 150, 0.5]})
         self.assertFalse(queue_stats_complete({**profile, "queueStats": [profile["queueStats"][0], {"handoffs": 0, "handoffNs": 0}, profile["queueStats"][2]]}, {"original": plain}))
 
     def test_spin_transaction_arms_use_the_transaction_rounds(self):

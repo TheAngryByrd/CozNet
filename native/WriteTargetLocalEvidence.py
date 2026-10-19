@@ -54,6 +54,7 @@ PREDICTION_HISTORY = [
     ("20261019T110837795-78ce6bcb", "Same", "Latency progress points", "Pass"),
     ("20261019T114345641-a76a3c68", "Same", "Per-transaction virtual latency", "Pass"),
     ("20261019T121854888-ee18e87d", "Same", "Transaction queue handoff", "Pass"),
+    ("20261019T125645104-7e8dced4", "Same", "Spin before a queue wait", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -97,6 +98,7 @@ TRANSITION_HISTORY = [
     ("20261019T110806692-b4b671d5", "Latency progress points", "Pass, 10 of 10"),
     ("20261019T114316513-16ceb9b8", "Per-transaction virtual latency", "Pass, 10 of 10"),
     ("20261019T121826636-adddad30", "Transaction queue handoff", "Fail, 9 of 10. Run 7 breaks the 2 ms debt bound."),
+    ("20261019T125615160-ba0dd35e", "Spin before a queue wait", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -142,6 +144,7 @@ BARRIER_HISTORY = [
     ("20261019T111000032-74adbcce", "Latency progress points", "Fail. `barrier-peer-bound` median 5.10 points."),
     ("20261019T114508965-bf1d556a", "Per-transaction virtual latency", "Pass"),
     ("20261019T122016119-859682da", "Transaction queue handoff", "Pass"),
+    ("20261019T125807312-5f10cdcc", "Spin before a queue wait", "Pass"),
 ]
 
 
@@ -679,6 +682,7 @@ PROFILE_HISTORY = [
     ("20261019T110709359-b184c519", "Latency progress points", "Pass"),
     ("20261019T114214114-cd942bc0", "Per-transaction virtual latency", "Pass"),
     ("20261019T121727927-5e679245", "Transaction queue handoff", "Pass"),
+    ("20261019T125516048-6470f3c8", "Spin before a queue wait", "Pass"),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
@@ -695,12 +699,16 @@ THROUGHPUT_HISTORY = [
     ("20261019T110611005-2a35600a", "Latency progress points", "Pass"),
     ("20261019T113911746-669e1783", "Per-transaction virtual latency", "Fail. `peer-75` has one block of -10.54 points."),
     ("20261019T121628106-2be55ac2", "Transaction queue handoff", "Pass"),
+    ("20261019T125416608-a58c20e0", "Spin before a queue wait", "Pass"),
 ]
-SPINTRANSACTION_HISTORY = []
+SPINTRANSACTION_HISTORY = [
+    ("20261019T124806158-79f85b15", "First spin transaction profile run", "Fail. `peer-25` median 5.34 points and `peer-75` median 6.92 points. The three `selected` points pass."),
+]
 TRANSACTION_HISTORY = [
     ("20261019T110105861-414dba20", "First transaction profile run", "Fail. All six points fail. The real gains follow the model, but the `peer` predictions stay near 5% at each speedup."),
     ("20261019T113356248-f1cbfddc", "Per-transaction virtual latency", "Fail. `selected-50` median 7.09 points and `peer-25` median 5.47 points. The other four points pass."),
     ("20261019T121118409-e589636a", "Transaction queue handoff", "Fail. `selected-25` median 7.58 points and `selected-50` median 10.07 points. The other four points pass."),
+    ("20261019T124914850-b10c2f47", "Spin before a queue wait", "Fail. `selected-25` one block of 27.61 points, `selected-50` median 8.32 points, and `peer-50` one block of -12.59 points."),
 ]
 SEMAPHORE_HISTORY = [
     ("20261019T082323819-903a6cef", "First semaphore profile run", "Fail. `selected-75` has one block of -10.61 points, and `peer-75` median 5.24 points."),
@@ -709,6 +717,7 @@ SEMAPHORE_HISTORY = [
     ("20261019T110212880-744018ed", "Latency progress points", "Fail. Five points fail: four by one block each, and `peer-50` by two blocks."),
     ("20261019T113503667-76dc9109", "Per-transaction virtual latency", "Fail. `selected-50` median 5.43 points and `selected-75` median 6.21 points."),
     ("20261019T121226146-ac4f2bea", "Transaction queue handoff", "Fail. `selected-50` median 6.60 points and `selected-75` median 5.27 points."),
+    ("20261019T125015330-52253802", "Spin before a queue wait", "Fail. `selected-50` median 5.51 points."),
 ]
 SPINLOCK_HISTORY = [
     ("20261019T074539772-03c40325", "First spin lock profile run", "Fail. Blocks 4 and 5 are invalid: `peer` at 75% has 97 and 98 visits. In the three valid blocks, `selected-50` has a median of 1.77 points, and `selected-75` fails at 6.87 points."),
@@ -718,6 +727,7 @@ SPINLOCK_HISTORY = [
     ("20261019T110413189-a8e4bb89", "Latency progress points", "Fail. Block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` median 7.87 points."),
     ("20261019T113703476-df6944a8", "Per-transaction virtual latency", "Fail. Block 4 is invalid: `peer` at 75% has 95 visits. `selected-75` median 6.93 points."),
     ("20261019T121428141-2d666768", "Transaction queue handoff", "Fail. `selected-75` median 6.37 points. All five blocks are valid."),
+    ("20261019T125215820-36780b18", "Spin before a queue wait", "Fail. Block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` median 5.60 points."),
 ]
 LOCK_HISTORY = [
     ("20261019T062708436-df83442b", "First lock profile run", "Fail. `selected-50` median 9.13 points, all five blocks below the actual gain. `peer-25` has one block of 11.87 points."),
@@ -729,6 +739,7 @@ LOCK_HISTORY = [
     ("20261019T110313420-3292dd51", "Latency progress points", "Pass"),
     ("20261019T113602781-8f0b3de1", "Per-transaction virtual latency", "Fail. Five points fail. `selected-50` median 7.49 points, `selected-75` median 5.67 points, and the three `peer` points by block 5."),
     ("20261019T121327119-d95b4f14", "Transaction queue handoff", "Fail. `selected-50` median 6.84 points, `selected-75` one block of 12.51 points, and `peer-25` one block of -15.85 points."),
+    ("20261019T125115354-73f1edc7", "Spin before a queue wait", "Fail. `selected-50` median 6.28 points, `peer-50` median 5.18, `peer-75` median 5.74, and `peer-25` one block of -13.92 points."),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
@@ -744,6 +755,7 @@ PIPELINE_HISTORY = [
     ("20261019T110512150-9b6ceb9a", "Latency progress points", "Pass"),
     ("20261019T113807687-40ce0fab", "Per-transaction virtual latency", "Pass"),
     ("20261019T121528493-e18bd4fd", "Transaction queue handoff", "Fail. `peer-75` median 6.62 points with one block of -10.53 points."),
+    ("20261019T125316611-20aa9ebf", "Spin before a queue wait", "Fail. `peer-50` one block of 12.29 points and `peer-75` median 5.13 points."),
 ]
 
 
@@ -807,6 +819,12 @@ def profile(root, run, change, kind="target-local-profile"):
                   "The table gives the median over valid blocks of the mean handoff, in the profile experiment and in the real arm. The baseline row compares the profile baseline with the plain original arm, and it is the only row that compares equal measures. "
                   "At a speedup above 0, a profiled handoff also includes the delay that the producer pays in `Enqueue`. At every point, the handoff also includes the time that an item waits in the queue.\n\n"
                   "| Point | Median mean handoff, profile | Median mean handoff, real arm |\n| --- | ---: | ---: |\n" + base_row + queue_rows) if queue_rows else ""
+    parts = [b["baselineHandoffParts"] for b in summary["blocks"] if b.get("valid") and b.get("baselineHandoffParts") and None not in b["baselineHandoffParts"].values()]
+    part = lambda arm, i: statistics.median(x[arm][i] for x in parts)
+    parts_text = ("\n\nThe second value is the signed difference between the dequeue return and the enqueue return of the same item, as a mean. It can be negative, because the consumer can take an item before the producer reads its time after `Enqueue`. The table gives the median over valid blocks of the baseline values.\n\n"
+                  "| Arm | Mean enqueue time | Mean dequeue return minus enqueue return | Share of spin takes |\n| --- | ---: | ---: | ---: |\n"
+                  + "\n".join(f"| {name} | {us(part(arm, 0))} | {us(part(arm, 1))} | {part(arm, 2) * 100:.1f}% |" for name, arm in (("Profile baseline", "profile"), ("Plain original", "plain")))) if parts else ""
+    queue_text = queue_text + parts_text
     ratios = "\n".join(f"| `{p['point']}` | {ratio(p)} |" for p in summary["points"])
     warmup_values = [b.get("warmupPassed") for b in summary["blocks"]]
     if not all("warmupPassed" in b for b in summary["blocks"]):

@@ -170,7 +170,7 @@ def handoff_shares(profile, plain, candidate, speedup):
 
 
 TRANSACTIONS = ("transaction", "spintransaction")
-QUEUE_KEYS = ("handoffs", "handoffNs")
+QUEUE_KEYS = ("handoffs", "handoffNs", "enqueues", "enqueueNs", "spunDequeues")
 
 
 def queue_stats_complete(profile, arms):
@@ -181,9 +181,23 @@ def queue_stats_complete(profile, arms):
     runs = [profile["warmup"]] + profile["experiments"] if isinstance(profile.get("warmup"), dict) else None
     if runs is None or not all(isinstance(s, dict) and all(type(s.get(k)) is int and s[k] >= 0 for k in QUEUE_KEYS) for s in stats):
         return False
-    if not all(s["handoffs"] == e.get("Visits") for s, e in zip(stats, [runs[0]] + sorted(runs[1:], key=lambda e: e.get("Order", 0))) if e.get("Passed")):
+    if not all(s["spunDequeues"] <= s["handoffs"] for s in stats):
         return False
-    return all(all(type(v.get(k)) is int and v[k] >= 0 for k in QUEUE_KEYS) and v["handoffs"] == v.get("visits") for v in plain)
+    if not all(s["handoffs"] == e.get("Visits") and s["enqueues"] == s["handoffs"] for s, e in zip(stats, [runs[0]] + sorted(runs[1:], key=lambda e: e.get("Order", 0))) if e.get("Passed")):
+        return False
+    return all(all(type(v.get(k)) is int and v[k] >= 0 for k in QUEUE_KEYS) and v["handoffs"] == v.get("visits") and v["enqueues"] == v["handoffs"] and v["spunDequeues"] <= v["handoffs"] for v in plain)
+
+
+def handoff_parts(profile, plain):
+    stats = profile.get("queueStats") if isinstance(profile, dict) else None
+    experiments = profile.get("experiments") if isinstance(profile, dict) else None
+    if not isinstance(stats, list) or not isinstance(experiments, list) or len(stats) != len(experiments) + 1 or not plain:
+        return None
+    base = next((e for e in experiments if e["Speedup"] == 0), None)
+    if base is None:
+        return None
+    parts = lambda s: [s["enqueueNs"] / s["enqueues"], (s["handoffNs"] - s["enqueueNs"]) / s["handoffs"], s["spunDequeues"] / s["handoffs"]] if s.get("handoffs") and s.get("enqueues") else None
+    return {"profile": parts(stats[base["Order"] + 1]), "plain": parts(plain)}
 
 
 def queue_handoffs(profile, plain, candidate, speedup):
@@ -301,6 +315,8 @@ def main():
                                if complete and workload in TRANSACTIONS and queue_stats_complete(profile, data) else None,
                                "difference": None if predicted is None or actual is None else predicted - actual}
         blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "points": points,
+                       "baselineHandoffParts": handoff_parts(profile, data["original"])
+                       if complete and workload in TRANSACTIONS and queue_stats_complete(profile, data) else None,
                        "baselineQueueHandoffNs": queue_handoffs(profile, data["original"], None, 0)
                        if complete and workload in TRANSACTIONS and queue_stats_complete(profile, data) else None,
                        "orderRatios": order_ratios(profile) if complete else {},

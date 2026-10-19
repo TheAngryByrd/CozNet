@@ -522,4 +522,37 @@ The other suites on the same tree:
 - Spin lock run `20261019T125215820-36780b18` fails, because block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` also fails by its median of 5.60 points.
 - Pipeline run `20261019T125316611-20aa9ebf` fails `peer-50` by one block of 12.29 points and `peer-75` with a median of 5.13 points.
 
+## Handoff parts
+
+[The handoff parts plan](target-local-handoff-parts.md) records the mean enqueue time and the mean signed difference between the dequeue return and the enqueue return of each item, and counts the spin takes in both arms.
+Criterion 100 gives these medians over the five blocks of each run on the same tree:
+
+| Suite and run | Arm | Mean enqueue time | Mean dequeue return minus enqueue return | Share of spin takes |
+| --- | --- | ---: | ---: | ---: |
+| `spintransaction` `20261019T131601688-284620fc` | Profile baseline | 1.46 us | 4.53 us | 99.43% |
+| `spintransaction` `20261019T131601688-284620fc` | Plain original | 33.60 us | 76.67 us | 96.41% |
+| `transaction` `20261019T131709144-4aa0a3ef` | Profile baseline | 20.36 us | 27.78 us | 0.00% |
+| `transaction` `20261019T131709144-4aa0a3ef` | Plain original | 42.01 us | 103.19 us | 0.00% |
+
+- With the spin, 96.41% of the plain takes come in a spin. The other 3.59% took a free item at once or waited past the spin, and the records do not separate the two. The plain values stay much larger than the profiled ones: 33.60 against 1.46 microseconds of enqueue time, and a signed difference of 76.67 against 4.53.
+- The spin share counts takes, not time. The records keep only the means, so the 3.59% of plain takes outside a spin can carry a large part of the mean signed difference. So the records do not exclude a slow wake as a main part of that value.
+- The plain enqueue time is 32 microseconds longer than the profiled one. When a space is free, `Enqueue` does not wait for the consumer. When the queue is full, it waits until the consumer takes an item, and the records do not count those enqueues. So the records do not show that the 32 microseconds exclude the consumer.
+- Hypothesis, not shown: the plain threads get less CPU time, for example two threads on one CPU. The records do not show where the plain threads ran.
+
+The spin transaction run fails criterion 95 at one point. All five blocks are valid. `peer-75` fails with a median of 7.29 points and one block of 14.67 points. The other five points pass.
+The transaction run fails `selected-25` with a median of 7.25 points and `selected-50` with 7.76. The other four points pass.
+
+Lock run `20261019T131912794-bfae28ce` fails, because block 1 is invalid from a debt failure. Criterion 80 gives these values:
+- In the `selected` experiment at 50%, worker 0 fails with 2.45 ms of debt, 20.23 ms after the first timed journal event. The window holds 86 events, and no collection runs.
+- 0.37 ms before the failure, worker 1 records one child payment of 3,348,955 ns for a request of 50,000 ns. It then publishes a local delay of 12.96 ms, above the global delay of 10.01 ms.
+- Worker 0 has a local delay of 10.01 ms. At its next sample it observes the new global delay, and its debt is above 2 ms.
+- So in this failure, one child payment that waited 3.3 ms longer than its request raised the global delay by 2.95 ms. Measured wall time pays authoritatively, so the other worker then owes that delay.
+- The records do not show why that child wait took 3.35 ms. Worker 1 has 2.01 ms of run-queue delay over the whole experiment.
+This answers the open question of [the failure context plan](target-local-failure-context.md) for this failure: a payment that overshoots its request can raise the global delay above the bound for the other worker.
+
+The other suites on the same tree:
+- Semaphore run `20261019T131809935-75def747` passes all six points.
+- Pipeline run `20261019T132114927-617f3dac`, throughput run `20261019T132215488-c111dbb5`, latency profile run `20261019T132316833-16878b7d`, transition run `20261019T132415383-4b7b1039`, prediction run `20261019T132443343-058778d3`, and barrier run `20261019T132604565-2f365b47` pass.
+- Spin lock run `20261019T132014752-3e849f73` fails `selected-75` by one block of 12.34 points. All five blocks are valid.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

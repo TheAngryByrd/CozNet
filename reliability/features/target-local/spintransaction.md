@@ -1,6 +1,6 @@
 # Target-local spin transaction profile
 
-Evidence: `artifacts/target-local-spintransaction/20261019T124806158-79f85b15`.
+Evidence: `artifacts/target-local-spintransaction/20261019T131601688-284620fc`.
 
 `TargetLocalSpinTransactionVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `spin-transaction-profile` process and seven `plain-spin-transaction` processes in a random order.
@@ -8,16 +8,16 @@ The profile process runs `TargetCausalProfile.run` with candidates `Work.selecte
 The criteria are in [the spin queue plan](../../../lode/plans/target-local-spin-queue.md). The runner hashes that file, and all source hashes stay unchanged.
 `native/WriteTargetLocalEvidence.py` writes this page.
 
-**Result: the current run fails.** Points peer-25, peer-75 fail, or a run-level criterion fails. The run is kept, and no rerun replaces it.
+**Result: the current run fails.** Points peer-75 fail, or a run-level criterion fails. The run is kept, and no rerun replaces it.
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 21.35% | 18.38% | 4.85 pp | 6.82 pp | Pass |
-| `selected-50` | 5 / 5 | 44.31% | 40.48% | 4.16 pp | 7.96 pp | Pass |
-| `selected-75` | 5 / 5 | 63.93% | 62.41% | 1.57 pp | 9.27 pp | Pass |
-| `peer-25` | 5 / 5 | 3.81% | 5.40% | 5.34 pp | 7.28 pp | Fail |
-| `peer-50` | 5 / 5 | 4.36% | 6.76% | 2.40 pp | 8.57 pp | Pass |
-| `peer-75` | 5 / 5 | 4.56% | 11.18% | 6.92 pp | 12.47 pp | Fail |
+| `selected-25` | 5 / 5 | 23.76% | 20.06% | 2.38 pp | 7.18 pp | Pass |
+| `selected-50` | 5 / 5 | 42.68% | 41.49% | 1.83 pp | 8.05 pp | Pass |
+| `selected-75` | 5 / 5 | 60.34% | 62.97% | 4.64 pp | 5.95 pp | Pass |
+| `peer-25` | 5 / 5 | 6.61% | 5.35% | 1.80 pp | 8.03 pp | Pass |
+| `peer-50` | 5 / 5 | 5.27% | 9.07% | 3.45 pp | 8.63 pp | Pass |
+| `peer-75` | 5 / 5 | 7.32% | 12.87% | 7.29 pp | 14.67 pp | Fail |
 
 The producer sets the rate at every point, so the latency of a transaction is about the sum of both parts. The model gives `Work.selected` 20.8%, 41.7%, and 62.5%, and `Work.peer` 4.2%, 8.3%, and 12.5%. The model leaves out the queue handoff and any queue wait.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.999, 0.932 |
-| `selected-50` | 0.991, 0.875 |
-| `selected-75` | 0.989, 0.870 |
-| `peer-25` | 1.000, 1.043 |
-| `peer-50` | 1.012, 1.060 |
-| `peer-75` | 1.009, 1.084 |
+| `selected-25` | 0.987, 0.935 |
+| `selected-50` | 0.987, 0.880 |
+| `selected-75` | 0.998, 0.818 |
+| `peer-25` | 1.010, 1.089 |
+| `peer-50` | 0.997, 1.046 |
+| `peer-75` | 0.991, 1.048 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 0.982; order 3: 1.000, 1.010; order 4: 0.999, 0.974; order 5: 0.989, 0.921; order 6: 0.999, 0.987. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 0.984, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 1.000, 1.048; order 4: 1.000, 1.000; order 5: 0.982, 0.935; order 6: 0.997, 0.928. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -46,29 +46,37 @@ The handoff of an item is the time from just before its enqueue to the return of
 
 | Point | Median mean handoff, profile | Median mean handoff, real arm |
 | --- | ---: | ---: |
-| baseline | 6.4 us | 104.7 us |
-| `selected-25` | 4.8 us | 90.1 us |
-| `selected-50` | 5.3 us | 72.3 us |
-| `selected-75` | 36.0 us | 45.1 us |
-| `peer-25` | 24.3 us | 105.8 us |
-| `peer-50` | 35.0 us | 102.7 us |
-| `peer-75` | 38.0 us | 97.9 us |
+| baseline | 6.9 us | 110.3 us |
+| `selected-25` | 4.8 us | 87.5 us |
+| `selected-50` | 5.8 us | 67.8 us |
+| `selected-75` | 43.0 us | 44.3 us |
+| `peer-25` | 47.7 us | 110.2 us |
+| `peer-50` | 34.1 us | 108.7 us |
+| `peer-75` | 29.9 us | 95.8 us |
+
+The second value is the signed difference between the dequeue return and the enqueue return of the same item, as a mean. It can be negative, because the consumer can take an item before the producer reads its time after `Enqueue`. The table gives the median over valid blocks of the baseline values.
+
+| Arm | Mean enqueue time | Mean dequeue return minus enqueue return | Share of spin takes |
+| --- | ---: | ---: | ---: |
+| Profile baseline | 1.5 us | 4.5 us | 99.4% |
+| Plain original | 33.6 us | 76.7 us | 96.4% |
 
 ## Blocks
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -2.61 pp | 1.38 pp | 9.27 pp | -2.71 pp | -2.40 pp | -12.47 pp |
-| 2 | Yes | 5.03 pp | 4.16 pp | 1.27 pp | 7.28 pp | 1.20 pp | -7.69 pp |
-| 3 | Yes | 4.85 pp | -1.19 pp | -1.57 pp | -5.70 pp | -8.57 pp | -6.92 pp |
-| 4 | Yes | 6.82 pp | 6.96 pp | 6.01 pp | 5.34 pp | 0.93 pp | -1.27 pp |
-| 5 | Yes | 4.73 pp | 7.96 pp | 0.38 pp | -2.87 pp | -3.82 pp | -5.68 pp |
+| 1 | Yes | 4.47 pp | 8.05 pp | -4.64 pp | 1.17 pp | 3.45 pp | -5.55 pp |
+| 2 | Yes | -0.04 pp | 0.01 pp | -5.02 pp | -1.80 pp | -8.63 pp | -7.29 pp |
+| 3 | Yes | 2.38 pp | -0.32 pp | -2.32 pp | 3.71 pp | -2.42 pp | -6.74 pp |
+| 4 | Yes | 7.18 pp | 2.35 pp | 5.95 pp | 8.03 pp | 2.55 pp | 14.67 pp |
+| 5 | Yes | 0.92 pp | -1.83 pp | 4.53 pp | -1.37 pp | -6.55 pp | -12.32 pp |
 
 ## Run history
 
 | Run | Change before the run | Result |
 | --- | --- | --- |
-| `20261019T124806158-79f85b15` | Spin before a queue wait | Fail. Points peer-25, peer-75 fail, or a run-level criterion fails. |
+| `20261019T124806158-79f85b15` | First spin transaction profile run | Fail. `peer-25` median 5.34 points and `peer-75` median 6.92 points. The three `selected` points pass. |
+| `20261019T131601688-284620fc` | Handoff parts | Fail. Points peer-75 fail, or a run-level criterion fails. |
 
 ## Limits
 

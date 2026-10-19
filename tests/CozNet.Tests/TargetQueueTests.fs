@@ -109,12 +109,12 @@ module TargetQueueTests =
                     Expect.isTrue (queue.Enqueue(7, TimeSpan.FromSeconds 1.0, CancellationToken.None)) "The enqueue must succeed."
                     Expect.isTrue (consumer.Join(TimeSpan.FromSeconds 10.0)) "The consumer must finish."
                     Expect.equal taken (ValueSome 7) "The consumer must take the item."
-                    queue.SpunTakes
+                    queue.SpunDequeues
                 let spun = [ for _ in 1..20 -> attempt () ] |> List.sum
                 Expect.isGreaterThan spun 0L "At least one of 20 dequeues must take its item during the spin."
                 let plain = TargetQueue<int>(4)
                 Expect.isTrue (plain.Enqueue(1, TimeSpan.Zero, CancellationToken.None)) "A free space must be taken."
-                Expect.equal (plain.Dequeue(TimeSpan.Zero, CancellationToken.None), plain.SpunTakes) (ValueSome 1, 0L) "A take without a wait must not count as a spin."
+                Expect.equal (plain.Dequeue(TimeSpan.Zero, CancellationToken.None), plain.SpunDequeues) (ValueSome 1, 0L) "A take without a wait must not count as a spin."
             }
 
             test "a queue needs a capacity of at least one" {

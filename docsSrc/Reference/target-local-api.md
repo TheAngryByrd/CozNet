@@ -191,7 +191,7 @@ No `publish`, `child`, or `deferred` event can belong to a blocked worker, and n
 ## Queue
 
 `TargetQueue<'T>(capacity)` is a bounded FIFO queue for profiled workers. It raises `ArgumentOutOfRangeException` when `capacity` is below 1.
-`TargetQueue<'T>(capacity, spin)` spins up to `spin`, from 0 to 1 ms, inside a `Dequeue` wait before it blocks, as `TargetLock(spin)` does. `Enqueue` does not spin. The spin and the block share one timeout budget.
+`TargetQueue<'T>(capacity, spin)` spins up to `spin`, from 0 to 1 ms, inside a `Dequeue` wait before it blocks, as `TargetLock(spin)` does. `Enqueue` does not spin. The spin and the block share one timeout budget. `SpunDequeues` counts the dequeues that take their item in a spin.
 
 | Member | Result |
 | --- | --- |
