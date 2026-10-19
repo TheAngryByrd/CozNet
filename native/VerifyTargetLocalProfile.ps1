@@ -1,6 +1,7 @@
-param([string]$EvidenceDirectory = (Join-Path $PSScriptRoot '../artifacts/target-local-profile'), [int]$Blocks = 5, [int]$Seed = 20261018,
+param([ValidateSet('latency', 'throughput')][string]$Workload = 'latency', [string]$EvidenceDirectory = '', [int]$Blocks = 5, [int]$Seed = 20261018,
     [string]$PythonCommand = $(if ($env:COZNET_PYTHON) { $env:COZNET_PYTHON } elseif ($IsWindows) { 'py' } else { 'python3' }))
 $ErrorActionPreference = 'Stop'
+if (-not $EvidenceDirectory) { $EvidenceDirectory = Join-Path $PSScriptRoot $(if ($Workload -eq 'throughput') { '../artifacts/target-local-throughput' } else { '../artifacts/target-local-profile' }) }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $run = Join-Path ([IO.Path]::GetFullPath($EvidenceDirectory)) ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 $app = Join-Path $run 'app'
@@ -13,7 +14,7 @@ $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.L
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'native/service/PerfRing.Linux.h', 'native/service/PerfSampleRing.h',
     'src/CozNet/TargetLocalReplay.fs', 'src/CozNet/TargetLocalLinux.fs', 'src/CozNet/TargetLocalProfiler.fs', 'src/CozNet/TargetCausalProfile.fs', 'samples/CozNet.TargetLocal/Work.fs',
     'samples/CozNet.TargetLocal/Program.fs', 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj',
-    'native/VerifyTargetLocalProfile.ps1', 'native/AnalyzeTargetProfile.py', 'lode/plans/target-local-causal-profile.md', 'build/build.fs')
+    'native/VerifyTargetLocalProfile.ps1', 'native/AnalyzeTargetProfile.py', 'lode/plans/target-local-causal-profile.md', 'lode/plans/target-local-throughput.md', 'build/build.fs')
 $hashes = @{}
 function Get-SourceHash([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)
@@ -38,16 +39,18 @@ $container = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-dro
     '--env', 'DOTNET_PerfMapEnabled=3', '--env', 'DOTNET_PerfMapShowOptimizationTiers=1', '--env', 'DOTNET_CLI_TELEMETRY_OPTOUT=1',
     '--mount', "type=bind,source=$app,target=/app,readonly", '--mount', "type=bind,source=$run,target=/out", $runtimeImage)
 & docker @container sh -c 'uname -a > /out/kernel.txt && nproc > /out/cpus.txt'
-$selected = 6000
-$peer = 3000
+$selected = if ($Workload -eq 'throughput') { 40 } else { 6000 }
+$peer = if ($Workload -eq 'throughput') { 20 } else { 3000 }
+$profileMode = if ($Workload -eq 'throughput') { 'throughput-profile' } else { 'causal-profile' }
+$plainMode = if ($Workload -eq 'throughput') { 'plain-throughput' } else { 'plain' }
 $speedups = @(25, 50, 75)
 $random = [Random]::new($Seed)
 $runs = @()
 for ($block = 1; $block -le $Blocks; $block++) {
-    $arms = @(@{ arm = 'profile'; args = "causal-profile $($Seed + $block)" }, @{ arm = 'original'; args = "plain $selected $peer" })
+    $arms = @(@{ arm = 'profile'; args = "$profileMode $($Seed + $block)" }, @{ arm = 'original'; args = "$plainMode $selected $peer" })
     foreach ($speedup in $speedups) {
-        $arms += @{ arm = "selected-$speedup"; args = "plain $([int]($selected * (100 - $speedup) / 100)) $peer" }
-        $arms += @{ arm = "peer-$speedup"; args = "plain $selected $([int]($peer * (100 - $speedup) / 100))" }
+        $arms += @{ arm = "selected-$speedup"; args = "$plainMode $([int]($selected * (100 - $speedup) / 100)) $peer" }
+        $arms += @{ arm = "peer-$speedup"; args = "$plainMode $selected $([int]($peer * (100 - $speedup) / 100))" }
     }
     foreach ($arm in ($arms | Sort-Object { $random.Next() })) {
         $file = "$block-$($arm.arm).json"
@@ -58,10 +61,10 @@ for ($block = 1; $block -le $Blocks; $block++) {
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-SourceHash (Join-Path $root $name)) -eq $hashes[$name] }
 foreach ($name in $binaries.Keys) { $unchanged = $unchanged -and (Get-FileHash -LiteralPath (Join-Path $app $name) -Algorithm SHA256).Hash -eq $binaries[$name] }
-@{ suite = 'profile'; sourceHash = 'sha256 after CRLF to LF'; sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage
+@{ suite = 'profile'; workload = $Workload; sourceHash = 'sha256 after CRLF to LF'; sources = $hashes; binaries = $binaries; compilerImage = $compilerImage; runtimeImage = $runtimeImage
     seed = $Seed; blocks = $Blocks; selected = $selected; peer = $peer; speedups = $speedups; runs = $runs; inputsUnchanged = $unchanged } |
     ConvertTo-Json -Depth 6 | Set-Content (Join-Path $run 'manifest.json')
 & $PythonCommand -I (Join-Path $PSScriptRoot 'AnalyzeTargetProfile.py') $run
 $analysisExit = $LASTEXITCODE
 Write-Output $run
-if (-not $unchanged -or $analysisExit -ne 0) { throw 'Target-local causal profile qualification failed. Retain this run.' }
+if (-not $unchanged -or $analysisExit -ne 0) { throw "Target-local $Workload profile qualification failed. Retain this run." }

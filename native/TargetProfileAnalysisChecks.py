@@ -1,7 +1,7 @@
 import unittest
 
-from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, driver_matches, expected_args, expected_fields, prediction,
-                                  profile_complete, timing_consistent)
+from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, prediction,
+                                  profile_complete, timing_consistent, visits_sufficient)
 
 
 def experiment(order, candidate, speedup, effective=100, passed=True):
@@ -88,6 +88,42 @@ class ConsistencyChecks(unittest.TestCase):
     def test_fields_name_mode_seed_and_rounds(self):
         fields = expected_fields(20261018, 1)
         self.assertEqual((fields["profile"]["seed"], fields["peer-75"]["peerRounds"], fields["selected-50"]["mode"]), (20261019, 750, "plain"))
+
+
+class ThroughputChecks(unittest.TestCase):
+    def test_arguments_name_each_throughput_arm(self):
+        args = expected_args(20261018, 1, "throughput")
+        self.assertEqual((args["profile"], args["original"], args["selected-25"], args["peer-75"]),
+                         ("throughput-profile 20261019", "plain-throughput 40 20", "plain-throughput 30 20", "plain-throughput 40 5"))
+
+    def test_throughput_fields_hold_the_duration(self):
+        fields = expected_fields(20261018, 1, "throughput")
+        self.assertEqual((fields["profile"]["durationMs"], fields["peer-50"]["peerRounds"], fields["original"]["mode"]), (120, 10, "plain-throughput"))
+
+    def test_throughput_actual_gain_compares_time_for_each_visit(self):
+        original = {"elapsedNs": 1000, "visits": 100}
+        self.assertEqual(actual_gain(original, {"elapsedNs": 1000, "visits": 200}, "throughput"), 0.5)
+        self.assertIsNone(actual_gain(original, {"elapsedNs": 1000, "visits": 0}, "throughput"))
+
+    def test_latency_actual_gain_compares_elapsed_time(self):
+        self.assertEqual(actual_gain({"elapsedNs": 1000}, {"elapsedNs": 750}, "latency"), 0.25)
+
+    def test_prediction_divides_by_visits(self):
+        value = record({(SELECTED_NAME, 0): {"Visits": 100}, (SELECTED_NAME, 50): {"Visits": 200}})
+        self.assertEqual(prediction(value, SELECTED_NAME, 50), 0.5)
+
+    def test_prediction_needs_visits(self):
+        self.assertIsNone(prediction(record({(PEER_NAME, 25): {"Visits": 0}}), PEER_NAME, 25))
+
+    def test_throughput_records_need_100_visits(self):
+        self.assertFalse(visits_sufficient({"visits": 99}, "throughput"))
+        self.assertTrue(visits_sufficient({"visits": 100}, "throughput"))
+        self.assertFalse(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 99}}), "throughput"))
+        self.assertTrue(visits_sufficient({"visits": 0}, "latency"))
+
+    def test_latency_experiments_need_one_visit(self):
+        self.assertTrue(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 1}}), "latency"))
+        self.assertFalse(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 2}}), "latency"))
 
 
 if __name__ == "__main__":

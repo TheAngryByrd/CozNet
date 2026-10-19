@@ -8,28 +8,53 @@ MEDIAN_LIMIT = 0.05
 BLOCK_LIMIT = 0.10
 BLOCKS = 5
 SEED = 20261018
-SELECTED, PEER = 6000, 3000
+WORKLOADS = {"latency": {"profile": "causal-profile", "plain": "plain", "selected": 6000, "peer": 3000, "durationMs": 0},
+             "throughput": {"profile": "throughput-profile", "plain": "plain-throughput", "selected": 40, "peer": 20, "durationMs": 120}}
+MIN_VISITS = 100
 SPEEDUPS = (25, 50, 75)
 SELECTED_NAME = "CozNet.TargetLocal.Work::selected(uint64)"
 PEER_NAME = "CozNet.TargetLocal.Work::peer(uint64)"
 CANDIDATES = {"selected": SELECTED_NAME, "peer": PEER_NAME}
 
 
-def expected_args(seed, block):
-    args = {"profile": f"causal-profile {seed + block}", "original": f"plain {SELECTED} {PEER}"}
+def expected_args(seed, block, workload="latency"):
+    w = WORKLOADS[workload]
+    selected, peer, plain = w["selected"], w["peer"], w["plain"]
+    args = {"profile": f"{w['profile']} {seed + block}", "original": f"{plain} {selected} {peer}"}
     for speedup in SPEEDUPS:
-        args[f"selected-{speedup}"] = f"plain {SELECTED * (100 - speedup) // 100} {PEER}"
-        args[f"peer-{speedup}"] = f"plain {SELECTED} {PEER * (100 - speedup) // 100}"
+        args[f"selected-{speedup}"] = f"{plain} {selected * (100 - speedup) // 100} {peer}"
+        args[f"peer-{speedup}"] = f"{plain} {selected} {peer * (100 - speedup) // 100}"
     return args
 
 
-def expected_fields(seed, block):
-    fields = {"profile": {"mode": "causal-profile", "seed": seed + block, "selectedRounds": SELECTED, "peerRounds": PEER},
-              "original": {"mode": "plain", "selectedRounds": SELECTED, "peerRounds": PEER}}
+def expected_fields(seed, block, workload="latency"):
+    w = WORKLOADS[workload]
+    selected, peer, plain = w["selected"], w["peer"], w["plain"]
+    extra = {"durationMs": w["durationMs"]} if workload == "throughput" else {}
+    fields = {"profile": {"mode": w["profile"], "seed": seed + block, "selectedRounds": selected, "peerRounds": peer, **extra},
+              "original": {"mode": plain, "selectedRounds": selected, "peerRounds": peer, **extra}}
     for speedup in SPEEDUPS:
-        fields[f"selected-{speedup}"] = {"mode": "plain", "selectedRounds": SELECTED * (100 - speedup) // 100, "peerRounds": PEER}
-        fields[f"peer-{speedup}"] = {"mode": "plain", "selectedRounds": SELECTED, "peerRounds": PEER * (100 - speedup) // 100}
+        fields[f"selected-{speedup}"] = {"mode": plain, "selectedRounds": selected * (100 - speedup) // 100, "peerRounds": peer, **extra}
+        fields[f"peer-{speedup}"] = {"mode": plain, "selectedRounds": selected, "peerRounds": peer * (100 - speedup) // 100, **extra}
     return fields
+
+
+def visits_sufficient(record, workload):
+    if workload != "throughput":
+        return all(e.get("Visits", 1) == 1 for e in record.get("experiments", []) if e.get("Passed"))
+    if "experiments" in record:
+        return all(e.get("Visits", 0) >= MIN_VISITS for e in record["experiments"] if e.get("Passed"))
+    return record.get("visits", 0) >= MIN_VISITS
+
+
+def actual_gain(original, optimized, workload):
+    if not original or not optimized or not original.get("elapsedNs") or not optimized.get("elapsedNs"):
+        return None
+    if workload != "throughput":
+        return 1 - optimized["elapsedNs"] / original["elapsedNs"]
+    if not original.get("visits") or not optimized.get("visits"):
+        return None
+    return 1 - (optimized["elapsedNs"] / optimized["visits"]) / (original["elapsedNs"] / original["visits"])
 
 
 def timing_consistent(record):
@@ -65,7 +90,9 @@ def prediction(record, candidate, speedup):
     point = next((e for e in experiments if e["Candidate"] == candidate and e["Speedup"] == speedup), None)
     if baseline is None or point is None or not (baseline["Passed"] and point["Passed"] and baseline["EffectiveNs"] > 0):
         return None
-    return 1 - point["EffectiveNs"] / baseline["EffectiveNs"]
+    if baseline.get("Visits", 1) <= 0 or point.get("Visits", 1) <= 0:
+        return None
+    return 1 - (point["EffectiveNs"] / point.get("Visits", 1)) / (baseline["EffectiveNs"] / baseline.get("Visits", 1))
 
 
 def load(path):
@@ -75,19 +102,21 @@ def load(path):
 def main():
     run = pathlib.Path(sys.argv[1]).resolve()
     manifest = load(run / "manifest.json")
-    passed = (manifest["inputsUnchanged"] and manifest["blocks"] == BLOCKS and manifest["seed"] == SEED and manifest["selected"] == SELECTED
-              and manifest["peer"] == PEER and tuple(manifest["speedups"]) == SPEEDUPS)
+    workload = manifest.get("workload", "latency")
+    w = WORKLOADS[workload]
+    passed = (manifest["inputsUnchanged"] and manifest["blocks"] == BLOCKS and manifest["seed"] == SEED and manifest["selected"] == w["selected"]
+              and manifest["peer"] == w["peer"] and tuple(manifest["speedups"]) == SPEEDUPS)
     blocks = []
     for block in range(1, BLOCKS + 1):
         records = [r for r in manifest["runs"] if r["block"] == block]
-        args = expected_args(manifest["seed"], block)
+        args = expected_args(manifest["seed"], block, workload)
         data = {arm: load(run / f"{block}-{arm}.json") for arm in args}
         reasons = [f"{arm} missing" for arm, value in data.items() if value is None]
         if sorted(r["arm"] for r in records) != sorted(args):
             reasons.append("the manifest does not hold exactly one record for each arm")
         reasons += [f"{r['arm']} exit {r['exitCode']}" for r in records if r["exitCode"] != 0]
         reasons += [f"{r['arm']} has arguments {r.get('args')}" for r in records if r.get("args") != args.get(r["arm"])]
-        for arm, fields in expected_fields(manifest["seed"], block).items():
+        for arm, fields in expected_fields(manifest["seed"], block, workload).items():
             value = data.get(arm)
             if value is not None:
                 reasons += [f"{arm} records {k} {value.get(k)}" for k, v in fields.items() if value.get(k) != v]
@@ -100,13 +129,14 @@ def main():
         elif not driver_matches(profile):
             reasons.append("the driver predictions differ from the experiments")
         reasons += [f"{arm} not passed" for arm, value in data.items() if value is not None and not value.get("passed")]
+        reasons += [f"{arm} has fewer than {MIN_VISITS} visits" for arm, value in data.items() if value is not None and not visits_sufficient(value, workload)]
         points = {}
         for label, name in CANDIDATES.items():
             for speedup in SPEEDUPS:
                 key = f"{label}-{speedup}"
                 predicted = prediction(profile, name, speedup) if complete else None
                 original, optimized = data["original"], data[key]
-                actual = (1 - optimized["elapsedNs"] / original["elapsedNs"]) if original and optimized and original.get("elapsedNs") else None
+                actual = actual_gain(original, optimized, workload)
                 points[key] = {"predicted": predicted, "actual": actual,
                                "difference": None if predicted is None or actual is None else predicted - actual}
         blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "points": points,
@@ -126,9 +156,9 @@ def main():
                 "medianPredicted": statistics.median(b["points"][key]["predicted"] for b in valid) if valid else None,
                 "medianActual": statistics.median(b["points"][key]["actual"] for b in valid) if valid else None,
                 "passed": point_passed})
-    summary = {"passed": passed, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
+    summary = {"passed": passed, "workload": workload, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
                "points": summary_points, "blocks": blocks,
-               "supportedModel": "Linux x64 CPU-bound managed fork/join threads registered through CozNet, end-to-end progress point",
+               "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + ("throughput progress point" if workload == "throughput" else "end-to-end progress point"),
                "generalClrSafetyEstablished": False}
     (run / "summary.json").write_text(json.dumps(summary, indent=2))
     return 0 if passed else 1

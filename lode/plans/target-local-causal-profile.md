@@ -19,7 +19,7 @@ CozNet ran one experiment for each process, with a method range and a speedup ch
   Each eligible symbol must be bound. The speedups must be distinct and from 1 to 100. The replay plan must accept the period and the ranges.
   Invalid input returns a list of `TargetCausalDesignError` values. `TargetCausalProfile.run` takes only a parsed design.
 
-Throughput progress points and fixed-length experiments in a running program are not part of this change. They need a native experiment switch without thread restart.
+Throughput progress points are not part of this change. [The throughput plan](target-local-throughput.md) adds them with one bound run for each fixed-length experiment.
 
 ## Qualification
 

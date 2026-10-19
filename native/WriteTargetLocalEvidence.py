@@ -38,6 +38,7 @@ PREDICTION_HISTORY = [
     ("20261019T011552600-3ac91378", "Same", "Forced-GC windows", "Pass"),
     ("20261019T014112845-eec890b5", "Same", "ReJIT detection check", "Pass"),
     ("20261019T020044104-92e8b8b1", "Same", "Linux backend file split and lifecycle plan update", "Pass"),
+    ("20261019T024239257-fae8a160", "Same", "Causal profile driver", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -66,6 +67,7 @@ TRANSITION_HISTORY = [
     ("20261019T014043978-f7a0ddbc", "ReJIT detection check",
      "Fail. Run 7: 2 ms debt bound. GC windows cover 0.22 ms of the 5.75 ms failure interval. The ReJIT check passes."),
     ("20261019T020010673-c0788652", "Linux backend file split and lifecycle plan update", "Pass, 10 of 10"),
+    ("20261019T024210440-65ed47ee", "Causal profile driver", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -95,6 +97,8 @@ BARRIER_HISTORY = [
     ("20261019T011713329-52b0bbca", "Forced-GC windows", "Pass"),
     ("20261019T014236242-6440bd58", "ReJIT detection check", "Pass"),
     ("20261019T020204625-4ef1deb4", "Linux backend file split and lifecycle plan update", "Pass"),
+    ("20261019T024401530-b69ae382", "Causal profile driver",
+     "Fail. Criterion 26: one of 60 setup segments takes 0.70 ms, with 9.3 microseconds on a CPU. All 15 blocks are within the limits."),
 ]
 
 
@@ -616,15 +620,22 @@ See [the blocking plan](../../../lode/plans/target-local-blocking.md) and [the A
 """
 
 
-PROFILE_HISTORY = []
+PROFILE_HISTORY = [
+    ("20261019T024109669-c30228ca", "First causal profile run", "Pass"),
+]
+THROUGHPUT_HISTORY = []
 
 
-def profile(root, run, change):
-    directory = root / "artifacts/target-local-profile" / run
+def profile(root, run, change, kind="target-local-profile"):
+    directory = root / "artifacts" / kind / run
     summary, manifest = load(directory / "summary.json"), load(directory / "manifest.json")
     if not summary["inputsUnchanged"]:
         raise SystemExit("The profile run changed its inputs.")
-    check_history(root, "target-local-profile", PROFILE_HISTORY, run)
+    throughput = kind == "target-local-throughput"
+    if manifest.get("workload", "latency") != ("throughput" if throughput else "latency"):
+        raise SystemExit(f"The run in {kind} records the workload {manifest.get('workload')}.")
+    known = THROUGHPUT_HISTORY if throughput else PROFILE_HISTORY
+    check_history(root, kind, known, run)
     kernel, cpus = host(directory)
     rows = "\n".join(f"| `{p['point']}` | {p['validBlocks']} / 5 | {pct(p['medianPredicted'])} | {pct(p['medianActual'])} | "
                      f"{pct(p['medianAbsoluteDifference'], suffix=' pp')} | {pct(p['maxAbsoluteDifference'], suffix=' pp')} | {'Pass' if p['passed'] else 'Fail'} |"
@@ -636,15 +647,24 @@ def profile(root, run, change):
     failed = [p["point"] for p in summary["points"] if not p["passed"]]
     current = "Pass" if summary["passed"] else f"Fail. Points {', '.join(failed) or 'none'} fail, or a run-level criterion fails."
     verdict = "**Result: the current run passes.**" if summary["passed"] else f"**Result: the current run fails.** {current[6:]} The run is kept, and no rerun replaces it."
-    history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in PROFILE_HISTORY + [(run, change, current)])
-    return f"""# Target-local causal profile
+    history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in known + [(run, change, current)])
+    title = "Target-local throughput profile" if throughput else "Target-local causal profile"
+    target, modes = ("TargetLocalThroughputVerify", "`throughput-profile` process and seven `plain-throughput`") if throughput else ("TargetLocalProfileVerify", "`causal-profile` process and seven `plain`")
+    workload = ("Each experiment runs for 120 ms. The selected worker repeats `Work.selected 40` and the peer repeats `Work.peer 20`, with one visit of the progress point after each call."
+                if throughput else "The selected thread runs 6000 rounds and the peer 3000. The progress point is the end of the workload.")
+    plan = "[the throughput plan](../../../lode/plans/target-local-throughput.md)" if throughput else "[the profile plan](../../../lode/plans/target-local-causal-profile.md)"
+    expected = ("If both workers have the same cost for each round, the expected gains are 10%, 25%, and 50% for `Work.selected` and 18.2%, 40%, and 66.7% for `Work.peer`. The criteria use the measured gains."
+                if throughput else "The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.")
+    limits = ("A throughput experiment counts every visit from the first work start to the last finish, so work in progress at the stop counts."
+              if throughput else "The progress point is the end of the workload.")
+    return f"""# {title}
 
-Evidence: `artifacts/target-local-profile/{run}`.
+Evidence: `artifacts/{kind}/{run}`.
 
-`TargetLocalProfileVerify` ran {manifest["blocks"]} blocks in the Linux x64 container, with kernel `{kernel}`, x64, and {cpus} CPUs.
-Each block runs one `causal-profile` process and seven `plain` processes in a random order.
-The profile process runs `TargetCausalProfile.run` with candidates `Work.selected` and `Work.peer` at speedups 25, 50, and 75. The selected thread runs 6000 rounds and the peer 3000.
-The criteria are in [the profile plan](../../../lode/plans/target-local-causal-profile.md). The runner hashes that file, and all source hashes stay unchanged.
+`{target}` ran {manifest["blocks"]} blocks in the Linux x64 container, with kernel `{kernel}`, x64, and {cpus} CPUs.
+Each block runs one {modes} processes in a random order.
+The profile process runs `TargetCausalProfile.run` with candidates `Work.selected` and `Work.peer` at speedups 25, 50, and 75. {workload}
+The criteria are in {plan}. The runner hashes that file, and all source hashes stay unchanged.
 `native/WriteTargetLocalEvidence.py` writes this page.
 
 {verdict}
@@ -653,7 +673,7 @@ The criteria are in [the profile plan](../../../lode/plans/target-local-causal-p
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 {rows}
 
-The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
+{expected}
 
 ## Blocks
 
@@ -669,8 +689,8 @@ The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% 
 
 ## Limits
 
-The progress point is the end of the workload. Throughput progress points are not supported.
-The profile covers CPU-bound fork/join threads on Linux x64. CLR safety outside this workload is not established.
+{limits}
+The profile covers CPU-bound threads on Linux x64 that do not block outside `TargetBarrier`. CLR safety outside this workload is not established.
 """
 
 
@@ -682,6 +702,8 @@ def main():
         pages["barrier.md"] = barrier(root, sys.argv[4], sys.argv[5])
     if len(sys.argv) > 7:
         pages["profile.md"] = profile(root, sys.argv[6], sys.argv[7])
+    if len(sys.argv) > 9:
+        pages["throughput.md"] = profile(root, sys.argv[8], sys.argv[9], "target-local-throughput")
     for name, text in pages.items():
         (out / name).write_text(text, newline="\n")
 

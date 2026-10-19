@@ -11,7 +11,7 @@ module TargetCausalProfileTests =
         CodeBinding.tryCapture [ "0x1000 10 a[Optimized]"; "0x2000 10 b[Optimized]" ] symbols |> Result.defaultWith failwith
 
     let private designOf eligible candidates speedups blocks seed =
-        TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks seed
+        TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks seed EndToEnd
         |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
 
     let private result effective passed : TargetProfileResult =
@@ -22,8 +22,10 @@ module TargetCausalProfileTests =
         { GlobalDelay = 10UL; Locals = Array.empty; SelectedSamples = 0UL; Credited = 0UL; Publishes = 0; Children = 0; MeasuredPayment = 0UL
           Deferred = 0; Failures = 0; MaxObservedDebt = 0UL; Blocks = 0; DependencyWakes = 0; SkippedDelay = 0UL }
 
+    let private runResults run design = TargetCausalProfile.runWith (fun c s -> run c s, 1L, None) design
+
     let private profile run blocks =
-        TargetCausalProfile.runWith run (designOf symbols symbols [| 25u; 50u |] blocks 7)
+        runResults run (designOf symbols symbols [| 25u; 50u |] blocks 7)
 
     [<Tests>]
     let tests =
@@ -42,7 +44,7 @@ module TargetCausalProfileTests =
 
             test "the same seed gives the same order and another seed can differ" {
                 let order seed =
-                    (TargetCausalProfile.runWith (fun _ _ -> result 100UL true) (designOf symbols symbols [| 25u; 50u; 75u |] 4 seed)).Experiments
+                    (runResults (fun _ _ -> result 100UL true) (designOf symbols symbols [| 25u; 50u; 75u |] 4 seed)).Experiments
                     |> Array.map (fun e -> e.Candidate, e.Speedup)
                 Expect.equal (order 7) (order 7) "A seed must fix the order."
                 Expect.notEqual (order 7) (order 8) "These two seeds must give different orders."
@@ -62,7 +64,7 @@ module TargetCausalProfileTests =
                 let run c s =
                     if s = 0u then block <- block + 1
                     result (if s = 0u then [| 200UL; 400UL; 100UL; 1000UL |][block - 1] else 100UL) true
-                let value = TargetCausalProfile.runWith run (designOf symbols [| "a" |] [| 25u |] 4 7)
+                let value = runResults run (designOf symbols [| "a" |] [| 25u |] 4 7)
                 let point = value.Points |> Array.exactlyOne
                 Expect.equal point.Predictions [| Some 0.5; Some 0.75; Some 0.0; Some 0.9 |] "Each block must divide by its own baseline."
                 Expect.equal point.MedianPrediction (Some 0.625) "The median of four values must be the mean of the middle two."
@@ -121,7 +123,7 @@ module TargetCausalProfileTests =
 
             test "an invalid design returns each parse error and no design" {
                 let errors eligible candidates speedups blocks =
-                    match TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks 0 with
+                    match TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks 0 EndToEnd with
                     | Ok _ -> []
                     | Error values -> values
                 Expect.equal (errors symbols [| "a"; "a" |] [| 25u |] 1) [ DuplicateCandidate "a" ] "A repeated candidate must fail."
@@ -133,8 +135,88 @@ module TargetCausalProfileTests =
                 Expect.equal (errors symbols [||] [||] 1) [ NoCandidates; NoSpeedups ] "Empty candidates and speedups must fail."
                 Expect.equal (errors [| "a"; "z" |] [| "a" |] [| 25u |] 1) [ UnboundEligible "z" ] "An unbound eligible symbol must fail."
                 Expect.isTrue
-                    (match TargetCausalDesign.tryCreate binding 0UL symbols symbols [| 25u |] 1 0 with Error [ PlanRejected _ ] -> true | _ -> false)
+                    (match TargetCausalDesign.tryCreate binding 0UL symbols symbols [| 25u |] 1 0 EndToEnd with Error [ PlanRejected _ ] -> true | _ -> false)
                     "A period that the replay plan rejects must fail."
+            }
+
+            test "a throughput duration outside 1 to 60000 ms is a parse error" {
+                let parse duration = TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 25u |] 1 0 (Throughput duration)
+                Expect.equal (parse 0) (Error [ InvalidDuration 0 ]) "A zero duration must fail."
+                Expect.equal (parse 60001) (Error [ InvalidDuration 60001 ]) "A duration above 60000 ms must fail."
+                Expect.equal (parse Int32.MaxValue) (Error [ InvalidDuration Int32.MaxValue ]) "The largest duration must fail."
+                Expect.isOk (parse 1) "1 ms must parse."
+                Expect.isOk (parse 60000) "60000 ms must parse."
+            }
+
+            test "a safety stop fails its experiment and keeps the reason" {
+                let design =
+                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 (Throughput 100)
+                    |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
+                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, 100L, (if c = "b" then Some "safety" else None))) design
+                let stopped = value.Experiments |> Array.filter (fun e -> not e.Passed)
+                Expect.equal (stopped |> Array.map (fun e -> e.Candidate, e.Error)) [| "b", "safety" |] "Only the stopped experiment must fail, with its reason."
+            }
+
+            test "the guard stops the counter and reports when the action outlasts the delay" {
+                let counter = TargetProgressCounter()
+                let value, fired = TargetCausalProfile.guard (TimeSpan.FromMilliseconds 20.0) counter (fun () -> (while not counter.Stopped do Threading.Thread.Sleep 1); 7)
+                Expect.equal (value, fired, counter.Stopped) (7, true, true) "A late action must be stopped and reported."
+                let quick = TargetProgressCounter()
+                let value, fired = TargetCausalProfile.guard (TimeSpan.FromSeconds 30.0) quick (fun () -> 8)
+                Expect.equal (value, fired, quick.Stopped) (8, false, false) "A quick action must not be stopped."
+            }
+
+            test "a throughput prediction compares the effective time for each visit" {
+                let design =
+                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 (Throughput 100)
+                    |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
+                let run c s = (result 1000UL true, (if s = 0u then 100L elif c = "a" then 200L else 100L), None)
+                let value = TargetCausalProfile.runWith run design
+                let point c = value.Points |> Array.find (fun p -> p.Candidate = c)
+                Expect.equal (point "a").Predictions [| Some 0.5 |] "200 visits in the same time must give a 50% shorter period."
+                Expect.equal (point "b").Predictions [| Some 0.0 |] "The same visits must give no gain."
+                Expect.equal (value.Experiments |> Array.map _.Visits |> Array.sort) [| 100L; 100L; 200L |] "Each experiment must keep its visits."
+            }
+
+            test "an experiment or baseline with no visits gives no prediction and stays in the record" {
+                let design =
+                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 (Throughput 100)
+                    |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
+                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, (if c = "a" && s = 50u then 0L else 100L), None)) design
+                Expect.equal ((value.Points |> Array.find (fun p -> p.Candidate = "a")).Predictions) [| None |] "Zero visits must give no prediction."
+                Expect.equal (value.Experiments |> Array.filter (fun e -> e.Visits = 0L) |> Array.length) 1 "The experiment must stay."
+                let baseline = TargetCausalProfile.runWith (fun _ s -> (result 1000UL true, (if s = 0u then 0L else 100L), None)) design
+                Expect.isTrue (baseline.Points |> Array.forall (fun p -> p.ValidBlocks = 0)) "A baseline with no visits must give no prediction."
+            }
+
+            test "the throughput monitor stops the counter after the duration once a worker works" {
+                let counter = TargetProgressCounter()
+                let watch = Diagnostics.Stopwatch.StartNew()
+                let mutable polls = 0
+                TargetCausalProfile.stopAfter 20 counter (fun () -> polls <- polls + 1; polls > 3) (fun () -> true)
+                Expect.isTrue counter.Stopped "The counter must stop."
+                Expect.isGreaterThanOrEqual watch.ElapsedMilliseconds 19L "The monitor must wait for the duration."
+                let idle = TargetProgressCounter()
+                TargetCausalProfile.stopAfter 10000 idle (fun () -> false) (fun () -> false)
+                Expect.isTrue idle.Stopped "A run that ends before any work must still stop the counter."
+            }
+
+            test "the throughput monitor stops the counter when it fails" {
+                let counter = TargetProgressCounter()
+                Expect.throwsT<InvalidOperationException> (fun () ->
+                    TargetCausalProfile.stopAfter 10 counter (fun () -> raise (InvalidOperationException "interrupted")) (fun () -> true)) "The failure must reach the caller."
+                Expect.isTrue counter.Stopped "A failed monitor must still stop the workers."
+            }
+
+            test "a counter counts each visit and starts unstopped" {
+                let counter = TargetProgressCounter()
+                Expect.isFalse counter.Stopped "A new counter must not be stopped."
+                for _ in 1..3 do counter.Visit()
+                Expect.equal counter.Visits 3L "Each visit must count."
+            }
+
+            test "the safety stop comes long after the duration" {
+                Expect.equal (TargetCausalProfile.safetyDelay 120) (TimeSpan.FromMilliseconds 2200.0) "The safety stop must wait 1 s plus ten times the duration."
             }
 
             test "a design keeps copies of its inputs" {

@@ -16,6 +16,7 @@
 - **Start run-queue delay:** The run-queue delay of a worker from the read before the start barrier to the read after that barrier returns. `StartRunDelayNs` holds it.
 - **GC window:** The interval from the `Stopwatch` read before a forced `GC.Collect` call to the read after it, on the monitor thread.
 - **Causal profile:** The predicted program gain for each candidate method at each virtual speedup, from `TargetCausalProfile.run`.
+- **Progress point:** The event that a profile measures. `EndToEnd` is the end of the workload. `Throughput` counts visits during a fixed run time.
 - **Causal design:** A parsed `TargetCausalDesign`: the binding, period, eligible symbols, candidates, speedups, blocks, and seed of a causal profile.
 - **Profile block:** One baseline experiment and one experiment for each candidate and speedup, run in a seeded random order.
 - **Start trace:** Three start points of a worker, from its native start to its work start. Each point holds the wall time, on-CPU time, run-queue delay, faults, and context switches.

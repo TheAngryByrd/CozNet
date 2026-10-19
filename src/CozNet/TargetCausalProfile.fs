@@ -1,6 +1,21 @@
 namespace CozNet
 
 open System
+open System.Threading
+
+type TargetProgressPoint =
+    | EndToEnd
+    | Throughput of durationMs: int
+
+[<Sealed; AllowNullLiteral>]
+type TargetProgressCounter() =
+    let mutable visits = 0L
+    let mutable stopped = 0
+
+    member _.Visit() = Interlocked.Increment(&visits) |> ignore
+    member _.Visits = Interlocked.Read(&visits)
+    member _.Stopped = Volatile.Read(&stopped) = 1
+    member _.Stop() = Volatile.Write(&stopped, 1)
 
 type TargetCausalExperiment = {
     Block: int
@@ -10,6 +25,7 @@ type TargetCausalExperiment = {
     ElapsedNs: uint64
     GlobalNs: uint64
     EffectiveNs: uint64
+    Visits: int64
     Passed: bool
     Error: string
 }
@@ -23,6 +39,7 @@ type TargetCausalPoint = {
 }
 
 type TargetCausalProfileResult = {
+    Progress: TargetProgressPoint
     Blocks: int
     Seed: int
     Candidates: string array
@@ -41,6 +58,7 @@ type TargetCausalDesignError =
     | DuplicateSpeedup of speedup: uint32
     | SpeedupOutOfRange of speedup: uint32
     | NoBlocks of blocks: int
+    | InvalidDuration of durationMs: int
     | PlanRejected of message: string
 
 type TargetCausalDesign = private {
@@ -51,6 +69,7 @@ type TargetCausalDesign = private {
     DesignSpeedups: uint32 array
     DesignBlocks: int
     DesignSeed: int
+    DesignProgress: TargetProgressPoint
 } with
     member this.Binding = this.DesignBinding
     member this.Period = this.DesignPeriod
@@ -59,14 +78,17 @@ type TargetCausalDesign = private {
     member this.Speedups = Array.copy this.DesignSpeedups
     member this.Blocks = this.DesignBlocks
     member this.Seed = this.DesignSeed
+    member this.Progress = this.DesignProgress
 
 [<RequireQualifiedAccess>]
 module TargetCausalDesign =
+    let internal maxDurationMs = 60000
+
     let private duplicates (values: 'a array) =
         values |> Array.countBy id |> Array.filter (fun (_, count) -> count > 1) |> Array.map fst
 
     let tryCreate (binding: CodeBinding) (period: uint64) (eligible: string array) (candidates: string array) (speedups: uint32 array)
-        (blocks: int) (seed: int) =
+        (blocks: int) (seed: int) (progress: TargetProgressPoint) =
         let bound = binding.Symbols
         let errors =
             [ for symbol in eligible do
@@ -82,7 +104,10 @@ module TargetCausalDesign =
                   DuplicateSpeedup speedup
               for speedup in Array.distinct speedups do
                   if speedup < 1u || speedup > 100u then SpeedupOutOfRange speedup
-              if blocks < 1 then NoBlocks blocks ]
+              if blocks < 1 then NoBlocks blocks
+              match progress with
+              | Throughput duration when duration < 1 || duration > maxDurationMs -> InvalidDuration duration
+              | _ -> () ]
 
         match errors with
         | [] ->
@@ -90,7 +115,7 @@ module TargetCausalDesign =
             | Error message -> Error [ PlanRejected message ]
             | Ok _ ->
                 Ok { DesignBinding = binding; DesignPeriod = period; DesignEligible = Array.copy eligible; DesignCandidates = Array.copy candidates
-                     DesignSpeedups = Array.copy speedups; DesignBlocks = blocks; DesignSeed = seed }
+                     DesignSpeedups = Array.copy speedups; DesignBlocks = blocks; DesignSeed = seed; DesignProgress = progress }
         | errors -> Error errors
 
     let describe error =
@@ -104,6 +129,7 @@ module TargetCausalDesign =
         | DuplicateSpeedup speedup -> $"The speedup {speedup} occurs more than once."
         | SpeedupOutOfRange speedup -> $"The speedup {speedup} is not from 1 to 100."
         | NoBlocks blocks -> $"The profile requires at least one block, but it has {blocks}."
+        | InvalidDuration duration -> $"A throughput experiment requires a duration from 1 to {maxDurationMs} ms, but it has {duration} ms."
         | PlanRejected message -> $"The replay plan rejects the design: {message}"
 
 [<RequireQualifiedAccess>]
@@ -131,8 +157,8 @@ module TargetCausalProfile =
                            let baseline = experiments |> Array.tryFind (fun e -> e.Block = block && e.Speedup = 0u)
                            let experiment = experiments |> Array.tryFind (fun e -> e.Block = block && e.Candidate = candidate && e.Speedup = speedup)
                            match baseline, experiment with
-                           | Some b, Some e when b.Passed && e.Passed && b.EffectiveNs > 0UL ->
-                               Some(1.0 - float e.EffectiveNs / float b.EffectiveNs)
+                           | Some b, Some e when b.Passed && e.Passed && b.EffectiveNs > 0UL && b.Visits > 0L && e.Visits > 0L ->
+                               Some(1.0 - (float e.EffectiveNs / float e.Visits) / (float b.EffectiveNs / float b.Visits))
                            | _ -> None)
                    let valid = predictions |> Array.choose id
                    { Candidate = candidate; Speedup = speedup; Predictions = predictions; ValidBlocks = valid.Length
@@ -165,7 +191,7 @@ module TargetCausalProfile =
             | [] -> "The experiment did not pass."
             | parts -> String.Join("; ", parts)
 
-    let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult) (design: TargetCausalDesign) =
+    let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option) (design: TargetCausalDesign) =
         let candidates, speedups, blocks, seed = design.Candidates, design.Speedups, design.Blocks, design.Seed
         let random = Random seed
         let experiments =
@@ -177,19 +203,71 @@ module TargetCausalProfile =
                            with error ->
                                Error $"{error.GetType().Name}: {error.Message}"
                        match result with
-                       | Ok r ->
+                       | Ok(r, visits, stop) ->
+                           let errors = [ if not r.Passed then failure r
+                                          match stop with
+                                          | Some message -> message
+                                          | None -> () ]
                            { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = r.ElapsedNs; GlobalNs = r.GlobalNs
-                             EffectiveNs = r.EffectiveNs; Passed = r.Passed
-                             Error = if r.Passed then "" else failure r }
+                             EffectiveNs = r.EffectiveNs; Visits = visits; Passed = r.Passed && stop.IsNone
+                             Error = String.Join("; ", errors) }
                        | Error message ->
                            { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = 0UL; GlobalNs = 0UL
-                             EffectiveNs = 0UL; Passed = false; Error = message } |]
-        { Blocks = blocks; Seed = seed; Candidates = candidates; Speedups = speedups; Experiments = experiments
+                             EffectiveNs = 0UL; Visits = 0L; Passed = false; Error = message } |]
+        { Progress = design.Progress; Blocks = blocks; Seed = seed; Candidates = candidates; Speedups = speedups; Experiments = experiments
           Points = points blocks candidates speedups experiments }
 
-    let run (design: TargetCausalDesign) (journalCapacity: uint32) (workers: unit -> TargetWorker array) =
+    let internal stopAfter (duration: int) (counter: TargetProgressCounter) (working: unit -> bool) (running: unit -> bool) =
+        try
+            while not (working ()) && running () do
+                Thread.SpinWait 100
+            if working () then
+                Thread.Sleep duration
+        finally
+            counter.Stop()
+
+    let internal safetyDelay (duration: int) = TimeSpan.FromMilliseconds(1000.0 + 10.0 * float duration)
+
+    let internal guard (delay: TimeSpan) (counter: TargetProgressCounter) (action: unit -> 'a) =
+        use finished = new ManualResetEventSlim()
+        let fired = [| 0 |]
+        let watcher =
+            Thread((fun () ->
+                if not (finished.Wait delay) then
+                    Volatile.Write(&fired[0], 1)
+                    counter.Stop()), IsBackground = true)
+        watcher.Start()
+        let mutable interrupted = false
+        let value =
+            try
+                action ()
+            finally
+                finished.Set()
+                let mutable joined = false
+                while not joined do
+                    try
+                        watcher.Join()
+                        joined <- true
+                    with :? ThreadInterruptedException ->
+                        interrupted <- true
+        if interrupted then
+            raise (ThreadInterruptedException "The calling thread was interrupted while it joined the safety watcher.")
+        value, Volatile.Read(&fired[0]) = 1
+
+    let run (design: TargetCausalDesign) (journalCapacity: uint32) (workers: TargetProgressCounter -> TargetWorker array) =
         let eligible = design.Eligible
         let experiment candidate speedup =
+            let counter = TargetProgressCounter()
+            let monitor (state: TargetRunState) =
+                match design.Progress with
+                | EndToEnd -> ()
+                | Throughput duration -> stopAfter duration counter (fun () -> state.Working) (fun () -> state.Running)
+            let built = workers counter
             GC.Collect(2, GCCollectionMode.Forced, true)
-            TargetLocalProfiler.runBound design.Binding speedup design.Period [| candidate |] eligible journalCapacity (workers ()) ignore
+            let profile () = TargetLocalProfiler.runBound design.Binding speedup design.Period [| candidate |] eligible journalCapacity built monitor
+            match design.Progress with
+            | EndToEnd -> profile (), 1L, None
+            | Throughput duration ->
+                let result, fired = guard (safetyDelay duration) counter profile
+                result, counter.Visits, (if fired then Some $"The safety stop ended the run after {safetyDelay duration}." else None)
         runWith experiment design

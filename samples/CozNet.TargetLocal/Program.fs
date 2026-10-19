@@ -264,25 +264,72 @@ let private barrierAbort (output: string) =
                     secondRunPassed = second.Passed; passed = passed |}
     if passed then 0 else 1
 
-let private causalProfile (seed: int) (output: string) =
-    let binding = bind ()
-    let selectedRange = binding.Range Work.selectedName
-    let peerRange = binding.Range Work.peerName
-    let workers () = [|
-        { Work = (fun () -> Work.selected 6000UL |> ignore); PaymentIp = fst selectedRange }
-        { Work = (fun () -> Work.peer 3000UL |> ignore); PaymentIp = fst peerRange }
-    |]
-    let design =
-        TargetCausalDesign.tryCreate binding period [| Work.selectedName; Work.peerName |] [| Work.selectedName; Work.peerName |] [| 25u; 50u; 75u |] 1 seed
-        |> Result.defaultWith (fun errors -> failwith (errors |> List.map TargetCausalDesign.describe |> String.concat " "))
-    let profile = TargetCausalProfile.run design journalCapacity workers
+let private throughputDuration = 120
+
+let private loop (counter: TargetProgressCounter) (work: uint64 -> uint64) rounds () =
+    while not counter.Stopped do
+        work rounds |> ignore
+        counter.Visit()
+
+let private profileDesign binding seed progress =
+    TargetCausalDesign.tryCreate binding period [| Work.selectedName; Work.peerName |] [| Work.selectedName; Work.peerName |] [| 25u; 50u; 75u |] 1 seed progress
+    |> Result.defaultWith (fun errors -> failwith (errors |> List.map TargetCausalDesign.describe |> String.concat " "))
+
+let private writeProfile mode seed selectedRounds peerRounds durationMs (profile: TargetCausalProfileResult) (output: string) =
     let passed = profile.Experiments.Length = 7 && profile.Experiments |> Array.forall _.Passed
     let points =
         profile.Points
         |> Array.map (fun p -> {| candidate = p.Candidate; speedup = p.Speedup; prediction = p.Predictions[0] |> Option.toNullable |})
-    write output {| mode = "causal-profile"; seed = seed; selectedRounds = 6000; peerRounds = 3000
+    write output {| mode = mode; seed = seed; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = durationMs
                     experiments = profile.Experiments; points = points; passed = passed |}
     if passed then 0 else 1
+
+let private causalProfile (seed: int) (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
+    let workers (_: TargetProgressCounter) = [|
+        { Work = (fun () -> Work.selected 6000UL |> ignore); PaymentIp = fst selectedRange }
+        { Work = (fun () -> Work.peer 3000UL |> ignore); PaymentIp = fst peerRange }
+    |]
+    let profile = TargetCausalProfile.run (profileDesign binding seed EndToEnd) journalCapacity workers
+    writeProfile "causal-profile" seed 6000 3000 0 profile output
+
+let private throughputProfile (seed: int) (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
+    let workers (counter: TargetProgressCounter) = [|
+        { Work = loop counter Work.selected 40UL; PaymentIp = fst selectedRange }
+        { Work = loop counter Work.peer 20UL; PaymentIp = fst peerRange }
+    |]
+    let profile = TargetCausalProfile.run (profileDesign binding seed (Throughput throughputDuration)) journalCapacity workers
+    writeProfile "throughput-profile" seed 40 20 throughputDuration profile output
+
+let private plainThroughput selectedRounds peerRounds (output: string) =
+    Work.selected 1UL |> ignore
+    Work.peer 1UL |> ignore
+    let counter = TargetProgressCounter()
+    let ready = new Barrier(3)
+    let started = Array.zeroCreate<int64> 2
+    let finished = Array.zeroCreate<int64> 2
+    let run index (work: uint64 -> uint64) rounds =
+        Thread(fun () ->
+            ready.SignalAndWait()
+            started[index] <- Stopwatch.GetTimestamp()
+            loop counter work rounds ()
+            finished[index] <- Stopwatch.GetTimestamp())
+    let threads = [| run 0 Work.selected selectedRounds; run 1 Work.peer peerRounds |]
+    threads |> Array.iter _.Start()
+    ready.SignalAndWait()
+    Thread.Sleep throughputDuration
+    counter.Stop()
+    threads |> Array.iter _.Join()
+    let elapsed = Stopwatch.GetElapsedTime(Array.min started, Array.max finished).TotalNanoseconds
+    let visits = counter.Visits
+    write output {| mode = "plain-throughput"; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
+                    elapsedNs = uint64 elapsed; visits = visits; passed = visits >= 100L |}
+    if visits >= 100L then 0 else 1
 
 module private ReJitProbe =
     [<System.Runtime.InteropServices.DllImport("CozNet.ReJitProbe", EntryPoint = "coz_rejit_request")>]
@@ -392,6 +439,8 @@ let main argv =
     | [| "binding"; output |] -> bindingCheck output
     | [| "rejit"; output |] -> rejitCheck output
     | [| "causal-profile"; seed; output |] -> causalProfile (Int32.Parse seed) output
+    | [| "throughput-profile"; seed; output |] -> throughputProfile (Int32.Parse seed) output
+    | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "shutdown"; output |] -> shutdown output
     | [| "barrier-abort"; output |] -> barrierAbort output
     | [| "plain-phases"; pattern; selectedPercent; output |] -> plainPhases pattern (UInt64.Parse selectedPercent) output

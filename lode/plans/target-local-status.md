@@ -213,4 +213,21 @@ Barrier run `20261019T024401530-b69ae382` keeps all 15 blocks within the limits,
 One of its 60 setup segments takes 0.70 ms, with 9.3 microseconds on a CPU. Its counters record no run-queue delay, no switch, and no fault. The other 59 take at most 0.0074 ms.
 This is the second such stall. The retained records do not establish its cause. Both stalls are in block 1, in the `profile-speedup` arm, on worker 0. Two cases do not establish a pattern.
 
+## Throughput progress points
+
+[The throughput plan](target-local-throughput.md) adds `Throughput` progress points: each experiment runs for a fixed time and counts visits.
+Throughput run `20261019T032027341-60c2ab7c` passes all six points on its first run. Each point has 5 valid blocks.
+- `Work.selected` predicts 9.10%, 23.83%, and 48.50% at speedups 25, 50, and 75. The real optimizations give 10.82%, 25.28%, and 49.68%.
+- `Work.peer` predicts 17.22%, 38.41%, and 65.44%. The real optimizations give 18.68%, 39.97%, and 66.58%.
+- The median absolute differences are 0.76 to 3.09 points, and the largest block difference is 5.26 points. No experiment breaks the debt bound.
+
+The other suites on the same tree:
+- Prediction run `20261019T032259730-367c4746` and barrier run `20261019T032421198-d2441fed` pass all criteria.
+- Latency profile run `20261019T032133781-6cc15ea3` fails two points, each by one block in block 1. Its other four points pass.
+  In that block, the plain `selected-75` arm gives 36.0%, against a prediction of 47.4% and a model value of 50%. The block difference is 11.41 points.
+  The plain `peer-75` arm gives 4.5%, against a prediction of -6.0% and a model value of 0%. The block difference is 10.42 points.
+  The records do not show which arm caused each difference. The first latency profile run passed all six points.
+- Transition run `20261019T032230942-d027dbb5` fails by forced-GC run 10 at the 2 ms debt bound, and every lifecycle check passes.
+  One GC window covers 1.16 ms of the 5.77 ms failure interval. The failing worker has 3.69 ms of whole-run run-queue delay. The records do not establish the cause.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

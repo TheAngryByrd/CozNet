@@ -104,11 +104,15 @@ See [the how-to](../How_Tos/profile-fork-join-program.md).
 
 ## Causal profile
 
-`TargetCausalDesign.tryCreate binding period eligible candidates speedups blocks seed` parses the experiment design. It returns `Ok TargetCausalDesign` or `Error` with a list of `TargetCausalDesignError` values:
-`NoCandidates`, `DuplicateCandidate`, `UnboundCandidate`, `IneligibleCandidate`, `UnboundEligible`, `NoSpeedups`, `DuplicateSpeedup`, `SpeedupOutOfRange`, `NoBlocks`, and `PlanRejected`.
+`TargetCausalDesign.tryCreate binding period eligible candidates speedups blocks seed progress` parses the experiment design.
+`progress` is `EndToEnd` or `Throughput durationMs`, with a duration from 1 to 60000 ms. It returns `Ok TargetCausalDesign` or `Error` with a list of `TargetCausalDesignError` values:
+`NoCandidates`, `DuplicateCandidate`, `UnboundCandidate`, `IneligibleCandidate`, `UnboundEligible`, `NoSpeedups`, `DuplicateSpeedup`, `SpeedupOutOfRange`, `NoBlocks`, `InvalidDuration`, and `PlanRejected`.
 `TargetCausalDesign.describe` gives the message for one error. A design has a private representation, and it keeps copies of its input arrays.
 
-`TargetCausalProfile.run design journalCapacity workers` runs the design in one process. `workers` is a function that returns new workers for each experiment.
+`TargetCausalProfile.run design journalCapacity workers` runs the design in one process. `workers` takes a new `TargetProgressCounter` and returns new workers for each experiment.
+For `Throughput`, workers call `Visit` once for each unit of work and stop when `Stopped` is true. The driver calls `Stop` when the duration has passed after a worker starts to work, and also when its monitor fails.
+A watcher thread also calls `Stop` 1 s plus ten times the duration after the experiment starts, so a run that never reaches its monitor still ends.
+An experiment that the watcher stops does not pass, and its error names the safety stop.
 Each experiment calls `TargetLocalProfiler.runBound` with one candidate as the selected symbol.
 
 1. Only `tryCreate` makes a design, so `run` receives only valid candidates, speedups, blocks, and a period that the replay plan accepts.
@@ -117,10 +121,11 @@ Each experiment calls `TargetLocalProfiler.runBound` with one candidate as the s
 3. Each `TargetCausalExperiment` holds `Block`, `Order`, `Candidate`, `Speedup`, `ElapsedNs`, `GlobalNs`, `EffectiveNs`, `Passed`, and `Error`.
    An experiment that raises an exception keeps the exception type and message. An experiment that does not pass keeps each cause that rejected it: binding, replay, ledger, close, signal, and thread errors, including handler intervals of 5 ms or more. `Passed` is then false.
 4. Each `TargetCausalPoint` holds one prediction for each block, `1 - E / E0`, where E0 is the baseline of the same block.
-   A prediction is `None` when the experiment or its baseline did not pass. `ValidBlocks` counts the other blocks, and `MedianPrediction` is their median.
+   With visits V, the period of an experiment is `EffectiveNs / V`, and the prediction is `1 - P / P0`. For `EndToEnd`, V is 1.
+   A prediction is `None` when the experiment or its baseline did not pass or has no visits. `ValidBlocks` counts the other blocks, and `MedianPrediction` is their median.
 
 `TargetCausalProfile.run` requires Linux x64 through `runBound`. The design and the prediction code are portable.
-The progress point is the end of the workload. Throughput progress points are not supported.
+Each `TargetCausalExperiment` also holds `Visits`. A throughput experiment counts every visit from the first work start to the last finish.
 
 ## Code binding
 
@@ -182,6 +187,8 @@ No `publish`, `child`, or `deferred` event can belong to a blocked worker, and n
 | `profile-gc <speedup> <selectedRounds> <peerRounds> <intervalMs> <out>` | The profile result, with a forced blocking gen-2 GC every `intervalMs` from the main thread |
 | `rejit <out>` | The ReJIT check. It requires the test profiler from `native/rejit/ReJitProbe.Linux.cpp`. |
 | `causal-profile <seed> <out>` | One block of `TargetCausalProfile.run` with candidates `Work.selected` and `Work.peer` at speedups 25, 50, and 75, with 6000 and 3000 rounds |
+| `throughput-profile <seed> <out>` | One throughput block of 120 ms experiments. The workers repeat `Work.selected 40` and `Work.peer 20` with one visit after each call. |
+| `plain-throughput <selectedRounds> <peerRounds> <out>` | The same loops without the profiler for 120 ms, with the elapsed time and the visits |
 
 The profile mode requires `DOTNET_TieredCompilation=0`, `DOTNET_ReadyToRun=0`, `DOTNET_PerfMapEnabled=3`, and `DOTNET_PerfMapShowOptimizationTiers=1`.
 It uses `TargetLocalProfiler.runBound` and gets the optimized method ranges from a `CodeBinding`.
