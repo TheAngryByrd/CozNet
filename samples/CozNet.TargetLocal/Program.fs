@@ -54,6 +54,34 @@ module private Pinning =
     let recorded () = if isNull requested then null else lock seen (fun () -> seen.ToArray())
     let reset () = lock seen (fun () -> seen.Clear())
 
+module private Placement =
+    let private cores =
+        lazy Array.init 64 (fun cpu ->
+            try
+                let topology = $"/sys/devices/system/cpu/cpu{cpu}/topology"
+                Some(File.ReadAllText(topology + "/physical_package_id").Trim(), File.ReadAllText(topology + "/core_id").Trim())
+            with _ -> None)
+
+    let prepare () = cores.Force() |> ignore
+
+    let names = [| "sameCpu"; "sameCore"; "otherCore"; "unknown" |]
+
+    let classify (producer: int) (consumer: int) =
+        if producer < 0 || consumer < 0 then 3
+        elif producer = consumer then 0
+        elif producer > 63 || consumer > 63 then 3
+        else
+            match cores.Value[producer], cores.Value[consumer] with
+            | Some a, Some b when a = b -> 1
+            | Some _, Some _ -> 2
+            | _ -> 3
+
+    let limitsNs = [| 50_000.0; 150_000.0; 500_000.0; 2_000_000.0 |]
+
+    let bucket (ns: float) =
+        let index = limitsNs |> Array.tryFindIndex (fun limit -> ns < limit)
+        defaultArg index limitsNs.Length
+
 let private write (path: string) value =
     File.WriteAllText(path, JsonSerializer.Serialize(value, JsonSerializerOptions(WriteIndented = false)))
 
@@ -438,12 +466,13 @@ let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRou
                     passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
-type private QueueHandoffs(queue: TargetQueue<struct (int64 * int64)>) =
+type private QueueHandoffs(queue: TargetQueue<struct (int64 * int64 * int)>) =
     let mutable handoffs = 0L
     let mutable handoffTicks = 0L
     let mutable enqueues = 0L
     let mutable enqueueTicks = 0L
     let mutable spun = 0L
+    let placements = Array2D.zeroCreate<int64> Placement.names.Length (Placement.limitsNs.Length + 1)
     member _.Queue = queue
     member _.AddSpun() = Interlocked.Increment(&spun) |> ignore
     member _.Spun = Interlocked.Read(&spun)
@@ -452,9 +481,13 @@ type private QueueHandoffs(queue: TargetQueue<struct (int64 * int64)>) =
         Interlocked.Add(&enqueueTicks, max 0L (finished - started)) |> ignore
     member _.Enqueues = Interlocked.Read(&enqueues)
     member _.EnqueueNs = uint64 (Stopwatch.GetElapsedTime(0L, Interlocked.Read(&enqueueTicks)).TotalNanoseconds)
-    member _.Add(enqueued: int64, dequeued: int64) =
+    member _.Add(enqueued: int64, dequeued: int64, producer: int, consumer: int) =
         Interlocked.Increment(&handoffs) |> ignore
         Interlocked.Add(&handoffTicks, max 0L (dequeued - enqueued)) |> ignore
+        let ns = Stopwatch.GetElapsedTime(0L, max 0L (dequeued - enqueued)).TotalNanoseconds
+        Interlocked.Increment(&placements[Placement.classify producer consumer, Placement.bucket ns]) |> ignore
+    member _.Placements =
+        Placement.names |> Array.mapi (fun row name -> name, Array.init (Placement.limitsNs.Length + 1) (fun column -> Interlocked.Read(&placements[row, column]))) |> dict
     member _.Handoffs = Interlocked.Read(&handoffs)
     member _.HandoffNs = uint64 (Stopwatch.GetElapsedTime(0L, Interlocked.Read(&handoffTicks)).TotalNanoseconds)
 
@@ -463,35 +496,38 @@ let private beginTransactions (counter: TargetProgressCounter) (handoffs: QueueH
     while not counter.Stopped do
         let ticket = counter.Begin()
         Work.selected rounds |> ignore
+        let cpu = Pinning.sched_getcpu ()
         let started = Stopwatch.GetTimestamp()
-        queue.Enqueue(struct (ticket, started))
+        queue.Enqueue(struct (ticket, started, cpu))
         handoffs.AddEnqueue(started, Stopwatch.GetTimestamp())
-    queue.Enqueue(struct (-1L, 0L))
+    queue.Enqueue(struct (-1L, 0L, -1))
 
 let private endTransactions (counter: TargetProgressCounter) (handoffs: QueueHandoffs) rounds () =
     let queue = handoffs.Queue
     let mutable running = true
     while running do
         let spunBefore = queue.SpunDequeues
-        let struct (ticket, enqueued) = queue.Dequeue()
+        let struct (ticket, enqueued, producer) = queue.Dequeue()
         let dequeued = Stopwatch.GetTimestamp()
+        let consumer = Pinning.sched_getcpu ()
         if ticket < 0L then
             running <- false
         else
             if queue.SpunDequeues > spunBefore then handoffs.AddSpun()
-            handoffs.Add(enqueued, dequeued)
+            handoffs.Add(enqueued, dequeued, producer, consumer)
             Work.peer rounds |> ignore
             counter.End ticket
 
 let private transactionSpin = TimeSpan.FromMilliseconds 1.0
 
 let private transactionProfileWith (mode: string) (spin: TimeSpan) (seed: int) (rotation: int) (output: string) =
+    Placement.prepare ()
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
     let peerRange = binding.Range Work.peerName
     let queues = Collections.Generic.List<QueueHandoffs>()
     let workers (counter: TargetProgressCounter) =
-        let queue = TargetQueue<struct (int64 * int64)>(pipelineCapacity, spin)
+        let queue = TargetQueue<struct (int64 * int64 * int)>(pipelineCapacity, spin)
         let handoffs = QueueHandoffs queue
         queues.Add handoffs
         let cpus = Pinning.start ()
@@ -500,15 +536,16 @@ let private transactionProfileWith (mode: string) (spin: TimeSpan) (seed: int) (
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Latency throughputDuration)) journalCapacity workers
     let stats =
         queues
-        |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs; enqueues = q.Enqueues; enqueueNs = q.EnqueueNs; spunDequeues = q.Spun |})
+        |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs; enqueues = q.Enqueues; enqueueNs = q.EnqueueNs; spunDequeues = q.Spun; handoffPlacement = q.Placements |})
         |> Seq.toArray
     writeProfileWith mode seed rotation 40 8 throughputDuration null (box stats) profile output
 
 let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds peerRounds (output: string) =
+    Placement.prepare ()
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
     let counter = TargetProgressCounter()
-    let queue = TargetQueue<struct (int64 * int64)>(pipelineCapacity, spin)
+    let queue = TargetQueue<struct (int64 * int64 * int)>(pipelineCapacity, spin)
     let handoffs = QueueHandoffs queue
     let cpus = Pinning.start ()
     let ready = new Barrier(3)
@@ -531,7 +568,7 @@ let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds 
     write output {| mode = mode; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
                     elapsedNs = uint64 elapsed; visits = visits; arrivals = counter.Arrivals; latencyNs = counter.LatencyNs
                     handoffs = handoffs.Handoffs; handoffNs = handoffs.HandoffNs; enqueues = handoffs.Enqueues; enqueueNs = handoffs.EnqueueNs
-                    spunDequeues = handoffs.Spun; workerCpus = Pinning.requested; workerCpusSeen = Pinning.recorded (); passed = visits >= 100L |}
+                    spunDequeues = handoffs.Spun; handoffPlacement = handoffs.Placements; workerCpus = Pinning.requested; workerCpusSeen = Pinning.recorded (); passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
 type private Turns() =

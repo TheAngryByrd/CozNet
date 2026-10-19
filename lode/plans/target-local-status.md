@@ -678,4 +678,32 @@ The 1 ms run fails all six points:
   The other 31 plain arms of the run have mean handoffs of 11.0 to 192.0 microseconds, and 27 of them are below 100. Each slow arm ran after a passed warm-up, and the plain processes do not run the profiler.
   So a slow plain `original` arm moves its whole block, and a slow treatment arm moves its own point. The records do not show the cause of the long handoffs.
 
+## Handoff placement
+
+[The handoff placement plan](target-local-handoff-placement.md) records the CPU placement of each transaction handoff. `transaction` run `20261019T193820084-e379d1a4` ran once on the reviewed tree.
+
+- Criterion 119 rejects H7 as written. Of the 95 long handoffs with a known placement, none is `sameCpu`, 26 are `sameCore`, and 69 are `otherCore`.
+  Of the 8539 short handoffs, none is `sameCpu`, 3152 are `sameCore`, and 5387 are `otherCore`. No handoff of this pool has `sameCpu` or `unknown` placement.
+- The long handoffs are 0.9% of the 10,657 handoffs of the plain arms and the baselines. Of the long handoffs, 27% are `sameCore`, against 37% of the short handoffs. Both are mostly `otherCore`.
+- The warm-ups, which the pool excludes, hold the only 11 `sameCpu` handoffs of the run, and all of them are long. Three are in the plain `peer-25` warm-up of block 4, from 500 microseconds to 2 ms.
+  Eight are in the profile warm-up of block 4: two from 500 microseconds to 2 ms, and six of at least 2 ms. So a shared CPU can occur in a cold phase. These counts do not test H7.
+- The rejection does not exclude a long wake that ends with a move of the consumer. The cause of the long handoffs stays open.
+- No plain arm and no profile baseline of the run has a mean handoff of at least 150 microseconds, so criterion 120 has no slow arm to report, and H9 is not tested.
+  The profile `selected-75` experiments of blocks 1 and 2 have means of 237.4 and 165.9 microseconds, but they pay delay inside the handoff, so the plan excludes them.
+
+The run has five valid blocks and no debt failure. Five points pass, the first `transaction` run to do so:
+
+| Point | Signed median | Median of absolute values | Largest absolute value |
+| --- | ---: | ---: | ---: |
+| `selected-25` | 1.36 | 2.27 | 3.05 |
+| `selected-50` | -1.50 | 1.50 | 6.51 |
+| `selected-75` | -10.48 | 10.48 | 16.97 |
+| `peer-25` | 3.85 | 4.46 | 4.48 |
+| `peer-50` | 0.73 | 1.85 | 6.49 |
+| `peer-75` | 1.02 | 1.03 | 4.71 |
+
+- `selected-75` fails again. Its signed median is -11.83, -10.92, and -10.48 points in the three runs at 1 ms after the settlement change.
+- This run has no slow plain arm, and it passes the other five points. One run cannot show that the five points pass in general.
+- Two of the five runs of the transaction suites after the settlement change have a debt failure.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

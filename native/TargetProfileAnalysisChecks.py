@@ -1,6 +1,6 @@
 import unittest
 
-from AnalyzeTargetProfile import (period_matches, plain_warmups_passed, pinning_complete, handoff_parts, queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
+from AnalyzeTargetProfile import (placement_complete, period_matches, plain_warmups_passed, pinning_complete, handoff_parts, queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
                                   order_ratios,
                                   positions_balanced,
                                   prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
@@ -325,6 +325,15 @@ class ThroughputChecks(unittest.TestCase):
         self.assertFalse(pinning_complete({**profile, "workerCpusSeen": [[0, 2]]}, plain, [0, 2]))
         same = {**profile, "workerCpus": [0, 0], "workerCpusSeen": [[0, 0], [0, 0], [-1, -1]]}
         self.assertFalse(pinning_complete(same, {"original": {"workerCpus": [0, 0], "workerCpusSeen": [[0, 0]]}}, [0, 0]))
+
+    def test_handoff_placement_must_add_up_to_the_handoffs(self):
+        rows = {"sameCpu": [1, 0, 2, 0, 0], "sameCore": [3, 0, 0, 0, 0], "otherCore": [4, 1, 0, 0, 0], "unknown": [0, 0, 0, 0, 0]}
+        self.assertTrue(placement_complete({"handoffs": 11, "handoffPlacement": rows}))
+        self.assertFalse(placement_complete({"handoffs": 12, "handoffPlacement": rows}))
+        self.assertFalse(placement_complete({"handoffs": 11, "handoffPlacement": {k: v for k, v in rows.items() if k != "unknown"}}))
+        self.assertFalse(placement_complete({"handoffs": 11, "handoffPlacement": {**rows, "sameCpu": [1, 0, 2, 0]}}))
+        self.assertFalse(placement_complete({"handoffs": 9, "handoffPlacement": {**rows, "sameCpu": [-1, 0, 2, 0, 0]}}))
+        self.assertTrue(placement_complete({"handoffs": 5}))
 
     def test_profile_period_must_match_the_run(self):
         self.assertTrue(period_matches({}, None))

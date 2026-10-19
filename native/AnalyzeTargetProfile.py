@@ -174,6 +174,20 @@ TRANSACTIONS = ("transaction", "spintransaction")
 QUEUE_KEYS = ("handoffs", "handoffNs", "enqueues", "enqueueNs", "spunDequeues")
 
 
+PLACEMENTS = ("sameCpu", "sameCore", "otherCore", "unknown")
+
+
+def placement_complete(record):
+    if "handoffPlacement" not in record:
+        return True
+    counts = record["handoffPlacement"]
+    if not isinstance(counts, dict) or sorted(counts) != sorted(PLACEMENTS):
+        return False
+    if not all(isinstance(row, list) and len(row) == 5 and all(type(c) is int and c >= 0 for c in row) for row in counts.values()):
+        return False
+    return sum(sum(row) for row in counts.values()) == record.get("handoffs")
+
+
 def queue_stats_complete(profile, arms):
     stats = profile.get("queueStats") if isinstance(profile, dict) else None
     if not isinstance(stats, list) or len(stats) != len(profile["experiments"]) + 1:
@@ -182,11 +196,11 @@ def queue_stats_complete(profile, arms):
     runs = [profile["warmup"]] + profile["experiments"] if isinstance(profile.get("warmup"), dict) else None
     if runs is None or not all(isinstance(s, dict) and all(type(s.get(k)) is int and s[k] >= 0 for k in QUEUE_KEYS) for s in stats):
         return False
-    if not all(s["spunDequeues"] <= s["handoffs"] for s in stats):
+    if not all(s["spunDequeues"] <= s["handoffs"] and placement_complete(s) for s in stats):
         return False
     if not all(s["handoffs"] == e.get("Visits") and s["enqueues"] == s["handoffs"] for s, e in zip(stats, [runs[0]] + sorted(runs[1:], key=lambda e: e.get("Order", 0))) if e.get("Passed")):
         return False
-    return all(all(type(v.get(k)) is int and v[k] >= 0 for k in QUEUE_KEYS) and v["handoffs"] == v.get("visits") and v["enqueues"] == v["handoffs"] and v["spunDequeues"] <= v["handoffs"] for v in plain)
+    return all(all(type(v.get(k)) is int and v[k] >= 0 for k in QUEUE_KEYS) and v["handoffs"] == v.get("visits") and v["enqueues"] == v["handoffs"] and v["spunDequeues"] <= v["handoffs"] and placement_complete(v) for v in plain)
 
 
 def handoff_parts(profile, plain):

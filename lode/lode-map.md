@@ -29,6 +29,7 @@ For the spin before a queue wait and the spin transaction suite, read [target-lo
 For the parts of a queue handoff and the spin take count, read [target-local handoff parts](plans/target-local-handoff-parts.md).
 For the worker pinning diagnostic, read [target-local worker pinning](plans/target-local-worker-pinning.md).
 For the diagnostic sample period and the `selected-75` over-correction, read [target-local sample period](plans/target-local-sample-period.md).
+For the CPU placement of each transaction handoff, read [target-local handoff placement](plans/target-local-handoff-placement.md).
 For the user decision on bounds and the matched plain warm-up, read [target-local plain warm-up](plans/target-local-plain-warmup.md).
 For the `selected` bias of the transaction points and the payment before each progress stamp, read [target-local progress settlement](plans/target-local-progress-settlement.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).
