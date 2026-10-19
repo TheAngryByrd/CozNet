@@ -881,7 +881,8 @@ The prediction results:
 ## Boundary export
 
 [The boundary export plan](target-local-boundary-export.md) adds ordered reads of the counters and the clock at the start and the stop of each experiment of the diagnostic mode.
-- The reads follow the upstream read order. Upstream also takes no common-instant snapshot, so the export does not claim one.
+- The export makes upstream-like ordered reads and evaluates the pinned formula with G rebuilt from the journal. It does not reproduce the upstream delay reads or the repeated counter reads, and its counters belong to one experiment, not to the process.
+  Upstream also takes no common-instant snapshot, so the export does not claim one.
 - G at those times comes from the journal publishes ordered by time.
 - Deterministic tests cover the races between counts and stamps, the boundary publishes, and the undefined cases. No capture has used the export yet.
 

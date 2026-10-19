@@ -27,7 +27,8 @@ So upstream takes no common-instant snapshot. Its counters, its clock, and its g
 
 ## Contract
 
-The export follows the upstream read order. It is not a linearizable snapshot.
+The export makes upstream-like ordered reads and evaluates the pinned formula with G rebuilt from the journal. It is not a linearizable snapshot.
+It does not reproduce the upstream reads of the global delay, or the repeated counter reads of the upstream log. Its counters belong to one experiment, and the upstream counters belong to the whole process.
 - Start observation, when a worker first works: read the arrivals, then the visits, then the clock.
 - Stop observation, after the requested duration: read the clock, then the arrivals, then the visits, then the clock again, then call `Stop`, then read the clock again.
 - G at an observation time is the journal publishes ordered by time, as in `virtualLatency`. It is not a read of the global delay at that instant.
@@ -67,5 +68,23 @@ These criteria are fixed before the reviews. They add to criteria 1 to 154 and c
 156. A unit test of `stopAfterObserved` covers the read order, the counts at both observations, the requested duration, and a run that never works.
 157. Unit checks of the analyzer cover a missing or malformed boundary, reads out of order, a boundary with a reason, undefined upstream values, and the viewer aggregate.
 158. No live capture runs in this step.
+
+## Capture phase
+
+The supervisor approved on 2026-10-19 exactly one live paired capture, to exercise the boundary evidence. Criterion 158 stays true for the implementation phase, which ran no capture.
+- Implementation: the reviewed commit `156db99`. The capture runs on a later commit that changes only plans and docs, so its implementation files equal those of `156db99`.
+- Command: `pwsh -NoProfile -File native/VerifyTargetLocalBottleneck.ps1`, without `-Probe` and without other instrumentation. The work, the seed, the order, the duration, the peer settings, the sample period, the capacity bounds, and the warm-up do not change.
+- No retry, no replacement of a failed arm, and no pooling with other captures. All earlier captures and all criteria stay. The capture is not a qualification claim.
+- If the harness cannot run as planned, the capture stops, and no unreviewed timing change is made. All timing collection stops after this one capture, whatever its outcome.
+
+These criteria are fixed before the capture. They add to criteria 1 to 158 and change none.
+
+159. The capture runs exactly once, and it is retained with its manifest, whatever its outcome.
+160. The report gives the boundary availability and each exclusion reason, the protocol-valid blocks, and the unchanged label of criterion 137.
+161. The report compares the clipped, signed, and boundary-derived predictions with the same plain arm, on the same eligible blocks for each comparison. It gives the values of each block before any aggregate.
+     A comparison between peers uses only the blocks that are eligible for both. A gain from a zero or undefined baseline is reported as undefined.
+162. The report gives the distributions and outliers of the stop-read span, the span from the first stop clock to the clock after `Stop`, the signed count-versus-stamp differences, the begins after `Stop`, and the drain extent. It sets no new pass limit.
+     These brackets bound some effects of the observation, but they cannot measure all the added delay of the monitor or prove atomicity.
+163. A few boundary samples cannot establish a stationary latency estimate or a causal mechanism. The report states this.
 
 See [target-local latency estimator](target-local-latency-estimator.md), [target-local latency model](target-local-latency-model.md), and [target-local status](target-local-status.md).
