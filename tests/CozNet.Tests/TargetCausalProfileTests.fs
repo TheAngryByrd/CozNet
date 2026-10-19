@@ -234,6 +234,17 @@ module TargetCausalProfileTests =
                     "Equal times must count together, and a lower later value must not lower the global delay."
             }
 
+            test "the hand-worked latency trace gives the virtual-time latency of each complete transaction" {
+                let publish sequence time value = { Worker = 0; Sequence = sequence; Kind = TargetLedgerEventKind.Publish; ObservedGlobal = 0UL; LocalBefore = value; Amount = value
+                                                    Requested = 0UL; Ip = 0UL; Detail = 0u; Time = time }
+                let events = [| publish 1UL 25UL 10UL; publish 2UL 60UL 30UL |]
+                let one (b: int64) (e: int64) = TargetCausalProfile.virtualLatency events [| struct (b, e) |]
+                Expect.equal (one 5L 40L, one 20L 70L, one 60L 90L) ((25UL, 0), (20UL, 0), (30UL, 0))
+                    "T1 must subtract the first step, T2 both steps, and T3, which begins at the second step, neither."
+                Expect.equal (TargetCausalProfile.virtualLatency events [| struct (5L, 40L); struct (20L, 70L); struct (60L, 90L) |]) (75UL, 0)
+                    "The three complete transactions must give the virtual-time integral of their occupancy, 115 - 40 ns."
+            }
+
             test "a counter counts arrivals, departures, and latency" {
                 let counter = TargetProgressCounter()
                 let first = counter.Begin()

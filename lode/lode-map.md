@@ -33,6 +33,7 @@ For the CPU placement of each transaction handoff, read [target-local handoff pl
 For the wake time of the consumer after idle time and the `selected-75` error, read [target-local wake after idle](plans/target-local-wake-idle.md).
 For the command that runs every suite as one package, read [target-local qualification package](plans/target-local-qualification-package.md).
 For the paid delay inside each transaction window, read [target-local window payment](plans/target-local-window-payment.md).
+For the pinned upstream latency rule, the hand-worked trace, and the paired peer-work diagnostic, read [target-local latency estimator](plans/target-local-latency-estimator.md).
 For the user decision on bounds and the matched plain warm-up, read [target-local plain warm-up](plans/target-local-plain-warmup.md).
 For the `selected` bias of the transaction points and the payment before each progress stamp, read [target-local progress settlement](plans/target-local-progress-settlement.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).

@@ -788,4 +788,29 @@ The run has five valid blocks and no debt failure, and it passes four points:
 - `selected-75` fails with a signed median of -12.54 points. It has failed in all six runs at 1 ms after the settlement change.
 - `peer-75` fails by one block of 23.91 points. Its median is 3.43 points.
 
+## Latency estimator and paired peer work
+
+[The latency estimator plan](target-local-latency-estimator.md) documents the pinned upstream rule. The CozNet rule is exact virtual-time Little's law for complete transactions without clipped values. It is an intentional extension, and the hand-worked trace shows no porting defect.
+
+Paired diagnostic run `20261019T213806586-069c2adf` ran once on the reviewed tree. Its inputs did not change, and all 50 arms exited with 0.
+- Peer 8 has 5 valid blocks. Peer 2 has 4: in block 1, the plain `original` warm-up for peer 2 has 95 visits and did not pass. The common valid blocks are 2 to 5.
+- These are medians over the common blocks:
+
+| Peer | `selected-25` | `selected-50` | `selected-75` | `selected-75`, upstream rule | `ready` share of the profile at 75% |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | -0.63 | -1.23 | -12.85 | +2.10 | 0.296 |
+| 2 | -3.45 | -2.09 | -4.02 | +1.41 | 0.063 |
+
+- Criterion 137 gives the label "congestion supported": S8 is -12.85, S2 is -4.02, R2 is 0.063, with 4 common blocks. This label supports the congestion hypothesis. It does not prove it.
+- A handoff is `ready` when the producer clock read before `Enqueue` comes before the consumer clock read before `Dequeue`. A producer preemption after its read can class a blocked dequeue as `ready`.
+  So the `ready` share does not show that the item was in the queue, and it does not measure the queue depth or the critical path. Its 10% limit is only descriptive.
+- The peer 8 error of the transaction suite repeats in all 5 blocks, from -9.4 to -17.8 points.
+- The peer 2 blocks spread from -6.3 to 5.7 points, so 2 of the 4 common blocks are outside 5 points.
+- Each profile `selected` 75% experiment for peer 2 has 4 to 22 clipped transactions with a negative virtual latency. So the identity with Little's law does not hold there, and the window rate is not available for peer 2. Peer 8 has no clipped transaction.
+- At 75%, the window rate for peer 8 is 0.623 against an overall delay rate of 0.734, the deficit of the transaction suite. The overall delay rate for peer 2 is 0.731.
+- The idle classes are time intervals between two clock reads, which can include a preemption, so they are a proxy for the consumer idle time.
+  For peer 2, the plain `selected-75` arm has 2325 of its 2562 handoffs in the class of 100 to 400 microseconds. For peer 8, it has 3012 of 3357 below 100 microseconds. This is the confound of criterion 138.
+- The medians of the upstream rule are within 3.6 points at every point for both peers, but single blocks reach 22.1 points.
+- Block 5 repeats the experiment order of block 1, so the positions are not balanced.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

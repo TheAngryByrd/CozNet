@@ -356,12 +356,15 @@ let private loop (counter: TargetProgressCounter) (work: uint64 -> uint64) round
         work rounds |> ignore
         counter.Visit()
 
-let private profileDesign binding seed rotation progress =
-    TargetCausalDesign.tryCreate binding period [| Work.selectedName; Work.peerName |] [| Work.selectedName; Work.peerName |] [| 25u; 50u; 75u |] 1 seed rotation progress
+let private profileDesignFor candidates binding seed rotation progress =
+    TargetCausalDesign.tryCreate binding period [| Work.selectedName; Work.peerName |] candidates [| 25u; 50u; 75u |] 1 seed rotation progress
     |> Result.defaultWith (fun errors -> failwith (errors |> List.map TargetCausalDesign.describe |> String.concat " "))
 
+let private profileDesign binding seed rotation progress =
+    profileDesignFor [| Work.selectedName; Work.peerName |] binding seed rotation progress
+
 let private writeProfileWith mode seed (rotation: int) selectedRounds peerRounds durationMs (lockStats: obj) (queueStats: obj) (profile: TargetCausalProfileResult) (output: string) =
-    let passed = profile.Experiments.Length = 7 && profile.Experiments |> Array.forall _.Passed
+    let passed = profile.Experiments.Length = profile.Points.Length + 1 && profile.Experiments |> Array.forall _.Passed
     let points =
         profile.Points
         |> Array.map (fun p -> {| candidate = p.Candidate; speedup = p.Speedup; prediction = p.Predictions[0] |> Option.toNullable |})
@@ -538,7 +541,7 @@ let private endTransactions (counter: TargetProgressCounter) (handoffs: QueueHan
 
 let private transactionSpin = TimeSpan.FromMilliseconds 1.0
 
-let private transactionProfileWith (mode: string) (spin: TimeSpan) (seed: int) (rotation: int) (output: string) =
+let private transactionProfileWith (mode: string) (spin: TimeSpan) (candidates: string array) (peerRounds: uint64) (seed: int) (rotation: int) (output: string) =
     Placement.prepare ()
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
@@ -550,13 +553,13 @@ let private transactionProfileWith (mode: string) (spin: TimeSpan) (seed: int) (
         queues.Add handoffs
         let cpus = Pinning.start ()
         [| { Work = Pinning.wrap cpus 0 (beginTransactions counter handoffs 40UL); PaymentIp = fst selectedRange }
-           { Work = Pinning.wrap cpus 1 (endTransactions counter handoffs 8UL); PaymentIp = fst peerRange } |]
-    let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Latency throughputDuration)) journalCapacity workers
+           { Work = Pinning.wrap cpus 1 (endTransactions counter handoffs peerRounds); PaymentIp = fst peerRange } |]
+    let profile = TargetCausalProfile.run (profileDesignFor candidates binding seed rotation (Latency throughputDuration)) journalCapacity workers
     let stats =
         queues
         |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs; enqueues = q.Enqueues; enqueueNs = q.EnqueueNs; spunDequeues = q.Spun; handoffPlacement = q.Placements; handoffIdle = q.Idles |})
         |> Seq.toArray
-    writeProfileWith mode seed rotation 40 8 throughputDuration null (box stats) profile output
+    writeProfileWith mode seed rotation 40 (int peerRounds) throughputDuration null (box stats) profile output
 
 let private plainTransactionWith (mode: string) (spin: TimeSpan) selectedRounds peerRounds (output: string) =
     Placement.prepare ()
@@ -823,9 +826,11 @@ let main argv =
     | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> warmed (plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
     | [| "lock-profile"; seed; rotation; output |] -> lockProfileWith "lock-profile" TimeSpan.Zero (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-lock"; selectedRounds; peerRounds; output |] -> warmed (plainLockWith "plain-lock" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
-    | [| "transaction-profile"; seed; rotation; output |] -> transactionProfileWith "transaction-profile" TimeSpan.Zero (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "transaction-profile"; seed; rotation; output |] -> transactionProfileWith "transaction-profile" TimeSpan.Zero [| Work.selectedName; Work.peerName |] 8UL (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "transaction-selected-profile"; peer; seed; rotation; output |] ->
+        transactionProfileWith "transaction-selected-profile" TimeSpan.Zero [| Work.selectedName |] (UInt64.Parse peer) (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-transaction"; selectedRounds; peerRounds; output |] -> warmed (plainTransactionWith "plain-transaction" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
-    | [| "spin-transaction-profile"; seed; rotation; output |] -> transactionProfileWith "spin-transaction-profile" transactionSpin (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "spin-transaction-profile"; seed; rotation; output |] -> transactionProfileWith "spin-transaction-profile" transactionSpin [| Work.selectedName; Work.peerName |] 8UL (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-spin-transaction"; selectedRounds; peerRounds; output |] -> warmed (plainTransactionWith "plain-spin-transaction" transactionSpin (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
     | [| "semaphore-profile"; seed; rotation; output |] -> semaphoreProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-semaphore"; selectedRounds; peerRounds; output |] -> warmed (plainSemaphore (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output

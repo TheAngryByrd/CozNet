@@ -171,6 +171,7 @@ def handoff_shares(profile, plain, candidate, speedup):
 
 
 TRANSACTIONS = ("transaction", "spintransaction")
+TRANSACTION_MODES = ("transaction-profile", "spin-transaction-profile", "transaction-selected-profile")
 QUEUE_KEYS = ("handoffs", "handoffNs", "enqueues", "enqueueNs", "spunDequeues")
 
 
@@ -286,11 +287,11 @@ def prediction(record, candidate, speedup):
         return None
     if baseline.get("Visits", 1) <= 0 or point.get("Visits", 1) <= 0:
         return None
-    if record.get("mode") in ("transaction-profile", "spin-transaction-profile") and "VirtualLatencyNs" in baseline:
+    if record.get("mode") in TRANSACTION_MODES and "VirtualLatencyNs" in baseline:
         if not all(type(e.get(k)) is int and e[k] > 0 for e in (baseline, point) for k in ("VirtualLatencyNs", "Visits")):
             return None
         return 1 - (point["VirtualLatencyNs"] / point["Visits"]) / (baseline["VirtualLatencyNs"] / baseline["Visits"])
-    if record.get("mode") in ("transaction-profile", "spin-transaction-profile"):
+    if record.get("mode") in TRANSACTION_MODES:
         fields = ("LatencyNs", "ElapsedNs", "EffectiveNs", "Visits")
         if not all(type(e.get(k)) is int and e[k] > 0 for e in (baseline, point) for k in fields):
             return None
