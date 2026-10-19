@@ -320,4 +320,23 @@ The other suites on the same tree:
   Its start run-queue delay is 3.75 ms, and its residual run-queue delay is 0.11 ms. The peer starts work late, and the failure comes 1.38 ms after the work start, after more credit and payment.
   The start delay is consistent with the late start, but the records do not show that it causes the failure.
 
+## Spin lock
+
+[The spin lock plan](target-local-spin-lock.md) adds a spin of up to 1 ms before a `TargetLock` wait and a `spinlock` suite. The `lock` suite keeps a spin of 0.
+Lock run `20261019T074433206-6d45795e`, with a spin of 0, fails `selected-50` and `selected-75`.
+- `selected-50` has a median difference of 7.89 points. All five blocks are below the actual gain, from -3.97 to -9.08 points.
+- `selected-75` has a median of 5.07 points, and block 2 is at +10.51 points.
+- At `selected-50`, the median handoff share is 7.97% in the profile and 1.22% in the real optimization.
+Spin lock run `20261019T074539772-03c40325` fails, because blocks 4 and 5 are invalid. In each of them, the `peer` experiment at 75% has 97 or 98 visits, below the floor of 100.
+- In the three valid blocks, `selected-50` predicts 47.36% against 48.58%, a median difference of 1.77 points. Each block is within 3 points.
+- At `selected-50`, the median handoff share is 2.84% in the profile and 0.53% in the real optimization.
+- `selected-75` has a median difference of 6.87 points. All three blocks are above the actual gain.
+The run fails criterion 68 of [the spin lock plan](target-local-spin-lock.md). Criteria 67 and 69 hold, and criterion 70 is checked after the commit.
+So with the spin, the knee error and the profile handoff share both fall. This supports the handoff hypothesis, but it does not show it. The spin also changes the workload, and only three blocks are valid.
+
+The other suites on the same tree:
+- Pipeline run `20261019T074639406-cf96acce`, throughput run `20261019T074738456-b0d0236a`, transition run `20261019T074936096-7103de7f`, prediction run `20261019T075004985-14232a40`, and barrier run `20261019T075126709-39bc016f` pass.
+- Latency profile run `20261019T074837405-5db1c839` fails, because block 1 is invalid. Its `selected` experiment at 75% records ledger failure 1, the 2 ms debt bound.
+  In that experiment, thread 1 has 8.41 ms of run-queue delay, and its wall time exceeds its CPU time by 8.38 ms. The four valid blocks are within the limits.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

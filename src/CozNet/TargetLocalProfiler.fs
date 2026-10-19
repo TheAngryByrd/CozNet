@@ -269,7 +269,7 @@ module internal TargetWait =
             TargetCurrent.Record(TargetLocalNative.Post(handle, TargetCurrent.PaymentIp, &posted))
             posted
 
-    let internal acquire (semaphore: SemaphoreSlim) (timeout: TimeSpan) (cancellation: CancellationToken) (onAcquired: bool -> uint64 voption) =
+    let internal acquireWithSpin (spin: TimeSpan) (semaphore: SemaphoreSlim) (timeout: TimeSpan) (cancellation: CancellationToken) (onAcquired: bool -> uint64 voption) =
         if cancellation.IsCancellationRequested || TargetCurrent.Abort.IsCancellationRequested then
             false
         elif semaphore.Wait 0 then
@@ -288,11 +288,33 @@ module internal TargetWait =
             use linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, TargetCurrent.Abort)
 
             try
+                let started = Stopwatch.GetTimestamp()
+                let spinLimit =
+                    if timeout = Timeout.InfiniteTimeSpan then spin
+                    elif timeout < TimeSpan.Zero then TimeSpan.Zero
+                    else min spin timeout
+
+                let spun =
+                    let limit = started + int64 (spinLimit.TotalSeconds * float Stopwatch.Frequency)
+                    let mutable taken = false
+                    let mutable waiter = SpinWait()
+                    while not taken && Stopwatch.GetTimestamp() < limit && not linked.Token.IsCancellationRequested do
+                        waiter.SpinOnce(-1)
+                        taken <- semaphore.Wait 0
+                    taken
+
                 let acquired =
-                    try
-                        if semaphore.Wait(timeout, linked.Token) then TargetWakeReason.Dependency else TargetWakeReason.Timeout
-                    with :? OperationCanceledException ->
-                        TargetWakeReason.Cancelled
+                    if spun then
+                        TargetWakeReason.Dependency
+                    else
+                        let remaining =
+                            if spinLimit <= TimeSpan.Zero || timeout = Timeout.InfiniteTimeSpan then timeout
+                            else max TimeSpan.Zero (timeout - Stopwatch.GetElapsedTime(started))
+
+                        try
+                            if semaphore.Wait(remaining, linked.Token) then TargetWakeReason.Dependency else TargetWakeReason.Timeout
+                        with :? OperationCanceledException ->
+                            TargetWakeReason.Cancelled
 
                 reason <-
                     if acquired = TargetWakeReason.Dependency then
@@ -310,6 +332,8 @@ module internal TargetWait =
                     TargetCurrent.RecordWait(before, TargetCurrent.RunQueue())
 
             reason = TargetWakeReason.Dependency || reason = TargetWakeReason.Spurious
+
+    let internal acquire semaphore timeout cancellation onAcquired = acquireWithSpin TimeSpan.Zero semaphore timeout cancellation onAcquired
 
 type TargetQueue<'T>(capacity: int) =
     do
@@ -376,7 +400,11 @@ type TargetQueue<'T>(capacity: int) =
         | ValueSome item -> item
         | ValueNone -> raise (OperationCanceledException "The run aborted the dequeue.")
 
-type TargetLock() =
+type TargetLock(spin: TimeSpan) =
+    do
+        if spin < TimeSpan.Zero || spin > TimeSpan.FromMilliseconds 1.0 then
+            raise (ArgumentOutOfRangeException(nameof spin, "The spin must be from 0 to 1 ms."))
+
     let gate = new SemaphoreSlim(1)
     let mutable releaseToken = 0UL
     let mutable releasedTicks = 0L
@@ -399,7 +427,7 @@ type TargetLock() =
             if blocked then acquired <- Stopwatch.GetTimestamp()
             ValueSome(Volatile.Read &releaseToken)
 
-        if TargetWait.acquire gate timeout cancellation take then
+        if TargetWait.acquireWithSpin spin gate timeout cancellation take then
             if acquired > 0L then
                 let released = Volatile.Read &releasedTicks
                 if released > 0L then
@@ -414,6 +442,10 @@ type TargetLock() =
     member this.Enter() =
         if not (this.Enter(Timeout.InfiniteTimeSpan, CancellationToken.None)) then
             raise (OperationCanceledException "The run aborted the lock wait.")
+
+    new() = TargetLock(TimeSpan.Zero)
+
+    member _.Spin = spin
 
     member _.Exit() =
         if Interlocked.CompareExchange(&owner, 0, Environment.CurrentManagedThreadId) <> Environment.CurrentManagedThreadId then

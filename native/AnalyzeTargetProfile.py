@@ -11,7 +11,8 @@ SEED = 20261018
 WORKLOADS = {"latency": {"profile": "causal-profile", "plain": "plain", "selected": 6000, "peer": 3000, "durationMs": 0},
              "throughput": {"profile": "throughput-profile", "plain": "plain-throughput", "selected": 40, "peer": 20, "durationMs": 120},
              "pipeline": {"profile": "pipeline-profile", "plain": "plain-pipeline", "selected": 40, "peer": 20, "durationMs": 120},
-             "lock": {"profile": "lock-profile", "plain": "plain-lock", "selected": 40, "peer": 20, "durationMs": 120}}
+             "lock": {"profile": "lock-profile", "plain": "plain-lock", "selected": 40, "peer": 20, "durationMs": 120},
+             "spinlock": {"profile": "spin-lock-profile", "plain": "plain-spin-lock", "selected": 40, "peer": 20, "durationMs": 120}}
 MIN_VISITS = 100
 SPEEDUPS = (25, 50, 75)
 SELECTED_NAME = "CozNet.TargetLocal.Work::selected(uint64)"
@@ -206,7 +207,7 @@ def main():
             reasons.append("a passed experiment does not hold two thread records")
         elif not warmup_present(profile):
             reasons.append("the profile record does not hold its warm-up experiment")
-        elif workload == "lock" and not lock_stats_complete(profile, data):
+        elif workload in ("lock", "spinlock") and not lock_stats_complete(profile, data):
             reasons.append("a lock record does not hold its handoff counts")
         reasons += [f"{arm} not passed" for arm, value in data.items() if value is not None and not value.get("passed")]
         reasons += [f"{arm} has fewer than {MIN_VISITS} visits" for arm, value in data.items() if value is not None and not visits_sufficient(value, workload)]
@@ -219,7 +220,7 @@ def main():
                 actual = actual_gain(original, optimized, workload)
                 points[key] = {"predicted": predicted, "actual": actual, "workRatios": work_ratios(profile, name, speedup) if complete else None,
                                "handoffShares": handoff_shares(profile, optimized, name, speedup)
-                               if complete and workload == "lock" and lock_stats_complete(profile, data) else None,
+                               if complete and workload in ("lock", "spinlock") and lock_stats_complete(profile, data) else None,
                                "difference": None if predicted is None or actual is None else predicted - actual}
         blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "points": points,
                        "orderRatios": order_ratios(profile) if complete else {},
@@ -256,7 +257,7 @@ def main():
     order_summary = {str(o): [statistics.median(r[i] for r in rows) for i in range(2)] for o, rows in sorted(by_order.items())}
     summary = {"passed": passed, "workload": workload, "positionsBalanced": balanced, "warmupsPassed": warmups, "medianWorkRatioByOrder": order_summary, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
                "points": summary_points, "blocks": blocks,
-               "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + {"throughput": "throughput progress point", "pipeline": "throughput progress point behind a TargetQueue", "lock": "throughput progress point with a TargetLock"}.get(workload, "end-to-end progress point"),
+               "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + {"throughput": "throughput progress point", "pipeline": "throughput progress point behind a TargetQueue", "lock": "throughput progress point with a TargetLock", "spinlock": "throughput progress point with a TargetLock that spins up to 1 ms"}.get(workload, "end-to-end progress point"),
                "generalClrSafetyEstablished": False}
     (run / "summary.json").write_text(json.dumps(summary, indent=2))
     return 0 if passed else 1

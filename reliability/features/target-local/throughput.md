@@ -1,6 +1,6 @@
 # Target-local throughput profile
 
-Evidence: `artifacts/target-local-throughput/20261019T070536063-c1a60568`.
+Evidence: `artifacts/target-local-throughput/20261019T074738456-b0d0236a`.
 
 `TargetLocalThroughputVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `throughput-profile` process and seven `plain-throughput` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the throughput plan](../../../lode/plans/target-local-throu
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 10.38% | 8.72% | 0.70 pp | 5.94 pp | Pass |
-| `selected-50` | 5 / 5 | 24.69% | 25.55% | 1.11 pp | 5.59 pp | Pass |
-| `selected-75` | 5 / 5 | 48.23% | 50.60% | 2.73 pp | 4.72 pp | Pass |
-| `peer-25` | 5 / 5 | 19.09% | 18.64% | 0.98 pp | 3.84 pp | Pass |
-| `peer-50` | 5 / 5 | 38.96% | 39.07% | 1.42 pp | 4.10 pp | Pass |
-| `peer-75` | 5 / 5 | 65.70% | 66.97% | 1.87 pp | 4.08 pp | Pass |
+| `selected-25` | 5 / 5 | 9.50% | 9.59% | 1.59 pp | 5.22 pp | Pass |
+| `selected-50` | 5 / 5 | 24.27% | 25.52% | 1.62 pp | 2.63 pp | Pass |
+| `selected-75` | 5 / 5 | 48.46% | 50.07% | 1.67 pp | 3.13 pp | Pass |
+| `peer-25` | 5 / 5 | 17.19% | 17.09% | 1.95 pp | 4.09 pp | Pass |
+| `peer-50` | 5 / 5 | 38.64% | 39.92% | 1.21 pp | 1.34 pp | Pass |
+| `peer-75` | 5 / 5 | 65.11% | 66.62% | 2.06 pp | 2.84 pp | Pass |
 
 If both workers have the same cost for each round, the expected gains are 10%, 25%, and 50% for `Work.selected` and 18.2%, 40%, and 66.7% for `Work.peer`. The criteria use the measured gains.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 1.196, 0.896 |
-| `selected-50` | 1.497, 0.752 |
-| `selected-75` | 2.012, 0.517 |
-| `peer-25` | 0.812, 1.073 |
-| `peer-50` | 0.612, 1.207 |
-| `peer-75` | 0.343, 1.331 |
+| `selected-25` | 1.196, 0.906 |
+| `selected-50` | 1.489, 0.757 |
+| `selected-75` | 1.995, 0.516 |
+| `peer-25` | 0.828, 1.096 |
+| `peer-50` | 0.614, 1.213 |
+| `peer-75` | 0.349, 1.353 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.798, 1.062; order 4: 1.000, 1.000; order 5: 1.214, 0.914; order 6: 1.180, 0.896. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.841, 1.120; order 4: 1.000, 1.000; order 5: 1.264, 0.944; order 6: 1.252, 0.942. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -4.42 pp | -2.23 pp | -2.73 pp | -2.91 pp | -4.10 pp | -1.87 pp |
-| 2 | Yes | 5.94 pp | 0.70 pp | -1.42 pp | 3.84 pp | 0.28 pp | -1.24 pp |
-| 3 | Yes | -0.40 pp | -0.64 pp | -2.20 pp | 0.05 pp | 1.42 pp | -1.05 pp |
-| 4 | Yes | -0.00 pp | -1.11 pp | -3.40 pp | -0.29 pp | -0.06 pp | -3.53 pp |
-| 5 | Yes | -0.70 pp | -5.59 pp | -4.72 pp | -0.98 pp | -1.76 pp | -4.08 pp |
+| 1 | Yes | 1.12 pp | -2.63 pp | -0.91 pp | -1.81 pp | -1.28 pp | -2.67 pp |
+| 2 | Yes | 2.99 pp | 0.84 pp | -1.67 pp | 2.64 pp | -1.21 pp | -0.55 pp |
+| 3 | Yes | -1.59 pp | -1.80 pp | -1.03 pp | -1.20 pp | -1.34 pp | -0.91 pp |
+| 4 | Yes | -5.22 pp | -1.16 pp | -2.03 pp | -1.95 pp | -0.23 pp | -2.84 pp |
+| 5 | Yes | -0.38 pp | 1.62 pp | -3.13 pp | -4.09 pp | 0.52 pp | -2.06 pp |
 
 ## Run history
 
@@ -61,6 +61,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T060526482-e851bced` | Rotated experiment order and warm-up gate | Pass |
 | `20261019T062905608-e6d24e45` | TargetLock and lock profile | Fail. Block 4 invalid: a 2 ms debt failure, and a handler interval of 5.99 ms with 45.8 ms of run-queue delay. |
 | `20261019T070536063-c1a60568` | Lock handoff counts | Pass |
+| `20261019T074738456-b0d0236a` | Spin before a lock wait | Pass |
 
 ## Limits
 

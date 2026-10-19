@@ -347,25 +347,27 @@ let private guarded (counter: TargetProgressCounter) (gate: TargetLock) inside o
             gate.Exit()
         counter.Visit()
 
-let private lockProfile (seed: int) (rotation: int) (output: string) =
+let private lockSpin = TimeSpan.FromMilliseconds 1.0
+
+let private lockProfileWith (mode: string) (spin: TimeSpan) (seed: int) (rotation: int) (output: string) =
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
     let peerRange = binding.Range Work.peerName
     let locks = Collections.Generic.List<TargetLock>()
     let workers (counter: TargetProgressCounter) =
-        let gate = TargetLock()
+        let gate = TargetLock spin
         locks.Add gate
         [| { Work = guarded counter gate 40UL 20UL; PaymentIp = fst selectedRange }
            { Work = guarded counter gate 40UL 20UL; PaymentIp = fst peerRange } |]
     let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Throughput throughputDuration)) journalCapacity workers
     let stats = locks |> Seq.map (fun l -> box {| entries = l.Entries; waitedEntries = l.WaitedEntries; handoffNs = l.HandoffNs |}) |> Seq.toArray
-    writeProfileWith "lock-profile" seed rotation 40 20 throughputDuration (box stats) profile output
+    writeProfileWith mode seed rotation 40 20 throughputDuration (box stats) profile output
 
-let private plainLock selectedRounds peerRounds (output: string) =
+let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
     let counter = TargetProgressCounter()
-    let gate = TargetLock()
+    let gate = TargetLock spin
     let ready = new Barrier(3)
     let started = Array.zeroCreate<int64> 2
     let finished = Array.zeroCreate<int64> 2
@@ -383,7 +385,7 @@ let private plainLock selectedRounds peerRounds (output: string) =
     threads |> Array.iter _.Join()
     let elapsed = Stopwatch.GetElapsedTime(Array.min started, Array.max finished).TotalNanoseconds
     let visits = counter.Visits
-    write output {| mode = "plain-lock"; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
+    write output {| mode = mode; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
                     elapsedNs = uint64 elapsed; visits = visits; entries = gate.Entries; waitedEntries = gate.WaitedEntries; handoffNs = gate.HandoffNs
                     passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
@@ -549,8 +551,10 @@ let main argv =
     | [| "causal-profile"; seed; rotation; output |] -> causalProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "throughput-profile"; seed; rotation; output |] -> throughputProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
-    | [| "lock-profile"; seed; rotation; output |] -> lockProfile (Int32.Parse seed) (Int32.Parse rotation) output
-    | [| "plain-lock"; selectedRounds; peerRounds; output |] -> plainLock (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "lock-profile"; seed; rotation; output |] -> lockProfileWith "lock-profile" TimeSpan.Zero (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "plain-lock"; selectedRounds; peerRounds; output |] -> plainLockWith "plain-lock" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "spin-lock-profile"; seed; rotation; output |] -> lockProfileWith "spin-lock-profile" lockSpin (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "plain-spin-lock"; selectedRounds; peerRounds; output |] -> plainLockWith "plain-spin-lock" lockSpin (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "pipeline-profile"; seed; rotation; output |] -> pipelineProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-pipeline"; selectedRounds; peerRounds; output |] -> plainPipeline (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "shutdown"; output |] -> shutdown output

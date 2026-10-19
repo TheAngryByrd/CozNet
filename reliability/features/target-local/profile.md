@@ -1,6 +1,6 @@
 # Target-local causal profile
 
-Evidence: `artifacts/target-local-profile/20261019T070634914-3cd1d60c`.
+Evidence: `artifacts/target-local-profile/20261019T074837405-5db1c839`.
 
 `TargetLocalProfileVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `causal-profile` process and seven `plain` processes in a random order.
@@ -8,16 +8,16 @@ The profile process runs `TargetCausalProfile.run` with candidates `Work.selecte
 The criteria are in [the profile plan](../../../lode/plans/target-local-causal-profile.md). The runner hashes that file, and all source hashes stay unchanged.
 `native/WriteTargetLocalEvidence.py` writes this page.
 
-**Result: the current run passes.**
+**Result: the current run fails.** Points selected-25, selected-50, selected-75, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. The run is kept, and no rerun replaces it.
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 25.37% | 26.52% | 1.62 pp | 2.68 pp | Pass |
-| `selected-50` | 5 / 5 | 49.41% | 49.78% | 0.79 pp | 2.68 pp | Pass |
-| `selected-75` | 5 / 5 | 50.48% | 50.13% | 1.22 pp | 2.08 pp | Pass |
-| `peer-25` | 5 / 5 | -1.35% | 2.20% | 1.44 pp | 7.70 pp | Pass |
-| `peer-50` | 5 / 5 | 2.03% | -1.10% | 2.92 pp | 6.62 pp | Pass |
-| `peer-75` | 5 / 5 | -1.34% | -1.16% | 0.64 pp | 6.26 pp | Pass |
+| `selected-25` | 4 / 5 | 24.59% | 24.03% | 1.24 pp | 2.34 pp | Fail |
+| `selected-50` | 4 / 5 | 48.37% | 50.08% | 1.71 pp | 3.06 pp | Fail |
+| `selected-75` | 4 / 5 | 49.29% | 50.01% | 1.44 pp | 2.45 pp | Fail |
+| `peer-25` | 4 / 5 | -0.02% | -0.45% | 2.26 pp | 5.58 pp | Fail |
+| `peer-50` | 4 / 5 | 0.76% | 1.02% | 0.57 pp | 2.35 pp | Fail |
+| `peer-75` | 4 / 5 | -1.12% | 1.10% | 2.67 pp | 5.27 pp | Fail |
 
 The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.994, 0.979 |
-| `selected-50` | 0.998, 0.982 |
-| `selected-75` | 0.996, 0.974 |
-| `peer-25` | 1.014, 0.992 |
-| `peer-50` | 0.980, 0.963 |
-| `peer-75` | 1.013, 0.992 |
+| `selected-25` | 1.004, 1.009 |
+| `selected-50` | 1.020, 1.019 |
+| `selected-75` | 1.006, 1.004 |
+| `peer-25` | 1.000, 1.024 |
+| `peer-50` | 0.992, 1.003 |
+| `peer-75` | 1.011, 1.013 |
 
-The median work ratio by run order in the process is order 0: 0.971, 0.992; order 1: 1.011, 1.002; order 2: 0.998, 1.000; order 3: 0.980, 0.969; order 4: 0.994, 0.979; order 5: 1.012, 0.961; order 6: 1.013, 0.992. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.003, 1.000; order 1: 1.013, 1.000; order 2: 1.011, 1.026; order 3: 1.017, 0.999; order 4: 1.000, 1.000; order 5: 0.997, 0.990; order 6: 1.008, 0.989. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -0.87 pp | -0.79 pp | -0.36 pp | 0.63 pp | 6.62 pp | -0.23 pp |
-| 2 | Yes | 1.62 pp | -0.79 pp | -0.12 pp | 0.70 pp | -2.92 pp | 0.41 pp |
-| 3 | Yes | -1.95 pp | 0.12 pp | -1.22 pp | -1.46 pp | -2.03 pp | 0.64 pp |
-| 4 | Yes | 1.38 pp | 1.31 pp | 1.46 pp | -1.44 pp | 4.80 pp | 3.17 pp |
-| 5 | Yes | -2.68 pp | -2.68 pp | -2.08 pp | -7.70 pp | -1.36 pp | -6.26 pp |
+| 1 | No: profile exit 1; profile not passed | -3.81 pp | -4.23 pp | n/a | -6.61 pp | -6.23 pp | -7.98 pp |
+| 2 | Yes | 1.31 pp | -0.00 pp | -0.39 pp | 1.62 pp | 0.02 pp | -0.69 pp |
+| 3 | Yes | 0.62 pp | -1.59 pp | -2.45 pp | -2.90 pp | -0.58 pp | 0.83 pp |
+| 4 | Yes | -1.17 pp | -1.84 pp | 1.62 pp | -1.43 pp | -2.35 pp | -5.27 pp |
+| 5 | Yes | 2.34 pp | -3.06 pp | -1.25 pp | 5.58 pp | 0.55 pp | -4.51 pp |
 
 ## Run history
 
@@ -62,6 +62,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T060624408-2e3fb8c4` | Rotated experiment order and warm-up gate | Pass |
 | `20261019T063004675-e6636cdf` | TargetLock and lock profile | Pass |
 | `20261019T070634914-3cd1d60c` | Lock handoff counts | Pass |
+| `20261019T074837405-5db1c839` | Spin before a lock wait | Fail. Points selected-25, selected-50, selected-75, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. |
 
 ## Limits
 

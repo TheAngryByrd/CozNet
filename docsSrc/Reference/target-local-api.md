@@ -197,7 +197,8 @@ A timeout or a cancellation skips no delay. The abort token of the run cancels e
 
 ## Lock
 
-`TargetLock()` is a non-recursive mutual-exclusion lock for profiled workers.
+`TargetLock()` is a non-recursive mutual-exclusion lock for profiled workers. `TargetLock(spin)` spins up to `spin`, from 0 to 1 ms, inside its wait before it blocks.
+The spin and the block share one timeout budget: the block gets only the part of `timeout` that the spin did not use. A spinning waiter is blocked for the ledger, as a sleeping waiter is. A spin uses CPU time, and it can shorten the time from a release to the next acquire.
 
 | Member | Result |
 | --- | --- |
@@ -231,6 +232,7 @@ Only the holder writes the token, so the token is always that of the release tha
 | `plain-throughput <selectedRounds> <peerRounds> <out>` | The same loops without the profiler for 120 ms, with the elapsed time and the visits |
 | `pipeline-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. A producer runs `Work.selected 40` for each item of a `TargetQueue` of 4 items, and a consumer runs `Work.peer 20` and visits for each item. |
 | `lock-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. Two workers each run `Work.peer 20` outside a `TargetLock` and `Work.selected 40` inside it, and visit once per cycle. |
+| `spin-lock-profile <seed> <rotation> <out>` and `plain-spin-lock <selectedRounds> <peerRounds> <out>` | The lock workloads with a 1 ms spin |
 | `plain-lock <selectedRounds> <peerRounds> <out>` | The same lock workload without the profiler for 120 ms, with the elapsed time and the visits |
 | `plain-pipeline <selectedRounds> <peerRounds> <out>` | The same pipeline without the profiler for 120 ms, with the elapsed time and the visits |
 

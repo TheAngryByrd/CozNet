@@ -45,6 +45,7 @@ PREDICTION_HISTORY = [
     ("20261019T051231424-1e546bce", "Same", "Profile warm-up experiment", "Pass"),
     ("20261019T060749814-6eba8ca5", "Same", "Rotated experiment order and warm-up gate", "Pass"),
     ("20261019T063130911-86311728", "Same", "TargetLock and lock profile", "Pass"),
+    ("20261019T070800008-220def3b", "Same", "Lock handoff counts", "Fail. `peer-longer` has 4 valid blocks. In block 4, the peer breaks the 2 ms debt bound 1.38 ms after its work start, with 3.75 ms of start run-queue delay."),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -80,6 +81,7 @@ TRANSITION_HISTORY = [
     ("20261019T051202514-ddf03668", "Profile warm-up experiment", "Fail. Run 1: 2 ms debt bound. One GC window covers 1.31 ms of the 5.26 ms failure interval."),
     ("20261019T060721421-9e406e92", "Rotated experiment order and warm-up gate", "Pass, 10 of 10"),
     ("20261019T063102813-1448d8f5", "TargetLock and lock profile", "Pass, 10 of 10"),
+    ("20261019T070731753-86c6ac1e", "Lock handoff counts", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -117,6 +119,7 @@ BARRIER_HISTORY = [
     ("20261019T051353871-0dc405c5", "Profile warm-up experiment", "Pass"),
     ("20261019T060913007-5812aec4", "Rotated experiment order and warm-up gate", "Pass"),
     ("20261019T063253419-973e8541", "TargetLock and lock profile", "Pass"),
+    ("20261019T070924325-199df270", "Lock handoff counts", "Pass"),
 ]
 
 
@@ -646,6 +649,7 @@ PROFILE_HISTORY = [
     ("20261019T051105836-8f4f2ab0", "Profile warm-up experiment", "Pass"),
     ("20261019T060624408-2e3fb8c4", "Rotated experiment order and warm-up gate", "Pass"),
     ("20261019T063004675-e6636cdf", "TargetLock and lock profile", "Pass"),
+    ("20261019T070634914-3cd1d60c", "Lock handoff counts", "Pass"),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
@@ -654,9 +658,12 @@ THROUGHPUT_HISTORY = [
     ("20261019T051006922-f2f80c26", "Profile warm-up experiment", "Pass"),
     ("20261019T060526482-e851bced", "Rotated experiment order and warm-up gate", "Pass"),
     ("20261019T062905608-e6d24e45", "TargetLock and lock profile", "Fail. Block 4 invalid: a 2 ms debt failure, and a handler interval of 5.99 ms with 45.8 ms of run-queue delay."),
+    ("20261019T070536063-c1a60568", "Lock handoff counts", "Pass"),
 ]
+SPINLOCK_HISTORY = []
 LOCK_HISTORY = [
     ("20261019T062708436-df83442b", "First lock profile run", "Fail. `selected-50` median 9.13 points, all five blocks below the actual gain. `peer-25` has one block of 11.87 points."),
+    ("20261019T070331580-523cc380", "Lock handoff counts", "Fail. Blocks 1 and 2 are invalid: `selected` at 50% breaks the 2 ms debt bound. In the three valid blocks, `selected-50` predicts 48.17% against 51.79%. The handoff share at `selected-50` is 7.40% in the profile and 2.18% in the real optimization."),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
@@ -664,6 +671,7 @@ PIPELINE_HISTORY = [
     ("20261019T050900839-0a049f8a", "Profile warm-up experiment", "Fail. `peer-50` median 6.01 points. The order-0 producer work ratio stays 1.041 with the warm-up."),
     ("20261019T060421721-4a882c0a", "Rotated experiment order and warm-up gate", "Pass. `peer-50` median 4.92 points."),
     ("20261019T062807524-d72126fc", "TargetLock and lock profile", "Pass"),
+    ("20261019T070437097-c99cf6c4", "Lock handoff counts", "Fail. `peer-50` has one block of 10.02 points. Its median difference is 2.70 points."),
 ]
 
 
@@ -672,11 +680,11 @@ def profile(root, run, change, kind="target-local-profile"):
     summary, manifest = load(directory / "summary.json"), load(directory / "manifest.json")
     if not summary["inputsUnchanged"]:
         raise SystemExit("The profile run changed its inputs.")
-    workload = {"target-local-throughput": "throughput", "target-local-pipeline": "pipeline", "target-local-lock": "lock"}.get(kind, "latency")
+    workload = {"target-local-throughput": "throughput", "target-local-pipeline": "pipeline", "target-local-lock": "lock", "target-local-spinlock": "spinlock"}.get(kind, "latency")
     throughput = workload != "latency"
     if manifest.get("workload", "latency") != workload:
         raise SystemExit(f"The run in {kind} records the workload {manifest.get('workload')}.")
-    known = {"throughput": THROUGHPUT_HISTORY, "pipeline": PIPELINE_HISTORY, "lock": LOCK_HISTORY}.get(workload, PROFILE_HISTORY)
+    known = {"throughput": THROUGHPUT_HISTORY, "pipeline": PIPELINE_HISTORY, "lock": LOCK_HISTORY, "spinlock": SPINLOCK_HISTORY}.get(workload, PROFILE_HISTORY)
     check_history(root, kind, known, run)
     kernel, cpus = host(directory)
     rows = "\n".join(f"| `{p['point']}` | {p['validBlocks']} / 5 | {pct(p['medianPredicted'])} | {pct(p['medianActual'])} | "
@@ -703,21 +711,25 @@ def profile(root, run, change, kind="target-local-profile"):
     current = "Pass" if summary["passed"] else f"Fail. Points {', '.join(failed) or 'none'} fail, or a run-level criterion fails."
     verdict = "**Result: the current run passes.**" if summary["passed"] else f"**Result: the current run fails.** {current[6:]} The run is kept, and no rerun replaces it."
     history = "\n".join(f"| `{r}` | {ch} | {res} |" for r, ch, res in known + [(run, change, current)])
-    title = {"throughput": "Target-local throughput profile", "pipeline": "Target-local pipeline profile", "lock": "Target-local lock profile"}.get(workload, "Target-local causal profile")
+    title = {"throughput": "Target-local throughput profile", "pipeline": "Target-local pipeline profile", "lock": "Target-local lock profile", "spinlock": "Target-local spin lock profile"}.get(workload, "Target-local causal profile")
     target, modes = {"throughput": ("TargetLocalThroughputVerify", "`throughput-profile` process and seven `plain-throughput`"),
                      "pipeline": ("TargetLocalPipelineVerify", "`pipeline-profile` process and seven `plain-pipeline`"),
-                     "lock": ("TargetLocalLockVerify", "`lock-profile` process and seven `plain-lock`")}.get(
+                     "lock": ("TargetLocalLockVerify", "`lock-profile` process and seven `plain-lock`"),
+                     "spinlock": ("TargetLocalSpinLockVerify", "`spin-lock-profile` process and seven `plain-spin-lock`")}.get(
         workload, ("TargetLocalProfileVerify", "`causal-profile` process and seven `plain`"))
     description = {"throughput": "Each experiment runs for 120 ms. The selected worker repeats `Work.selected 40` and the peer repeats `Work.peer 20`, with one visit of the progress point after each call.",
                    "pipeline": "Each experiment runs for 120 ms. A producer repeats `Work.selected 40` and puts one item into a `TargetQueue` of 4 items. A consumer takes each item, runs `Work.peer 20`, and visits the progress point.",
-                   "lock": "Each experiment runs for 120 ms. Two workers each repeat `Work.peer 20` outside a `TargetLock`, then `Work.selected 40` inside it, and then visit the progress point."}.get(
+                   "lock": "Each experiment runs for 120 ms. Two workers each repeat `Work.peer 20` outside a `TargetLock`, then `Work.selected 40` inside it, and then visit the progress point.",
+                   "spinlock": "Each experiment runs for 120 ms. Two workers each repeat `Work.peer 20` outside a `TargetLock` that spins up to 1 ms before it blocks, then `Work.selected 40` inside it, and then visit the progress point."}.get(
         workload, "The selected thread runs 6000 rounds and the peer 3000. The progress point is the end of the workload.")
     plan = {"throughput": "[the throughput plan](../../../lode/plans/target-local-throughput.md)",
             "pipeline": "[the queue plan](../../../lode/plans/target-local-queue.md)",
-            "lock": "[the lock plan](../../../lode/plans/target-local-lock.md)"}.get(workload, "[the profile plan](../../../lode/plans/target-local-causal-profile.md)")
+            "lock": "[the lock plan](../../../lode/plans/target-local-lock.md)",
+            "spinlock": "[the spin lock plan](../../../lode/plans/target-local-spin-lock.md)"}.get(workload, "[the profile plan](../../../lode/plans/target-local-causal-profile.md)")
     expected = {"throughput": "If both workers have the same cost for each round, the expected gains are 10%, 25%, and 50% for `Work.selected` and 18.2%, 40%, and 66.7% for `Work.peer`. The criteria use the measured gains.",
                 "pipeline": "The producer is the bottleneck, so the model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. Above 50%, the consumer sets the rate.",
-                "lock": "The lock sets the rate, so the model gives `Work.selected` 25%, 50%, and 62.5%, and `Work.peer` 0% at each speedup. At 75%, the work outside the lock sets the rate."}.get(
+                "lock": "The lock sets the rate, so the model gives `Work.selected` 25%, 50%, and 62.5%, and `Work.peer` 0% at each speedup. At 75%, the work outside the lock sets the rate.",
+                "spinlock": "The lock sets the rate, so the model gives `Work.selected` 25%, 50%, and 62.5%, and `Work.peer` 0% at each speedup. At 75%, the work outside the lock sets the rate."}.get(
         workload, "The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.")
     limits = ("A throughput experiment counts every visit from the first work start to the last finish, so work in progress at the stop counts."
               if throughput else "The progress point is the end of the workload.")
@@ -768,7 +780,7 @@ The warm-up experiment passed in {warmups}.
 ## Limits
 
 {limits}
-{"The profile covers CPU-bound threads on Linux x64 that block only at a `TargetLock`." if workload == "lock" else "The profile covers CPU-bound threads on Linux x64 that block only at a `TargetQueue` with one producer and one consumer." if workload == "pipeline" else "The profile covers CPU-bound threads on Linux x64 that do not block outside `TargetBarrier`."} CLR safety outside this workload is not established.
+{"The profile covers CPU-bound threads on Linux x64 that block only at a `TargetLock`." if workload in ("lock", "spinlock") else "The profile covers CPU-bound threads on Linux x64 that block only at a `TargetQueue` with one producer and one consumer." if workload == "pipeline" else "The profile covers CPU-bound threads on Linux x64 that do not block outside `TargetBarrier`."} CLR safety outside this workload is not established.
 """
 
 
@@ -786,6 +798,8 @@ def main():
         pages["pipeline.md"] = profile(root, sys.argv[10], sys.argv[11], "target-local-pipeline")
     if len(sys.argv) > 13:
         pages["lock.md"] = profile(root, sys.argv[12], sys.argv[13], "target-local-lock")
+    if len(sys.argv) > 15:
+        pages["spinlock.md"] = profile(root, sys.argv[14], sys.argv[15], "target-local-spinlock")
     for name, text in pages.items():
         (out / name).write_text(text, newline="\n")
 

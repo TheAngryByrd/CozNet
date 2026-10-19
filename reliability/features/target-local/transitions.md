@@ -1,6 +1,6 @@
 # Target-local forced-GC transitions
 
-Evidence: `artifacts/target-local-transitions/20261019T070731753-86c6ac1e`.
+Evidence: `artifacts/target-local-transitions/20261019T074936096-7103de7f`.
 
 `TargetLocalTransitionsVerify` ran `profile-gc 50 6000 3000 5` ten times in the Linux x64 container.
 The run records kernel `5.15.153.1-microsoft-standard-WSL2`, x64, with 4 CPUs. Earlier transition runs did not record the host.
@@ -12,21 +12,21 @@ The sample runs through the checked library entry point `TargetLocalProfiler.run
 
 | Run | Passed | Ledger failure | Max observed debt (ns) | Forced GCs in work window | Max handler (ns) | Wall minus counted CPU (ms) | Epochs complete, zero loss |
 | ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
-| 1 | Yes | None | 999,987 | 19 | 1,504,305 | 5.7 | Yes |
-| 2 | Yes | None | 999,973 | 19 | 1,503,781 | 7.0 | Yes |
-| 3 | Yes | None | 999,982 | 19 | 1,504,975 | 6.1 | Yes |
-| 4 | Yes | None | 999,993 | 20 | 1,504,896 | 7.5 | Yes |
-| 5 | Yes | None | 949,981 | 19 | 1,503,675 | 7.5 | Yes |
-| 6 | Yes | None | 999,984 | 19 | 1,503,562 | 5.8 | Yes |
-| 7 | Yes | None | 999,983 | 19 | 1,503,826 | 5.7 | Yes |
-| 8 | Yes | None | 999,994 | 20 | 1,504,614 | 7.1 | Yes |
-| 9 | Yes | None | 999,983 | 20 | 1,503,729 | 7.0 | Yes |
-| 10 | Yes | None | 999,990 | 19 | 1,504,471 | 5.7 | Yes |
+| 1 | Yes | None | 999,980 | 20 | 1,503,679 | 6.7 | Yes |
+| 2 | Yes | None | 1,000,000 | 20 | 1,506,232 | 7.1 | Yes |
+| 3 | Yes | None | 999,971 | 19 | 1,505,704 | 7.3 | Yes |
+| 4 | Yes | None | 1,000,000 | 20 | 1,504,484 | 8.2 | Yes |
+| 5 | Yes | None | 999,966 | 20 | 1,504,667 | 7.0 | Yes |
+| 6 | Yes | None | 1,000,000 | 20 | 1,504,315 | 7.2 | Yes |
+| 7 | Yes | None | 999,972 | 19 | 1,504,722 | 7.0 | Yes |
+| 8 | Yes | None | 999,976 | 20 | 1,504,860 | 7.2 | Yes |
+| 9 | Yes | None | 949,968 | 19 | 1,007,822 | 7.5 | Yes |
+| 10 | Yes | None | 949,978 | 21 | 1,505,075 | 10.0 | Yes |
 
 No run crashed or hung. Every run closed both epochs with zero loss, retired both sessions, and restored the handlers.
 The `cleanup` check passes. A profile whose monitor throws raises `AggregateException`, and a second profile in the same process then passes.
 The `barrier-abort` check passes. A worker that throws releases its waiting peer, the run fails within 10 s, and a second profile then passes.
-Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,504,975 ns.
+Every handler interval stays below 5 ms, and no run records a ledger failure. The longest is 1,506,232 ns.
 Wall minus counted CPU is the largest per-thread difference. Counted CPU stops at disable and wall time includes the closing payment, so it is coarse.
 
 ## GC windows
@@ -37,16 +37,16 @@ A debt failure lists the window time inside the interval from the sample before 
 
 | Run | Complete | Windows | Window total | Pause total | Largest event gap | Debt failures |
 | ---: | --- | ---: | ---: | ---: | --- | --- |
-| 1 | Yes | 19 | 6.9033 ms | 5.7160 ms | worker 0: 2.2973 ms with 0.3478 ms in windows | none |
-| 2 | Yes | 19 | 8.2690 ms | 7.0300 ms | worker 0: 1.7524 ms with 1.2400 ms in windows | none |
-| 3 | Yes | 19 | 7.7677 ms | 6.2030 ms | worker 0: 2.0684 ms with 1.9203 ms in windows | none |
-| 4 | Yes | 20 | 8.9842 ms | 7.5950 ms | worker 0: 2.1945 ms with 1.2638 ms in windows | none |
-| 5 | Yes | 19 | 8.6725 ms | 7.3660 ms | worker 0: 2.0526 ms with 1.4868 ms in windows | none |
-| 6 | Yes | 19 | 7.0089 ms | 5.8630 ms | worker 0: 1.7369 ms with 0.7847 ms in windows | none |
-| 7 | Yes | 19 | 7.2134 ms | 5.7800 ms | worker 0: 2.1511 ms with 0.2225 ms in windows | none |
-| 8 | Yes | 20 | 8.8242 ms | 7.3230 ms | worker 0: 2.1622 ms with 0.2448 ms in windows | none |
-| 9 | Yes | 20 | 8.3704 ms | 7.1790 ms | worker 0: 2.0913 ms with 1.1350 ms in windows | none |
-| 10 | Yes | 19 | 6.8881 ms | 5.6920 ms | worker 0: 1.8515 ms with 0.9005 ms in windows | none |
+| 1 | Yes | 20 | 8.4796 ms | 7.0530 ms | worker 0: 1.8081 ms with 0.8906 ms in windows | none |
+| 2 | Yes | 20 | 8.6838 ms | 7.0820 ms | worker 0: 2.2246 ms with 0.2977 ms in windows | none |
+| 3 | Yes | 19 | 9.0222 ms | 7.4000 ms | worker 0: 2.5992 ms with 1.6268 ms in windows | none |
+| 4 | Yes | 20 | 9.4497 ms | 8.2700 ms | worker 0: 3.5592 ms with 2.5985 ms in windows | none |
+| 5 | Yes | 20 | 8.8843 ms | 7.2580 ms | worker 0: 2.1933 ms with 0.2655 ms in windows | none |
+| 6 | Yes | 20 | 8.1898 ms | 6.8460 ms | worker 0: 2.1641 ms with 1.1786 ms in windows | none |
+| 7 | Yes | 19 | 9.1233 ms | 7.8210 ms | worker 0: 1.8897 ms with 0.9171 ms in windows | none |
+| 8 | Yes | 20 | 8.7067 ms | 7.2490 ms | worker 0: 1.9329 ms with 0.9288 ms in windows | none |
+| 9 | Yes | 19 | 8.4650 ms | 7.1330 ms | worker 0: 1.7953 ms with 0.8269 ms in windows | none |
+| 10 | Yes | 21 | 11.5788 ms | 9.7990 ms | worker 0: 2.2557 ms with 1.3432 ms in windows | none |
 
 ## Run history
 
@@ -83,6 +83,7 @@ A debt failure lists the window time inside the interval from the sample before 
 | `20261019T060721421-9e406e92` | Rotated experiment order and warm-up gate | Pass, 10 of 10 |
 | `20261019T063102813-1448d8f5` | TargetLock and lock profile | Pass, 10 of 10 |
 | `20261019T070731753-86c6ac1e` | Lock handoff counts | Pass, 10 of 10 |
+| `20261019T074936096-7103de7f` | Spin before a lock wait | Pass, 10 of 10 |
 
 ## Earlier failed check
 
@@ -99,7 +100,7 @@ One hypothesis is that the host or the GC deschedules one thread. Profile result
 
 ## Consequence
 
-The passing current-design checks hold 210 runs with no failure. Eight current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
+The passing current-design checks hold 220 runs with no failure. Eight current-design checks each fail 1 of 10 runs by the 2 ms debt bound, the same bound as the first failure.
 A thread can go without samples long enough to break the 2 ms debt bound. The cause is unknown.
 GC-heavy workloads stay outside the supported model. The debt bound stays unchanged.
 
