@@ -1,6 +1,6 @@
 import unittest
 
-from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, order_ratios,
+from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, order_ratios, positions_balanced,
                                   prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
 
 
@@ -40,7 +40,7 @@ class DesignChecks(unittest.TestCase):
     def test_arguments_name_each_arm(self):
         args = expected_args(20261018, 2)
         self.assertEqual((args["profile"], args["selected-75"], args["peer-25"]),
-                         ("causal-profile 20261020", "plain 1500 3000", "plain 6000 2250"))
+                         ("causal-profile 20261018 1", "plain 1500 3000", "plain 6000 2250"))
 
 
 class PredictionChecks(unittest.TestCase):
@@ -87,7 +87,7 @@ class ConsistencyChecks(unittest.TestCase):
 
     def test_fields_name_mode_seed_and_rounds(self):
         fields = expected_fields(20261018, 1)
-        self.assertEqual((fields["profile"]["seed"], fields["peer-75"]["peerRounds"], fields["selected-50"]["mode"]), (20261019, 750, "plain"))
+        self.assertEqual((fields["profile"]["seed"], fields["peer-75"]["peerRounds"], fields["selected-50"]["mode"]), (20261018, 750, "plain"))
 
 
 def threads(wall, payment):
@@ -134,11 +134,41 @@ class WarmupChecks(unittest.TestCase):
         self.assertEqual((ratios[0], ratios[peer["Order"]]), ([1.0, 1.0], [1.1, 1.0]))
 
 
+class RotationChecks(unittest.TestCase):
+    arms = [(SELECTED_NAME, 0)] + [(n, s) for n in (SELECTED_NAME, PEER_NAME) for s in SPEEDUPS]
+
+    def blocks(self, shifts):
+        return [{"positions": [[c, s, (i - shift) % 7] for i, (c, s) in enumerate(self.arms)]} for shift in shifts]
+
+    def test_five_rotations_balance_positions(self):
+        self.assertTrue(positions_balanced(self.blocks([0, 1, 2, 3, 4])))
+
+    def test_a_repeated_rotation_is_not_balanced(self):
+        self.assertFalse(positions_balanced(self.blocks([0, 1, 2, 3, 3])))
+
+    def test_a_missing_block_is_not_balanced(self):
+        self.assertFalse(positions_balanced(self.blocks([0, 1, 2, 3]) + [{"positions": None}]))
+
+    def test_profile_arguments_and_fields_carry_seed_and_rotation(self):
+        self.assertEqual(expected_args(20261018, 3, "pipeline")["profile"], "pipeline-profile 20261018 2")
+        fields = expected_fields(20261018, 3, "latency")["profile"]
+        self.assertEqual((fields["seed"], fields["rotation"]), (20261018, 2))
+
+    def test_order_ratios_skip_only_incomplete_experiments(self):
+        value = record()
+        for e in value["experiments"]:
+            e["Threads"] = threads(100, 0)
+            e.setdefault("Visits", 1)
+        value["experiments"][3]["Threads"] = []
+        ratios = order_ratios(value)
+        self.assertEqual((len(ratios), value["experiments"][3]["Order"] in ratios), (6, False))
+
+
 class ThroughputChecks(unittest.TestCase):
     def test_arguments_name_each_throughput_arm(self):
         args = expected_args(20261018, 1, "throughput")
         self.assertEqual((args["profile"], args["original"], args["selected-25"], args["peer-75"]),
-                         ("throughput-profile 20261019", "plain-throughput 40 20", "plain-throughput 30 20", "plain-throughput 40 5"))
+                         ("throughput-profile 20261018 0", "plain-throughput 40 20", "plain-throughput 30 20", "plain-throughput 40 5"))
 
     def test_throughput_fields_hold_the_duration(self):
         fields = expected_fields(20261018, 1, "throughput")
@@ -169,7 +199,7 @@ class ThroughputChecks(unittest.TestCase):
         args = expected_args(20261018, 1, "pipeline")
         fields = expected_fields(20261018, 1, "pipeline")
         self.assertEqual((args["profile"], args["selected-75"], fields["peer-25"]["mode"], fields["original"]["durationMs"]),
-                         ("pipeline-profile 20261019", "plain-pipeline 10 20", "plain-pipeline", 120))
+                         ("pipeline-profile 20261018 0", "plain-pipeline 10 20", "plain-pipeline", 120))
         self.assertEqual(actual_gain({"elapsedNs": 1000, "visits": 100}, {"elapsedNs": 1000, "visits": 200}, "pipeline"), 0.5)
         self.assertFalse(visits_sufficient({"visits": 99}, "pipeline"))
 

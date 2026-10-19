@@ -72,6 +72,7 @@ type TargetCausalDesignError =
     | SpeedupOutOfRange of speedup: uint32
     | NoBlocks of blocks: int
     | InvalidDuration of durationMs: int
+    | InvalidRotation of rotation: int
     | PlanRejected of message: string
 
 type TargetCausalDesign = private {
@@ -82,6 +83,7 @@ type TargetCausalDesign = private {
     DesignSpeedups: uint32 array
     DesignBlocks: int
     DesignSeed: int
+    DesignRotation: int
     DesignProgress: TargetProgressPoint
 } with
     member this.Binding = this.DesignBinding
@@ -91,6 +93,7 @@ type TargetCausalDesign = private {
     member this.Speedups = Array.copy this.DesignSpeedups
     member this.Blocks = this.DesignBlocks
     member this.Seed = this.DesignSeed
+    member this.Rotation = this.DesignRotation
     member this.Progress = this.DesignProgress
 
 [<RequireQualifiedAccess>]
@@ -101,7 +104,7 @@ module TargetCausalDesign =
         values |> Array.countBy id |> Array.filter (fun (_, count) -> count > 1) |> Array.map fst
 
     let tryCreate (binding: CodeBinding) (period: uint64) (eligible: string array) (candidates: string array) (speedups: uint32 array)
-        (blocks: int) (seed: int) (progress: TargetProgressPoint) =
+        (blocks: int) (seed: int) (rotation: int) (progress: TargetProgressPoint) =
         let bound = binding.Symbols
         let errors =
             [ for symbol in eligible do
@@ -118,6 +121,7 @@ module TargetCausalDesign =
               for speedup in Array.distinct speedups do
                   if speedup < 1u || speedup > 100u then SpeedupOutOfRange speedup
               if blocks < 1 then NoBlocks blocks
+              if rotation < 0 || rotation > candidates.Length * speedups.Length then InvalidRotation rotation
               match progress with
               | Throughput duration when duration < 1 || duration > maxDurationMs -> InvalidDuration duration
               | _ -> () ]
@@ -128,7 +132,7 @@ module TargetCausalDesign =
             | Error message -> Error [ PlanRejected message ]
             | Ok _ ->
                 Ok { DesignBinding = binding; DesignPeriod = period; DesignEligible = Array.copy eligible; DesignCandidates = Array.copy candidates
-                     DesignSpeedups = Array.copy speedups; DesignBlocks = blocks; DesignSeed = seed; DesignProgress = progress }
+                     DesignSpeedups = Array.copy speedups; DesignBlocks = blocks; DesignSeed = seed; DesignRotation = rotation; DesignProgress = progress }
         | errors -> Error errors
 
     let describe error =
@@ -142,12 +146,13 @@ module TargetCausalDesign =
         | DuplicateSpeedup speedup -> $"The speedup {speedup} occurs more than once."
         | SpeedupOutOfRange speedup -> $"The speedup {speedup} is not from 1 to 100."
         | NoBlocks blocks -> $"The profile requires at least one block, but it has {blocks}."
+        | InvalidRotation rotation -> $"The rotation {rotation} is not from 0 to the number of experiments in a block minus 1."
         | InvalidDuration duration -> $"A throughput experiment requires a duration from 1 to {maxDurationMs} ms, but it has {duration} ms."
         | PlanRejected message -> $"The replay plan rejects the design: {message}"
 
 [<RequireQualifiedAccess>]
 module TargetCausalProfile =
-    let internal arms (random: Random) (candidates: string array) (speedups: uint32 array) =
+    let internal arms (random: Random) (candidates: string array) (speedups: uint32 array) : (string * uint32) array =
         let arms = Array.append [| candidates[0], 0u |] [| for c in candidates do for s in speedups -> c, s |]
         for index in arms.Length - 1 .. -1 .. 1 do
             let other = random.Next(index + 1)
@@ -231,7 +236,7 @@ module TargetCausalProfile =
 
     let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option) (design: TargetCausalDesign) =
         let candidates, speedups, blocks, seed = design.Candidates, design.Speedups, design.Blocks, design.Seed
-        let random = Random seed
+        let order = arms (Random seed) candidates speedups
 
         let measure block order candidate speedup =
             let result =
@@ -256,8 +261,9 @@ module TargetCausalProfile =
         let warmup = measure 0 -1 candidates[0] 0u
         let experiments =
             [| for block in 1 .. blocks do
-                   for order, (candidate, speedup) in arms random candidates speedups |> Array.indexed do
-                       measure block order candidate speedup |]
+                   let shift = design.Rotation + block - 1
+                   for position, (candidate, speedup) in Array.init order.Length (fun i -> order[(i + shift) % order.Length]) |> Array.indexed do
+                       measure block position candidate speedup |]
         { Progress = design.Progress; Blocks = blocks; Seed = seed; Candidates = candidates; Speedups = speedups; Warmup = warmup
           Experiments = experiments; Points = points blocks candidates speedups experiments }
 

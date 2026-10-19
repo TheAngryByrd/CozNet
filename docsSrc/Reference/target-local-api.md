@@ -104,9 +104,10 @@ See [the how-to](../How_Tos/profile-fork-join-program.md).
 
 ## Causal profile
 
-`TargetCausalDesign.tryCreate binding period eligible candidates speedups blocks seed progress` parses the experiment design.
+`TargetCausalDesign.tryCreate binding period eligible candidates speedups blocks seed rotation progress` parses the experiment design.
+The seed fixes one base order of the experiments. Block b runs that order rotated left by `rotation + b - 1` places. `rotation` must be from 0 to the experiment count of a block minus 1.
 `progress` is `EndToEnd` or `Throughput durationMs`, with a duration from 1 to 60000 ms. It returns `Ok TargetCausalDesign` or `Error` with a list of `TargetCausalDesignError` values:
-`NoCandidates`, `DuplicateCandidate`, `UnboundCandidate`, `IneligibleCandidate`, `UnboundEligible`, `NoSpeedups`, `DuplicateSpeedup`, `SpeedupOutOfRange`, `NoBlocks`, `InvalidDuration`, and `PlanRejected`.
+`NoCandidates`, `DuplicateCandidate`, `UnboundCandidate`, `IneligibleCandidate`, `UnboundEligible`, `NoSpeedups`, `DuplicateSpeedup`, `SpeedupOutOfRange`, `NoBlocks`, `InvalidRotation`, `InvalidDuration`, and `PlanRejected`.
 `TargetCausalDesign.describe` gives the message for one error. A design has a private representation, and it keeps copies of its input arrays.
 
 `TargetCausalProfile.run design journalCapacity workers` runs the design in one process. `workers` takes a new `TargetProgressCounter` and returns new workers for each experiment.
@@ -209,10 +210,10 @@ A timeout or a cancellation skips no delay. The abort token of the run cancels e
 | `profile-phases <speedup> <pattern> <out>` | The profile result for 10 barrier phases. Patterns are `alternating`, `selected-dominant`, and `peer-bound`. |
 | `profile-gc <speedup> <selectedRounds> <peerRounds> <intervalMs> <out>` | The profile result, with a forced blocking gen-2 GC every `intervalMs` from the main thread |
 | `rejit <out>` | The ReJIT check. It requires the test profiler from `native/rejit/ReJitProbe.Linux.cpp`. |
-| `causal-profile <seed> <out>` | One block of `TargetCausalProfile.run` with candidates `Work.selected` and `Work.peer` at speedups 25, 50, and 75, with 6000 and 3000 rounds |
-| `throughput-profile <seed> <out>` | One throughput block of 120 ms experiments. The workers repeat `Work.selected 40` and `Work.peer 20` with one visit after each call. |
+| `causal-profile <seed> <rotation> <out>` | One block of `TargetCausalProfile.run` with candidates `Work.selected` and `Work.peer` at speedups 25, 50, and 75, with 6000 and 3000 rounds |
+| `throughput-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. The workers repeat `Work.selected 40` and `Work.peer 20` with one visit after each call. |
 | `plain-throughput <selectedRounds> <peerRounds> <out>` | The same loops without the profiler for 120 ms, with the elapsed time and the visits |
-| `pipeline-profile <seed> <out>` | One throughput block of 120 ms experiments. A producer runs `Work.selected 40` for each item of a `TargetQueue` of 4 items, and a consumer runs `Work.peer 20` and visits for each item. |
+| `pipeline-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. A producer runs `Work.selected 40` for each item of a `TargetQueue` of 4 items, and a consumer runs `Work.peer 20` and visits for each item. |
 | `plain-pipeline <selectedRounds> <peerRounds> <out>` | The same pipeline without the profiler for 120 ms, with the elapsed time and the visits |
 
 The profile mode requires `DOTNET_TieredCompilation=0`, `DOTNET_ReadyToRun=0`, `DOTNET_PerfMapEnabled=3`, and `DOTNET_PerfMapShowOptimizationTiers=1`.

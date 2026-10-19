@@ -21,7 +21,7 @@ CANDIDATES = {"selected": SELECTED_NAME, "peer": PEER_NAME}
 def expected_args(seed, block, workload="latency"):
     w = WORKLOADS[workload]
     selected, peer, plain = w["selected"], w["peer"], w["plain"]
-    args = {"profile": f"{w['profile']} {seed + block}", "original": f"{plain} {selected} {peer}"}
+    args = {"profile": f"{w['profile']} {seed} {block - 1}", "original": f"{plain} {selected} {peer}"}
     for speedup in SPEEDUPS:
         args[f"selected-{speedup}"] = f"{plain} {selected * (100 - speedup) // 100} {peer}"
         args[f"peer-{speedup}"] = f"{plain} {selected} {peer * (100 - speedup) // 100}"
@@ -32,7 +32,7 @@ def expected_fields(seed, block, workload="latency"):
     w = WORKLOADS[workload]
     selected, peer, plain = w["selected"], w["peer"], w["plain"]
     extra = {"durationMs": w["durationMs"]} if workload != "latency" else {}
-    fields = {"profile": {"mode": w["profile"], "seed": seed + block, "selectedRounds": selected, "peerRounds": peer, **extra},
+    fields = {"profile": {"mode": w["profile"], "seed": seed, "rotation": block - 1, "selectedRounds": selected, "peerRounds": peer, **extra},
               "original": {"mode": plain, "selectedRounds": selected, "peerRounds": peer, **extra}}
     for speedup in SPEEDUPS:
         fields[f"selected-{speedup}"] = {"mode": plain, "selectedRounds": selected * (100 - speedup) // 100, "peerRounds": peer, **extra}
@@ -74,11 +74,21 @@ def warmup_present(record):
 def order_ratios(record):
     experiments = record["experiments"]
     baseline = next((e for e in experiments if e["Speedup"] == 0), None)
-    if baseline is None or not baseline["Passed"] or not threads_complete(record):
+    complete = lambda e: isinstance(e.get("Threads"), list) and len(e["Threads"]) == 2
+    if baseline is None or not baseline["Passed"] or not complete(baseline):
         return {}
     base = [(t["WallNs"] - t["PaymentNs"]) / max(baseline.get("Visits", 1), 1) for t in baseline["Threads"]]
     return {e["Order"]: [((t["WallNs"] - t["PaymentNs"]) / max(e.get("Visits", 1), 1)) / b if b > 0 else None for t, b in zip(e["Threads"], base)]
-            for e in experiments if e["Passed"]}
+            for e in experiments if e["Passed"] and complete(e)}
+
+
+def positions_balanced(blocks):
+    seen = {}
+    for b in blocks:
+        for candidate, speedup, order in b.get("positions") or []:
+            seen.setdefault((candidate, speedup), []).append(order)
+    expected = len(CANDIDATES) * len(SPEEDUPS) + 1
+    return len(seen) == expected and all(len(v) == BLOCKS and len(set(v)) == BLOCKS for v in seen.values())
 
 
 def threads_complete(record):
@@ -184,6 +194,7 @@ def main():
         blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "points": points,
                        "orderRatios": order_ratios(profile) if complete else {},
                        "warmupPassed": profile["warmup"]["Passed"] if isinstance(profile, dict) and warmup_present(profile) else None,
+                       "positions": [[e["Candidate"], e["Speedup"], e["Order"]] for e in profile["experiments"]] if complete else None,
                        "order": [[e["Candidate"], e["Speedup"]] for e in sorted(profile["experiments"], key=lambda e: e["Order"])] if complete else None})
     summary_points = []
     for label in CANDIDATES:
@@ -202,13 +213,16 @@ def main():
                 "medianActual": statistics.median(b["points"][key]["actual"] for b in valid) if valid else None,
                 "medianWorkRatios": [statistics.median(r[i] for r in rows) for i in range(2)] if rows else None,
                 "passed": point_passed})
+    balanced = positions_balanced(blocks)
+    warmups = all(b["warmupPassed"] is True for b in blocks)
+    passed = passed and balanced and warmups
     by_order = {}
     for b in blocks:
         for order, ratios in b["orderRatios"].items():
             if None not in ratios:
                 by_order.setdefault(order, []).append(ratios)
     order_summary = {str(o): [statistics.median(r[i] for r in rows) for i in range(2)] for o, rows in sorted(by_order.items())}
-    summary = {"passed": passed, "workload": workload, "medianWorkRatioByOrder": order_summary, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
+    summary = {"passed": passed, "workload": workload, "positionsBalanced": balanced, "warmupsPassed": warmups, "medianWorkRatioByOrder": order_summary, "inputsUnchanged": manifest["inputsUnchanged"], "medianLimit": MEDIAN_LIMIT, "blockLimit": BLOCK_LIMIT,
                "points": summary_points, "blocks": blocks,
                "supportedModel": "Linux x64 CPU-bound managed threads registered through CozNet, " + {"throughput": "throughput progress point", "pipeline": "throughput progress point behind a TargetQueue"}.get(workload, "end-to-end progress point"),
                "generalClrSafetyEstablished": False}

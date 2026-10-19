@@ -277,4 +277,15 @@ In all three profile suites, the warm-up passes in 5 of 5 blocks.
 Next step: a design that moves each point through each order across blocks, so the `peer-50` effect can be separated from the order.
 Accepted risk until that change: the analyzer reports `warmupPassed` but does not fail a run when a warm-up fails, and a block with one partial thread record drops out of the order report.
 
+## Rotated order
+
+[The rotation plan](target-local-rotation.md) runs one base order in five rotations, gates the warm-ups, and keeps partial blocks in the order report. All six suites pass on that tree.
+- Pipeline run `20261019T060421721-4a882c0a` passes all six points for the first time. `peer-50` passes by a median of 4.92 points, close to the 5-point limit.
+  Its block differences are -7.3, +4.0, +2.0, -9.4, and -4.9 points at positions 0, 6, 5, 4, and 3. So the negative error is not confined to position 0. One block at each position cannot exclude a position effect.
+  The reported order medians include the baseline, whose ratio to itself is always 1.000. Without the baseline, the order-0 producer ratios have a median of 1.005 and range from 0.969 to 1.342.
+  Orders 1 to 6 have medians from 0.987 to 1.020 without the baseline. These medians mix different points and baseline positions, so they do not show that the rotation removed an overhead. Single experiments still vary by up to 34%.
+- Latency profile run `20261019T060624408-2e3fb8c4` and throughput run `20261019T060526482-e851bced` pass all six points.
+- Transition run `20261019T060721421-9e406e92` passes 10 of 10. Prediction run `20261019T060749814-6eba8ca5` and barrier run `20261019T060913007-5812aec4` pass.
+The remaining `peer-50` error in the pipeline is not placed. The records do not show its cause.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

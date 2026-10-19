@@ -271,20 +271,20 @@ let private loop (counter: TargetProgressCounter) (work: uint64 -> uint64) round
         work rounds |> ignore
         counter.Visit()
 
-let private profileDesign binding seed progress =
-    TargetCausalDesign.tryCreate binding period [| Work.selectedName; Work.peerName |] [| Work.selectedName; Work.peerName |] [| 25u; 50u; 75u |] 1 seed progress
+let private profileDesign binding seed rotation progress =
+    TargetCausalDesign.tryCreate binding period [| Work.selectedName; Work.peerName |] [| Work.selectedName; Work.peerName |] [| 25u; 50u; 75u |] 1 seed rotation progress
     |> Result.defaultWith (fun errors -> failwith (errors |> List.map TargetCausalDesign.describe |> String.concat " "))
 
-let private writeProfile mode seed selectedRounds peerRounds durationMs (profile: TargetCausalProfileResult) (output: string) =
+let private writeProfile mode seed (rotation: int) selectedRounds peerRounds durationMs (profile: TargetCausalProfileResult) (output: string) =
     let passed = profile.Experiments.Length = 7 && profile.Experiments |> Array.forall _.Passed
     let points =
         profile.Points
         |> Array.map (fun p -> {| candidate = p.Candidate; speedup = p.Speedup; prediction = p.Predictions[0] |> Option.toNullable |})
-    write output {| mode = mode; seed = seed; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = durationMs
+    write output {| mode = mode; seed = seed; rotation = rotation; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = durationMs
                     warmup = profile.Warmup; experiments = profile.Experiments; points = points; passed = passed |}
     if passed then 0 else 1
 
-let private causalProfile (seed: int) (output: string) =
+let private causalProfile (seed: int) (rotation: int) (output: string) =
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
     let peerRange = binding.Range Work.peerName
@@ -292,10 +292,10 @@ let private causalProfile (seed: int) (output: string) =
         { Work = (fun () -> Work.selected 6000UL |> ignore); PaymentIp = fst selectedRange }
         { Work = (fun () -> Work.peer 3000UL |> ignore); PaymentIp = fst peerRange }
     |]
-    let profile = TargetCausalProfile.run (profileDesign binding seed EndToEnd) journalCapacity workers
-    writeProfile "causal-profile" seed 6000 3000 0 profile output
+    let profile = TargetCausalProfile.run (profileDesign binding seed rotation EndToEnd) journalCapacity workers
+    writeProfile "causal-profile" seed rotation 6000 3000 0 profile output
 
-let private throughputProfile (seed: int) (output: string) =
+let private throughputProfile (seed: int) (rotation: int) (output: string) =
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
     let peerRange = binding.Range Work.peerName
@@ -303,8 +303,8 @@ let private throughputProfile (seed: int) (output: string) =
         { Work = loop counter Work.selected 40UL; PaymentIp = fst selectedRange }
         { Work = loop counter Work.peer 20UL; PaymentIp = fst peerRange }
     |]
-    let profile = TargetCausalProfile.run (profileDesign binding seed (Throughput throughputDuration)) journalCapacity workers
-    writeProfile "throughput-profile" seed 40 20 throughputDuration profile output
+    let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Throughput throughputDuration)) journalCapacity workers
+    writeProfile "throughput-profile" seed rotation 40 20 throughputDuration profile output
 
 let private pipelineCapacity = 4
 
@@ -323,7 +323,7 @@ let private consume (counter: TargetProgressCounter) (queue: TargetQueue<int>) r
             Work.peer rounds |> ignore
             counter.Visit()
 
-let private pipelineProfile (seed: int) (output: string) =
+let private pipelineProfile (seed: int) (rotation: int) (output: string) =
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
     let peerRange = binding.Range Work.peerName
@@ -331,8 +331,8 @@ let private pipelineProfile (seed: int) (output: string) =
         let queue = TargetQueue<int> pipelineCapacity
         [| { Work = produce counter queue 40UL; PaymentIp = fst selectedRange }
            { Work = consume counter queue 20UL; PaymentIp = fst peerRange } |]
-    let profile = TargetCausalProfile.run (profileDesign binding seed (Throughput throughputDuration)) journalCapacity workers
-    writeProfile "pipeline-profile" seed 40 20 throughputDuration profile output
+    let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Throughput throughputDuration)) journalCapacity workers
+    writeProfile "pipeline-profile" seed rotation 40 20 throughputDuration profile output
 
 let private plainPipeline selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
@@ -492,10 +492,10 @@ let main argv =
     | [| "cleanup"; output |] -> cleanup output
     | [| "binding"; output |] -> bindingCheck output
     | [| "rejit"; output |] -> rejitCheck output
-    | [| "causal-profile"; seed; output |] -> causalProfile (Int32.Parse seed) output
-    | [| "throughput-profile"; seed; output |] -> throughputProfile (Int32.Parse seed) output
+    | [| "causal-profile"; seed; rotation; output |] -> causalProfile (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "throughput-profile"; seed; rotation; output |] -> throughputProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
-    | [| "pipeline-profile"; seed; output |] -> pipelineProfile (Int32.Parse seed) output
+    | [| "pipeline-profile"; seed; rotation; output |] -> pipelineProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-pipeline"; selectedRounds; peerRounds; output |] -> plainPipeline (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "shutdown"; output |] -> shutdown output
     | [| "barrier-abort"; output |] -> barrierAbort output

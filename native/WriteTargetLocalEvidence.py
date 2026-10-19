@@ -42,6 +42,7 @@ PREDICTION_HISTORY = [
     ("20261019T032259730-367c4746", "Same", "Throughput progress points", "Pass"),
     ("20261019T040632196-702f8052", "Same", "Blocking queue and pipeline profile", "Pass"),
     ("20261019T043903739-5859c385", "Same", "Per-thread experiment diagnostics", "Pass"),
+    ("20261019T051231424-1e546bce", "Same", "Profile warm-up experiment", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -74,6 +75,7 @@ TRANSITION_HISTORY = [
     ("20261019T032230942-d027dbb5", "Throughput progress points", "Fail. Run 10: 2 ms debt bound. One GC window covers 1.16 ms of the 5.77 ms failure interval."),
     ("20261019T040604415-1a034540", "Blocking queue and pipeline profile", "Fail. Run 9: 2 ms debt bound. Two GC windows cover 0.91 ms of the 6.50 ms failure interval."),
     ("20261019T043835718-5c15e486", "Per-thread experiment diagnostics", "Pass, 10 of 10"),
+    ("20261019T051202514-ddf03668", "Profile warm-up experiment", "Fail. Run 1: 2 ms debt bound. One GC window covers 1.31 ms of the 5.26 ms failure interval."),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -108,6 +110,7 @@ BARRIER_HISTORY = [
     ("20261019T032421198-d2441fed", "Throughput progress points", "Pass"),
     ("20261019T040754718-d668c4c1", "Blocking queue and pipeline profile", "Pass"),
     ("20261019T044024104-2513fe0c", "Per-thread experiment diagnostics", "Fail. `barrier-selected-dominant` block 2 invalid: a debt failure 2 microseconds after a wake whose wait has 7.40 ms of run-queue delay."),
+    ("20261019T051353871-0dc405c5", "Profile warm-up experiment", "Pass"),
 ]
 
 
@@ -634,15 +637,18 @@ PROFILE_HISTORY = [
     ("20261019T032133781-6cc15ea3", "Throughput progress points", "Fail. `selected-75` and `peer-75` each have one block above 10 points, both in block 1, where the plain arms give 36.0% and 4.5%."),
     ("20261019T040508680-38464c4a", "Blocking queue and pipeline profile", "Fail. Block 3 is invalid: its `selected` experiment at 75% breaks the 2 ms debt bound."),
     ("20261019T043738634-485c3ea9", "Per-thread experiment diagnostics", "Fail. `peer-50` median 5.52 points and one block of 10.91 points. `peer-75` has one block of 12.72 points."),
+    ("20261019T051105836-8f4f2ab0", "Profile warm-up experiment", "Pass"),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
     ("20261019T040411141-1b17380b", "Blocking queue and pipeline profile", "Pass"),
     ("20261019T043639774-d3af17e6", "Per-thread experiment diagnostics", "Pass"),
+    ("20261019T051006922-f2f80c26", "Profile warm-up experiment", "Pass"),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
     ("20261019T043536804-514995d6", "Per-thread experiment diagnostics", "Fail. `peer-75` has one block of 14.82 points. The `peer-50` prediction tracks the producer work ratio."),
+    ("20261019T050900839-0a049f8a", "Profile warm-up experiment", "Fail. `peer-50` median 6.01 points. The order-0 producer work ratio stays 1.041 with the warm-up."),
 ]
 
 

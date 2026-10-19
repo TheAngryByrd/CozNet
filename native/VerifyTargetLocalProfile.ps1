@@ -14,7 +14,7 @@ $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.L
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'native/service/PerfRing.Linux.h', 'native/service/PerfSampleRing.h',
     'src/CozNet/TargetLocalReplay.fs', 'src/CozNet/TargetLocalLinux.fs', 'src/CozNet/TargetLocalProfiler.fs', 'src/CozNet/TargetCausalProfile.fs', 'samples/CozNet.TargetLocal/Work.fs',
     'samples/CozNet.TargetLocal/Program.fs', 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj',
-    'native/VerifyTargetLocalProfile.ps1', 'native/AnalyzeTargetProfile.py', 'lode/plans/target-local-causal-profile.md', 'lode/plans/target-local-throughput.md', 'lode/plans/target-local-queue.md', 'lode/plans/target-local-experiment-diagnostics.md', 'lode/plans/target-local-warmup.md', 'build/build.fs')
+    'native/VerifyTargetLocalProfile.ps1', 'native/AnalyzeTargetProfile.py', 'lode/plans/target-local-causal-profile.md', 'lode/plans/target-local-throughput.md', 'lode/plans/target-local-queue.md', 'lode/plans/target-local-experiment-diagnostics.md', 'lode/plans/target-local-warmup.md', 'lode/plans/target-local-rotation.md', 'build/build.fs')
 $hashes = @{}
 function Get-SourceHash([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)
@@ -47,7 +47,7 @@ $speedups = @(25, 50, 75)
 $random = [Random]::new($Seed)
 $runs = @()
 for ($block = 1; $block -le $Blocks; $block++) {
-    $arms = @(@{ arm = 'profile'; args = "$profileMode $($Seed + $block)" }, @{ arm = 'original'; args = "$plainMode $selected $peer" })
+    $arms = @(@{ arm = 'profile'; args = "$profileMode $Seed $($block - 1)" }, @{ arm = 'original'; args = "$plainMode $selected $peer" })
     foreach ($speedup in $speedups) {
         $arms += @{ arm = "selected-$speedup"; args = "$plainMode $([int]($selected * (100 - $speedup) / 100)) $peer" }
         $arms += @{ arm = "peer-$speedup"; args = "$plainMode $selected $([int]($peer * (100 - $speedup) / 100))" }

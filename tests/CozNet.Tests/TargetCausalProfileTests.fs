@@ -11,7 +11,7 @@ module TargetCausalProfileTests =
         CodeBinding.tryCapture [ "0x1000 10 a[Optimized]"; "0x2000 10 b[Optimized]" ] symbols |> Result.defaultWith failwith
 
     let private designOf eligible candidates speedups blocks seed =
-        TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks seed EndToEnd
+        TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks seed 0 EndToEnd
         |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
 
     let private result effective passed : TargetProfileResult =
@@ -136,7 +136,7 @@ module TargetCausalProfileTests =
 
             test "an invalid design returns each parse error and no design" {
                 let errors eligible candidates speedups blocks =
-                    match TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks 0 EndToEnd with
+                    match TargetCausalDesign.tryCreate binding 1000000UL eligible candidates speedups blocks 0 0 EndToEnd with
                     | Ok _ -> []
                     | Error values -> values
                 Expect.equal (errors symbols [| "a"; "a" |] [| 25u |] 1) [ DuplicateCandidate "a" ] "A repeated candidate must fail."
@@ -148,12 +148,12 @@ module TargetCausalProfileTests =
                 Expect.equal (errors symbols [||] [||] 1) [ NoCandidates; NoSpeedups ] "Empty candidates and speedups must fail."
                 Expect.equal (errors [| "a"; "z" |] [| "a" |] [| 25u |] 1) [ UnboundEligible "z" ] "An unbound eligible symbol must fail."
                 Expect.isTrue
-                    (match TargetCausalDesign.tryCreate binding 0UL symbols symbols [| 25u |] 1 0 EndToEnd with Error [ PlanRejected _ ] -> true | _ -> false)
+                    (match TargetCausalDesign.tryCreate binding 0UL symbols symbols [| 25u |] 1 0 0 EndToEnd with Error [ PlanRejected _ ] -> true | _ -> false)
                     "A period that the replay plan rejects must fail."
             }
 
             test "a throughput duration outside 1 to 60000 ms is a parse error" {
-                let parse duration = TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 25u |] 1 0 (Throughput duration)
+                let parse duration = TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 25u |] 1 0 0 (Throughput duration)
                 Expect.equal (parse 0) (Error [ InvalidDuration 0 ]) "A zero duration must fail."
                 Expect.equal (parse 60001) (Error [ InvalidDuration 60001 ]) "A duration above 60000 ms must fail."
                 Expect.equal (parse Int32.MaxValue) (Error [ InvalidDuration Int32.MaxValue ]) "The largest duration must fail."
@@ -163,7 +163,7 @@ module TargetCausalProfileTests =
 
             test "a safety stop fails its experiment and keeps the reason" {
                 let design =
-                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 (Throughput 100)
+                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
                 let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, 100L, (if c = "b" then Some "safety" else None))) design
                 let stopped = value.Experiments |> Array.filter (fun e -> not e.Passed)
@@ -181,7 +181,7 @@ module TargetCausalProfileTests =
 
             test "a throughput prediction compares the effective time for each visit" {
                 let design =
-                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 (Throughput 100)
+                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
                 let run c s = (result 1000UL true, (if s = 0u then 100L elif c = "a" then 200L else 100L), None)
                 let value = TargetCausalProfile.runWith run design
@@ -193,7 +193,7 @@ module TargetCausalProfileTests =
 
             test "an experiment or baseline with no visits gives no prediction and stays in the record" {
                 let design =
-                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 (Throughput 100)
+                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
                 let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, (if c = "a" && s = 50u then 0L else 100L), None)) design
                 Expect.equal ((value.Points |> Array.find (fun p -> p.Candidate = "a")).Predictions) [| None |] "Zero visits must give no prediction."
@@ -245,6 +245,29 @@ module TargetCausalProfileTests =
                 let rows = TargetCausalProfile.threads value
                 Expect.equal (rows |> Array.map (fun t -> t.CpuNs, t.HandlerNs, t.PaymentNs, t.SkipNs, t.Samples, t.Wakes, t.RunDelayNs, t.WallNs))
                     [| 10UL, 3UL, 11UL, 0UL, 2, 0, 7L, 0UL; 20UL, 3UL, 0UL, 4UL, 1, 1, 7L, 0UL |] "Each thread must keep its own totals."
+            }
+
+            test "a rotation shifts the order of each block and keeps every experiment" {
+                let order rotation =
+                    let design =
+                        TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 25u; 50u; 75u |] 3 7 rotation EndToEnd
+                        |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
+                    (runResults (fun _ _ -> result 100UL true) design).Experiments
+                    |> Array.map (fun e -> e.Block, e.Candidate, e.Speedup, e.Order)
+                let blocks rotation b = order rotation |> Array.filter (fun (block, _, _, _) -> block = b) |> Array.sortBy (fun (_, _, _, o) -> o)
+                                      |> Array.map (fun (_, c, s, _) -> c, s)
+                let first = blocks 0 1
+                let rotated = Array.append first[1..] first[..0]
+                Expect.equal (blocks 0 2) rotated "Block 2 must rotate the base order by one place."
+                Expect.equal (blocks 1 1) rotated "Rotation 1 must rotate block 1 by one place."
+                Expect.equal (Array.sort (blocks 1 3)) (Array.sort first) "A rotation must keep every experiment."
+            }
+
+            test "a rotation outside the experiment count is a parse error" {
+                let parse rotation = TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 25u |] 1 0 rotation EndToEnd
+                Expect.equal (parse -1) (Error [ InvalidRotation -1 ]) "A negative rotation must fail."
+                Expect.equal (parse 3) (Error [ InvalidRotation 3 ]) "A rotation equal to the experiment count must fail."
+                Expect.isOk (parse 2) "The last valid rotation must parse."
             }
 
             test "a design keeps copies of its inputs" {

@@ -38,7 +38,7 @@ To compare several candidates and speedups in one process, call `TargetCausalPro
        { Work = (fun () -> Work.index 1000 |> ignore); PaymentIp = fst (binding.Range index) }
    |]
    let design =
-       TargetCausalDesign.tryCreate binding 1000000UL [| parse; index |] [| parse; index |] [| 25u; 50u; 75u |] 5 42 EndToEnd
+       TargetCausalDesign.tryCreate binding 1000000UL [| parse; index |] [| parse; index |] [| 25u; 50u; 75u |] 5 42 0 EndToEnd
        |> Result.defaultWith (fun errors -> failwith (errors |> List.map TargetCausalDesign.describe |> String.concat " "))
    let profile = TargetCausalProfile.run design (1u <<< 20) workerSet
    ```

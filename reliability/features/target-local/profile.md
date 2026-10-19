@@ -1,6 +1,6 @@
 # Target-local causal profile
 
-Evidence: `artifacts/target-local-profile/20261019T051105836-8f4f2ab0`.
+Evidence: `artifacts/target-local-profile/20261019T060624408-2e3fb8c4`.
 
 `TargetLocalProfileVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `causal-profile` process and seven `plain` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the profile plan](../../../lode/plans/target-local-causal-p
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 26.11% | 26.79% | 1.61 pp | 5.21 pp | Pass |
-| `selected-50` | 5 / 5 | 49.20% | 49.78% | 1.76 pp | 3.26 pp | Pass |
-| `selected-75` | 5 / 5 | 49.67% | 51.25% | 0.95 pp | 4.20 pp | Pass |
-| `peer-25` | 5 / 5 | 0.25% | 0.21% | 1.60 pp | 6.94 pp | Pass |
-| `peer-50` | 5 / 5 | 0.60% | 0.80% | 1.57 pp | 3.54 pp | Pass |
-| `peer-75` | 5 / 5 | 1.77% | 1.69% | 1.22 pp | 3.21 pp | Pass |
+| `selected-25` | 5 / 5 | 23.90% | 25.90% | 1.70 pp | 6.58 pp | Pass |
+| `selected-50` | 5 / 5 | 49.54% | 49.21% | 1.30 pp | 2.20 pp | Pass |
+| `selected-75` | 5 / 5 | 49.69% | 49.95% | 1.03 pp | 2.64 pp | Pass |
+| `peer-25` | 5 / 5 | -0.36% | 3.34% | 2.03 pp | 9.36 pp | Pass |
+| `peer-50` | 5 / 5 | 0.39% | -0.90% | 3.58 pp | 6.58 pp | Pass |
+| `peer-75` | 5 / 5 | 1.33% | 2.08% | 3.74 pp | 4.94 pp | Pass |
 
 The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
 
@@ -28,25 +28,25 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.985, 1.008 |
-| `selected-50` | 0.998, 1.025 |
-| `selected-75` | 1.006, 1.022 |
-| `peer-25` | 0.998, 1.021 |
-| `peer-50` | 0.994, 1.013 |
-| `peer-75` | 0.982, 1.016 |
+| `selected-25` | 1.012, 1.024 |
+| `selected-50` | 0.999, 1.016 |
+| `selected-75` | 1.005, 1.023 |
+| `peer-25` | 1.004, 1.013 |
+| `peer-50` | 0.996, 1.008 |
+| `peer-75` | 0.987, 1.028 |
 
-The median work ratio by run order in the process is order 0: 0.971, 1.013; order 1: 1.007, 1.025; order 2: 0.998, 1.016; order 3: 1.000, 1.024; order 4: 0.995, 1.005; order 5: 0.994, 1.004; order 6: 1.000, 1.022. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.000, 1.013; order 1: 1.000, 1.000; order 2: 1.000, 1.005; order 3: 1.000, 1.028; order 4: 1.000, 1.013; order 5: 0.998, 1.027; order 6: 0.996, 1.016. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 ## Blocks
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -1.61 pp | -1.10 pp | 0.11 pp | -1.60 pp | 2.46 pp | -0.27 pp |
-| 2 | Yes | 1.73 pp | -1.36 pp | -4.20 pp | -6.94 pp | -1.57 pp | -3.21 pp |
-| 3 | Yes | -5.21 pp | -3.25 pp | -0.36 pp | -5.41 pp | 3.54 pp | -1.22 pp |
-| 4 | Yes | -0.50 pp | -1.76 pp | -0.95 pp | 0.83 pp | -0.21 pp | 0.61 pp |
-| 5 | Yes | 0.36 pp | 3.26 pp | -1.98 pp | 0.67 pp | -1.11 pp | 2.85 pp |
+| 1 | Yes | -1.70 pp | 1.67 pp | -0.63 pp | -2.03 pp | 3.58 pp | 0.53 pp |
+| 2 | Yes | -0.43 pp | 0.53 pp | 0.93 pp | -1.34 pp | 1.81 pp | 3.74 pp |
+| 3 | Yes | -6.58 pp | -2.20 pp | -1.34 pp | -9.36 pp | -6.58 pp | -3.74 pp |
+| 4 | Yes | -0.32 pp | -1.30 pp | -1.03 pp | 3.80 pp | 4.04 pp | -4.94 pp |
+| 5 | Yes | 4.04 pp | -0.29 pp | 2.64 pp | 1.91 pp | 0.95 pp | 1.87 pp |
 
 ## Run history
 
@@ -57,6 +57,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T040508680-38464c4a` | Blocking queue and pipeline profile | Fail. Block 3 is invalid: its `selected` experiment at 75% breaks the 2 ms debt bound. |
 | `20261019T043738634-485c3ea9` | Per-thread experiment diagnostics | Fail. `peer-50` median 5.52 points and one block of 10.91 points. `peer-75` has one block of 12.72 points. |
 | `20261019T051105836-8f4f2ab0` | Profile warm-up experiment | Pass |
+| `20261019T060624408-2e3fb8c4` | Rotated experiment order and warm-up gate | Pass |
 
 ## Limits
 

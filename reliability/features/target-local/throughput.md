@@ -1,6 +1,6 @@
 # Target-local throughput profile
 
-Evidence: `artifacts/target-local-throughput/20261019T051006922-f2f80c26`.
+Evidence: `artifacts/target-local-throughput/20261019T060526482-e851bced`.
 
 `TargetLocalThroughputVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `throughput-profile` process and seven `plain-throughput` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the throughput plan](../../../lode/plans/target-local-throu
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 8.34% | 9.16% | 1.97 pp | 3.04 pp | Pass |
-| `selected-50` | 5 / 5 | 23.64% | 23.25% | 1.40 pp | 3.01 pp | Pass |
-| `selected-75` | 5 / 5 | 48.01% | 49.79% | 1.78 pp | 3.01 pp | Pass |
-| `peer-25` | 5 / 5 | 17.51% | 18.03% | 0.88 pp | 1.77 pp | Pass |
-| `peer-50` | 5 / 5 | 38.09% | 38.07% | 0.47 pp | 4.38 pp | Pass |
-| `peer-75` | 5 / 5 | 64.40% | 66.58% | 1.37 pp | 2.61 pp | Pass |
+| `selected-25` | 5 / 5 | 7.82% | 10.65% | 3.53 pp | 4.62 pp | Pass |
+| `selected-50` | 5 / 5 | 24.24% | 24.77% | 2.13 pp | 5.34 pp | Pass |
+| `selected-75` | 5 / 5 | 47.00% | 49.68% | 2.22 pp | 3.71 pp | Pass |
+| `peer-25` | 5 / 5 | 17.26% | 17.53% | 3.35 pp | 4.00 pp | Pass |
+| `peer-50` | 5 / 5 | 40.33% | 39.78% | 2.09 pp | 4.09 pp | Pass |
+| `peer-75` | 5 / 5 | 65.06% | 66.45% | 1.71 pp | 2.41 pp | Pass |
 
 If both workers have the same cost for each round, the expected gains are 10%, 25%, and 50% for `Work.selected` and 18.2%, 40%, and 66.7% for `Work.peer`. The criteria use the measured gains.
 
@@ -28,25 +28,25 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 1.219, 0.914 |
-| `selected-50` | 1.506, 0.767 |
-| `selected-75` | 1.996, 0.520 |
-| `peer-25` | 0.825, 1.094 |
-| `peer-50` | 0.619, 1.224 |
-| `peer-75` | 0.356, 1.354 |
+| `selected-25` | 1.222, 0.921 |
+| `selected-50` | 1.493, 0.761 |
+| `selected-75` | 2.052, 0.529 |
+| `peer-25` | 0.827, 1.098 |
+| `peer-50` | 0.598, 1.186 |
+| `peer-75` | 0.349, 1.358 |
 
-The median work ratio by run order in the process is order 0: 0.616, 1.233; order 1: 1.542, 0.782; order 2: 0.837, 1.060; order 3: 1.000, 1.000; order 4: 1.503, 0.767; order 5: 1.219, 0.915; order 6: 1.000, 1.000. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.827, 1.098; order 4: 1.000, 1.000; order 5: 1.249, 0.934; order 6: 1.237, 0.929. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 ## Blocks
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -1.75 pp | 0.34 pp | -0.71 pp | 0.89 pp | -0.47 pp | -1.37 pp |
-| 2 | Yes | -2.70 pp | -2.98 pp | -2.17 pp | 0.36 pp | 0.15 pp | 0.06 pp |
-| 3 | Yes | 0.95 pp | -1.40 pp | -1.78 pp | -1.77 pp | 0.42 pp | -2.61 pp |
-| 4 | Yes | 1.97 pp | 3.01 pp | 0.31 pp | 0.06 pp | 0.91 pp | -0.74 pp |
-| 5 | Yes | -3.04 pp | -0.71 pp | -3.01 pp | -0.88 pp | -4.38 pp | -2.52 pp |
+| 1 | Yes | 0.80 pp | 2.13 pp | -3.21 pp | -3.51 pp | 0.56 pp | -2.36 pp |
+| 2 | Yes | -3.53 pp | 0.97 pp | -0.79 pp | 0.42 pp | -2.09 pp | -1.71 pp |
+| 3 | Yes | -4.62 pp | -5.34 pp | -3.71 pp | -1.10 pp | -4.09 pp | -1.32 pp |
+| 4 | Yes | -4.54 pp | -4.37 pp | -2.22 pp | -3.35 pp | -1.98 pp | -2.41 pp |
+| 5 | Yes | 1.51 pp | 0.15 pp | -0.61 pp | 4.00 pp | 3.72 pp | 1.36 pp |
 
 ## Run history
 
@@ -56,6 +56,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T040411141-1b17380b` | Blocking queue and pipeline profile | Pass |
 | `20261019T043639774-d3af17e6` | Per-thread experiment diagnostics | Pass |
 | `20261019T051006922-f2f80c26` | Profile warm-up experiment | Pass |
+| `20261019T060526482-e851bced` | Rotated experiment order and warm-up gate | Pass |
 
 ## Limits
 
