@@ -413,4 +413,30 @@ For the pipeline failure, the release-token rule sets the skip to 0, and the 2 m
 The records do not show whether the thread ran before that settlement in the pipeline case.
 The release-token rule is a design choice of the blocking plan, not a user requirement. Under it, the consumer owes the delay that the producer added after its post. The 2 ms bound is a user requirement. A change to the bound needs a user decision. The [roadmap](roadmap.md) lists the options.
 
+## Latency progress points
+
+[The latency point plan](target-local-transactions.md) adds `TargetProgressPoint.Latency` and a `transaction` suite.
+Transaction run `20261019T110105861-414dba20` fails criterion 84 at all six points. All five blocks are valid, and the positions are balanced.
+
+| Point | Median predicted | Median real gain | Median difference | Max difference |
+| --- | ---: | ---: | ---: | ---: |
+| `selected-25` | 27.91% | 20.13% | 5.43 pp | 21.30 pp |
+| `selected-50` | 51.48% | 41.96% | 10.19 pp | 15.28 pp |
+| `selected-75` | 69.96% | 63.09% | 7.24 pp | 15.64 pp |
+| `peer-25` | 5.12% | 5.11% | 7.25 pp | 19.88 pp |
+| `peer-50` | 4.67% | 8.69% | 9.25 pp | 14.42 pp |
+| `peer-75` | 4.51% | 13.40% | 12.06 pp | 14.97 pp |
+
+The real gains are close to the model of the plan, so the workload behaves as planned. The predictions do not follow the `peer` gains, which rise with the speedup while the predictions stay near 5%.
+Hypothesis, not shown: the `E / T` scaling of the plan assumes that the global delay stretches each transaction as it stretches the whole run.
+A `peer` sample adds global delay while the consumer runs, and the producer pays it in the next transaction. So the delay does not fall evenly across transactions, and the scaling cannot see a faster consumer.
+A rule that subtracts the global delay added between the begin and the end of each transaction would give the `peer` gain in a simple model of this pipeline. Block 1 is above the real gain at every point, by 12.06 to 21.30 points.
+
+The other suites on the same tree:
+- Lock run `20261019T110313420-3292dd51` passes all six points, with median differences from 1.03 to 4.64 points. It is the first lock run that passes.
+- Pipeline run `20261019T110512150-9b6ceb9a`, throughput run `20261019T110611005-2a35600a`, latency profile run `20261019T110709359-b184c519`, transition run `20261019T110806692-b4b671d5`, and prediction run `20261019T110837795-78ce6bcb` pass.
+- Semaphore run `20261019T110212880-744018ed` fails five points: four by one block each, and `peer-50` by two blocks. Block 3 is below the real gain at every point, from -9.12 to -33.29 points, and block 4 has `peer-50` at +19.36 points.
+- Spin lock run `20261019T110413189-a8e4bb89` fails, because block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` also fails by its median of 7.87 points.
+- Barrier run `20261019T111000032-74adbcce` fails `barrier-peer-bound` by its median of 5.10 points. Its blocks range from -7.63 to +5.35 points.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

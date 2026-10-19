@@ -1,6 +1,6 @@
 # Target-local pipeline profile
 
-Evidence: `artifacts/target-local-pipeline/20261019T094141941-f8894fe3`.
+Evidence: `artifacts/target-local-pipeline/20261019T110512150-9b6ceb9a`.
 
 `TargetLocalPipelineVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `pipeline-profile` process and seven `plain-pipeline` processes in a random order.
@@ -8,16 +8,16 @@ The profile process runs `TargetCausalProfile.run` with candidates `Work.selecte
 The criteria are in [the queue plan](../../../lode/plans/target-local-queue.md). The runner hashes that file, and all source hashes stay unchanged.
 `native/WriteTargetLocalEvidence.py` writes this page.
 
-**Result: the current run fails.** Points selected-25, selected-50, selected-75, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. The run is kept, and no rerun replaces it.
+**Result: the current run passes.**
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 4 / 5 | 24.74% | 25.41% | 1.36 pp | 6.00 pp | Fail |
-| `selected-50` | 4 / 5 | 48.99% | 49.84% | 0.35 pp | 2.03 pp | Fail |
-| `selected-75` | 4 / 5 | 47.85% | 47.94% | 1.14 pp | 3.38 pp | Fail |
-| `peer-25` | 4 / 5 | -1.56% | 1.86% | 2.80 pp | 6.16 pp | Fail |
-| `peer-50` | 4 / 5 | 0.05% | 0.12% | 1.46 pp | 11.12 pp | Fail |
-| `peer-75` | 4 / 5 | -1.21% | 2.29% | 4.50 pp | 5.47 pp | Fail |
+| `selected-25` | 5 / 5 | 23.83% | 24.81% | 0.99 pp | 2.74 pp | Pass |
+| `selected-50` | 5 / 5 | 49.20% | 49.98% | 0.54 pp | 1.46 pp | Pass |
+| `selected-75` | 5 / 5 | 48.84% | 49.08% | 1.45 pp | 3.57 pp | Pass |
+| `peer-25` | 5 / 5 | 0.98% | 1.66% | 1.07 pp | 6.77 pp | Pass |
+| `peer-50` | 5 / 5 | 0.21% | -0.11% | 2.86 pp | 3.51 pp | Pass |
+| `peer-75` | 5 / 5 | -0.09% | 0.62% | 2.76 pp | 5.71 pp | Pass |
 
 The producer is the bottleneck, so the model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. Above 50%, the consumer sets the rate.
 
@@ -28,44 +28,27 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.998, 0.869 |
-| `selected-50` | 0.990, 0.527 |
-| `selected-75` | 1.237, 0.521 |
-| `peer-25` | 1.016, 1.145 |
-| `peer-50` | 0.999, 1.247 |
-| `peer-75` | 1.011, 1.395 |
+| `selected-25` | 1.002, 0.871 |
+| `selected-50` | 0.994, 0.515 |
+| `selected-75` | 1.236, 0.511 |
+| `peer-25` | 0.990, 1.104 |
+| `peer-50` | 0.997, 1.239 |
+| `peer-75` | 1.000, 1.387 |
 
-The median work ratio by run order in the process is order 0: 1.003, 1.000; order 1: 1.008, 1.000; order 2: 1.000, 1.000; order 3: 1.000, 1.117; order 4: 1.000, 1.000; order 5: 1.003, 1.002; order 6: 1.015, 0.898. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.034, 1.000; order 1: 1.000, 1.000; order 2: 1.007, 1.000; order 3: 1.000, 1.104; order 4: 0.997, 1.000; order 5: 1.002, 0.871; order 6: 0.997, 0.869. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
-
-## Failed experiments
-
-Each row is a ledger failure of an experiment that did not pass, or the error of a failed experiment without a ledger failure. The time counts from the first journal event with a time. The amount is the debt for failure 1 and 0 for other failures. The gap is the time from the previous journal event of the same worker, in sequence order, and a buffered sample can make it negative. A failure without a time shows n/a. The collection count and the GC pause cover all threads of the process during the experiment.
-
-| Block | Experiment | Worker | Failure | Amount | Time | Gap | Collections | GC pause |
-| ---: | --- | ---: | ---: | ---: | ---: | --- | ---: | ---: |
-| 5 | `selected` 75% | 1 | 1 | 2.250 ms | 3.969 ms | 0.003 ms after `Wake` | 0 | 0.000 ms |
-
-## Failure context
-
-For each failure, each row summarizes one worker over the journal events that come before the failure in sequence and no more than 10 ms before it in time. The record also keeps the 64 latest of these events. Child payments show their total measured time for their total requested time over the whole window, which can cover several payments. The overshoot is the largest measured minus requested time of one completed child. A failed child wait is counted, but it is not ranked. The ledger records a publish only when it raises the global delay, from the observed value to the local delay of its worker. Offsets count from the failure. An event of another worker can have a positive offset, because it takes its time before its sequence.
-
-| Block | Experiment | Failing worker | Window events | Worker | Events | Children | Child time | Largest overshoot | Publishes | Last publish |
-| ---: | --- | ---: | ---: | ---: | ---: | ---: | --- | --- | ---: | --- |
-| 5 | `selected` 75% | 1 | 13 | 0 | 11 | 0 (0 failed) | 0.000 ms for 0.000 ms | none | 3 | 2.250 ms over 1.500 ms at -0.889 ms |
-| 5 | `selected` 75% | 1 | 13 | 1 | 2 | 0 (0 failed) | 0.000 ms for 0.000 ms | none | 0 | none |
 
 ## Blocks
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -1.05 pp | 0.13 pp | 0.40 pp | -0.66 pp | -0.53 pp | -5.47 pp |
-| 2 | Yes | 1.66 pp | -0.49 pp | 1.85 pp | -0.68 pp | 0.39 pp | 2.05 pp |
-| 3 | Yes | -6.00 pp | -2.03 pp | -3.38 pp | -4.92 pp | -11.12 pp | -4.64 pp |
-| 4 | Yes | 0.53 pp | 0.22 pp | 0.44 pp | -6.16 pp | 2.40 pp | -4.36 pp |
-| 5 | No: profile exit 1; profile not passed | -1.28 pp | -0.37 pp | n/a | 2.26 pp | -1.25 pp | -0.71 pp |
+| 1 | Yes | -2.74 pp | -0.61 pp | -0.30 pp | 1.01 pp | 3.51 pp | -2.05 pp |
+| 2 | Yes | -2.32 pp | -1.46 pp | -3.57 pp | -4.47 pp | -2.86 pp | -2.76 pp |
+| 3 | Yes | -0.98 pp | -0.54 pp | -0.70 pp | -0.67 pp | 0.16 pp | -0.36 pp |
+| 4 | Yes | 0.99 pp | -0.28 pp | 2.46 pp | 6.77 pp | 0.63 pp | -5.71 pp |
+| 5 | Yes | 0.49 pp | 0.47 pp | 1.45 pp | -1.07 pp | -3.36 pp | -3.03 pp |
 
 ## Run history
 
@@ -80,7 +63,8 @@ For each failure, each row summarizes one worker over the journal events that co
 | `20261019T074639406-cf96acce` | Spin before a lock wait | Pass |
 | `20261019T082629301-c4292b43` | TargetSemaphore and semaphore profile | Fail. `peer-25` has one block of 10.11 points. |
 | `20261019T090700489-b82b1791` | Failure and GC records | Pass |
-| `20261019T094141941-f8894fe3` | Failure context | Fail. Points selected-25, selected-50, selected-75, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. |
+| `20261019T094141941-f8894fe3` | Failure context | Fail. Block 5 is invalid from a debt failure after a wake with a skip of 0, and `peer-50` has one block of -11.12 points. |
+| `20261019T110512150-9b6ceb9a` | Latency progress points | Pass |
 
 ## Limits
 

@@ -390,6 +390,60 @@ let private plainLockWith (mode: string) (spin: TimeSpan) selectedRounds peerRou
                     passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
+let private beginTransactions (counter: TargetProgressCounter) (queue: TargetQueue<int64>) rounds () =
+    while not counter.Stopped do
+        let ticket = counter.Begin()
+        Work.selected rounds |> ignore
+        queue.Enqueue ticket
+    queue.Enqueue -1L
+
+let private endTransactions (counter: TargetProgressCounter) (queue: TargetQueue<int64>) rounds () =
+    let mutable running = true
+    while running do
+        let ticket = queue.Dequeue()
+        if ticket < 0L then
+            running <- false
+        else
+            Work.peer rounds |> ignore
+            counter.End ticket
+
+let private transactionProfile (seed: int) (rotation: int) (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
+    let workers (counter: TargetProgressCounter) =
+        let queue = TargetQueue<int64> pipelineCapacity
+        [| { Work = beginTransactions counter queue 40UL; PaymentIp = fst selectedRange }
+           { Work = endTransactions counter queue 8UL; PaymentIp = fst peerRange } |]
+    let profile = TargetCausalProfile.run (profileDesign binding seed rotation (Latency throughputDuration)) journalCapacity workers
+    writeProfile "transaction-profile" seed rotation 40 8 throughputDuration profile output
+
+let private plainTransaction selectedRounds peerRounds (output: string) =
+    Work.selected 1UL |> ignore
+    Work.peer 1UL |> ignore
+    let counter = TargetProgressCounter()
+    let queue = TargetQueue<int64> pipelineCapacity
+    let ready = new Barrier(3)
+    let started = Array.zeroCreate<int64> 2
+    let finished = Array.zeroCreate<int64> 2
+    let run index (body: unit -> unit) =
+        Thread(fun () ->
+            ready.SignalAndWait()
+            started[index] <- Stopwatch.GetTimestamp()
+            body ()
+            finished[index] <- Stopwatch.GetTimestamp())
+    let threads = [| run 0 (beginTransactions counter queue selectedRounds); run 1 (endTransactions counter queue peerRounds) |]
+    threads |> Array.iter _.Start()
+    ready.SignalAndWait()
+    Thread.Sleep throughputDuration
+    counter.Stop()
+    threads |> Array.iter _.Join()
+    let elapsed = Stopwatch.GetElapsedTime(Array.min started, Array.max finished).TotalNanoseconds
+    let visits = counter.Visits
+    write output {| mode = "plain-transaction"; selectedRounds = selectedRounds; peerRounds = peerRounds; durationMs = throughputDuration
+                    elapsedNs = uint64 elapsed; visits = visits; arrivals = counter.Arrivals; latencyNs = counter.LatencyNs; passed = visits >= 100L |}
+    if visits >= 100L then 0 else 1
+
 type private Turns() =
     let mutable finished = 0
     member val Selected = TargetSemaphore 0
@@ -618,6 +672,8 @@ let main argv =
     | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "lock-profile"; seed; rotation; output |] -> lockProfileWith "lock-profile" TimeSpan.Zero (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-lock"; selectedRounds; peerRounds; output |] -> plainLockWith "plain-lock" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "transaction-profile"; seed; rotation; output |] -> transactionProfile (Int32.Parse seed) (Int32.Parse rotation) output
+    | [| "plain-transaction"; selectedRounds; peerRounds; output |] -> plainTransaction (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "semaphore-profile"; seed; rotation; output |] -> semaphoreProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "plain-semaphore"; selectedRounds; peerRounds; output |] -> plainSemaphore (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
     | [| "spin-lock-profile"; seed; rotation; output |] -> lockProfileWith "spin-lock-profile" lockSpin (Int32.Parse seed) (Int32.Parse rotation) output

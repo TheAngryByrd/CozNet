@@ -1,6 +1,6 @@
 import unittest
 
-from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
+from AnalyzeTargetProfile import (latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
                                   order_ratios,
                                   positions_balanced,
                                   prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
@@ -264,6 +264,26 @@ class ThroughputChecks(unittest.TestCase):
         self.assertEqual(failed_experiments(record), [{"candidate": "a", "speedup": 75, "order": 3, "error": "replay", "collections": 2, "gcPauseNs": 900,
                                                        "failures": [failure], "threads": [{"CpuNs": 1, "WallNs": 2, "RunDelayNs": 0}]}])
         self.assertEqual(failed_experiments(None), [])
+
+    def test_transaction_gain_and_prediction_use_the_mean_latency(self):
+        original = {"elapsedNs": 1000, "visits": 100, "latencyNs": 100000}
+        optimized = {"elapsedNs": 1000, "visits": 200, "latencyNs": 150000}
+        self.assertAlmostEqual(actual_gain(original, optimized, "transaction"), 1 - 750 / 1000)
+        self.assertIsNone(actual_gain({**original, "latencyNs": 0}, optimized, "transaction"))
+        self.assertIsNone(actual_gain(original, {**optimized, "latencyNs": "x"}, "transaction"))
+        experiments = [{"Candidate": "a", "Speedup": 0, "Passed": True, "Visits": 100, "LatencyNs": 100000, "EffectiveNs": 1000, "ElapsedNs": 1000},
+                       {"Candidate": "a", "Speedup": 50, "Passed": True, "Visits": 200, "LatencyNs": 125000, "EffectiveNs": 800, "ElapsedNs": 1000}]
+        self.assertAlmostEqual(prediction({"mode": "transaction-profile", "experiments": experiments}, "a", 50), 1 - (625 * 0.8) / 1000)
+        broken = [experiments[0], {k: v for k, v in experiments[1].items() if k != "LatencyNs"}]
+        self.assertIsNone(prediction({"mode": "transaction-profile", "experiments": broken}, "a", 50))
+        complete = {"experiments": [{**e, "Arrivals": e["Visits"]} for e in experiments]}
+        plain = {"original": {"arrivals": 100, "visits": 100, "latencyNs": 1}}
+        self.assertTrue(latency_counts_complete(complete, {"profile": complete, **plain}))
+        self.assertFalse(latency_counts_complete(complete, {"profile": complete, "original": {"arrivals": 101, "visits": 100, "latencyNs": 1}}))
+        warmed = {**complete, "warmup": {**experiments[0], "Arrivals": 99}}
+        self.assertFalse(latency_counts_complete(warmed, {"profile": warmed, **plain}))
+        args = expected_args(20261018, 1, "transaction")
+        self.assertEqual((args["profile"], args["selected-50"], args["peer-75"]), ("transaction-profile 20261018 0", "plain-transaction 20 8", "plain-transaction 40 2"))
 
     def test_latency_experiments_need_one_visit(self):
         self.assertTrue(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 1}}), "latency"))

@@ -6,14 +6,28 @@ open System.Threading
 type TargetProgressPoint =
     | EndToEnd
     | Throughput of durationMs: int
+    | Latency of durationMs: int
 
 [<Sealed; AllowNullLiteral>]
 type TargetProgressCounter() =
     let mutable visits = 0L
+    let mutable arrivals = 0L
+    let mutable latencyTicks = 0L
     let mutable stopped = 0
 
     member _.Visit() = Interlocked.Increment(&visits) |> ignore
     member _.Visits = Interlocked.Read(&visits)
+
+    member _.Begin() =
+        Interlocked.Increment(&arrivals) |> ignore
+        Diagnostics.Stopwatch.GetTimestamp()
+
+    member this.End(ticket: int64) =
+        Interlocked.Add(&latencyTicks, max 0L (Diagnostics.Stopwatch.GetTimestamp() - ticket)) |> ignore
+        this.Visit()
+
+    member _.Arrivals = Interlocked.Read(&arrivals)
+    member _.LatencyNs = uint64 (Diagnostics.Stopwatch.GetElapsedTime(0L, Interlocked.Read(&latencyTicks)).TotalNanoseconds)
     member _.Stopped = Volatile.Read(&stopped) = 1
     member _.Stop() = Volatile.Write(&stopped, 1)
 
@@ -77,6 +91,8 @@ type TargetCausalExperiment = {
     GlobalNs: uint64
     EffectiveNs: uint64
     Visits: int64
+    Arrivals: int64
+    LatencyNs: uint64
     Threads: TargetCausalThread array
     Failures: TargetCausalFailure array
     Collections: int
@@ -166,7 +182,8 @@ module TargetCausalDesign =
               if blocks < 1 then NoBlocks blocks
               if rotation < 0 || rotation > candidates.Length * speedups.Length then InvalidRotation rotation
               match progress with
-              | Throughput duration when duration < 1 || duration > maxDurationMs -> InvalidDuration duration
+              | Throughput duration
+              | Latency duration when duration < 1 || duration > maxDurationMs -> InvalidDuration duration
               | _ -> () ]
 
         match errors with
@@ -190,7 +207,7 @@ module TargetCausalDesign =
         | SpeedupOutOfRange speedup -> $"The speedup {speedup} is not from 1 to 100."
         | NoBlocks blocks -> $"The profile requires at least one block, but it has {blocks}."
         | InvalidRotation rotation -> $"The rotation {rotation} is not from 0 to the number of experiments in a block minus 1."
-        | InvalidDuration duration -> $"A throughput experiment requires a duration from 1 to {maxDurationMs} ms, but it has {duration} ms."
+        | InvalidDuration duration -> $"A throughput or latency experiment requires a duration from 1 to {maxDurationMs} ms, but it has {duration} ms."
         | PlanRejected message -> $"The replay plan rejects the design: {message}"
 
 [<RequireQualifiedAccess>]
@@ -209,7 +226,9 @@ module TargetCausalProfile =
         let middle = sorted.Length / 2
         if sorted.Length % 2 = 1 then sorted[middle] else (sorted[middle - 1] + sorted[middle]) / 2.0
 
-    let internal points (blocks: int) (candidates: string array) (speedups: uint32 array) (experiments: TargetCausalExperiment array) =
+    let internal latency (e: TargetCausalExperiment) = float e.LatencyNs / float e.Visits * float e.EffectiveNs / float e.ElapsedNs
+
+    let internal points (progress: TargetProgressPoint) (blocks: int) (candidates: string array) (speedups: uint32 array) (experiments: TargetCausalExperiment array) =
         [| for candidate in candidates do
                for speedup in speedups do
                    let predictions =
@@ -219,7 +238,10 @@ module TargetCausalProfile =
                            let experiment = experiments |> Array.tryFind (fun e -> e.Block = block && e.Candidate = candidate && e.Speedup = speedup)
                            match baseline, experiment with
                            | Some b, Some e when b.Passed && e.Passed && b.EffectiveNs > 0UL && b.Visits > 0L && e.Visits > 0L ->
-                               Some(1.0 - (float e.EffectiveNs / float e.Visits) / (float b.EffectiveNs / float b.Visits))
+                               match progress with
+                               | Latency _ when b.ElapsedNs = 0UL || e.ElapsedNs = 0UL || b.LatencyNs = 0UL || e.LatencyNs = 0UL -> None
+                               | Latency _ -> Some(1.0 - latency e / latency b)
+                               | _ -> Some(1.0 - (float e.EffectiveNs / float e.Visits) / (float b.EffectiveNs / float b.Visits))
                            | _ -> None)
                    let valid = predictions |> Array.choose id
                    { Candidate = candidate; Speedup = speedup; Predictions = predictions; ValidBlocks = valid.Length
@@ -322,7 +344,7 @@ module TargetCausalProfile =
                      Workers = workers e events }
                if e.Time > 0UL then last[e.Worker] <- e |]
 
-    let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option * TargetCausalGc) (design: TargetCausalDesign) =
+    let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option * TargetCausalGc * struct (int64 * uint64)) (design: TargetCausalDesign) =
         let candidates, speedups, blocks, seed = design.Candidates, design.Speedups, design.Blocks, design.Seed
         let order = arms (Random seed) candidates speedups
 
@@ -334,18 +356,18 @@ module TargetCausalProfile =
                     Error $"{error.GetType().Name}: {error.Message}"
 
             match result with
-            | Ok(r, visits, stop, gc) ->
+            | Ok(r, visits, stop, gc, struct (arrivals, latencyNs)) ->
                 let errors = [ if not r.Passed then failure r
                                match stop with
                                | Some message -> message
                                | None -> () ]
                 { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = r.ElapsedNs; GlobalNs = r.GlobalNs
-                  EffectiveNs = r.EffectiveNs; Visits = visits; Threads = threads r; Failures = failures r; Collections = gc.Collections
+                  EffectiveNs = r.EffectiveNs; Visits = visits; Arrivals = arrivals; LatencyNs = latencyNs; Threads = threads r; Failures = failures r; Collections = gc.Collections
                   GcPauseNs = gc.PauseNs; Passed = r.Passed && stop.IsNone
                   Error = String.Join("; ", errors) }
             | Error message ->
                 { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = 0UL; GlobalNs = 0UL
-                  EffectiveNs = 0UL; Visits = 0L; Threads = Array.empty; Failures = Array.empty; Collections = -1; GcPauseNs = -1L
+                  EffectiveNs = 0UL; Visits = 0L; Arrivals = 0L; LatencyNs = 0UL; Threads = Array.empty; Failures = Array.empty; Collections = -1; GcPauseNs = -1L
                   Passed = false; Error = message }
 
         let warmup = measure 0 -1 candidates[0] 0u
@@ -355,7 +377,7 @@ module TargetCausalProfile =
                    for position, (candidate, speedup) in Array.init order.Length (fun i -> order[(i + shift) % order.Length]) |> Array.indexed do
                        measure block position candidate speedup |]
         { Progress = design.Progress; Blocks = blocks; Seed = seed; Candidates = candidates; Speedups = speedups; Warmup = warmup
-          Experiments = experiments; Points = points blocks candidates speedups experiments }
+          Experiments = experiments; Points = points design.Progress blocks candidates speedups experiments }
 
     let internal stopAfter (duration: int) (counter: TargetProgressCounter) (working: unit -> bool) (running: unit -> bool) =
         try
@@ -401,7 +423,8 @@ module TargetCausalProfile =
             let monitor (state: TargetRunState) =
                 match design.Progress with
                 | EndToEnd -> ()
-                | Throughput duration -> stopAfter duration counter (fun () -> state.Working) (fun () -> state.Running)
+                | Throughput duration
+                | Latency duration -> stopAfter duration counter (fun () -> state.Working) (fun () -> state.Running)
             let built = workers counter
             GC.Collect(2, GCCollectionMode.Forced, true)
             let collections, pause = GC.CollectionCount 0, GC.GetTotalPauseDuration()
@@ -410,8 +433,10 @@ module TargetCausalProfile =
             match design.Progress with
             | EndToEnd ->
                 let result = profile ()
-                result, 1L, None, gc ()
-            | Throughput duration ->
+                result, 1L, None, gc (), struct (0L, 0UL)
+            | Throughput duration
+            | Latency duration ->
                 let result, fired = guard (safetyDelay duration) counter profile
-                result, counter.Visits, (if fired then Some $"The safety stop ended the run after {safetyDelay duration}." else None), gc ()
+                result, counter.Visits, (if fired then Some $"The safety stop ended the run after {safetyDelay duration}." else None), gc (),
+                struct (counter.Arrivals, counter.LatencyNs)
         runWith experiment design

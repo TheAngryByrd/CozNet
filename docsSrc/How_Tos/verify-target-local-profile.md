@@ -19,6 +19,7 @@ It requires the .NET 10 SDK, PowerShell 7, Python 3, Docker, and the images `coz
 9. To check workers that contend for a lock, run `TargetLocalLockVerify` and open the new directory under `artifacts/target-local-lock`. Repeat steps 3 to 6.
 10. To check the same workload with a 1 ms spin, run `TargetLocalSpinLockVerify` and open the new directory under `artifacts/target-local-spinlock`. Repeat steps 3 to 6.
 11. To check two workers that take turns through semaphores, run `TargetLocalSemaphoreVerify` and open the new directory under `artifacts/target-local-semaphore`. Repeat steps 3 to 6.
+12. To check a latency progress point, run `TargetLocalTransactionVerify` and open the new directory under `artifacts/target-local-transaction`. Repeat steps 3 to 6.
 
 Each block runs one profile process and seven plain processes in a random order.
 The profile process runs a baseline and six experiments: `Work.selected` and `Work.peer` at speedups 25, 50, and 75.

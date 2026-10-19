@@ -533,6 +533,7 @@ let targetLocalPipelineVerify _ = nativeScriptWithArgs "VerifyTargetLocalProfile
 let targetLocalLockVerify _ = nativeScriptWithArgs "VerifyTargetLocalProfile.ps1" [ "-Workload"; "lock" ]
 let targetLocalSpinLockVerify _ = nativeScriptWithArgs "VerifyTargetLocalProfile.ps1" [ "-Workload"; "spinlock" ]
 let targetLocalSemaphoreVerify _ = nativeScriptWithArgs "VerifyTargetLocalProfile.ps1" [ "-Workload"; "semaphore" ]
+let targetLocalTransactionVerify _ = nativeScriptWithArgs "VerifyTargetLocalProfile.ps1" [ "-Workload"; "transaction" ]
 
 let targetPredictionAnalysisChecks _ =
     for script in [ "native/TargetPredictionAnalysisChecks.py"; "native/TargetGcAnalysisChecks.py"; "native/TargetProfileAnalysisChecks.py" ] do
@@ -1326,6 +1327,7 @@ let initTargets () =
     Target.create "TargetLocalLockVerify" targetLocalLockVerify
     Target.create "TargetLocalSpinLockVerify" targetLocalSpinLockVerify
     Target.create "TargetLocalSemaphoreVerify" targetLocalSemaphoreVerify
+    Target.create "TargetLocalTransactionVerify" targetLocalTransactionVerify
     Target.create "TargetPredictionAnalysisChecks" targetPredictionAnalysisChecks
     Target.create "LinuxTimerInterop" linuxTimerInterop
     Target.create "LinuxTimerManaged" linuxTimerManaged

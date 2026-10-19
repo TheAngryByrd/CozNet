@@ -106,12 +106,14 @@ See [the how-to](../How_Tos/profile-fork-join-program.md).
 
 `TargetCausalDesign.tryCreate binding period eligible candidates speedups blocks seed rotation progress` parses the experiment design.
 The seed fixes one base order of the experiments. Block b runs that order rotated left by `rotation + b - 1` places. `rotation` must be from 0 to the experiment count of a block minus 1.
-`progress` is `EndToEnd` or `Throughput durationMs`, with a duration from 1 to 60000 ms. It returns `Ok TargetCausalDesign` or `Error` with a list of `TargetCausalDesignError` values:
+`progress` is `EndToEnd`, `Throughput durationMs`, or `Latency durationMs`, with a duration from 1 to 60000 ms. It returns `Ok TargetCausalDesign` or `Error` with a list of `TargetCausalDesignError` values:
 `NoCandidates`, `DuplicateCandidate`, `UnboundCandidate`, `IneligibleCandidate`, `UnboundEligible`, `NoSpeedups`, `DuplicateSpeedup`, `SpeedupOutOfRange`, `NoBlocks`, `InvalidRotation`, `InvalidDuration`, and `PlanRejected`.
 `TargetCausalDesign.describe` gives the message for one error. A design has a private representation, and it keeps copies of its input arrays.
 
 `TargetCausalProfile.run design journalCapacity workers` runs the design in one process. `workers` takes a new `TargetProgressCounter` and returns new workers for each experiment.
 For `Throughput`, workers call `Visit` once for each unit of work and stop when `Stopped` is true. The driver calls `Stop` when the duration has passed after a worker starts to work, and also when its monitor fails.
+For `Latency`, workers call `Begin` at the start of each transaction and `End ticket` at its end, with the ticket that `Begin` returned. `End` also counts a visit. Do not call `Visit` in a `Latency` experiment. After `Stopped` is true, end every transaction that has begun, because a transaction that never ends is left out of `LatencyNs`. An experiment without latency gives no prediction. The driver stops a `Latency` experiment as it stops a `Throughput` experiment.
+A `Latency` prediction is `1 - (W * E / T) / (W0 * E0 / T0)`, where W is `LatencyNs / Visits`, E is `EffectiveNs`, and T is `ElapsedNs`. Pinned Coz applies Little's law to the transactions in flight at the end of an experiment instead. The scaling by `E / T` assumes that the global delay stretches the transactions as it stretches the whole run, so work outside the transactions can bias the prediction.
 A watcher thread also calls `Stop` 1 s plus ten times the duration after the experiment starts, so a run that never reaches its monitor still ends.
 An experiment that the watcher stops does not pass, and its error names the safety stop.
 Each experiment calls `TargetLocalProfiler.runBound` with one candidate as the selected symbol.
@@ -130,6 +132,7 @@ Each experiment calls `TargetLocalProfiler.runBound` with one candidate as the s
 Each `TargetCausalExperiment` also holds `Visits`, and `Threads` with one `TargetCausalThread` for each worker.
 A `TargetCausalThread` holds `CpuNs`, `WallNs`, `HandlerNs`, `PaymentNs` (the sum of measured child payments, including the closing payment), `SkipNs` (the sum of wake skips), `Samples`, `Wakes`, and `RunDelayNs`.
 `CpuNs` stops when the native finish disables counting. `WallNs` runs from the work start to the end of the native finish. A throughput experiment counts every visit from the first work start to the last finish.
+`Arrivals` counts `Begin` calls and `LatencyNs` sums the wall time from each `Begin` to its `End`. `EndToEnd` records 0 for both. `Throughput` records the counter values, which stay 0 unless workers call `Begin`.
 `Failures` holds one `TargetCausalFailure` for each `Failure` event of the journal: `Worker`, `Detail`, `DebtNs` (the event amount), `TimeNs` (from the first journal event with a time), and `GapNs` and `PreviousKind` (from the previous event of the same worker with a time, in sequence order).
 The list follows the journal sequence. `GapNs` can be negative, because a buffered sample can have an earlier time than the event before it.
 The window of a failure holds the timed journal events of all workers that come before it in sequence and no more than 10 ms before it in time. `ContextEvents` counts them.
@@ -258,6 +261,7 @@ Only the holder writes the token, so the token is always that of the release tha
 | `plain-throughput <selectedRounds> <peerRounds> <out>` | The same loops without the profiler for 120 ms, with the elapsed time and the visits |
 | `pipeline-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. A producer runs `Work.selected 40` for each item of a `TargetQueue` of 4 items, and a consumer runs `Work.peer 20` and visits for each item. |
 | `lock-profile <seed> <rotation> <out>` | One throughput block of 120 ms experiments. Two workers each run `Work.peer 20` outside a `TargetLock` and `Work.selected 40` inside it, and visit once per cycle. |
+| `transaction-profile <seed> <rotation> <out>` and `plain-transaction <selectedRounds> <peerRounds> <out>` | A latency progress point around a `TargetQueue` of 4 items. Worker 0 begins a transaction and runs `Work.selected 40`, and worker 1 runs `Work.peer 8` and ends it. |
 | `semaphore-profile <seed> <rotation> <out>` and `plain-semaphore <selectedRounds> <peerRounds> <out>` | Two workers that take turns through two `TargetSemaphore` objects. Worker 0 runs `Work.selected 24`, and worker 1 runs `Work.peer 12` and visits. |
 | `spin-lock-profile <seed> <rotation> <out>` and `plain-spin-lock <selectedRounds> <peerRounds> <out>` | The lock workloads with a 1 ms spin |
 | `plain-lock <selectedRounds> <peerRounds> <out>` | The same lock workload without the profiler for 120 ms, with the elapsed time and the visits |

@@ -9,9 +9,9 @@
 - Deterministic tests and a real CPU comparison sample.
 - Lode Coding project knowledge.
 - Experimental Linux x64 target-local profiler: `TargetLocalProfiler.runBound`, `CodeBinding`, `TargetBarrier`, `TargetQueue`, `TargetSemaphore`, and `TargetLock`, with an optional spin of up to 1 ms before a lock wait. Each causal profile experiment keeps its ledger failures, the journal events before each failure (`TargetCausalContextEvent`) with a summary for each worker (`TargetCausalWorkerContext`), and its GC collection count and pause.
-- `TargetCausalDesign.tryCreate` and `TargetCausalProfile.run` for seeded causal profiles with `EndToEnd` and `Throughput` progress points.
+- `TargetCausalDesign.tryCreate` and `TargetCausalProfile.run` for seeded causal profiles with `EndToEnd`, `Throughput`, and `Latency` progress points. `TargetProgressCounter.Begin` and `End` mark a transaction.
 
 ### Changed
 
 - `TargetCausalDesign.tryCreate` takes a `rotation` after `seed`. The seed fixes one base order, and each block rotates it. An invalid rotation returns `InvalidRotation`.
-- `TargetCausalExperiment` holds `Visits`, `Threads`, `Failures`, `Collections`, and `GcPauseNs`, each `TargetCausalFailure` holds `ContextEvents`, `Context`, and `Workers`, and `TargetCausalProfileResult` holds `Progress` and `Warmup`. Code that constructs these records must set the new fields.
+- `TargetProgressPoint` has a `Latency` case, so an exhaustive match on it must handle `Latency`. `TargetCausalExperiment` holds `Visits`, `Arrivals`, `LatencyNs`, `Threads`, `Failures`, `Collections`, and `GcPauseNs`, each `TargetCausalFailure` holds `ContextEvents`, `Context`, and `Workers`, and `TargetCausalProfileResult` holds `Progress` and `Warmup`. Code that constructs these records must set the new fields.

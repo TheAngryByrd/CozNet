@@ -23,8 +23,9 @@ module TargetCausalProfileTests =
           Deferred = 0; Failures = 0; MaxObservedDebt = 0UL; Blocks = 0; DependencyWakes = 0; SkippedDelay = 0UL }
 
     let private noGc = { Collections = 0; PauseNs = 0L }
+    let private noLatency = struct (0L, 0UL)
 
-    let private runResults run design = TargetCausalProfile.runWith (fun c s -> run c s, 1L, None, noGc) design
+    let private runResults run design = TargetCausalProfile.runWith (fun c s -> run c s, 1L, None, noGc, noLatency) design
 
     let private profile run blocks =
         runResults run (designOf symbols symbols [| 25u; 50u |] blocks 7)
@@ -163,11 +164,18 @@ module TargetCausalProfileTests =
                 Expect.isOk (parse 60000) "60000 ms must parse."
             }
 
+            test "a latency duration outside 1 to 60000 ms is a parse error" {
+                let parse duration = TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 25u |] 1 0 0 (Latency duration)
+                Expect.equal (parse 0, parse 60001) (Error [ InvalidDuration 0 ], Error [ InvalidDuration 60001 ]) "A duration outside 1 to 60000 ms must fail."
+                Expect.isOk (parse 1) "1 ms must parse."
+                Expect.isOk (parse 60000) "60000 ms must parse."
+            }
+
             test "a safety stop fails its experiment and keeps the reason" {
                 let design =
                     TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
-                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, 100L, (if c = "b" then Some "safety" else None), noGc)) design
+                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, 100L, (if c = "b" then Some "safety" else None), noGc, noLatency)) design
                 let stopped = value.Experiments |> Array.filter (fun e -> not e.Passed)
                 Expect.equal (stopped |> Array.map (fun e -> e.Candidate, e.Error)) [| "b", "safety" |] "Only the stopped experiment must fail, with its reason."
             }
@@ -185,7 +193,7 @@ module TargetCausalProfileTests =
                 let design =
                     TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
-                let run c s = (result 1000UL true, (if s = 0u then 100L elif c = "a" then 200L else 100L), None, noGc)
+                let run c s = (result 1000UL true, (if s = 0u then 100L elif c = "a" then 200L else 100L), None, noGc, noLatency)
                 let value = TargetCausalProfile.runWith run design
                 let point c = value.Points |> Array.find (fun p -> p.Candidate = c)
                 Expect.equal (point "a").Predictions [| Some 0.5 |] "200 visits in the same time must give a 50% shorter period."
@@ -193,14 +201,53 @@ module TargetCausalProfileTests =
                 Expect.equal (value.Experiments |> Array.map _.Visits |> Array.sort) [| 100L; 100L; 200L |] "Each experiment must keep its visits."
             }
 
+            test "a latency prediction compares the virtual latency for each departure" {
+                let design =
+                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Latency 100)
+                    |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
+                let measured elapsed effective = { result effective true with ElapsedNs = elapsed }
+                let run c s =
+                    if s = 0u then measured 1000UL 900UL, 100L, None, noGc, struct (110L, 100_000UL)
+                    elif c = "a" then measured 1000UL 800UL, 200L, None, noGc, struct (210L, 125_000UL)
+                    else measured 1000UL 1000UL, 100L, None, noGc, struct (100L, 0UL)
+                let value = TargetCausalProfile.runWith run design
+                let point c = value.Points |> Array.find (fun p -> p.Candidate = c)
+                let expected = 1.0 - (125_000.0 / 200.0 * 800.0 / 1000.0) / (100_000.0 / 100.0 * 900.0 / 1000.0)
+                Expect.floatClose Accuracy.high (point "a").Predictions[0].Value expected "The prediction must be 1 - (W * E / T) / (W0 * E0 / T0)."
+                Expect.equal (point "b").Predictions [| None |] "Visits without latency must give no prediction."
+                Expect.equal (value.Experiments |> Array.map (fun e -> e.Arrivals, e.LatencyNs) |> Array.sort) [| 100L, 0UL; 110L, 100_000UL; 210L, 125_000UL |] "Each experiment must keep its arrivals and latency."
+                let none = TargetCausalProfile.runWith (fun c s -> if s = 0u then measured 1000UL 1000UL, 100L, None, noGc, struct (100L, 0UL) else run c s) design
+                Expect.isTrue (none.Points |> Array.forall (fun p -> p.ValidBlocks = 0)) "A baseline without latency must give no prediction."
+                let failed = TargetCausalProfile.runWith (fun c s -> if c = "a" then { result 1000UL false with ElapsedNs = 1000UL }, 200L, None, noGc, struct (200L, 1UL) else run c s) design
+                Expect.equal (failed.Points |> Array.find (fun p -> p.Candidate = "a")).Predictions [| None |] "A failed experiment must give no prediction."
+            }
+
+            test "a counter counts arrivals, departures, and latency" {
+                let counter = TargetProgressCounter()
+                let first = counter.Begin()
+                let second = counter.Begin()
+                Threading.Thread.Sleep 2
+                counter.End first
+                Expect.equal (counter.Arrivals, counter.Visits) (2L, 1L) "Each begin must count an arrival, and each end a departure."
+                Expect.isGreaterThanOrEqual counter.LatencyNs 1_000_000UL "The latency must hold the time from the begin to the end."
+                counter.End second
+                Expect.equal counter.Visits 2L "Each end must count a visit."
+                let ago (ms: int64) = Diagnostics.Stopwatch.GetTimestamp() - ms * Diagnostics.Stopwatch.Frequency / 1000L
+                let summed = TargetProgressCounter()
+                summed.End(ago 300L)
+                summed.End(ago 500L)
+                Expect.isGreaterThanOrEqual summed.LatencyNs 800_000_000UL "The latency must sum both transactions of 300 ms and 500 ms."
+                Expect.isLessThan summed.LatencyNs 1_300_000_000UL "The latency must not count a transaction twice."
+            }
+
             test "an experiment or baseline with no visits gives no prediction and stays in the record" {
                 let design =
                     TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
-                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, (if c = "a" && s = 50u then 0L else 100L), None, noGc)) design
+                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, (if c = "a" && s = 50u then 0L else 100L), None, noGc, noLatency)) design
                 Expect.equal ((value.Points |> Array.find (fun p -> p.Candidate = "a")).Predictions) [| None |] "Zero visits must give no prediction."
                 Expect.equal (value.Experiments |> Array.filter (fun e -> e.Visits = 0L) |> Array.length) 1 "The experiment must stay."
-                let baseline = TargetCausalProfile.runWith (fun _ s -> (result 1000UL true, (if s = 0u then 0L else 100L), None, noGc)) design
+                let baseline = TargetCausalProfile.runWith (fun _ s -> (result 1000UL true, (if s = 0u then 0L else 100L), None, noGc, noLatency)) design
                 Expect.isTrue (baseline.Points |> Array.forall (fun p -> p.ValidBlocks = 0)) "A baseline with no visits must give no prediction."
             }
 
@@ -320,7 +367,7 @@ module TargetCausalProfileTests =
                     { result 1000UL false with
                         Events = [| { Worker = 1; Sequence = 1UL; Kind = TargetLedgerEventKind.Failure; ObservedGlobal = 0UL; LocalBefore = 0UL; Amount = 2200000UL
                                       Requested = 0UL; Ip = 0UL; Detail = 1u; Time = 50UL } |] }
-                let value = TargetCausalProfile.runWith (fun c s -> if c = "b" then failwith "boom" else ((if s = 50u then failing else result 1000UL true), 1L, None, { Collections = 3; PauseNs = 700L })) design
+                let value = TargetCausalProfile.runWith (fun c s -> if c = "b" then failwith "boom" else ((if s = 50u then failing else result 1000UL true), 1L, None, { Collections = 3; PauseNs = 700L }, noLatency)) design
                 let gc = value.Experiments |> Array.map (fun e -> e.Candidate, e.Speedup, e.Collections, e.GcPauseNs) |> Array.sort
                 Expect.equal gc [| "a", 0u, 3, 700L; "a", 50u, 3, 700L; "b", 50u, -1, -1L |] "Each experiment must keep its GC values, and a thrown one must record -1."
                 let failed = value.Experiments |> Array.find (fun e -> e.Candidate = "a" && e.Speedup = 50u)
