@@ -3,7 +3,7 @@ import pathlib
 import tempfile
 import unittest
 
-from AnalyzeTargetBottleneck import SEED, block_reasons, block_values, diagnostics_complete, paired_outcome, plain_matches, expected_args, outcome, profile_complete
+from AnalyzeTargetBottleneck import SEED, block_reasons, block_values, diagnostics_complete, evidence_reasons, evidence_values, paired_outcome, plain_matches, expected_args, outcome, profile_complete
 from AnalyzeTargetProfile import SELECTED_NAME
 
 
@@ -98,6 +98,78 @@ class BottleneckAnalysisTests(unittest.TestCase):
         self.assertTrue(diagnostics_complete(profile, {"profile": profile, "original": {"handoffIdle": idle}}))
         self.assertFalse(diagnostics_complete(profile, {"profile": profile, "original": {}}))
         self.assertFalse(diagnostics_complete({"queueStats": [{}, {"handoffIdle": idle}, {}]}, {"original": {"handoffIdle": idle}}))
+
+    def evidence_case(self, signed75=50_000, clipped75=10_000):
+        def ex(speedup, order, visits, virtual, negative):
+            return {"Block": 1, "Order": order, "Speedup": speedup, "Visits": visits, "VirtualLatencyNs": virtual, "NegativeTransactions": negative}
+        warmup = {"Block": 0, "Order": -1, "Speedup": 0, "Visits": 2, "VirtualLatencyNs": 2_000, "NegativeTransactions": 0}
+        experiments = [ex(0, 0, 2, 2_000, 0), ex(25, 1, 2, 1_500, 0), ex(50, 2, 2, 1_000, 0), ex(75, 3, 2, signed75 + clipped75, 1)]
+        profile = {"warmup": warmup, "experiments": experiments}
+        def ev(e, signed, clipped):
+            first = signed + clipped
+            windows = ([[0, first, 0, 0, first, 0], [first, first + 1, 0, clipped + 1, -clipped, 1]] if clipped
+                       else [[0, signed, 0, 0, signed, 0], [signed, signed, 0, 0, 0, 0]])
+            return {"block": e["Block"], "order": e["Order"], "transactions": e["Visits"], "signedTotalNs": signed, "clippedNs": clipped,
+                    "clippedTotalNs": signed + clipped, "negativeTransactions": e["NegativeTransactions"], "stepHistogram": [1, 1, 0, 0] if clipped else [2, 0, 0, 0],
+                    "exported": 2, "omitted": 0, "exportLimit": 4096, "windows": windows}
+        evidence = {"experiments": [ev(warmup, 2_000, 0)] + [ev(e, e["VirtualLatencyNs"], 0) for e in experiments[:3]] + [ev(experiments[3], signed75, clipped75)]}
+        return profile, evidence
+
+    def test_evidence_must_match_the_profile_and_its_own_identities(self):
+        profile, evidence = self.evidence_case()
+        self.assertEqual(evidence_reasons(profile, evidence), [])
+        evidence["experiments"][4]["clippedTotalNs"] += 1
+        self.assertIn("order 3 evidence differs from the profile record", evidence_reasons(profile, evidence))
+        self.assertIn("order 3 clipped total differs from signed total plus clipped amount", evidence_reasons(profile, evidence))
+        profile, evidence = self.evidence_case()
+        evidence["experiments"][1] = {**evidence["experiments"][1], "clippedNs": 5, "signedTotalNs": 1_995}
+        self.assertIn("order 0 baseline clips delay", evidence_reasons(profile, evidence))
+        profile, evidence = self.evidence_case()
+        evidence["experiments"][4]["windows"][0][3] = 7
+        self.assertEqual(evidence_reasons(profile, evidence), ["order 3 a window does not hold its own arithmetic"])
+        profile, evidence = self.evidence_case()
+        evidence["experiments"][4]["windows"][1] = [55_000, 55_001, 0, 5_001, -5_000, 1]
+        evidence["experiments"][4]["windows"][0] = [0, 55_000, 0, 0, 55_000, 0]
+        self.assertEqual(evidence_reasons(profile, evidence), ["order 3 windows do not add up to the totals"])
+        profile, evidence = self.evidence_case()
+        evidence["experiments"][4]["windows"][1][5] = 3
+        self.assertEqual(evidence_reasons(profile, evidence), ["order 3 windows do not add up to the totals"])
+        profile, evidence = self.evidence_case()
+        evidence["experiments"][4]["exported"] = 1
+        evidence["experiments"][4]["omitted"] = 1
+        self.assertEqual(evidence_reasons(profile, evidence), ["order 3 export does not match its count"])
+        profile, evidence = self.evidence_case()
+        evidence["experiments"][4].update(windows=[], exported=0, omitted=2)
+        self.assertEqual(evidence_reasons(profile, evidence), ["order 3 export does not match its count"])
+        profile, evidence = self.evidence_case()
+        evidence["experiments"][1]["windows"][1] = [5, 5, 0, 0, 0, 1]
+        self.assertIn("order 0 a window does not hold its own arithmetic", evidence_reasons(profile, evidence))
+        profile, evidence = self.evidence_case()
+        self.assertEqual(evidence_reasons(profile, {"experiments": evidence["experiments"] + [None]}), ["evidence has an entry without an integer block and order"])
+        self.assertEqual(evidence_reasons(profile, {"experiments": evidence["experiments"] + [{}]}), ["evidence has an entry without an integer block and order"])
+        self.assertEqual(evidence_reasons(profile, {"experiments": evidence["experiments"] + [dict(evidence["experiments"][4])]}),
+                         ["evidence does not hold exactly one entry for each experiment"])
+        profile, evidence = self.evidence_case()
+        evidence["experiments"][4]["stepHistogram"] = [2]
+        self.assertEqual(evidence_reasons(profile, evidence), ["order 3 evidence has the wrong shape"])
+        profile, evidence = self.evidence_case()
+        evidence["experiments"][2]["omitted"] = 1
+        self.assertIn("order 1 counts do not add up", evidence_reasons(profile, evidence))
+        profile, evidence = self.evidence_case()
+        self.assertEqual(evidence_reasons(profile, {"experiments": evidence["experiments"][:-1]}), ["evidence does not hold exactly one entry for each experiment"])
+        self.assertEqual(evidence_reasons(profile, None), ["no evidence record"])
+
+    def test_a_nonpositive_signed_total_gives_no_unclipped_difference(self):
+        data = {"original": {"latencyNs": 2_000, "visits": 2, "elapsedNs": 1}, **{f"selected-{s}": {"latencyNs": 1_000, "visits": 2, "elapsedNs": 1} for s in (25, 50, 75)}}
+        profile, evidence = self.evidence_case()
+        values = evidence_values(profile, data, evidence, True)
+        self.assertIsNone(evidence_values(profile, data, evidence, False)[75]["unclippedDifference"])
+        self.assertAlmostEqual(values[75]["unclippedDifference"], 100 * ((1 - 25_000 / 1_000) - 0.5))
+        self.assertEqual((values[75]["clippedPerTransactionNs"], values[75]["estimatorAssumptionsValid"], values[25]["estimatorAssumptionsValid"]), (5_000, False, True))
+        for signed in (0, -4_000):
+            profile, evidence = self.evidence_case(signed75=signed, clipped75=12_000)
+            self.assertEqual(evidence_reasons(profile, evidence), [])
+            self.assertIsNone(evidence_values(profile, data, evidence, True)[75]["unclippedDifference"])
 
     def test_the_outcome_follows_the_predeclared_limits(self):
         self.assertEqual(outcome(-11.0, -2.0, 0.05, 5, 5), "congestion supported")

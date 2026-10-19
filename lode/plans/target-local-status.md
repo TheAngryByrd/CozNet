@@ -790,7 +790,8 @@ The run has five valid blocks and no debt failure, and it passes four points:
 
 ## Latency estimator and paired peer work
 
-[The latency estimator plan](target-local-latency-estimator.md) documents the pinned upstream rule. The CozNet rule is exact virtual-time Little's law for complete transactions without clipped values. It is an intentional extension, and the hand-worked trace shows no porting defect.
+[The latency estimator plan](target-local-latency-estimator.md) documents the pinned upstream rule. The CozNet rule is an algebraic identity of signed measures for complete transactions without clipped values, not a causal latency of each transaction. It is an intentional extension, and the hand-worked trace shows no porting defect.
+The clipping in the peer 2 `selected` 75% experiments changes the estimator regime in the arm that supports the congestion label. So the label of criterion 137 stays, but the causal conclusion is unresolved, because clipping and the idle-time change confound it. Clipping can only move S2 down, so it cannot explain the change from peer 8 to peer 2.
 
 Paired diagnostic run `20261019T213806586-069c2adf` ran once on the reviewed tree. Its inputs did not change, and all 50 arms exited with 0.
 - Peer 8 has 5 valid blocks. Peer 2 has 4: in block 1, the plain `original` warm-up for peer 2 has 95 visits and did not pass. The common valid blocks are 2 to 5.
@@ -812,5 +813,33 @@ Paired diagnostic run `20261019T213806586-069c2adf` ran once on the reviewed tre
   For peer 2, the plain `selected-75` arm has 2325 of its 2562 handoffs in the class of 100 to 400 microseconds. For peer 8, it has 3012 of 3357 below 100 microseconds. This is the confound of criterion 138.
 - The medians of the upstream rule are within 3.6 points at every point for both peers, but single blocks reach 22.1 points.
 - Block 5 repeats the experiment order of block 1, so the positions are not balanced.
+
+## Clipping export
+
+[The clipping export plan](target-local-clipping-export.md) exports the exact signed and clipped totals and the delay steps of each window. Paired run `20261019T222832093-272334f5` ran once on the reviewed tree. Its inputs did not change, and it is retained with the earlier run `20261019T213806586-069c2adf`.
+
+The protocol was weak in this run:
+- Peer 8 has 3 valid blocks. Blocks 1 and 4 are invalid, because a profile experiment has 83 or 71 visits.
+- Peer 2 has 2 valid blocks. In block 3, the plain `original` has 56 visits and two profile experiments have 96 and 54. In block 4, the `selected` 75% experiment has a debt failure. In block 5, a profile experiment has 82 visits.
+- The only block that is valid for both peers is block 2. So criterion 137 gives "not decisive: too few valid blocks".
+- These visit counts are about half of the earlier runs at the same work. The records do not show why.
+
+The evidence is valid for all 10 profiles, and the full collection before each experiment left 0 collections in every experiment.
+
+| Peer | Block | `selected-75` clipped | `selected-75` unclipped | Clipped amount for each transaction | Negative transactions |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | 2 | -20.67 | -20.67 | 0 | 0 |
+| 8 | 3 | +4.58 | +4.58 | 0 | 0 |
+| 8 | 5 | -12.12 | -12.12 | 0 | 0 |
+| 2 | 1 | -4.09 | -3.86 | 1.76 µs | 39 |
+| 2 | 2 | -18.18 | -18.16 | 0.17 µs | 2 |
+
+- In the valid blocks of this run, clipping changes a `selected-75` difference by at most 0.23 points. The exact measurement supports the direction of the review: removing clipping only raises the predicted gain.
+- By the predeclared rule of criterion 143, the one-step bound of the review did not hold. In the `selected` 75% experiments, 540 peer 8 windows and 207 peer 2 windows have 2 or more counted rises of G.
+- The counted rises are rises of the running maximum of G. Many windows have 2 or 3 rises with a total delay of one nominal step of 750 µs, so one nominal step can arrive in more than one publish.
+  By total delay, 92 of the 795 peer 8 windows and 17 of the 727 peer 2 windows hold at least 1.9 nominal steps. This observation does not replace the result of criterion 143.
+- In the peer 2 `selected` 75% experiments, each of the 45 negative windows has a global delay of exactly one nominal step, with a wall time of 716.5 to 749.8 µs. So each clips at most 33.5 µs.
+  The peer 8 profiles have one negative window, in invalid block 1, with two nominal steps, a wall time of 1473.3 µs, and a clip of 26.7 µs.
+- In block 2, the only block valid for both peers, both peers are far below the real gain: -20.67 and -18.18 points. The earlier run gave S2 = -4.02. This one block does not repeat that result, but it is too little evidence to test it.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

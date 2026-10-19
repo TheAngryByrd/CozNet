@@ -18,6 +18,7 @@ MIN_VISITS = 100
 CONGESTED = -8.0
 CLOSE = 5.0
 READY_LIMIT = 0.10
+EXPORT_LIMIT = 4096
 
 
 def expected_args(seed, block, peer):
@@ -112,6 +113,73 @@ def block_values(data):
     return values
 
 
+def integers(value, length=None):
+    return isinstance(value, list) and (length is None or len(value) == length) and all(type(v) is int for v in value)
+
+
+def evidence_reasons(profile, evidence):
+    if not isinstance(evidence, dict) or not isinstance(evidence.get("experiments"), list):
+        return ["no evidence record"]
+    if not all(isinstance(e, dict) and type(e.get("block")) is int and type(e.get("order")) is int for e in evidence["experiments"]):
+        return ["evidence has an entry without an integer block and order"]
+    keys = [(e["block"], e["order"]) for e in evidence["experiments"]]
+    expected = [(e.get("Block"), e.get("Order")) for e in [profile["warmup"]] + profile["experiments"]]
+    if sorted(keys) != sorted(expected):
+        return ["evidence does not hold exactly one entry for each experiment"]
+    by = dict(zip(keys, evidence["experiments"]))
+    reasons = []
+    for e in [profile["warmup"]] + profile["experiments"]:
+        ev = by[(e.get("Block"), e.get("Order"))]
+        name = f"order {e.get('Order')}"
+        keys = ("transactions", "signedTotalNs", "clippedNs", "clippedTotalNs", "negativeTransactions", "exported", "omitted", "exportLimit")
+        windows = ev.get("windows")
+        if (not all(type(ev.get(k)) is int for k in keys) or not integers(ev.get("stepHistogram"), 4) or min(ev["stepHistogram"]) < 0
+                or not isinstance(windows, list) or not all(integers(w, 6) for w in windows)):
+            reasons.append(f"{name} evidence has the wrong shape")
+            continue
+        if not (ev["transactions"] == e.get("Visits") and ev["clippedTotalNs"] == e.get("VirtualLatencyNs")
+                and ev["negativeTransactions"] == e.get("NegativeTransactions")):
+            reasons.append(f"{name} evidence differs from the profile record")
+        if ev["clippedTotalNs"] != ev["signedTotalNs"] + ev["clippedNs"]:
+            reasons.append(f"{name} clipped total differs from signed total plus clipped amount")
+        if sum(ev["stepHistogram"]) != ev["transactions"] or ev["exported"] + ev["omitted"] != ev["transactions"]:
+            reasons.append(f"{name} counts do not add up")
+        if len(windows) != ev["exported"] or ev["exportLimit"] != EXPORT_LIMIT or ev["exported"] != min(EXPORT_LIMIT, ev["transactions"]):
+            reasons.append(f"{name} export does not match its count")
+        if any(w[4] != (w[1] - w[0]) - (w[3] - w[2]) or w[5] < 0 or w[1] < w[0] or w[3] < w[2] or (w[1] == w[0] and (w[5] != 0 or w[3] != w[2]))
+               for w in windows):
+            reasons.append(f"{name} a window does not hold its own arithmetic")
+        if ev["omitted"] == 0:
+            negative = [w[4] for w in windows if w[4] < 0]
+            histogram = [sum(1 for w in windows if min(w[5], 3) == i) for i in range(4)]
+            if (sum(w[4] for w in windows) != ev["signedTotalNs"] or len(negative) != ev["negativeTransactions"]
+                    or -sum(negative) != ev["clippedNs"] or histogram != ev["stepHistogram"]):
+                reasons.append(f"{name} windows do not add up to the totals")
+        if e.get("Speedup") == 0 and ev["clippedNs"] != 0:
+            reasons.append(f"{name} baseline clips delay")
+    return reasons
+
+
+def evidence_values(profile, data, evidence, valid):
+    by = {(e["block"], e["order"]): e for e in evidence["experiments"]}
+    experiments = {e["Speedup"]: e for e in profile["experiments"]}
+    base = experiments[0]
+    base_latency = base["VirtualLatencyNs"] / base["Visits"] if base["Visits"] > 0 and base["VirtualLatencyNs"] > 0 else None
+    values = {}
+    for speedup in SPEEDUPS:
+        e = experiments[speedup]
+        ev = by[(e["Block"], e["Order"])]
+        actual = actual_gain(data["original"], data[f"selected-{speedup}"], "transaction") if valid else None
+        signed = ev["signedTotalNs"]
+        visits = e["Visits"]
+        unclipped = None if signed <= 0 or actual is None or base_latency is None or visits <= 0 else 100 * ((1 - (signed / visits) / base_latency) - actual)
+        values[speedup] = {"unclippedDifference": unclipped, "signedTotalNs": signed, "clippedPerTransactionNs": ev["clippedNs"] / visits if visits > 0 else None,
+                           "negativeTransactions": ev["negativeTransactions"], "estimatorAssumptionsValid": ev["negativeTransactions"] == 0,
+                           "stepHistogram": ev["stepHistogram"], "windowsWithTwoOrMoreSteps": sum(ev["stepHistogram"][2:]),
+                           "collections": e.get("Collections"), "gcPauseNs": e.get("GcPauseNs")}
+    return values
+
+
 def median(values):
     values = [v for v in values if v is not None]
     return statistics.median(values) if values else None
@@ -138,6 +206,27 @@ def paired_outcome(blocks8, blocks2):
     return common, paired, outcome(paired[8][75]["difference"], paired[2][75]["difference"], paired[2][75]["ready"], len(common), len(common))
 
 
+def unclipped_summary(blocks8, blocks2, common):
+    pairs = {b8["block"]: (b8, b2) for b8, b2 in zip(blocks8, blocks2)}
+    subset = [n for n in common if pairs[n][0].get("evidenceValid") and pairs[n][1].get("evidenceValid")]
+    result = {"blocks": subset}
+    for peer, blocks in ((8, blocks8), (2, blocks2)):
+        chosen = [b for b in blocks if b["block"] in subset]
+        profiles = [b for b in blocks if b.get("evidenceValid")]
+        result[str(peer)] = {
+            "evidenceInvalid": {b["block"]: b.get("evidenceReasons") for b in blocks if not b.get("evidenceValid")},
+            **{str(s): {"medianDifference": median(b["values"][s]["difference"] for b in chosen),
+                        "medianUnclippedDifference": median(b["evidence"][s]["unclippedDifference"] for b in chosen),
+                        "undefinedUnclipped": sum(1 for b in chosen if b["evidence"][s]["unclippedDifference"] is None),
+                        "allProfiles": [b["block"] for b in profiles],
+                        "medianClippedPerTransactionNs": median(b["evidence"][s]["clippedPerTransactionNs"] for b in profiles),
+                        "estimatorAssumptionsValidProfiles": sum(1 for b in profiles if b["evidence"][s]["estimatorAssumptionsValid"]),
+                        "windowsWithTwoOrMoreSteps": sum(b["evidence"][s]["windowsWithTwoOrMoreSteps"] for b in profiles),
+                        "collections": [b["evidence"][s]["collections"] for b in profiles],
+                        "stepHistogram": [sum(b["evidence"][s]["stepHistogram"][i] for b in profiles) for i in range(4)]} for s in SPEEDUPS}}
+    return result
+
+
 def main():
     run = pathlib.Path(sys.argv[1]).resolve()
     manifest = load(run / "manifest.json")
@@ -148,7 +237,16 @@ def main():
         blocks = []
         for block in range(1, BLOCKS + 1):
             reasons, data = block_reasons(run, block, peer, manifest["runs"])
-            blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "values": block_values(data) if not reasons else None})
+            entry = {"block": block, "valid": not reasons, "reasons": reasons, "values": block_values(data) if not reasons else None}
+            evidence = load(run / f"{block}-p{peer}-profile.json.evidence.json")
+            profile = data["profile"]
+            if profile is not None and profile_complete(profile, peer, block) and warmup_present(profile):
+                entry["evidenceReasons"] = evidence_reasons(profile, evidence)
+                entry["evidenceValid"] = not entry["evidenceReasons"]
+                entry["evidence"] = evidence_values(profile, data, evidence, not reasons) if entry["evidenceValid"] else None
+            else:
+                entry["evidenceReasons"], entry["evidenceValid"], entry["evidence"] = ["the profile record is incomplete"], False, None
+            blocks.append(entry)
         valid = [b["values"] for b in blocks if b["valid"]]
         points = {s: {k: median(v[s][k] for v in valid) for k in ("difference", "upstreamDifference", "ready", "windowRate", "delayRate")} for s in SPEEDUPS}
         idle = {}
@@ -157,11 +255,12 @@ def main():
                 idle[k] = idle.get(k, 0) + n
         peers[peer] = {"validBlocks": len(valid), "blocks": blocks, "points": points, "plainSelected75Idle": idle}
     common, paired, result = paired_outcome(peers[8]["blocks"], peers[2]["blocks"])
+    unclipped = unclipped_summary(peers[8]["blocks"], peers[2]["blocks"], common)
     summary = {"inputsUnchanged": manifest["inputsUnchanged"], "complete": complete, "outcome": result if complete else "not decisive: run incomplete",
-               "commonValidBlocks": common, "paired": {str(k): v for k, v in paired.items()},
+               "commonValidBlocks": common, "paired": {str(k): v for k, v in paired.items()}, "unclipped": unclipped,
                "peers": {str(k): v for k, v in peers.items()}, "diagnostic": True, "qualification": False}
     (run / "summary.json").write_text(json.dumps(summary, indent=2))
-    print(json.dumps({"outcome": summary["outcome"], "commonValidBlocks": common, "paired": paired}))
+    print(json.dumps({"outcome": summary["outcome"], "commonValidBlocks": common, "paired": paired, "unclipped": unclipped}))
     return 0 if complete else 1
 
 

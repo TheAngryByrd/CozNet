@@ -554,7 +554,17 @@ let private transactionProfileWith (mode: string) (spin: TimeSpan) (candidates: 
         let cpus = Pinning.start ()
         [| { Work = Pinning.wrap cpus 0 (beginTransactions counter handoffs 40UL); PaymentIp = fst selectedRange }
            { Work = Pinning.wrap cpus 1 (endTransactions counter handoffs peerRounds); PaymentIp = fst peerRange } |]
-    let profile = TargetCausalProfile.run (profileDesignFor candidates binding seed rotation (Latency throughputDuration)) journalCapacity workers
+    let evidence = Collections.Generic.List<obj>()
+    let sink =
+        if mode = "transaction-selected-profile" then
+            Some(fun (block: int) (order: int) (e: TargetLatencyEvidence) ->
+                evidence.Add(box {| block = block; order = order; transactions = e.Transactions; signedTotalNs = e.SignedTotalNs; clippedNs = e.ClippedNs
+                                    clippedTotalNs = e.ClippedTotalNs; negativeTransactions = e.NegativeTransactions; stepHistogram = e.StepHistogram
+                                    exported = e.Windows.Length; omitted = e.Omitted; exportLimit = TargetCausalProfile.latencyWindowLimit
+                                    windows = e.Windows |> Array.map (fun w -> [| w.BeginNs; w.EndNs; w.GlobalAtBeginNs; w.GlobalAtEndNs; w.SignedNs; int64 w.Steps |]) |}))
+        else None
+    let profile = TargetCausalProfile.runCollecting sink (profileDesignFor candidates binding seed rotation (Latency throughputDuration)) journalCapacity workers
+    if sink.IsSome then write (output + ".evidence.json") {| windowFields = [| "beginNs"; "endNs"; "globalAtBeginNs"; "globalAtEndNs"; "signedNs"; "steps" |]; experiments = evidence.ToArray() |}
     let stats =
         queues
         |> Seq.map (fun q -> box {| handoffs = q.Handoffs; handoffNs = q.HandoffNs; enqueues = q.Enqueues; enqueueNs = q.EnqueueNs; spunDequeues = q.Spun; handoffPlacement = q.Placements; handoffIdle = q.Idles |})

@@ -221,6 +221,48 @@ module TargetCausalProfileTests =
                 Expect.equal (failed.Points |> Array.find (fun p -> p.Candidate = "a")).Predictions [| None |] "A failed experiment must give no prediction."
             }
 
+            test "the latency evidence counts signed values, clipping, and rises of the running maximum" {
+                let publish sequence time value = { Worker = 0; Sequence = sequence; Kind = TargetLedgerEventKind.Publish; ObservedGlobal = 0UL; LocalBefore = value; Amount = value
+                                                    Requested = 0UL; Ip = 0UL; Detail = 0u; Time = time }
+                let events = [| publish 1UL 25UL 10UL; publish 2UL 60UL 30UL; publish 3UL 70UL 30UL; publish 4UL 80UL 20UL; publish 6UL 90UL 45UL; publish 5UL 90UL 40UL |]
+                let transactions = [| struct (5L, 40L); struct (20L, 70L); struct (60L, 95L); struct (85L, 92L); struct (100L, 110L); struct (0L, 120L) |]
+                let evidence = TargetCausalProfile.latencyEvidence 4096 events transactions
+                Expect.equal (evidence.Windows |> Array.map (fun w -> w.SignedNs, w.Steps)) [| 25L, 1; 20L, 2; 20L, 1; -8L, 1; 10L, 0; 75L, 3 |]
+                    "A window must count each rise in (b, e], not a repeated or lower maximum, and two publishes at one time as one rise."
+                Expect.equal (evidence.Windows[2].GlobalAtBeginNs, evidence.Windows[2].GlobalAtEndNs) (30L, 45L) "A step at the begin time must count in G(b)."
+                Expect.equal (evidence.SignedTotalNs, evidence.ClippedNs, evidence.ClippedTotalNs, evidence.NegativeTransactions) (142L, 8UL, 150UL, 1)
+                    "The totals must cover each transaction."
+                Expect.equal (int64 evidence.ClippedTotalNs) (evidence.SignedTotalNs + int64 evidence.ClippedNs) "The clipped total must equal the signed total plus the clipped amount."
+                Expect.equal (TargetCausalProfile.virtualLatency events transactions) (evidence.ClippedTotalNs, evidence.NegativeTransactions) "The evidence must match the estimator."
+                Expect.equal evidence.StepHistogram [| 1; 3; 1; 1 |] "The histogram must count windows with 0, 1, 2, and 3 or more steps."
+                let bounded = TargetCausalProfile.latencyEvidence 2 events transactions
+                Expect.equal (bounded.Windows.Length, bounded.Omitted, bounded.Transactions, bounded.SignedTotalNs, bounded.ClippedNs) (2, 4, 6, 142L, 8UL)
+                    "The export bound must keep the first windows and must not change the totals."
+                Expect.equal bounded.Windows evidence.Windows[0..1] "The export must keep the first windows in list order."
+                Expect.equal (bounded.ClippedTotalNs, bounded.NegativeTransactions, bounded.StepHistogram) (150UL, 1, [| 1; 3; 1; 1 |])
+                    "The export bound must not change any total."
+                let flat = TargetCausalProfile.latencyEvidence 4096 Array.empty transactions
+                Expect.equal (flat.ClippedNs, flat.NegativeTransactions, flat.SignedTotalNs) (0UL, 0, 35L + 50L + 35L + 7L + 10L + 120L) "Without publishes, nothing must be clipped."
+            }
+
+            test "the evidence callback receives each latency experiment with its evidence" {
+                let design =
+                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Latency 100)
+                    |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
+                let publish time value = { Worker = 0; Sequence = time; Kind = TargetLedgerEventKind.Publish; ObservedGlobal = 0UL; LocalBefore = value; Amount = value
+                                           Requested = 0UL; Ip = 0UL; Detail = 0u; Time = time }
+                let run _ s =
+                    let events = if s = 0u then Array.empty else [| publish 150UL 300UL |]
+                    { result 1000UL true with Events = events }, 2L, None, noGc, struct (2L, 0UL, [| struct (100L, 200L); struct (100L, 1100L) |])
+                let seen = Collections.Generic.List<int * int * TargetLatencyEvidence>()
+                let value = TargetCausalProfile.runWithEvidence (Some(fun block order evidence -> seen.Add((block, order, evidence)))) run design
+                Expect.equal seen.Count (value.Experiments.Length + 1) "The callback must receive the warm-up and each experiment."
+                for e in value.Experiments do
+                    let _, _, evidence = seen |> Seq.find (fun (b, o, _) -> b = e.Block && o = e.Order)
+                    Expect.equal (evidence.ClippedTotalNs, evidence.NegativeTransactions) (e.VirtualLatencyNs, e.NegativeTransactions) "The evidence must match the experiment."
+                    Expect.equal evidence.ClippedNs (if e.Speedup = 0u then 0UL else 200UL) "The baseline must clip nothing, and the step must clip 300 - 100 ns."
+            }
+
             test "the virtual latency subtracts the global delay added during each transaction" {
                 let publish sequence time value = { Worker = 1; Sequence = sequence; Kind = TargetLedgerEventKind.Publish; ObservedGlobal = 0UL; LocalBefore = value; Amount = value
                                                     Requested = 0UL; Ip = 0UL; Detail = 0u; Time = time }

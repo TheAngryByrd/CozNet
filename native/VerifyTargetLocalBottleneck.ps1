@@ -15,7 +15,7 @@ $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.L
     'samples/CozNet.TargetLocal/Program.fs', 'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj',
     'native/VerifyTargetLocalBottleneck.ps1', 'native/AnalyzeTargetBottleneck.py', 'native/AnalyzeTargetProfile.py',
     'lode/plans/target-local-transactions.md', 'lode/plans/target-local-transaction-delay.md', 'lode/plans/target-local-plain-warmup.md',
-    'lode/plans/target-local-progress-settlement.md', 'lode/plans/target-local-wake-idle.md', 'lode/plans/target-local-latency-estimator.md', 'build/build.fs')
+    'lode/plans/target-local-progress-settlement.md', 'lode/plans/target-local-wake-idle.md', 'lode/plans/target-local-latency-estimator.md', 'lode/plans/target-local-clipping-export.md', 'src/CozNet/CozNet.fsproj', 'build/build.fs')
 $hashes = @{}
 function Get-SourceHash([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)

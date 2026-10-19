@@ -26,5 +26,6 @@
     <InternalsVisibleTo Include="CozNet.Tests" />
     <InternalsVisibleTo Include="CozNet.Instrumentation" />
     <InternalsVisibleTo Include="CozNet.LinuxPerf" />
+    <InternalsVisibleTo Include="CozNet.TargetLocal" />
   </ItemGroup>
 </Project>

@@ -114,6 +114,26 @@ type TargetCausalExperiment = {
     Error: string
 }
 
+type internal TargetLatencyWindow = {
+    BeginNs: int64
+    EndNs: int64
+    GlobalAtBeginNs: int64
+    GlobalAtEndNs: int64
+    SignedNs: int64
+    Steps: int
+}
+
+type internal TargetLatencyEvidence = {
+    Transactions: int
+    SignedTotalNs: int64
+    ClippedNs: uint64
+    ClippedTotalNs: uint64
+    NegativeTransactions: int
+    StepHistogram: int array
+    Windows: TargetLatencyWindow array
+    Omitted: int
+}
+
 type TargetCausalPoint = {
     Candidate: string
     Speedup: uint32
@@ -257,6 +277,54 @@ module TargetCausalProfile =
                 if value < 0L then negative <- negative + 1 else total <- total + uint64 value
             total, negative
 
+    let internal latencyWindowLimit = 4096
+
+    let internal latencyEvidence (limit: int) (events: TargetLedgerEvent array) (transactions: struct (int64 * int64) array) =
+        let publishes = events |> Array.filter (fun e -> e.Kind = TargetLedgerEventKind.Publish && e.Time > 0UL) |> Array.sortBy (fun e -> e.Time, e.Sequence)
+        let rises = Collections.Generic.List<int64>()
+        let levels = Collections.Generic.List<int64>()
+        let mutable high = 0UL
+        let mutable index = 0
+        while index < publishes.Length do
+            let time = publishes[index].Time
+            let before = high
+            while index < publishes.Length && publishes[index].Time = time do
+                high <- max high publishes[index].Amount
+                index <- index + 1
+            if high > before then
+                rises.Add(int64 time)
+                levels.Add(int64 high)
+        let times, values = rises.ToArray(), levels.ToArray()
+        let risesUpTo (time: int64) =
+            let mutable low, top = 0, times.Length
+            while low < top do
+                let middle = (low + top) / 2
+                if times[middle] <= time then low <- middle + 1 else top <- middle
+            low
+        let globalAt time =
+            let count = risesUpTo time
+            if count = 0 then 0L else values[count - 1]
+        let windows =
+            transactions
+            |> Array.map (fun (struct (started, finished)) ->
+                let atBegin, atEnd = globalAt started, globalAt finished
+                { BeginNs = started; EndNs = finished; GlobalAtBeginNs = atBegin; GlobalAtEndNs = atEnd
+                  SignedNs = (finished - started) - (atEnd - atBegin); Steps = risesUpTo finished - risesUpTo started })
+        let histogram = Array.zeroCreate<int> 4
+        let mutable signed, clipped, kept, negative = 0L, 0UL, 0UL, 0
+        for w in windows do
+            let bin = min (max w.Steps 0) 3
+            histogram[bin] <- histogram[bin] + 1
+            signed <- signed + w.SignedNs
+            if w.SignedNs < 0L then
+                negative <- negative + 1
+                clipped <- clipped + uint64 (-w.SignedNs)
+            else
+                kept <- kept + uint64 w.SignedNs
+        let exported = min limit windows.Length
+        { Transactions = windows.Length; SignedTotalNs = signed; ClippedNs = clipped; ClippedTotalNs = kept; NegativeTransactions = negative
+          StepHistogram = histogram; Windows = Array.sub windows 0 exported; Omitted = windows.Length - exported }
+
     let internal points (progress: TargetProgressPoint) (blocks: int) (candidates: string array) (speedups: uint32 array) (experiments: TargetCausalExperiment array) =
         [| for candidate in candidates do
                for speedup in speedups do
@@ -386,7 +454,9 @@ module TargetCausalProfile =
                      Workers = workers e events }
                if e.Time > 0UL then last[e.Worker] <- e |]
 
-    let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option * TargetCausalGc * struct (int64 * uint64 * struct (int64 * int64) array)) (design: TargetCausalDesign) =
+    let internal runWithEvidence (sink: (int -> int -> TargetLatencyEvidence -> unit) option)
+                                 (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option * TargetCausalGc * struct (int64 * uint64 * struct (int64 * int64) array))
+                                 (design: TargetCausalDesign) =
         let candidates, speedups, blocks, seed = design.Candidates, design.Speedups, design.Blocks, design.Seed
         let order = arms (Random seed) candidates speedups
 
@@ -400,6 +470,7 @@ module TargetCausalProfile =
             match result with
             | Ok(r, visits, stop, gc, struct (arrivals, latencyNs, transactions)) ->
                 let virtualNs, negative = virtualLatency r.Events transactions
+                sink |> Option.iter (fun write -> write block order (latencyEvidence latencyWindowLimit r.Events transactions))
                 let errors = [ if not r.Passed then failure r
                                match stop with
                                | Some message -> message
@@ -421,6 +492,8 @@ module TargetCausalProfile =
                        measure block position candidate speedup |]
         { Progress = design.Progress; Blocks = blocks; Seed = seed; Candidates = candidates; Speedups = speedups; Warmup = warmup
           Experiments = experiments; Points = points design.Progress blocks candidates speedups experiments }
+
+    let internal runWith runExperiment design = runWithEvidence None runExperiment design
 
     let internal stopAfter (duration: int) (counter: TargetProgressCounter) (working: unit -> bool) (running: unit -> bool) =
         try
@@ -459,7 +532,7 @@ module TargetCausalProfile =
             raise (ThreadInterruptedException "The calling thread was interrupted while it joined the safety watcher.")
         value, Volatile.Read(&fired[0]) = 1
 
-    let run (design: TargetCausalDesign) (journalCapacity: uint32) (workers: TargetProgressCounter -> TargetWorker array) =
+    let internal runCollecting sink (design: TargetCausalDesign) (journalCapacity: uint32) (workers: TargetProgressCounter -> TargetWorker array) =
         let eligible = design.Eligible
         let experiment candidate speedup =
             let counter = TargetProgressCounter()
@@ -482,4 +555,7 @@ module TargetCausalProfile =
                 let result, fired = guard (safetyDelay duration) counter profile
                 result, counter.Visits, (if fired then Some $"The safety stop ended the run after {safetyDelay duration}." else None), gc (),
                 struct (counter.Arrivals, counter.LatencyNs, counter.Transactions)
-        runWith experiment design
+        runWithEvidence sink experiment design
+
+    let run (design: TargetCausalDesign) (journalCapacity: uint32) (workers: TargetProgressCounter -> TargetWorker array) =
+        runCollecting None design journalCapacity workers

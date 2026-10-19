@@ -40,6 +40,7 @@ Assumptions of this rule:
 Let N(t) be the transactions in flight, A the arrivals, T the elapsed time, ΔG the global delay added, and D = T - ΔG.
 - When each transaction begins and ends in the window, `Σ (e_i - b_i) = ∫ N dt` and `Σ (G(e_i) - G(b_i)) = ∫ N dG`. The identities below hold only when `NegativeTransactions` is 0. The run before the settlement has clipped transactions at `selected-75`.
 - So the CozNet rule gives `VL / V = ∫ N (dt - dG) / A`. This is Little's law in virtual time, with the exact time average of the occupancy and no edge transactions.
+  It is an algebraic identity of signed measures for complete transactions without clipped values, not a causal latency of each transaction. `t - G(t)` jumps backward when G steps, so one transaction can have a negative value. See [the clipping export plan](target-local-clipping-export.md).
 - The expected upstream value, with the occupancy sampled at a random wall-clock instant, is `(∫ N dt / T) / (A / D)`. With every transaction in the window, this equals `W * D / T`, the earlier CozNet rule.
 - The difference of the two rules is `(∫ N dG - N̄ ΔG) / A`, where N̄ is the wall-time mean occupancy. It is 0 when the delay rate is not correlated with the occupancy.
   The CozNet rule is lower than the upstream rule when delay is added at a high occupancy, and higher when delay is added at a low occupancy.
@@ -66,7 +67,7 @@ The window is 0 to 100 ns. The global delay steps to 10 at t = 25 and to 30 at t
 - Expected upstream value with T4: `∫ N dt = 135`, so `(135 / 100) / (4 / 70) = 23.63` ns.
 - Exact virtual Little's law with T4: `(75 + 20) / 4 = 23.75` ns.
 
-The trace shows no porting defect in `virtualLatency`. It gives the exact virtual-time Little's law for complete transactions, and the outstanding transaction does not occur in the suites, because the consumer drains the queue.
+The trace shows no porting defect in `virtualLatency`. It gives the virtual-time identity for complete transactions without clipped values, and the outstanding transaction does not occur in the suites, because the consumer drains the queue. The identity does not show a causal latency.
 
 ## Comparison on the retained runs
 
