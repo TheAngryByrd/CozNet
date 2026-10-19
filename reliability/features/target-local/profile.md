@@ -1,6 +1,6 @@
 # Target-local causal profile
 
-Evidence: `artifacts/target-local-profile/20261019T082828297-eb8d2196`.
+Evidence: `artifacts/target-local-profile/20261019T090901082-03de2f25`.
 
 `TargetLocalProfileVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `causal-profile` process and seven `plain` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the profile plan](../../../lode/plans/target-local-causal-p
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 4 / 5 | 25.00% | 24.47% | 1.11 pp | 4.93 pp | Fail |
-| `selected-50` | 4 / 5 | 49.48% | 49.79% | 1.05 pp | 1.82 pp | Fail |
-| `selected-75` | 4 / 5 | 49.63% | 50.88% | 0.93 pp | 2.69 pp | Fail |
-| `peer-25` | 4 / 5 | -2.54% | -1.28% | 3.76 pp | 6.94 pp | Fail |
-| `peer-50` | 4 / 5 | 0.58% | 1.11% | 1.58 pp | 5.19 pp | Fail |
-| `peer-75` | 4 / 5 | -0.25% | 0.60% | 2.38 pp | 4.70 pp | Fail |
+| `selected-25` | 4 / 5 | 26.20% | 25.53% | 2.89 pp | 6.37 pp | Fail |
+| `selected-50` | 4 / 5 | 50.43% | 49.08% | 1.24 pp | 3.21 pp | Fail |
+| `selected-75` | 4 / 5 | 49.77% | 50.60% | 1.59 pp | 3.20 pp | Fail |
+| `peer-25` | 4 / 5 | 1.75% | -1.64% | 3.79 pp | 5.19 pp | Fail |
+| `peer-50` | 4 / 5 | 0.47% | -0.05% | 0.50 pp | 4.34 pp | Fail |
+| `peer-75` | 4 / 5 | -0.69% | -0.41% | 3.23 pp | 4.43 pp | Fail |
 
 The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
 
@@ -28,27 +28,35 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.998, 1.003 |
-| `selected-50` | 1.007, 1.004 |
-| `selected-75` | 0.999, 1.005 |
-| `peer-25` | 1.025, 1.004 |
-| `peer-50` | 0.994, 1.005 |
-| `peer-75` | 1.002, 1.028 |
+| `selected-25` | 0.982, 0.989 |
+| `selected-50` | 0.988, 0.985 |
+| `selected-75` | 1.003, 1.005 |
+| `peer-25` | 0.982, 0.996 |
+| `peer-50` | 0.995, 1.000 |
+| `peer-75` | 1.007, 1.007 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 0.993, 1.000; order 2: 1.000, 0.991; order 3: 0.997, 1.000; order 4: 1.000, 0.999; order 5: 0.994, 1.008; order 6: 1.008, 1.015. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.012, 1.028; order 1: 0.994, 1.000; order 2: 1.002, 1.000; order 3: 1.000, 1.025; order 4: 0.991, 0.999; order 5: 0.989, 1.009; order 6: 1.006, 1.004. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
+
+## Failed experiments
+
+Each row is a ledger failure of an experiment that did not pass, or the error of a failed experiment without a ledger failure. The time counts from the first journal event with a time. The amount is the debt for failure 1 and 0 for other failures. The gap is the time from the previous journal event of the same worker, in sequence order, and a buffered sample can make it negative. A failure without a time shows n/a. The collection count and the GC pause cover all threads of the process during the experiment.
+
+| Block | Experiment | Worker | Failure | Amount | Time | Gap | Collections | GC pause |
+| ---: | --- | ---: | ---: | ---: | ---: | --- | ---: | ---: |
+| 3 | `selected` 25% | 0 | 1 | 2.582 ms | 25.002 ms | 0.003 ms after `Sample` | 0 | 0.000 ms |
 
 ## Blocks
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | No: profile exit 1; profile not passed | -2.40 pp | -0.52 pp | -0.37 pp | -3.96 pp | -0.81 pp | n/a |
-| 2 | Yes | 4.93 pp | 1.17 pp | -0.79 pp | 4.30 pp | 0.09 pp | 1.09 pp |
-| 3 | Yes | 1.31 pp | -1.82 pp | 1.08 pp | -3.22 pp | 0.36 pp | 1.95 pp |
-| 4 | Yes | -0.48 pp | 0.30 pp | -2.69 pp | -0.09 pp | -5.19 pp | -4.70 pp |
-| 5 | Yes | -0.91 pp | -0.92 pp | -0.74 pp | -6.94 pp | -2.79 pp | -2.80 pp |
+| 1 | Yes | 0.14 pp | 0.28 pp | -1.36 pp | 5.15 pp | -0.31 pp | 1.02 pp |
+| 2 | Yes | 6.37 pp | 3.21 pp | 1.09 pp | 5.19 pp | 4.34 pp | 3.59 pp |
+| 3 | No: profile exit 1; profile not passed | n/a | 1.77 pp | -2.67 pp | 1.97 pp | 2.19 pp | 1.32 pp |
+| 4 | Yes | -4.41 pp | 1.07 pp | -1.83 pp | -0.25 pp | -0.33 pp | -2.87 pp |
+| 5 | Yes | -1.36 pp | -1.40 pp | -3.20 pp | -2.42 pp | 0.67 pp | -4.43 pp |
 
 ## Run history
 
@@ -63,7 +71,8 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T063004675-e6636cdf` | TargetLock and lock profile | Pass |
 | `20261019T070634914-3cd1d60c` | Lock handoff counts | Pass |
 | `20261019T074837405-5db1c839` | Spin before a lock wait | Fail. Block 1 is invalid: `selected` at 75% breaks the 2 ms debt bound, with 8.41 ms of run-queue delay on thread 1. |
-| `20261019T082828297-eb8d2196` | TargetSemaphore and semaphore profile | Fail. Points selected-25, selected-50, selected-75, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. |
+| `20261019T082828297-eb8d2196` | TargetSemaphore and semaphore profile | Fail. Block 1 is invalid: `peer` at 75% records ledger failure 1, with no large run-queue delay. |
+| `20261019T090901082-03de2f25` | Failure and GC records | Fail. Points selected-25, selected-50, selected-75, peer-25, peer-50, peer-75 fail, or a run-level criterion fails. |
 
 ## Limits
 

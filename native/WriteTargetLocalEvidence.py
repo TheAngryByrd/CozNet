@@ -47,6 +47,7 @@ PREDICTION_HISTORY = [
     ("20261019T063130911-86311728", "Same", "TargetLock and lock profile", "Pass"),
     ("20261019T070800008-220def3b", "Same", "Lock handoff counts", "Fail. `peer-longer` has 4 valid blocks. In block 4, the peer breaks the 2 ms debt bound 1.38 ms after its work start, with 3.75 ms of start run-queue delay."),
     ("20261019T075004985-14232a40", "Same", "Spin before a lock wait", "Pass"),
+    ("20261019T082954122-98c31e2d", "Same", "TargetSemaphore and semaphore profile", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -84,6 +85,7 @@ TRANSITION_HISTORY = [
     ("20261019T063102813-1448d8f5", "TargetLock and lock profile", "Pass, 10 of 10"),
     ("20261019T070731753-86c6ac1e", "Lock handoff counts", "Pass, 10 of 10"),
     ("20261019T074936096-7103de7f", "Spin before a lock wait", "Pass, 10 of 10"),
+    ("20261019T082925705-0e9bf3e5", "TargetSemaphore and semaphore profile", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -123,6 +125,7 @@ BARRIER_HISTORY = [
     ("20261019T063253419-973e8541", "TargetLock and lock profile", "Pass"),
     ("20261019T070924325-199df270", "Lock handoff counts", "Pass"),
     ("20261019T075126709-39bc016f", "Spin before a lock wait", "Pass"),
+    ("20261019T083116455-261fde3b", "TargetSemaphore and semaphore profile", "Pass"),
 ]
 
 
@@ -654,6 +657,7 @@ PROFILE_HISTORY = [
     ("20261019T063004675-e6636cdf", "TargetLock and lock profile", "Pass"),
     ("20261019T070634914-3cd1d60c", "Lock handoff counts", "Pass"),
     ("20261019T074837405-5db1c839", "Spin before a lock wait", "Fail. Block 1 is invalid: `selected` at 75% breaks the 2 ms debt bound, with 8.41 ms of run-queue delay on thread 1."),
+    ("20261019T082828297-eb8d2196", "TargetSemaphore and semaphore profile", "Fail. Block 1 is invalid: `peer` at 75% records ledger failure 1, with no large run-queue delay."),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
@@ -664,15 +668,20 @@ THROUGHPUT_HISTORY = [
     ("20261019T062905608-e6d24e45", "TargetLock and lock profile", "Fail. Block 4 invalid: a 2 ms debt failure, and a handler interval of 5.99 ms with 45.8 ms of run-queue delay."),
     ("20261019T070536063-c1a60568", "Lock handoff counts", "Pass"),
     ("20261019T074738456-b0d0236a", "Spin before a lock wait", "Pass"),
+    ("20261019T082728956-3c510383", "TargetSemaphore and semaphore profile", "Pass"),
 ]
-SEMAPHORE_HISTORY = []
+SEMAPHORE_HISTORY = [
+    ("20261019T082323819-903a6cef", "First semaphore profile run", "Fail. `selected-75` has one block of -10.61 points, and `peer-75` median 5.24 points."),
+]
 SPINLOCK_HISTORY = [
     ("20261019T074539772-03c40325", "First spin lock profile run", "Fail. Blocks 4 and 5 are invalid: `peer` at 75% has 97 and 98 visits. In the three valid blocks, `selected-50` has a median of 1.77 points, and `selected-75` fails at 6.87 points."),
+    ("20261019T082529889-abecc54b", "TargetSemaphore and semaphore profile", "Fail. Block 3 is invalid: `peer` at 75% has 96 visits. `selected-75` median 6.70 points with one block of 10.52 points."),
 ]
 LOCK_HISTORY = [
     ("20261019T062708436-df83442b", "First lock profile run", "Fail. `selected-50` median 9.13 points, all five blocks below the actual gain. `peer-25` has one block of 11.87 points."),
     ("20261019T070331580-523cc380", "Lock handoff counts", "Fail. Blocks 1 and 2 are invalid: `selected` at 50% breaks the 2 ms debt bound. In the three valid blocks, `selected-50` predicts 48.17% against 51.79%. The handoff share at `selected-50` is 7.40% in the profile and 2.18% in the real optimization."),
     ("20261019T074433206-6d45795e", "Spin before a lock wait", "Fail. `selected-50` median 7.89 points, all five blocks below the actual gain. `selected-75` median 5.07 points, with one block of 10.51 points."),
+    ("20261019T082429851-cb3998b5", "TargetSemaphore and semaphore profile", "Fail. `selected-50` median 5.62 points, `selected-75` median 5.17 points with one block of 12.83 points, and `peer-75` median 5.55 points."),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
@@ -682,6 +691,7 @@ PIPELINE_HISTORY = [
     ("20261019T062807524-d72126fc", "TargetLock and lock profile", "Pass"),
     ("20261019T070437097-c99cf6c4", "Lock handoff counts", "Fail. `peer-50` has one block of 10.02 points. Its median difference is 2.70 points."),
     ("20261019T074639406-cf96acce", "Spin before a lock wait", "Pass"),
+    ("20261019T082629301-c4292b43", "TargetSemaphore and semaphore profile", "Fail. `peer-25` has one block of 10.11 points."),
 ]
 
 
@@ -709,6 +719,17 @@ def profile(root, run, change, kind="target-local-profile"):
     handoff_text = ("\n\n## Lock handoff\n\nThe handoff share is the time from a release to the acquire of a waiting thread, divided by the elapsed time. "
                     "The share counts only handoffs to a thread that waited. See [the handoff plan](../../../lode/plans/target-local-lock-handoff.md) for the hypothesis that these handoffs cause the knee error.\n\n"
                     "| Point | Median handoff share, profile | Median handoff share, real optimization |\n| --- | ---: | ---: |\n" + handoff) if handoff else ""
+    ms = lambda v: f"{v / 1e6:.3f} ms" if type(v) is int else "n/a"
+    failed = [(b["block"], e, f) for b in summary["blocks"] for e in b.get("failedExperiments") or [] for f in e["failures"] or [None]]
+    failure_rows = "\n".join(
+        f"| {block} | `{e['candidate'].split('::')[-1].split('(')[0] if e['candidate'] else 'n/a'}` {e['speedup']}% | "
+        + (f"{f['Worker']} | {f['Detail']} | {ms(f['DebtNs'])} | {ms(f['TimeNs'])} | {ms(f['GapNs'])} after `{f['PreviousKind'] or 'none'}` | " if f
+           else f"No ledger failure: {' '.join((e['error'] or 'no error').split()).replace('|', '/')} | | | | | ")
+        + f"{e['collections'] if type(e['collections']) is int and e['collections'] >= 0 else 'n/a'} | {ms(e['gcPauseNs']) if type(e['gcPauseNs']) is int and e['gcPauseNs'] >= 0 else 'n/a'} |" for block, e, f in failed)
+    failure_text = ("\n\n## Failed experiments\n\nEach row is a ledger failure of an experiment that did not pass, or the error of a failed experiment without a ledger failure. The time counts from the first journal event with a time. "
+                    "The amount is the debt for failure 1 and 0 for other failures. The gap is the time from the previous journal event of the same worker, in sequence order, and a buffered sample can make it negative. A failure without a time shows n/a. The collection count and the GC pause cover all threads of the process during the experiment.\n\n"
+                    "| Block | Experiment | Worker | Failure | Amount | Time | Gap | Collections | GC pause |\n| ---: | --- | ---: | ---: | ---: | ---: | --- | ---: | ---: |\n"
+                    + failure_rows) if failed else ""
     ratios = "\n".join(f"| `{p['point']}` | {ratio(p)} |" for p in summary["points"])
     warmup_values = [b.get("warmupPassed") for b in summary["blocks"]]
     if not all("warmupPassed" in b for b in summary["blocks"]):
@@ -777,7 +798,7 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 The median work ratio by run order in the process is {order_text}. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in {warmups}.
 
-{handoff_text}
+{handoff_text}{failure_text}
 
 ## Blocks
 

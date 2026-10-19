@@ -130,6 +130,10 @@ Each experiment calls `TargetLocalProfiler.runBound` with one candidate as the s
 Each `TargetCausalExperiment` also holds `Visits`, and `Threads` with one `TargetCausalThread` for each worker.
 A `TargetCausalThread` holds `CpuNs`, `WallNs`, `HandlerNs`, `PaymentNs` (the sum of measured child payments, including the closing payment), `SkipNs` (the sum of wake skips), `Samples`, `Wakes`, and `RunDelayNs`.
 `CpuNs` stops when the native finish disables counting. `WallNs` runs from the work start to the end of the native finish. A throughput experiment counts every visit from the first work start to the last finish.
+`Failures` holds one `TargetCausalFailure` for each `Failure` event of the journal: `Worker`, `Detail`, `DebtNs` (the event amount), `TimeNs` (from the first journal event with a time), and `GapNs` and `PreviousKind` (from the previous event of the same worker with a time, in sequence order).
+The list follows the journal sequence. `GapNs` can be negative, because a buffered sample can have an earlier time than the event before it.
+Some native failures carry no time. Their `TimeNs` and `GapNs` are null, and `PreviousKind` is empty. A failure without a previous timed event of its worker also has a null `GapNs`.
+`Collections` and `GcPauseNs` are the change of `GC.CollectionCount(0)` and of `GC.GetTotalPauseDuration()` across the experiment, after its forced collection. They count all threads of the process. An experiment that raises an exception records -1 for both.
 
 ## Code binding
 

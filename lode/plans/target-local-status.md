@@ -358,4 +358,26 @@ The other suites on the same tree:
   The record does not name the thread of the failure. Thread 0, which pays delay at a `peer` speedup, has 4.2 microseconds of run-queue delay, and its wall time exceeds its CPU time by 17.1 microseconds.
   For thread 1, wall time minus counted CPU time is 1.16 ms, with no run-queue delay, and the records do not show why. No large run-queue delay is recorded, and the cause of this failure is not known.
 
+## Failure records
+
+[The failure record plan](target-local-failure-records.md) keeps the ledger failures and the GC values of each profile experiment.
+Semaphore run `20261019T090345985-b2474637` passes all six points with 5 valid blocks each. So criterion 72 holds in the second semaphore run.
+Pipeline run `20261019T090700489-b82b1791`, throughput run `20261019T090759533-41316f2b`, transition run `20261019T090959282-d4b0da38`, prediction run `20261019T091027391-fbd17a7d`, and barrier run `20261019T091147974-ff48eb23` pass.
+
+Two runs fail by one debt failure each. Criterion 77 gives these values:
+
+| Run | Block | Experiment | Worker | Debt | Time | Gap before the failure | Collections | GC pause |
+| --- | ---: | --- | ---: | ---: | ---: | --- | ---: | ---: |
+| Latency `20261019T090901082-03de2f25` | 3 | `selected` 25% | 0 | 2.582 ms | 25.002 ms | 3.1 microseconds after a sample | 0 | 0 |
+| Lock `20261019T090501903-273c483d` | 4 | `peer` 75% | 1 | 3.000 ms | 56.871 ms | 7.2 microseconds after a sample | 0 | 0 |
+
+- In the latency failure, both threads have no run-queue delay. Wall time minus counted CPU time is 12.6 and 13.9 microseconds.
+  No collection ran in the experiment, so the GC suspension hypothesis of the plan is refuted for this failure.
+  The 3.1 microsecond gap runs from the timestamp of the preceding sample of that worker to the failure timestamp. It does not show how long the worker ran before the failure.
+  Worker 0 runs `Work.selected`, so it is the selected thread of this experiment. The worker observed debt above 2 ms at that check, while it ran. The record does not show when the debt crossed 2 ms.
+  Open question, not shown: the global delay rises above the credit of the selected thread only when another worker publishes a larger local delay. A measured payment of the peer that overshoots its request can cause this.
+- In the lock failure, no collection ran either. Threads 0 and 1 have 11.42 ms and 6.32 ms of run-queue delay over the whole experiment. The records do not place that delay relative to the failure.
+The lock run then has 4 valid blocks, so every point fails criterion 62. In the four valid blocks, `selected-50` is below the real gain in each block, from -1.67 to -8.71 points, with a median of 8.32 points.
+Spin lock run `20261019T090601089-7d489720` fails, because block 4 is invalid: `peer` at 75% has 98 visits. So each point has 4 valid blocks.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

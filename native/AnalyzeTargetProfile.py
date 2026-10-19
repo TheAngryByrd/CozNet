@@ -68,6 +68,20 @@ def timing_consistent(record):
 WARMUP_KEYS = ("Block", "Order", "Candidate", "Speedup", "ElapsedNs", "GlobalNs", "EffectiveNs", "Visits", "Threads", "Passed", "Error")
 
 
+FAILURE_KEYS = ("Worker", "Detail", "DebtNs", "TimeNs", "GapNs", "PreviousKind")
+
+
+def failed_experiments(record):
+    if not isinstance(record, dict) or not isinstance(record.get("experiments"), list):
+        return []
+    experiments = record["experiments"] + ([record["warmup"]] if isinstance(record.get("warmup"), dict) else [])
+    return [{"candidate": e.get("Candidate"), "speedup": e.get("Speedup"), "order": e.get("Order"), "error": e.get("Error"),
+             "collections": e.get("Collections"), "gcPauseNs": e.get("GcPauseNs"),
+             "failures": [{k: f.get(k) for k in FAILURE_KEYS} for f in e.get("Failures") or [] if isinstance(f, dict)],
+             "threads": [{k: t.get(k) for k in ("CpuNs", "WallNs", "RunDelayNs")} for t in e.get("Threads") or [] if isinstance(t, dict)]}
+            for e in experiments if isinstance(e, dict) and not e.get("Passed")]
+
+
 def warmup_present(record):
     warmup = record.get("warmup")
     return (isinstance(warmup, dict) and all(k in warmup for k in WARMUP_KEYS) and warmup["Speedup"] == 0 and warmup["Block"] == 0
@@ -226,6 +240,7 @@ def main():
         blocks.append({"block": block, "valid": not reasons, "reasons": reasons, "points": points,
                        "orderRatios": order_ratios(profile) if complete else {},
                        "warmupPassed": profile["warmup"]["Passed"] if isinstance(profile, dict) and warmup_present(profile) else None,
+                       "failedExperiments": failed_experiments(profile),
                        "positions": [[e["Candidate"], e["Speedup"], e["Order"]] for e in profile["experiments"]] if complete else None,
                        "order": [[e["Candidate"], e["Speedup"]] for e in sorted(profile["experiments"], key=lambda e: e["Order"])] if complete else None})
     summary_points = []

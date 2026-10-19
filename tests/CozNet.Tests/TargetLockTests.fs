@@ -130,9 +130,11 @@ module TargetLockTests =
                 let other = Thread((fun () -> entered <- gate.Enter(TimeSpan.FromSeconds 5.0, CancellationToken.None)), IsBackground = true)
                 other.Start()
                 let watch = Diagnostics.Stopwatch.StartNew()
-                while not (other.ThreadState.HasFlag ThreadState.WaitSleepJoin) && watch.Elapsed < TimeSpan.FromSeconds 5.0 do
-                    Thread.Sleep 1
-                Expect.isTrue (other.ThreadState.HasFlag ThreadState.WaitSleepJoin) "The waiter must block after its spin."
+                let mutable waiting = false
+                while not waiting && watch.Elapsed < TimeSpan.FromSeconds 5.0 do
+                    waiting <- other.ThreadState.HasFlag ThreadState.WaitSleepJoin
+                    if not waiting then Thread.Sleep 1
+                Expect.isTrue waiting "The waiter must reach its wait before the holder exits."
                 gate.Exit()
                 Expect.isTrue (other.Join(TimeSpan.FromSeconds 10.0)) "The waiter must finish."
                 Expect.isTrue entered "The waiter must take the lock."

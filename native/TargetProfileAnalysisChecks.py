@@ -1,6 +1,6 @@
 import unittest
 
-from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, handoff_shares, lock_stats_complete,
+from AnalyzeTargetProfile import (PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
                                   order_ratios,
                                   positions_balanced,
                                   prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
@@ -251,6 +251,16 @@ class ThroughputChecks(unittest.TestCase):
     def test_semaphore_arms_use_the_semaphore_rounds(self):
         args = expected_args(20261018, 1, "semaphore")
         self.assertEqual((args["profile"], args["selected-25"], args["peer-75"]), ("semaphore-profile 20261018 0", "plain-semaphore 18 12", "plain-semaphore 24 3"))
+
+    def test_failed_experiments_keep_their_failures_and_gc_values(self):
+        failure = {"Worker": 1, "Detail": 1, "DebtNs": 2100000, "TimeNs": 3200, "GapNs": 2500, "PreviousKind": "Wake"}
+        record = {"experiments": [{"Candidate": "a", "Speedup": 75, "Order": 3, "Passed": False, "Error": "replay", "Collections": 2, "GcPauseNs": 900,
+                                   "Failures": [failure], "Threads": [{"CpuNs": 1, "WallNs": 2, "RunDelayNs": 0, "HandlerNs": 5}]},
+                                  {"Candidate": "a", "Speedup": 0, "Order": 0, "Passed": True, "Failures": []}],
+                  "warmup": {"Candidate": "a", "Speedup": 0, "Order": -1, "Passed": True}}
+        self.assertEqual(failed_experiments(record), [{"candidate": "a", "speedup": 75, "order": 3, "error": "replay", "collections": 2, "gcPauseNs": 900,
+                                                       "failures": [failure], "threads": [{"CpuNs": 1, "WallNs": 2, "RunDelayNs": 0}]}])
+        self.assertEqual(failed_experiments(None), [])
 
     def test_latency_experiments_need_one_visit(self):
         self.assertTrue(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 1}}), "latency"))

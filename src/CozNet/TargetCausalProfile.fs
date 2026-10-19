@@ -28,6 +28,17 @@ type TargetCausalThread = {
     RunDelayNs: int64
 }
 
+type TargetCausalFailure = {
+    Worker: int
+    Detail: uint32
+    DebtNs: uint64
+    TimeNs: Nullable<int64>
+    GapNs: Nullable<int64>
+    PreviousKind: string
+}
+
+type TargetCausalGc = { Collections: int; PauseNs: int64 }
+
 type TargetCausalExperiment = {
     Block: int
     Order: int
@@ -38,6 +49,9 @@ type TargetCausalExperiment = {
     EffectiveNs: uint64
     Visits: int64
     Threads: TargetCausalThread array
+    Failures: TargetCausalFailure array
+    Collections: int
+    GcPauseNs: int64
     Passed: bool
     Error: string
 }
@@ -234,7 +248,20 @@ module TargetCausalProfile =
               Wakes = wakes[index]
               RunDelayNs = outcome.RunDelayNs })
 
-    let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option) (design: TargetCausalDesign) =
+    let internal failures (result: TargetProfileResult) =
+        let timed = result.Events |> Array.filter (fun e -> e.Time > 0UL)
+        let origin = if timed.Length = 0 then 0UL else timed |> Array.minBy _.Time |> _.Time
+        let last = Collections.Generic.Dictionary<int, TargetLedgerEvent>()
+        [| for e in result.Events |> Array.sortBy _.Sequence do
+               if e.Kind = TargetLedgerEventKind.Failure then
+                   let previous = if e.Time = 0UL then None else match last.TryGetValue e.Worker with | true, p -> Some p | _ -> None
+                   { Worker = e.Worker; Detail = e.Detail; DebtNs = e.Amount
+                     TimeNs = (if e.Time = 0UL then Nullable() else Nullable(int64 (e.Time - origin)))
+                     GapNs = (match previous with Some p -> Nullable(int64 e.Time - int64 p.Time) | None -> Nullable())
+                     PreviousKind = (match previous with Some p -> string p.Kind | None -> "") }
+               if e.Time > 0UL then last[e.Worker] <- e |]
+
+    let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option * TargetCausalGc) (design: TargetCausalDesign) =
         let candidates, speedups, blocks, seed = design.Candidates, design.Speedups, design.Blocks, design.Seed
         let order = arms (Random seed) candidates speedups
 
@@ -246,17 +273,19 @@ module TargetCausalProfile =
                     Error $"{error.GetType().Name}: {error.Message}"
 
             match result with
-            | Ok(r, visits, stop) ->
+            | Ok(r, visits, stop, gc) ->
                 let errors = [ if not r.Passed then failure r
                                match stop with
                                | Some message -> message
                                | None -> () ]
                 { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = r.ElapsedNs; GlobalNs = r.GlobalNs
-                  EffectiveNs = r.EffectiveNs; Visits = visits; Threads = threads r; Passed = r.Passed && stop.IsNone
+                  EffectiveNs = r.EffectiveNs; Visits = visits; Threads = threads r; Failures = failures r; Collections = gc.Collections
+                  GcPauseNs = gc.PauseNs; Passed = r.Passed && stop.IsNone
                   Error = String.Join("; ", errors) }
             | Error message ->
                 { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = 0UL; GlobalNs = 0UL
-                  EffectiveNs = 0UL; Visits = 0L; Threads = Array.empty; Passed = false; Error = message }
+                  EffectiveNs = 0UL; Visits = 0L; Threads = Array.empty; Failures = Array.empty; Collections = -1; GcPauseNs = -1L
+                  Passed = false; Error = message }
 
         let warmup = measure 0 -1 candidates[0] 0u
         let experiments =
@@ -314,10 +343,14 @@ module TargetCausalProfile =
                 | Throughput duration -> stopAfter duration counter (fun () -> state.Working) (fun () -> state.Running)
             let built = workers counter
             GC.Collect(2, GCCollectionMode.Forced, true)
+            let collections, pause = GC.CollectionCount 0, GC.GetTotalPauseDuration()
+            let gc () = { Collections = GC.CollectionCount 0 - collections; PauseNs = int64 (GC.GetTotalPauseDuration() - pause).TotalNanoseconds }
             let profile () = TargetLocalProfiler.runBound design.Binding speedup design.Period [| candidate |] eligible journalCapacity built monitor
             match design.Progress with
-            | EndToEnd -> profile (), 1L, None
+            | EndToEnd ->
+                let result = profile ()
+                result, 1L, None, gc ()
             | Throughput duration ->
                 let result, fired = guard (safetyDelay duration) counter profile
-                result, counter.Visits, (if fired then Some $"The safety stop ended the run after {safetyDelay duration}." else None)
+                result, counter.Visits, (if fired then Some $"The safety stop ended the run after {safetyDelay duration}." else None), gc ()
         runWith experiment design

@@ -20,6 +20,7 @@ For the lock and the lock qualification, read [target-local lock](plans/target-l
 For the lock handoff counts and the knee error of the lock profile, read [target-local lock handoff](plans/target-local-lock-handoff.md).
 For the spin before a lock wait and the spin lock suite, read [target-local spin lock](plans/target-local-spin-lock.md).
 For `TargetSemaphore` and the semaphore suite, read [target-local semaphore](plans/target-local-semaphore.md).
+For the failure and GC records of each profile experiment, read [target-local failure records](plans/target-local-failure-records.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).
 For the warm-up experiment and the first-experiment cost in a process, read [target-local warm-up](plans/target-local-warmup.md).
 For the rotated experiment order and the warm-up gate, read [target-local rotation](plans/target-local-rotation.md).

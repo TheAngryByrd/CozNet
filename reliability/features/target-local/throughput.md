@@ -1,6 +1,6 @@
 # Target-local throughput profile
 
-Evidence: `artifacts/target-local-throughput/20261019T082728956-3c510383`.
+Evidence: `artifacts/target-local-throughput/20261019T090759533-41316f2b`.
 
 `TargetLocalThroughputVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `throughput-profile` process and seven `plain-throughput` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the throughput plan](../../../lode/plans/target-local-throu
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 9.24% | 9.81% | 1.98 pp | 7.71 pp | Pass |
-| `selected-50` | 5 / 5 | 24.09% | 24.77% | 0.40 pp | 3.70 pp | Pass |
-| `selected-75` | 5 / 5 | 48.27% | 49.27% | 2.77 pp | 3.59 pp | Pass |
-| `peer-25` | 5 / 5 | 17.13% | 18.74% | 1.87 pp | 6.31 pp | Pass |
-| `peer-50` | 5 / 5 | 39.48% | 39.60% | 1.31 pp | 4.97 pp | Pass |
-| `peer-75` | 5 / 5 | 65.04% | 66.24% | 1.22 pp | 2.22 pp | Pass |
+| `selected-25` | 5 / 5 | 10.99% | 11.23% | 1.94 pp | 2.52 pp | Pass |
+| `selected-50` | 5 / 5 | 23.83% | 24.37% | 2.32 pp | 4.36 pp | Pass |
+| `selected-75` | 5 / 5 | 48.30% | 50.34% | 1.83 pp | 3.01 pp | Pass |
+| `peer-25` | 5 / 5 | 17.60% | 18.70% | 1.53 pp | 2.15 pp | Pass |
+| `peer-50` | 5 / 5 | 39.70% | 40.72% | 1.62 pp | 3.31 pp | Pass |
+| `peer-75` | 5 / 5 | 64.87% | 66.20% | 1.14 pp | 2.83 pp | Pass |
 
 If both workers have the same cost for each round, the expected gains are 10%, 25%, and 50% for `Work.selected` and 18.2%, 40%, and 66.7% for `Work.peer`. The criteria use the measured gains.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 1.203, 0.912 |
-| `selected-50` | 1.502, 0.762 |
-| `selected-75` | 2.013, 0.520 |
-| `peer-25` | 0.829, 1.100 |
-| `peer-50` | 0.605, 1.202 |
-| `peer-75` | 0.350, 1.350 |
+| `selected-25` | 1.180, 0.893 |
+| `selected-50` | 1.507, 0.765 |
+| `selected-75` | 1.999, 0.519 |
+| `peer-25` | 0.824, 1.093 |
+| `peer-50` | 0.603, 1.193 |
+| `peer-75` | 0.351, 1.339 |
 
-The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.845, 1.126; order 4: 1.000, 1.000; order 5: 1.232, 0.922; order 6: 1.240, 0.933. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.000, 1.000; order 1: 1.000, 1.000; order 2: 1.000, 1.000; order 3: 0.838, 1.116; order 4: 1.000, 1.000; order 5: 1.150, 0.871; order 6: 1.210, 0.919. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -1.64 pp | -1.95 pp | -1.64 pp | -1.87 pp | 0.64 pp | -1.61 pp |
-| 2 | Yes | 2.77 pp | -0.40 pp | -0.45 pp | 0.59 pp | 1.45 pp | -0.08 pp |
-| 3 | Yes | -7.71 pp | -3.70 pp | -3.35 pp | -6.31 pp | -4.97 pp | -2.22 pp |
-| 4 | Yes | -1.98 pp | 0.25 pp | -3.59 pp | 1.67 pp | -1.31 pp | -1.20 pp |
-| 5 | Yes | -0.56 pp | -0.03 pp | -2.77 pp | -2.31 pp | -0.47 pp | -1.22 pp |
+| 1 | Yes | -1.94 pp | -2.91 pp | -3.01 pp | -2.15 pp | -1.62 pp | -2.83 pp |
+| 2 | Yes | -2.52 pp | -2.32 pp | -2.55 pp | -1.53 pp | -3.31 pp | -2.23 pp |
+| 3 | Yes | -1.54 pp | -0.29 pp | -1.68 pp | -0.11 pp | -1.00 pp | -1.14 pp |
+| 4 | Yes | 2.04 pp | 4.36 pp | -1.34 pp | -0.04 pp | 1.68 pp | -0.39 pp |
+| 5 | Yes | 1.16 pp | 0.86 pp | -1.83 pp | 1.98 pp | -1.43 pp | -0.52 pp |
 
 ## Run history
 
@@ -63,6 +63,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T070536063-c1a60568` | Lock handoff counts | Pass |
 | `20261019T074738456-b0d0236a` | Spin before a lock wait | Pass |
 | `20261019T082728956-3c510383` | TargetSemaphore and semaphore profile | Pass |
+| `20261019T090759533-41316f2b` | Failure and GC records | Pass |
 
 ## Limits
 

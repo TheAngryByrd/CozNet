@@ -22,7 +22,9 @@ module TargetCausalProfileTests =
         { GlobalDelay = 10UL; Locals = Array.empty; SelectedSamples = 0UL; Credited = 0UL; Publishes = 0; Children = 0; MeasuredPayment = 0UL
           Deferred = 0; Failures = 0; MaxObservedDebt = 0UL; Blocks = 0; DependencyWakes = 0; SkippedDelay = 0UL }
 
-    let private runResults run design = TargetCausalProfile.runWith (fun c s -> run c s, 1L, None) design
+    let private noGc = { Collections = 0; PauseNs = 0L }
+
+    let private runResults run design = TargetCausalProfile.runWith (fun c s -> run c s, 1L, None, noGc) design
 
     let private profile run blocks =
         runResults run (designOf symbols symbols [| 25u; 50u |] blocks 7)
@@ -165,7 +167,7 @@ module TargetCausalProfileTests =
                 let design =
                     TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
-                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, 100L, (if c = "b" then Some "safety" else None))) design
+                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, 100L, (if c = "b" then Some "safety" else None), noGc)) design
                 let stopped = value.Experiments |> Array.filter (fun e -> not e.Passed)
                 Expect.equal (stopped |> Array.map (fun e -> e.Candidate, e.Error)) [| "b", "safety" |] "Only the stopped experiment must fail, with its reason."
             }
@@ -183,7 +185,7 @@ module TargetCausalProfileTests =
                 let design =
                     TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
-                let run c s = (result 1000UL true, (if s = 0u then 100L elif c = "a" then 200L else 100L), None)
+                let run c s = (result 1000UL true, (if s = 0u then 100L elif c = "a" then 200L else 100L), None, noGc)
                 let value = TargetCausalProfile.runWith run design
                 let point c = value.Points |> Array.find (fun p -> p.Candidate = c)
                 Expect.equal (point "a").Predictions [| Some 0.5 |] "200 visits in the same time must give a 50% shorter period."
@@ -195,10 +197,10 @@ module TargetCausalProfileTests =
                 let design =
                     TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Throughput 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
-                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, (if c = "a" && s = 50u then 0L else 100L), None)) design
+                let value = TargetCausalProfile.runWith (fun c s -> (result 1000UL true, (if c = "a" && s = 50u then 0L else 100L), None, noGc)) design
                 Expect.equal ((value.Points |> Array.find (fun p -> p.Candidate = "a")).Predictions) [| None |] "Zero visits must give no prediction."
                 Expect.equal (value.Experiments |> Array.filter (fun e -> e.Visits = 0L) |> Array.length) 1 "The experiment must stay."
-                let baseline = TargetCausalProfile.runWith (fun _ s -> (result 1000UL true, (if s = 0u then 0L else 100L), None)) design
+                let baseline = TargetCausalProfile.runWith (fun _ s -> (result 1000UL true, (if s = 0u then 0L else 100L), None, noGc)) design
                 Expect.isTrue (baseline.Points |> Array.forall (fun p -> p.ValidBlocks = 0)) "A baseline with no visits must give no prediction."
             }
 
@@ -245,6 +247,44 @@ module TargetCausalProfileTests =
                 let rows = TargetCausalProfile.threads value
                 Expect.equal (rows |> Array.map (fun t -> t.CpuNs, t.HandlerNs, t.PaymentNs, t.SkipNs, t.Samples, t.Wakes, t.RunDelayNs, t.WallNs))
                     [| 10UL, 3UL, 11UL, 0UL, 2, 0, 7L, 0UL; 20UL, 3UL, 0UL, 4UL, 1, 1, 7L, 0UL |] "Each thread must keep its own totals."
+            }
+
+            test "an experiment keeps each ledger failure with its worker, debt, and times" {
+                let event worker sequence kind time amount detail = { Worker = worker; Sequence = sequence; Kind = kind; ObservedGlobal = 0UL; LocalBefore = 0UL; Amount = amount
+                                                                      Requested = 0UL; Ip = 0UL; Detail = detail; Time = time }
+                let some (v: int64) = Nullable v
+                let value =
+                    { result 100UL false with
+                        Events = [| event 1 3UL TargetLedgerEventKind.Wake 1700UL 0UL 0u; event 0 1UL TargetLedgerEventKind.Sample 1000UL 0UL 0u
+                                    event 1 2UL TargetLedgerEventKind.Sample 1200UL 0UL 0u; event 1 4UL TargetLedgerEventKind.Failure 4200UL 2100000UL 1u
+                                    event 0 5UL TargetLedgerEventKind.Failure 5000UL 2050000UL 1u |] }
+                let rows (v: TargetProfileResult) = TargetCausalProfile.failures v |> Array.map (fun f -> f.Worker, f.Detail, f.DebtNs, f.TimeNs, f.GapNs, f.PreviousKind)
+                Expect.equal (rows value) [| 1, 1u, 2100000UL, some 3200L, some 2500L, "Wake"; 0, 1u, 2050000UL, some 4000L, some 4000L, "Sample" |]
+                    "Each failure must keep its worker, detail, debt, time, and gap."
+                let untimed = { value with Events = Array.append value.Events [| event 1 6UL TargetLedgerEventKind.Failure 0UL 0UL 2u |] }
+                Expect.equal (rows untimed |> Array.last) (1, 2u, 0UL, Nullable(), Nullable(), "") "A failure without a time must have unknown times."
+                Expect.equal (rows untimed |> Array.take 2) (rows value) "A failure without a time must not move the origin."
+                let buffered = { value with Events = Array.append value.Events [| event 0 7UL TargetLedgerEventKind.Child 6000UL 5UL 0u; event 0 8UL TargetLedgerEventKind.Sample 5800UL 0UL 0u
+                                                                                  event 0 9UL TargetLedgerEventKind.Failure 6100UL 2010000UL 1u |] }
+                Expect.equal (rows buffered |> Array.last) (0, 1u, 2010000UL, some 5100L, some 300L, "Sample") "The previous event must follow the journal sequence, not the time."
+                Expect.isEmpty (TargetCausalProfile.failures { value with Events = value.Events |> Array.filter (fun e -> e.Kind <> TargetLedgerEventKind.Failure) })
+                    "An experiment without a failure event must have no failure."
+                Expect.isEmpty (TargetCausalProfile.failures { value with Events = Array.empty }) "An experiment without events must have no failure."
+            }
+
+            test "an experiment keeps its failures and GC values, and a thrown experiment marks them unknown" {
+                let design =
+                    TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 EndToEnd
+                    |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
+                let failing =
+                    { result 1000UL false with
+                        Events = [| { Worker = 1; Sequence = 1UL; Kind = TargetLedgerEventKind.Failure; ObservedGlobal = 0UL; LocalBefore = 0UL; Amount = 2200000UL
+                                      Requested = 0UL; Ip = 0UL; Detail = 1u; Time = 50UL } |] }
+                let value = TargetCausalProfile.runWith (fun c s -> if c = "b" then failwith "boom" else ((if s = 50u then failing else result 1000UL true), 1L, None, { Collections = 3; PauseNs = 700L })) design
+                let gc = value.Experiments |> Array.map (fun e -> e.Candidate, e.Speedup, e.Collections, e.GcPauseNs) |> Array.sort
+                Expect.equal gc [| "a", 0u, 3, 700L; "a", 50u, 3, 700L; "b", 50u, -1, -1L |] "Each experiment must keep its GC values, and a thrown one must record -1."
+                let failed = value.Experiments |> Array.find (fun e -> e.Candidate = "a" && e.Speedup = 50u)
+                Expect.equal (failed.Failures |> Array.map (fun f -> f.Worker, f.DebtNs)) [| 1, 2200000UL |] "A failed experiment must keep its ledger failures."
             }
 
             test "a rotation shifts the order of each block and keeps every experiment" {
