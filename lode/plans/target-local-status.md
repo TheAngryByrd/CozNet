@@ -842,4 +842,32 @@ The evidence is valid for all 10 profiles, and the full collection before each e
   The peer 8 profiles have one negative window, in invalid block 1, with two nominal steps, a wall time of 1473.3 µs, and a clip of 26.7 µs.
 - In block 2, the only block valid for both peers, both peers are far below the real gain: -20.67 and -18.18 points. The earlier run gave S2 = -4.02. This one block does not repeat that result, but it is too little evidence to test it.
 
+## Probe diagnostic
+
+[The probe diagnostic plan](target-local-probe-diagnostic.md) runs a fixed probe before each arm and records guest counters. Capture `20261019T225711474-4ea91d27` ran once on the reviewed tree. Its inputs did not change, no probe failed, and the capture did not stop.
+It is retained with the paired runs `20261019T213806586-069c2adf` and `20261019T222832093-272334f5`.
+
+The broad visit drop of the second paired run did not recur:
+
+| Comparison | Items | Median ratio of visit rates | Range | Items below 0.85 |
+| --- | ---: | ---: | --- | ---: |
+| Plain items to `069c2adf` | 80 | 1.033 | 0.171 to 1.374 | 1 |
+| Profile items to `069c2adf` | 50 | 1.037 | 0.970 to 1.157 | 0 |
+| Plain items to `272334f5` | 80 | 1.094 | 0.210 to 3.141 | 1 |
+| Profile items to `272334f5` | 50 | 1.093 | 0.962 to 3.208 | 0 |
+
+- The plain items include the 40 warm-ups, and the profile items include the 10 warm-up experiments.
+- The only low item is the plain `selected-25` warm-up of block 4 for peer 8. It has 35 visits in 121.1 ms, and its probe was 668.2 µs, inside the spread below. This failed warm-up makes block 4 invalid for peer 8.
+- All 50 probes are valid. Their median wall time for each sample is 644.5 to 698.5 µs, with a median of 661.0 µs and a coefficient of variation of 1.6%. Their CPU time over their wall time is 0.9996 to 1.0021.
+- The steal ticks of `/proc/stat` did not change around any arm. `/proc/pressure/cpu` is missing on this kernel.
+- The Spearman correlations of the probe wall time with the median rate ratio of the next arm are -0.20 (40 plain arms) and -0.58 (10 profile arms) for `069c2adf`, and -0.07 and 0.05 for `272334f5`. They are descriptive only.
+- No slow arm group and almost no probe variation means that this capture cannot resolve the cause of the earlier slowdown. The probe has no historical baseline.
+- Guest counters cannot prove that the host had no contention, so unchanged steal ticks do not show its absence.
+- A probe runs only before its arm, so it supports only a temporal comparison with the next arm.
+- The container start, the runtime start, and the work of each probe can change the thermal and idle state of the CPUs, so this capture is not an exact repeat of the earlier runs.
+
+The prediction results:
+- Peer 8 has 4 valid blocks and peer 2 has 4. In block 5, the peer 2 `selected` 75% experiment has a debt failure. Blocks 1 to 3 are valid for both peers, so criterion 137 gives "not decisive: too few valid blocks".
+- Over blocks 1 to 3, `selected-75` has a median of -13.75 points for peer 8 and -4.45 for peer 2. The per-block values are -32.54, -13.75, and -11.05 for peer 8, and -6.47, -4.45, and -2.60 for peer 2.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

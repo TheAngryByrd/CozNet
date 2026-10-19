@@ -24,6 +24,7 @@ It requires the .NET 10 SDK, PowerShell 7, Python 3, Docker, and the images `coz
 14. To pin each worker to one CPU, run `VerifyTargetLocalProfile.ps1` with `-WorkerCpus '0,2'` and a lock or transaction workload. The runner accepts only `'0,2'`, one CPU on each physical core. Open the new directory under `artifacts/target-local-<workload>-pinned`. Repeat steps 3 to 6.
 15. To sample every 0.25 ms, run `VerifyTargetLocalProfile.ps1` with `-PeriodNs 250000` and a transaction workload. The runner accepts only `250000`. Open the new directory under `artifacts/target-local-<workload>-period`. Repeat steps 3 to 6. This run is a diagnostic, not a qualification run.
 16. To compare peer work 8 and 2 at the `selected` points in the same blocks, run `TargetLocalBottleneckVerify`. Open the new directory under `artifacts/target-local-bottleneck`, and read `outcome` in `summary.json`. This run is a diagnostic, not a qualification run.
+17. To add a fixed probe before each arm of that diagnostic, run `VerifyTargetLocalBottleneck.ps1 -Probe`. Open the new directory under `artifacts/target-local-bottleneck-probe`, and read `probe-summary.json`. The summary is descriptive only.
 
 In the qualification suites, each block runs one profile process and seven plain processes in a random order.
 The profile process runs a baseline and six experiments: `Work.selected` and `Work.peer` at speedups 25, 50, and 75.

@@ -231,7 +231,7 @@ def main():
     run = pathlib.Path(sys.argv[1]).resolve()
     manifest = load(run / "manifest.json")
     complete = (manifest["inputsUnchanged"] and manifest["blocks"] == BLOCKS and manifest["seed"] == SEED and manifest["selected"] == SELECTED
-                and tuple(manifest["peers"]) == PEERS and tuple(manifest["speedups"]) == SPEEDUPS)
+                and tuple(manifest["peers"]) == PEERS and tuple(manifest["speedups"]) == SPEEDUPS and not manifest.get("stopped"))
     peers = {}
     for peer in PEERS:
         blocks = []
@@ -256,7 +256,7 @@ def main():
         peers[peer] = {"validBlocks": len(valid), "blocks": blocks, "points": points, "plainSelected75Idle": idle}
     common, paired, result = paired_outcome(peers[8]["blocks"], peers[2]["blocks"])
     unclipped = unclipped_summary(peers[8]["blocks"], peers[2]["blocks"], common)
-    summary = {"inputsUnchanged": manifest["inputsUnchanged"], "complete": complete, "outcome": result if complete else "not decisive: run incomplete",
+    summary = {"inputsUnchanged": manifest["inputsUnchanged"], "complete": complete, "stopped": manifest.get("stopped"), "outcome": result if complete else "not decisive: run incomplete",
                "commonValidBlocks": common, "paired": {str(k): v for k, v in paired.items()}, "unclipped": unclipped,
                "peers": {str(k): v for k, v in peers.items()}, "diagnostic": True, "qualification": False}
     (run / "summary.json").write_text(json.dumps(summary, indent=2))

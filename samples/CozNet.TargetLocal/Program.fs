@@ -107,6 +107,48 @@ let private calibrate (output: string) =
     write output {| mode = "calibrate"; rounds = rounds; nanoseconds = nanoseconds; roundsPerMillisecond = float rounds * 1e6 / nanoseconds |}
     0
 
+module private Clocks =
+    [<Struct; System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)>]
+    type Timespec =
+        val mutable Seconds: int64
+        val mutable Nanoseconds: int64
+
+    [<System.Runtime.InteropServices.DllImport("libc", SetLastError = true)>]
+    extern int clock_gettime(int clock, Timespec& value)
+
+    let realtime, monotonic, threadCpu, boottime = 0, 1, 3, 7
+
+    let read clock =
+        let mutable value = Timespec()
+        if clock_gettime(clock, &value) <> 0 then -1L else value.Seconds * 1_000_000_000L + value.Nanoseconds
+
+let private probe (output: string) =
+    let rounds, warmup, samples = 40UL, 20, 100
+    let stamp () = {| realtimeNs = Clocks.read Clocks.realtime; monotonicNs = Clocks.read Clocks.monotonic; boottimeNs = Clocks.read Clocks.boottime |}
+    let started = stamp ()
+    let expected = Work.selected rounds
+    let mutable differing = 0
+    for _ in 2 .. warmup do
+        if Work.selected rounds <> expected then differing <- differing + 1
+    let records =
+        Array.init samples (fun _ ->
+            let cpuBefore = Pinning.sched_getcpu ()
+            let threadBefore = Clocks.read Clocks.threadCpu
+            let wallBefore = Stopwatch.GetTimestamp()
+            let value = Work.selected rounds
+            let wallAfter = Stopwatch.GetTimestamp()
+            let threadAfter = Clocks.read Clocks.threadCpu
+            let cpuAfter = Pinning.sched_getcpu ()
+            if value <> expected then differing <- differing + 1
+            {| wallNs = int64 (Stopwatch.GetElapsedTime(wallBefore, wallAfter).TotalNanoseconds)
+               cpuNs = (if threadBefore < 0L || threadAfter < 0L then -1L else threadAfter - threadBefore)
+               cpuBefore = cpuBefore; cpuAfter = cpuAfter |})
+    let finished = stamp ()
+    let passed = differing = 0 && records |> Array.forall (fun r -> r.cpuNs >= 0L)
+    write output {| mode = "probe"; work = "Work.selected"; rounds = rounds; warmupSamples = warmup; samples = samples; checksum = expected
+                    differingResults = differing; started = started; finished = finished; records = records; passed = passed |}
+    if passed then 0 else 1
+
 let private plain selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
@@ -828,6 +870,7 @@ let private cleanup (output: string) =
 let main argv =
     match argv with
     | [| "calibrate"; output |] -> calibrate output
+    | [| "probe"; output |] -> probe output
     | [| "cleanup"; output |] -> cleanup output
     | [| "binding"; output |] -> bindingCheck output
     | [| "rejit"; output |] -> rejitCheck output

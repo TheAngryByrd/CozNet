@@ -35,6 +35,7 @@ For the command that runs every suite as one package, read [target-local qualifi
 For the paid delay inside each transaction window, read [target-local window payment](plans/target-local-window-payment.md).
 For the pinned upstream latency rule, the hand-worked trace, and the paired peer-work diagnostic, read [target-local latency estimator](plans/target-local-latency-estimator.md).
 For the exact clipping and the delay steps of each window, read [target-local clipping export](plans/target-local-clipping-export.md).
+For the fixed probe before each arm and the visit-rate drop, read [target-local probe diagnostic](plans/target-local-probe-diagnostic.md).
 For the user decision on bounds and the matched plain warm-up, read [target-local plain warm-up](plans/target-local-plain-warmup.md).
 For the `selected` bias of the transaction points and the payment before each progress stamp, read [target-local progress settlement](plans/target-local-progress-settlement.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).
