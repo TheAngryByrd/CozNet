@@ -175,4 +175,18 @@ All three suites pass on the reviewed tree:
 
 The four retained forced-GC debt failures predate the windows, so their collections stay unplaced.
 
+## ReJIT check
+
+[The ReJIT plan](target-local-rejit.md) adds a test CLR profiler that requests a ReJIT of `Work.selected` during a bound run.
+Prediction run `20261019T014112845-eec890b5` and barrier run `20261019T014236242-6440bd58` pass all criteria.
+Transition run `20261019T014043978-f7a0ddbc` passes the ReJIT check and every other lifecycle check.
+In the ReJIT check, `RequestReJIT` returns 0 and one ReJIT compilation finishes with status 0. The perf map then holds two `[Optimized]` entries for `Work.selected`, and the run fails with `BindingError`.
+The transition run fails by forced-GC run 7, which breaks the 2 ms debt bound. It is the fifth current-design forced-GC debt failure and the first with GC windows.
+- The peer has no event from 24.45 ms to 29.68 ms, and its failure interval is 5.75 ms. Only one window, of 0.22 ms, overlaps that interval.
+- The selected thread journals a sample about every 1 ms from 25.85 ms to 28.86 ms. So no collection suspends both workers for long in the gap. A short suspension inside the 0.22 ms window stays possible.
+- The peer has 9.14 ms of whole-run run-queue delay, with no waits and no start delay. That is consistent with a run-queue wait in the gap, but the records do not place it.
+So forced collections cover at most 0.22 ms of this failure interval. The records do not establish its cause, and the failure stays.
+In the same run, the selected thread has an 8.88 ms event gap from 8.44 ms to 17.31 ms with no window and 8.11 ms of whole-run run-queue delay. It records no debt failure there.
+The lifecycle plan still says that no check produces a ReJIT. It is hashed by the transition runner, so it changes only with the next run.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

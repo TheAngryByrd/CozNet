@@ -35,6 +35,7 @@ PREDICTION_HISTORY = [
     ("20261019T002411461-b833589f", "Same", "Start trace with the thread CPU clock", "Pass"),
     ("20261019T004805873-c97ab2e5", "Same", "Thread state set before the native start, criterion 27 for barrier runs",
      "Fail. Criterion 26: one of 60 setup segments takes 0.60 ms, with a median of 0.0049 ms. All 15 blocks are within the limits."),
+    ("20261019T011552600-3ac91378", "Same", "Forced-GC windows", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -59,6 +60,7 @@ TRANSITION_HISTORY = [
      "Fail. Run 8: 2 ms debt bound at 39 ms, after a 6.5 ms peer gap with no event. The peer has 5.3 ms of residual run-queue delay."),
     ("20261019T002340083-c152f4ca", "Start trace with the thread CPU clock", "Pass, 10 of 10"),
     ("20261019T004724440-fd9cd00c", "Thread state set before the native start, criterion 27 for barrier runs", "Pass, 10 of 10"),
+    ("20261019T011520304-41a7c250", "Forced-GC windows", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -85,6 +87,7 @@ BARRIER_HISTORY = [
     ("20261019T001733954-3bae192a", "Start trace, with on-CPU time from schedstat field 1, before the revision", "Pass"),
     ("20261019T002531212-f435da11", "Start trace with the thread CPU clock", "Fail. Criterion 14: all 300 wait values are zero. All 15 blocks are within the limits, and 27 of 60 whole-run delays are above zero."),
     ("20261019T004925668-914e6b56", "Thread state set before the native start, criterion 27 for barrier runs", "Pass"),
+    ("20261019T011713329-52b0bbca", "Forced-GC windows", "Pass"),
 ]
 
 
@@ -334,7 +337,8 @@ The checks do not measure prediction accuracy under GC.
 
 `bindingTiered` runs with tiering on and requires both a configuration error and a rejected capture. `bindingDefault` requires a capture that still verifies after 100 ms of work.
 `shutdown` requires an exit through `Environment.Exit` while a worker is still working. In this run the exit code is {lifecycle.get('shutdownExitCode')}. The check does not show that a handler was inside a payment spin at the exit.
-The checks do not cover ReJIT or thread abort. See [the lifecycle plan](../../../lode/plans/target-local-lifecycle.md).
+{"`rejit` loads a test CLR profiler that requests a ReJIT of `Work.selected` during the run. It requires the ReJIT to finish and the run to fail with `BindingError`. See [the ReJIT plan](../../../lode/plans/target-local-rejit.md)." if "rejitPassed" in lifecycle else "This run predates the ReJIT check."}
+The checks do not cover thread abort. See [the lifecycle plan](../../../lode/plans/target-local-lifecycle.md).
 
 See [the support boundary](../../../docsSrc/Explanations/target-local-prediction.md) and [the prediction qualification](prediction.md).
 """

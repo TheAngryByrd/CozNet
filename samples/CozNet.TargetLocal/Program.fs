@@ -264,6 +264,39 @@ let private barrierAbort (output: string) =
                     secondRunPassed = second.Passed; passed = passed |}
     if passed then 0 else 1
 
+module private ReJitProbe =
+    [<System.Runtime.InteropServices.DllImport("CozNet.ReJitProbe", EntryPoint = "coz_rejit_request")>]
+    extern int request(unativeint functionId)
+
+    [<System.Runtime.InteropServices.DllImport("CozNet.ReJitProbe", EntryPoint = "coz_rejit_status")>]
+    extern void status(int64& finished, int64& errors, int& last)
+
+let private rejitCheck (output: string) =
+    let binding = bind ()
+    let selectedRange = binding.Range Work.selectedName
+    let peerRange = binding.Range Work.peerName
+    let selectedMethod = Type.GetType("CozNet.TargetLocal.Work, CozNet.TargetLocal").GetMethod("selected")
+    let requested = [| Int32.MinValue |]
+    let selectedWork () =
+        Work.selected 1UL |> ignore
+        requested[0] <- ReJitProbe.request (unativeint (selectedMethod.MethodHandle.Value))
+        Work.selected 6000UL |> ignore
+    let workers = [|
+        { Work = selectedWork; PaymentIp = fst selectedRange }
+        { Work = (fun () -> Work.peer 3000UL |> ignore); PaymentIp = fst peerRange }
+    |]
+    let result = boundRun binding 50u workers ignore
+    let mutable finished = 0L
+    let mutable errors = 0L
+    let mutable last = 0
+    ReJitProbe.status(&finished, &errors, &last)
+    let entries = File.ReadAllLines(PerfMap.currentProcess ()) |> Array.filter (fun line -> line.Contains(Work.selectedName, StringComparison.Ordinal))
+    let bindingError = result.BindingError |> Option.defaultValue ""
+    let passed = requested[0] = 0 && finished >= 1L && errors = 0L && last = 0 && entries.Length > 1 && bindingError <> "" && not result.Passed
+    write output {| mode = "rejit"; requestResult = requested[0]; rejitFinished = finished; rejitErrors = errors; lastStatus = last
+                    selectedEntries = entries; bindingError = bindingError; runPassed = result.Passed; passed = passed |}
+    if passed then 0 else 1
+
 let private bindingCheck (output: string) =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
@@ -337,6 +370,7 @@ let main argv =
     | [| "calibrate"; output |] -> calibrate output
     | [| "cleanup"; output |] -> cleanup output
     | [| "binding"; output |] -> bindingCheck output
+    | [| "rejit"; output |] -> rejitCheck output
     | [| "shutdown"; output |] -> shutdown output
     | [| "barrier-abort"; output |] -> barrierAbort output
     | [| "plain-phases"; pattern; selectedPercent; output |] -> plainPhases pattern (UInt64.Parse selectedPercent) output

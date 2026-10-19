@@ -14,7 +14,8 @@ It requires the .NET 10 SDK, PowerShell 7, Python 3, Docker, and the images `coz
 4. For each entry in `outcomes`, check that `exitCode` is 0 and `passed` is true.
 5. Check that each `forcedCollections` value is at least 10. It counts collections that start while a worker is working.
 6. Check that each `maxHandlerNs` value is less than 5,000,000.
-7. Check that each `lifecycle` value ending in `Passed` is true. They cover tiering rejection, binding, and shutdown.
+7. Check that each `lifecycle` value ending in `Passed` is true. They cover tiering rejection, binding, ReJIT detection, and shutdown.
+   `rejitPassed` comes from `rejit.json`. A test profiler requests a ReJIT of a bound method during the run, and the run must fail with `BindingError`.
 8. Check that `cleanupPassed` is true. It shows that a run whose monitor throws still closes its experiment.
 9. Check that `gcWindowsComplete` is true. Each forced collection must have one GC window, with none dropped.
 10. For a failed run, open `gc-summary.json`. Read the windows that overlap each debt failure and the largest event gap of each worker.

@@ -12,7 +12,7 @@ if ($LASTEXITCODE -ne 0) { throw 'The Linux SDK image is unavailable.' }
 $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.Linux.cpp', 'native/service/TargetSampleSession.Linux.h',
     'native/service/TargetSampleDispatch.h', 'native/service/TargetDelayLedger.h', 'src/CozNet/TargetLocalReplay.fs',
     'src/CozNet/TargetLocalProfiler.fs', 'samples/CozNet.TargetLocal/Work.fs', 'samples/CozNet.TargetLocal/Program.fs',
-    'native/VerifyTargetLocalTransitions.ps1', 'lode/plans/target-local-transitions.md', 'lode/plans/target-local-lifecycle.md', 'lode/plans/target-local-wait-delay.md', 'lode/plans/target-local-start-delay.md', 'lode/plans/target-local-start-trace.md', 'lode/plans/target-local-start-setup.md', 'lode/plans/target-local-gc-windows.md', 'native/AnalyzeTargetGc.py')
+    'native/VerifyTargetLocalTransitions.ps1', 'lode/plans/target-local-transitions.md', 'lode/plans/target-local-lifecycle.md', 'lode/plans/target-local-wait-delay.md', 'lode/plans/target-local-start-delay.md', 'lode/plans/target-local-start-trace.md', 'lode/plans/target-local-start-setup.md', 'lode/plans/target-local-gc-windows.md', 'native/AnalyzeTargetGc.py', 'lode/plans/target-local-rejit.md', 'native/rejit/ReJitProbe.Linux.cpp')
 $hashes = @{}
 function Get-SourceHash([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)
@@ -28,7 +28,7 @@ if ($LASTEXITCODE -ne 0) { throw "The managed build failed. See $run/managed-bui
 Copy-Item -Recurse (Join-Path $root 'samples/CozNet.TargetLocal/bin/Release/net10.0/*') $app
 & docker run --rm --pull never --network none --cap-drop ALL --read-only --tmpfs /tmp:rw,nosuid,size=64m `
     --mount "type=bind,source=$root,target=/source,readonly" --mount "type=bind,source=$app,target=/build" $compilerImage `
-    sh -c 'cd /source/native/service && clang++ -std=c++20 -O2 -Wall -Wextra -Werror -fPIC -shared -fvisibility=hidden -pthread TargetLocalApi.Linux.cpp -o /build/libCozNet.TargetLocal.so' *> (Join-Path $run 'native-build.log')
+    sh -c 'cd /source/native/service && clang++ -std=c++20 -O2 -Wall -Wextra -Werror -fPIC -shared -fvisibility=hidden -pthread TargetLocalApi.Linux.cpp -o /build/libCozNet.TargetLocal.so && cd /source/native/rejit && clang++ -std=c++20 -O2 -Wall -Wextra -Werror -fPIC -shared -fvisibility=hidden -pthread ReJitProbe.Linux.cpp -o /build/libCozNet.ReJitProbe.so' *> (Join-Path $run 'native-build.log')
 if ($LASTEXITCODE -ne 0) { throw "The native build failed. See $run/native-build.log." }
 $container = @('run', '--rm', '--pull', 'never', '--network', 'none', '--cap-drop', 'ALL', '--read-only', '--security-opt', 'seccomp=unconfined',
     '--tmpfs', '/tmp:rw,nosuid,size=64m', '--env', 'DOTNET_TieredCompilation=0', '--env', 'DOTNET_ReadyToRun=0',
@@ -57,6 +57,10 @@ $tiered = $container | ForEach-Object { if ($_ -eq 'DOTNET_TieredCompilation=0')
 $tieredExit = $LASTEXITCODE
 & docker @container sh -c "cd /app && timeout -k 2s 60s dotnet CozNet.TargetLocal.dll binding /out/binding-default.json" *> (Join-Path $run 'binding-default.json.log')
 $defaultExit = $LASTEXITCODE
+$probe = @($container[0..($container.Length - 2)]) + @('--env', 'CORECLR_ENABLE_PROFILING=1', '--env', 'CORECLR_PROFILER={8C2A6B1E-2F0D-4C47-9B7E-3D1A5F6C7E20}',
+    '--env', 'CORECLR_PROFILER_PATH=/app/libCozNet.ReJitProbe.so', $container[-1])
+& docker @probe sh -c "cd /app && timeout -k 2s 60s dotnet CozNet.TargetLocal.dll rejit /out/rejit.json" *> (Join-Path $run 'rejit.json.log')
+$rejitExit = $LASTEXITCODE
 $shutdownWatch = [Diagnostics.Stopwatch]::StartNew()
 & docker @container sh -c "cd /app && timeout -k 2s 30s dotnet CozNet.TargetLocal.dll shutdown /out/shutdown.json" *> (Join-Path $run 'shutdown.log')
 $shutdownExit = $LASTEXITCODE
@@ -64,8 +68,10 @@ $shutdownSeconds = $shutdownWatch.Elapsed.TotalSeconds
 $read = { param($name) $path = Join-Path $run $name; if (Test-Path -LiteralPath $path) { Get-Content $path -Raw | ConvertFrom-Json } else { $null } }
 $bindingTiered = & $read 'binding-tiered.json'
 $bindingDefault = & $read 'binding-default.json'
+$rejit = & $read 'rejit.json'
 $lifecycle = [ordered]@{
     bindingTieredPassed = $tieredExit -eq 0 -and $null -ne $bindingTiered -and $bindingTiered.passed -and $bindingTiered.tiered
+    rejitPassed = $rejitExit -eq 0 -and $null -ne $rejit -and $rejit.passed
     bindingDefaultPassed = $defaultExit -eq 0 -and $null -ne $bindingDefault -and $bindingDefault.passed -and -not $bindingDefault.tiered
     shutdownPassed = $shutdownExit -eq 0 -and $shutdownSeconds -lt 10 -and (Test-Path -LiteralPath (Join-Path $run 'shutdown.json.marker')) -and -not (Test-Path -LiteralPath (Join-Path $run 'shutdown.json')) -and (Get-Content (Join-Path $run 'shutdown.json.marker') -Raw | ConvertFrom-Json).working
     shutdownExitCode = $shutdownExit; shutdownSeconds = $shutdownSeconds }
@@ -75,7 +81,7 @@ $gc = & $read 'gc-summary.json'
 $gcComplete = $gcExit -eq 0 -and $null -ne $gc -and [bool]$gc.gcWindowsComplete
 $unchanged = $true
 foreach ($name in $sources) { $unchanged = $unchanged -and (Get-SourceHash (Join-Path $root $name)) -eq $hashes[$name] }
-$passed = $unchanged -and $gcComplete -and $lifecycle.bindingTieredPassed -and $lifecycle.bindingDefaultPassed -and $lifecycle.shutdownPassed -and $cleanupExit -eq 0 -and $null -ne $cleanup -and $cleanup.passed -and $abortExit -eq 0 -and $null -ne $abort -and $abort.passed -and $Runs -eq 10 -and @($outcomes).Count -eq 10 -and @($outcomes | Where-Object {
+$passed = $unchanged -and $gcComplete -and $lifecycle.rejitPassed -and $lifecycle.bindingTieredPassed -and $lifecycle.bindingDefaultPassed -and $lifecycle.shutdownPassed -and $cleanupExit -eq 0 -and $null -ne $cleanup -and $cleanup.passed -and $abortExit -eq 0 -and $null -ne $abort -and $abort.passed -and $Runs -eq 10 -and @($outcomes).Count -eq 10 -and @($outcomes | Where-Object {
     $_.exitCode -ne 0 -or -not $_.recordExists -or -not $_.passed -or $_.forcedCollections -lt 10 -or $_.maxHandlerNs -ge 5000000 }).Count -eq 0
 @{ passed = $passed; inputsUnchanged = $unchanged; gcWindowsComplete = $gcComplete; cleanupExitCode = $cleanupExit; cleanupPassed = [bool]$cleanup.passed; barrierAbortPassed = [bool]$abort.passed; lifecycle = $lifecycle; sourceHash = 'sha256 after CRLF to LF'; sources = $hashes; runs = $Runs; outcomes = $outcomes
     compilerImage = $compilerImage; runtimeImage = $runtimeImage; generalClrSafetyEstablished = $false } |
