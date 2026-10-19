@@ -1,6 +1,6 @@
 # Target-local causal profile
 
-Evidence: `artifacts/target-local-profile/20261019T110709359-b184c519`.
+Evidence: `artifacts/target-local-profile/20261019T114214114-cd942bc0`.
 
 `TargetLocalProfileVerify` ran 5 blocks in the Linux x64 container, with kernel `5.15.153.1-microsoft-standard-WSL2`, x64, and 4 CPUs.
 Each block runs one `causal-profile` process and seven `plain` processes in a random order.
@@ -12,12 +12,12 @@ The criteria are in [the profile plan](../../../lode/plans/target-local-causal-p
 
 | Point | Valid blocks | Median predicted | Median actual | Median absolute difference | Max absolute difference | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `selected-25` | 5 / 5 | 25.78% | 25.67% | 1.13 pp | 1.79 pp | Pass |
-| `selected-50` | 5 / 5 | 49.40% | 50.39% | 1.05 pp | 2.49 pp | Pass |
-| `selected-75` | 5 / 5 | 50.32% | 50.99% | 1.46 pp | 2.91 pp | Pass |
-| `peer-25` | 5 / 5 | 0.07% | 2.75% | 2.74 pp | 3.70 pp | Pass |
-| `peer-50` | 5 / 5 | 0.01% | 2.31% | 0.77 pp | 3.80 pp | Pass |
-| `peer-75` | 5 / 5 | 1.71% | 1.02% | 1.34 pp | 3.07 pp | Pass |
+| `selected-25` | 5 / 5 | 24.91% | 25.14% | 1.54 pp | 2.24 pp | Pass |
+| `selected-50` | 5 / 5 | 49.49% | 49.94% | 0.77 pp | 1.15 pp | Pass |
+| `selected-75` | 5 / 5 | 48.58% | 49.89% | 1.84 pp | 3.91 pp | Pass |
+| `peer-25` | 5 / 5 | 0.68% | -0.51% | 2.10 pp | 2.53 pp | Pass |
+| `peer-50` | 5 / 5 | 0.17% | 0.92% | 1.47 pp | 2.95 pp | Pass |
+| `peer-75` | 5 / 5 | -0.70% | 0.09% | 2.34 pp | 2.96 pp | Pass |
 
 The fork/join model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. The plateau at 75% comes from the peer, which then sets the end time.
 
@@ -28,14 +28,14 @@ All workers share the visits of the progress point. Blocked time, overhead, and 
 
 | Point | Median work ratio |
 | --- | --- |
-| `selected-25` | 0.988, 0.998 |
-| `selected-50` | 0.998, 1.014 |
-| `selected-75` | 0.985, 0.993 |
-| `peer-25` | 0.999, 0.995 |
-| `peer-50` | 1.000, 0.998 |
-| `peer-75` | 0.983, 0.994 |
+| `selected-25` | 1.000, 0.989 |
+| `selected-50` | 0.997, 0.996 |
+| `selected-75` | 1.012, 1.010 |
+| `peer-25` | 0.993, 0.989 |
+| `peer-50` | 0.998, 1.002 |
+| `peer-75` | 1.007, 1.001 |
 
-The median work ratio by run order in the process is order 0: 0.988, 1.000; order 1: 1.000, 1.000; order 2: 0.984, 1.000; order 3: 1.000, 0.995; order 4: 1.000, 1.000; order 5: 1.001, 0.998; order 6: 1.000, 1.023. The seed fixes the order of each block, so order and point are confounded.
+The median work ratio by run order in the process is order 0: 1.005, 1.012; order 1: 1.018, 1.001; order 2: 0.999, 1.000; order 3: 1.003, 0.999; order 4: 1.000, 1.000; order 5: 0.997, 1.002; order 6: 0.992, 1.000. The seed fixes the order of each block, so order and point are confounded.
 The warm-up experiment passed in 5 of 5 blocks.
 
 
@@ -44,11 +44,11 @@ The warm-up experiment passed in 5 of 5 blocks.
 
 | Block | Valid | selected-25 | selected-50 | selected-75 | peer-25 | peer-50 | peer-75 |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Yes | -1.75 pp | -1.05 pp | 0.79 pp | -1.60 pp | 0.24 pp | 0.02 pp |
-| 2 | Yes | 0.63 pp | -1.35 pp | 1.24 pp | 0.11 pp | -0.56 pp | 0.70 pp |
-| 3 | Yes | -0.40 pp | -2.49 pp | -1.50 pp | -3.70 pp | -3.80 pp | -1.35 pp |
-| 4 | Yes | -1.13 pp | -0.43 pp | -2.91 pp | -3.55 pp | -0.77 pp | -1.34 pp |
-| 5 | Yes | 1.79 pp | -0.98 pp | 1.46 pp | 2.74 pp | 2.92 pp | 3.07 pp |
+| 1 | Yes | -1.54 pp | 0.77 pp | 0.57 pp | 2.10 pp | -1.39 pp | -2.34 pp |
+| 2 | Yes | -0.64 pp | -0.72 pp | -3.52 pp | -0.35 pp | 0.13 pp | 0.66 pp |
+| 3 | Yes | 1.89 pp | -1.15 pp | -3.91 pp | -0.21 pp | -1.47 pp | -2.36 pp |
+| 4 | Yes | 2.24 pp | 0.83 pp | 0.47 pp | 2.53 pp | 2.95 pp | 2.24 pp |
+| 5 | Yes | -0.23 pp | -0.54 pp | -1.84 pp | -2.27 pp | -1.57 pp | -2.96 pp |
 
 ## Run history
 
@@ -67,6 +67,7 @@ The warm-up experiment passed in 5 of 5 blocks.
 | `20261019T090901082-03de2f25` | Failure and GC records | Fail. Block 3 is invalid: `selected` at 25% records ledger failure 1, with no collection and no run-queue delay. |
 | `20261019T094341955-4375de13` | Failure context | Pass |
 | `20261019T110709359-b184c519` | Latency progress points | Pass |
+| `20261019T114214114-cd942bc0` | Per-transaction virtual latency | Pass |
 
 ## Limits
 

@@ -23,7 +23,7 @@ module TargetCausalProfileTests =
           Deferred = 0; Failures = 0; MaxObservedDebt = 0UL; Blocks = 0; DependencyWakes = 0; SkippedDelay = 0UL }
 
     let private noGc = { Collections = 0; PauseNs = 0L }
-    let private noLatency = struct (0L, 0UL)
+    let private noLatency = struct (0L, 0UL, Array.empty<struct (int64 * int64)>)
 
     let private runResults run design = TargetCausalProfile.runWith (fun c s -> run c s, 1L, None, noGc, noLatency) design
 
@@ -205,21 +205,33 @@ module TargetCausalProfileTests =
                 let design =
                     TargetCausalDesign.tryCreate binding 1000000UL symbols symbols [| 50u |] 1 0 0 (Latency 100)
                     |> Result.defaultWith (fun errors -> failwith $"%A{errors}")
-                let measured elapsed effective = { result effective true with ElapsedNs = elapsed }
+                let publish time value = { Worker = 0; Sequence = time; Kind = TargetLedgerEventKind.Publish; ObservedGlobal = 0UL; LocalBefore = value; Amount = value
+                                           Requested = 0UL; Ip = 0UL; Detail = 0u; Time = time }
+                let withEvents events = { result 1000UL true with Events = events }
                 let run c s =
-                    if s = 0u then measured 1000UL 900UL, 100L, None, noGc, struct (110L, 100_000UL)
-                    elif c = "a" then measured 1000UL 800UL, 200L, None, noGc, struct (210L, 125_000UL)
-                    else measured 1000UL 1000UL, 100L, None, noGc, struct (100L, 0UL)
+                    if s = 0u then withEvents Array.empty, 2L, None, noGc, struct (2L, 0UL, [| struct (100L, 1100L); struct (200L, 1200L) |])
+                    elif c = "a" then withEvents [| publish 500UL 300UL |], 4L, None, noGc, struct (4L, 0UL, [| struct (100L, 1100L); struct (2000L, 2900L); struct (3000L, 3100L); struct (3100L, 3200L) |])
+                    else withEvents Array.empty, 2L, None, noGc, struct (2L, 0UL, Array.empty)
                 let value = TargetCausalProfile.runWith run design
                 let point c = value.Points |> Array.find (fun p -> p.Candidate = c)
-                let expected = 1.0 - (125_000.0 / 200.0 * 800.0 / 1000.0) / (100_000.0 / 100.0 * 900.0 / 1000.0)
-                Expect.floatClose Accuracy.high (point "a").Predictions[0].Value expected "The prediction must be 1 - (W * E / T) / (W0 * E0 / T0)."
-                Expect.equal (point "b").Predictions [| None |] "Visits without latency must give no prediction."
-                Expect.equal (value.Experiments |> Array.map (fun e -> e.Arrivals, e.LatencyNs) |> Array.sort) [| 100L, 0UL; 110L, 100_000UL; 210L, 125_000UL |] "Each experiment must keep its arrivals and latency."
-                let none = TargetCausalProfile.runWith (fun c s -> if s = 0u then measured 1000UL 1000UL, 100L, None, noGc, struct (100L, 0UL) else run c s) design
-                Expect.isTrue (none.Points |> Array.forall (fun p -> p.ValidBlocks = 0)) "A baseline without latency must give no prediction."
-                let failed = TargetCausalProfile.runWith (fun c s -> if c = "a" then { result 1000UL false with ElapsedNs = 1000UL }, 200L, None, noGc, struct (200L, 1UL) else run c s) design
+                Expect.floatClose Accuracy.high (point "a").Predictions[0].Value (1.0 - (700.0 + 900.0 + 100.0 + 100.0) / 4.0 / 1000.0) "The prediction must compare the mean virtual latency, 1 - (VL / V) / (VL0 / V0)."
+                Expect.equal (point "b").Predictions [| None |] "An experiment without transactions must give no prediction."
+                Expect.equal (value.Experiments |> Array.map (fun e -> e.Speedup, e.VirtualLatencyNs) |> Array.sort) [| 0u, 2000UL; 50u, 0UL; 50u, 1800UL |] "Each experiment must keep its virtual latency."
+                let failed = TargetCausalProfile.runWith (fun c s -> if c = "a" then { withEvents Array.empty with BindingError = Some "moved"; Passed = false }, 2L, None, noGc, struct (2L, 0UL, [| struct (0L, 10L) |]) else run c s) design
                 Expect.equal (failed.Points |> Array.find (fun p -> p.Candidate = "a")).Predictions [| None |] "A failed experiment must give no prediction."
+            }
+
+            test "the virtual latency subtracts the global delay added during each transaction" {
+                let publish sequence time value = { Worker = 1; Sequence = sequence; Kind = TargetLedgerEventKind.Publish; ObservedGlobal = 0UL; LocalBefore = value; Amount = value
+                                                    Requested = 0UL; Ip = 0UL; Detail = 0u; Time = time }
+                let sample = { publish 9UL 50UL 999UL with Kind = TargetLedgerEventKind.Sample }
+                let events = [| publish 2UL 400UL 250UL; sample; publish 1UL 100UL 100UL; publish 3UL 0UL 5000UL |]
+                let total, negative = TargetCausalProfile.virtualLatency events [| struct (50L, 150L); struct (150L, 450L); struct (100L, 400L); struct (300L, 390L); struct (390L, 401L) |]
+                Expect.equal (total, negative) (0UL + 150UL + 150UL + 90UL, 1) "Each latency must subtract the global delay added from its begin to its end, a publish at a time counts from that time, and a negative value counts as 0."
+                Expect.equal (TargetCausalProfile.virtualLatency Array.empty [| struct (10L, 30L) |]) (20UL, 0) "Without publishes, the virtual latency is the wall latency."
+                let tied = [| publish 5UL 200UL 50UL; publish 4UL 200UL 80UL; publish 6UL 300UL 60UL |]
+                Expect.equal (TargetCausalProfile.virtualLatency tied [| struct (100L, 250L); struct (250L, 350L) |]) (70UL + 100UL, 0)
+                    "Equal times must count together, and a lower later value must not lower the global delay."
             }
 
             test "a counter counts arrivals, departures, and latency" {
@@ -238,6 +250,9 @@ module TargetCausalProfileTests =
                 summed.End(ago 500L)
                 Expect.isGreaterThanOrEqual summed.LatencyNs 800_000_000UL "The latency must sum both transactions of 300 ms and 500 ms."
                 Expect.isLessThan summed.LatencyNs 1_300_000_000UL "The latency must not count a transaction twice."
+                let kept = summed.Transactions |> Array.map (fun struct (b, e) -> e - b) |> Array.sort
+                Expect.equal kept.Length 2 "The counter must keep each transaction that ends."
+                Expect.isTrue (kept[0] >= 300_000_000L && kept[1] >= 500_000_000L && kept[1] < 1_000_000_000L) "Each kept transaction must hold its begin and end in nanoseconds."
             }
 
             test "an experiment or baseline with no visits gives no prediction and stays in the record" {

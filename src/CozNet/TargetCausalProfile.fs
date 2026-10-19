@@ -13,7 +13,10 @@ type TargetProgressCounter() =
     let mutable visits = 0L
     let mutable arrivals = 0L
     let mutable latencyTicks = 0L
+    let transactions = Collections.Generic.List<struct (int64 * int64)>(4096)
     let mutable stopped = 0
+    let frequency = Diagnostics.Stopwatch.Frequency
+    let nanoseconds (ticks: int64) = ticks / frequency * 1_000_000_000L + ticks % frequency * 1_000_000_000L / frequency
 
     member _.Visit() = Interlocked.Increment(&visits) |> ignore
     member _.Visits = Interlocked.Read(&visits)
@@ -23,11 +26,14 @@ type TargetProgressCounter() =
         Diagnostics.Stopwatch.GetTimestamp()
 
     member this.End(ticket: int64) =
-        Interlocked.Add(&latencyTicks, max 0L (Diagnostics.Stopwatch.GetTimestamp() - ticket)) |> ignore
+        let finished = Diagnostics.Stopwatch.GetTimestamp()
+        Interlocked.Add(&latencyTicks, max 0L (finished - ticket)) |> ignore
+        lock transactions (fun () -> transactions.Add(struct (nanoseconds ticket, nanoseconds finished)))
         this.Visit()
 
     member _.Arrivals = Interlocked.Read(&arrivals)
     member _.LatencyNs = uint64 (Diagnostics.Stopwatch.GetElapsedTime(0L, Interlocked.Read(&latencyTicks)).TotalNanoseconds)
+    member _.Transactions = lock transactions (fun () -> transactions.ToArray())
     member _.Stopped = Volatile.Read(&stopped) = 1
     member _.Stop() = Volatile.Write(&stopped, 1)
 
@@ -93,6 +99,8 @@ type TargetCausalExperiment = {
     Visits: int64
     Arrivals: int64
     LatencyNs: uint64
+    VirtualLatencyNs: uint64
+    NegativeTransactions: int
     Threads: TargetCausalThread array
     Failures: TargetCausalFailure array
     Collections: int
@@ -226,7 +234,23 @@ module TargetCausalProfile =
         let middle = sorted.Length / 2
         if sorted.Length % 2 = 1 then sorted[middle] else (sorted[middle - 1] + sorted[middle]) / 2.0
 
-    let internal latency (e: TargetCausalExperiment) = float e.LatencyNs / float e.Visits * float e.EffectiveNs / float e.ElapsedNs
+    let internal virtualLatency (events: TargetLedgerEvent array) (transactions: struct (int64 * int64) array) =
+        if transactions.Length = 0 then 0UL, 0
+        else
+            let publishes = events |> Array.filter (fun e -> e.Kind = TargetLedgerEventKind.Publish && e.Time > 0UL) |> Array.sortBy (fun e -> e.Time, e.Sequence)
+            let times = publishes |> Array.map (fun e -> int64 e.Time)
+            let values = publishes |> Array.scan (fun high e -> max high e.Amount) 0UL |> Array.tail
+            let globalAt (time: int64) =
+                let mutable low, high = 0, times.Length
+                while low < high do
+                    let middle = (low + high) / 2
+                    if times[middle] <= time then low <- middle + 1 else high <- middle
+                if low = 0 then 0L else int64 values[low - 1]
+            let mutable total, negative = 0UL, 0
+            for struct (started, finished) in transactions do
+                let value = (finished - started) - (globalAt finished - globalAt started)
+                if value < 0L then negative <- negative + 1 else total <- total + uint64 value
+            total, negative
 
     let internal points (progress: TargetProgressPoint) (blocks: int) (candidates: string array) (speedups: uint32 array) (experiments: TargetCausalExperiment array) =
         [| for candidate in candidates do
@@ -239,8 +263,8 @@ module TargetCausalProfile =
                            match baseline, experiment with
                            | Some b, Some e when b.Passed && e.Passed && b.EffectiveNs > 0UL && b.Visits > 0L && e.Visits > 0L ->
                                match progress with
-                               | Latency _ when b.ElapsedNs = 0UL || e.ElapsedNs = 0UL || b.LatencyNs = 0UL || e.LatencyNs = 0UL -> None
-                               | Latency _ -> Some(1.0 - latency e / latency b)
+                               | Latency _ when b.VirtualLatencyNs = 0UL || e.VirtualLatencyNs = 0UL -> None
+                               | Latency _ -> Some(1.0 - (float e.VirtualLatencyNs / float e.Visits) / (float b.VirtualLatencyNs / float b.Visits))
                                | _ -> Some(1.0 - (float e.EffectiveNs / float e.Visits) / (float b.EffectiveNs / float b.Visits))
                            | _ -> None)
                    let valid = predictions |> Array.choose id
@@ -344,7 +368,7 @@ module TargetCausalProfile =
                      Workers = workers e events }
                if e.Time > 0UL then last[e.Worker] <- e |]
 
-    let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option * TargetCausalGc * struct (int64 * uint64)) (design: TargetCausalDesign) =
+    let internal runWith (runExperiment: string -> uint32 -> TargetProfileResult * int64 * string option * TargetCausalGc * struct (int64 * uint64 * struct (int64 * int64) array)) (design: TargetCausalDesign) =
         let candidates, speedups, blocks, seed = design.Candidates, design.Speedups, design.Blocks, design.Seed
         let order = arms (Random seed) candidates speedups
 
@@ -356,18 +380,19 @@ module TargetCausalProfile =
                     Error $"{error.GetType().Name}: {error.Message}"
 
             match result with
-            | Ok(r, visits, stop, gc, struct (arrivals, latencyNs)) ->
+            | Ok(r, visits, stop, gc, struct (arrivals, latencyNs, transactions)) ->
+                let virtualNs, negative = virtualLatency r.Events transactions
                 let errors = [ if not r.Passed then failure r
                                match stop with
                                | Some message -> message
                                | None -> () ]
                 { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = r.ElapsedNs; GlobalNs = r.GlobalNs
-                  EffectiveNs = r.EffectiveNs; Visits = visits; Arrivals = arrivals; LatencyNs = latencyNs; Threads = threads r; Failures = failures r; Collections = gc.Collections
+                  EffectiveNs = r.EffectiveNs; Visits = visits; Arrivals = arrivals; LatencyNs = latencyNs; VirtualLatencyNs = virtualNs; NegativeTransactions = negative; Threads = threads r; Failures = failures r; Collections = gc.Collections
                   GcPauseNs = gc.PauseNs; Passed = r.Passed && stop.IsNone
                   Error = String.Join("; ", errors) }
             | Error message ->
                 { Block = block; Order = order; Candidate = candidate; Speedup = speedup; ElapsedNs = 0UL; GlobalNs = 0UL
-                  EffectiveNs = 0UL; Visits = 0L; Arrivals = 0L; LatencyNs = 0UL; Threads = Array.empty; Failures = Array.empty; Collections = -1; GcPauseNs = -1L
+                  EffectiveNs = 0UL; Visits = 0L; Arrivals = 0L; LatencyNs = 0UL; VirtualLatencyNs = 0UL; NegativeTransactions = 0; Threads = Array.empty; Failures = Array.empty; Collections = -1; GcPauseNs = -1L
                   Passed = false; Error = message }
 
         let warmup = measure 0 -1 candidates[0] 0u
@@ -433,10 +458,10 @@ module TargetCausalProfile =
             match design.Progress with
             | EndToEnd ->
                 let result = profile ()
-                result, 1L, None, gc (), struct (0L, 0UL)
+                result, 1L, None, gc (), struct (0L, 0UL, Array.empty)
             | Throughput duration
             | Latency duration ->
                 let result, fired = guard (safetyDelay duration) counter profile
                 result, counter.Visits, (if fired then Some $"The safety stop ended the run after {safetyDelay duration}." else None), gc (),
-                struct (counter.Arrivals, counter.LatencyNs)
+                struct (counter.Arrivals, counter.LatencyNs, counter.Transactions)
         runWith experiment design

@@ -70,7 +70,7 @@ def latency_counts_complete(profile, data):
     experiments = profile.get("experiments") if isinstance(profile, dict) else None
     if isinstance(experiments, list) and isinstance(profile.get("warmup"), dict):
         experiments = experiments + [profile["warmup"]]
-    if not isinstance(experiments, list) or not all(type(e.get("Arrivals")) is int and type(e.get("LatencyNs")) is int for e in experiments):
+    if not isinstance(experiments, list) or not all(all(type(e.get(k)) is int for k in ("Arrivals", "LatencyNs", "VirtualLatencyNs", "NegativeTransactions")) for e in experiments):
         return False
     if not all(e["Arrivals"] == e["Visits"] for e in experiments if e.get("Passed")):
         return False
@@ -199,6 +199,10 @@ def prediction(record, candidate, speedup):
         return None
     if baseline.get("Visits", 1) <= 0 or point.get("Visits", 1) <= 0:
         return None
+    if record.get("mode") == "transaction-profile" and "VirtualLatencyNs" in baseline:
+        if not all(type(e.get(k)) is int and e[k] > 0 for e in (baseline, point) for k in ("VirtualLatencyNs", "Visits")):
+            return None
+        return 1 - (point["VirtualLatencyNs"] / point["Visits"]) / (baseline["VirtualLatencyNs"] / baseline["Visits"])
     if record.get("mode") == "transaction-profile":
         fields = ("LatencyNs", "ElapsedNs", "EffectiveNs", "Visits")
         if not all(type(e.get(k)) is int and e[k] > 0 for e in (baseline, point) for k in fields):

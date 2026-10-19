@@ -23,6 +23,7 @@ For `TargetSemaphore` and the semaphore suite, read [target-local semaphore](pla
 For the failure and GC records of each profile experiment, read [target-local failure records](plans/target-local-failure-records.md).
 For the journal events before each failure, read [target-local failure context](plans/target-local-failure-context.md).
 For latency progress points and the transaction suite, read [target-local latency progress points](plans/target-local-transactions.md).
+For the virtual latency of each transaction, read [target-local transaction delay](plans/target-local-transaction-delay.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).
 For the warm-up experiment and the first-experiment cost in a process, read [target-local warm-up](plans/target-local-warmup.md).
 For the rotated experiment order and the warm-up gate, read [target-local rotation](plans/target-local-rotation.md).

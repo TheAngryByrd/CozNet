@@ -50,6 +50,7 @@ PREDICTION_HISTORY = [
     ("20261019T082954122-98c31e2d", "Same", "TargetSemaphore and semaphore profile", "Pass"),
     ("20261019T091027391-fbd17a7d", "Same", "Failure and GC records", "Pass"),
     ("20261019T094506888-d9c14620", "Same", "Failure context", "Fail. `peer-longer` has one block of -12.57 points, and `selected-dominant` block 5 is invalid from a startup debt failure."),
+    ("20261019T110837795-78ce6bcb", "Same", "Latency progress points", "Pass"),
 ]
 TRANSITION_HISTORY = [
     ("20261018T151031617-addf680d", "First check", "Fail. 1 of 10 runs broke the debt bound. Its collection count was flawed."),
@@ -90,6 +91,7 @@ TRANSITION_HISTORY = [
     ("20261019T082925705-0e9bf3e5", "TargetSemaphore and semaphore profile", "Pass, 10 of 10"),
     ("20261019T090959282-d4b0da38", "Failure and GC records", "Pass, 10 of 10"),
     ("20261019T094438941-7638b960", "Failure context", "Pass, 10 of 10"),
+    ("20261019T110806692-b4b671d5", "Latency progress points", "Pass, 10 of 10"),
 ]
 BARRIER_HISTORY = [
     ("20261018T182448183-601598d1", "First barrier run", "Pass"),
@@ -132,6 +134,7 @@ BARRIER_HISTORY = [
     ("20261019T083116455-261fde3b", "TargetSemaphore and semaphore profile", "Pass"),
     ("20261019T091147974-ff48eb23", "Failure and GC records", "Pass"),
     ("20261019T094627976-f1d19c78", "Failure context", "Pass"),
+    ("20261019T111000032-74adbcce", "Latency progress points", "Fail. `barrier-peer-bound` median 5.10 points."),
 ]
 
 
@@ -666,6 +669,7 @@ PROFILE_HISTORY = [
     ("20261019T082828297-eb8d2196", "TargetSemaphore and semaphore profile", "Fail. Block 1 is invalid: `peer` at 75% records ledger failure 1, with no large run-queue delay."),
     ("20261019T090901082-03de2f25", "Failure and GC records", "Fail. Block 3 is invalid: `selected` at 25% records ledger failure 1, with no collection and no run-queue delay."),
     ("20261019T094341955-4375de13", "Failure context", "Pass"),
+    ("20261019T110709359-b184c519", "Latency progress points", "Pass"),
 ]
 THROUGHPUT_HISTORY = [
     ("20261019T032027341-60c2ab7c", "First throughput profile run", "Pass"),
@@ -679,18 +683,23 @@ THROUGHPUT_HISTORY = [
     ("20261019T082728956-3c510383", "TargetSemaphore and semaphore profile", "Pass"),
     ("20261019T090759533-41316f2b", "Failure and GC records", "Pass"),
     ("20261019T094241716-2243c889", "Failure context", "Pass"),
+    ("20261019T110611005-2a35600a", "Latency progress points", "Pass"),
 ]
-TRANSACTION_HISTORY = []
+TRANSACTION_HISTORY = [
+    ("20261019T110105861-414dba20", "First transaction profile run", "Fail. All six points fail. The real gains follow the model, but the `peer` predictions stay near 5% at each speedup."),
+]
 SEMAPHORE_HISTORY = [
     ("20261019T082323819-903a6cef", "First semaphore profile run", "Fail. `selected-75` has one block of -10.61 points, and `peer-75` median 5.24 points."),
     ("20261019T090345985-b2474637", "Failure and GC records", "Pass"),
     ("20261019T093837289-67cf3f9e", "Failure context", "Fail. `selected-50` median 5.09 points and `selected-75` median 5.41 points."),
+    ("20261019T110212880-744018ed", "Latency progress points", "Fail. Five points fail: four by one block each, and `peer-50` by two blocks."),
 ]
 SPINLOCK_HISTORY = [
     ("20261019T074539772-03c40325", "First spin lock profile run", "Fail. Blocks 4 and 5 are invalid: `peer` at 75% has 97 and 98 visits. In the three valid blocks, `selected-50` has a median of 1.77 points, and `selected-75` fails at 6.87 points."),
     ("20261019T082529889-abecc54b", "TargetSemaphore and semaphore profile", "Fail. Block 3 is invalid: `peer` at 75% has 96 visits. `selected-75` median 6.70 points with one block of 10.52 points."),
     ("20261019T090601089-7d489720", "Failure and GC records", "Fail. Block 4 is invalid: `peer` at 75% has 98 visits."),
     ("20261019T094042685-1d761439", "Failure context", "Fail. Block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` median 8.59 points."),
+    ("20261019T110413189-a8e4bb89", "Latency progress points", "Fail. Block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` median 7.87 points."),
 ]
 LOCK_HISTORY = [
     ("20261019T062708436-df83442b", "First lock profile run", "Fail. `selected-50` median 9.13 points, all five blocks below the actual gain. `peer-25` has one block of 11.87 points."),
@@ -699,6 +708,7 @@ LOCK_HISTORY = [
     ("20261019T082429851-cb3998b5", "TargetSemaphore and semaphore profile", "Fail. `selected-50` median 5.62 points, `selected-75` median 5.17 points with one block of 12.83 points, and `peer-75` median 5.55 points."),
     ("20261019T090501903-273c483d", "Failure and GC records", "Fail. Block 4 is invalid: `peer` at 75% records ledger failure 1. In the four valid blocks, `selected-50` median 8.32 points."),
     ("20261019T093943719-10b7cd71", "Failure context", "Fail. `selected-50` median 6.09 points with one block of -12.53 points."),
+    ("20261019T110313420-3292dd51", "Latency progress points", "Pass"),
 ]
 PIPELINE_HISTORY = [
     ("20261019T040306290-64463c6b", "First pipeline profile run", "Fail. `peer-50` median 6.76 points. Across the `peer` points, 13 of 15 block predictions are below their actual gains."),
@@ -711,6 +721,7 @@ PIPELINE_HISTORY = [
     ("20261019T082629301-c4292b43", "TargetSemaphore and semaphore profile", "Fail. `peer-25` has one block of 10.11 points."),
     ("20261019T090700489-b82b1791", "Failure and GC records", "Pass"),
     ("20261019T094141941-f8894fe3", "Failure context", "Fail. Block 5 is invalid from a debt failure after a wake with a skip of 0, and `peer-50` has one block of -11.12 points."),
+    ("20261019T110512150-9b6ceb9a", "Latency progress points", "Pass"),
 ]
 
 
@@ -791,14 +802,14 @@ def profile(root, run, change, kind="target-local-profile"):
                    "lock": "Each experiment runs for 120 ms. Two workers each repeat `Work.peer 20` outside a `TargetLock`, then `Work.selected 40` inside it, and then visit the progress point.",
                    "spinlock": "Each experiment runs for 120 ms. Two workers each repeat `Work.peer 20` outside a `TargetLock` that spins up to 1 ms before it blocks, then `Work.selected 40` inside it, and then visit the progress point.",
                    "semaphore": "Each experiment runs for 120 ms. Two workers take turns through two `TargetSemaphore` objects. Worker 0 runs `Work.selected 24` and releases worker 1, which runs `Work.peer 12`, visits the progress point, and releases worker 0.",
-                   "transaction": "Each experiment runs for 120 ms with a latency progress point. Worker 0 begins a transaction, runs `Work.selected 40`, and enqueues it in a `TargetQueue` of 4 items. Worker 1 dequeues it, runs `Work.peer 8`, and ends it. The prediction is `1 - (W * E / T) / (W0 * E0 / T0)`, where W is the mean wall latency, E the effective time, and T the elapsed time. The real gain is `1 - W / W0`."}.get(
+                   "transaction": "Each experiment runs for 120 ms with a latency progress point. Worker 0 begins a transaction, runs `Work.selected 40`, and enqueues it in a `TargetQueue` of 4 items. Worker 1 dequeues it, runs `Work.peer 8`, and ends it. The prediction is `1 - (VL / V) / (VL0 / V0)`, where VL sums the virtual latency of the transactions, each its wall latency minus the global delay added during it and at least 0, and V counts the departures. The real gain is `1 - W / W0`, where W is the mean wall latency."}.get(
         workload, "The selected thread runs 6000 rounds and the peer 3000. The progress point is the end of the workload.")
     plan = {"throughput": "[the throughput plan](../../../lode/plans/target-local-throughput.md)",
             "pipeline": "[the queue plan](../../../lode/plans/target-local-queue.md)",
             "lock": "[the lock plan](../../../lode/plans/target-local-lock.md)",
             "spinlock": "[the spin lock plan](../../../lode/plans/target-local-spin-lock.md)",
             "semaphore": "[the semaphore plan](../../../lode/plans/target-local-semaphore.md)",
-            "transaction": "[the latency point plan](../../../lode/plans/target-local-transactions.md)"}.get(workload, "[the profile plan](../../../lode/plans/target-local-causal-profile.md)")
+            "transaction": "[the latency point plan](../../../lode/plans/target-local-transactions.md) and [the transaction delay plan](../../../lode/plans/target-local-transaction-delay.md)"}.get(workload, "[the profile plan](../../../lode/plans/target-local-causal-profile.md)")
     expected = {"throughput": "If both workers have the same cost for each round, the expected gains are 10%, 25%, and 50% for `Work.selected` and 18.2%, 40%, and 66.7% for `Work.peer`. The criteria use the measured gains.",
                 "pipeline": "The producer is the bottleneck, so the model gives `Work.selected` 25%, 50%, and 50%, and `Work.peer` 0% at each speedup. Above 50%, the consumer sets the rate.",
                 "lock": "The lock sets the rate, so the model gives `Work.selected` 25%, 50%, and 62.5%, and `Work.peer` 0% at each speedup. At 75%, the work outside the lock sets the rate.",

@@ -439,4 +439,31 @@ The other suites on the same tree:
 - Spin lock run `20261019T110413189-a8e4bb89` fails, because block 5 is invalid: `peer` at 75% has 99 visits. `selected-75` also fails by its median of 7.87 points.
 - Barrier run `20261019T111000032-74adbcce` fails `barrier-peer-bound` by its median of 5.10 points. Its blocks range from -7.63 to +5.35 points.
 
+## Transaction delay
+
+[The transaction delay plan](target-local-transaction-delay.md) subtracts the global delay added during each transaction.
+Transaction run `20261019T113356248-f1cbfddc` fails criterion 88 at two points. All five blocks are valid, the positions are balanced, and four points pass.
+
+| Point | Median predicted | Median real gain | Median difference | Max difference | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `selected-25` | 23.77% | 19.31% | 4.97 pp | 7.74 pp | Pass |
+| `selected-50` | 45.30% | 40.09% | 7.09 pp | 13.57 pp | Fail |
+| `selected-75` | 63.99% | 62.90% | 0.99 pp | 4.66 pp | Pass |
+| `peer-25` | 5.50% | 2.90% | 5.47 pp | 10.85 pp | Fail |
+| `peer-50` | 8.25% | 6.66% | 0.45 pp | 7.74 pp | Pass |
+| `peer-75` | 10.20% | 8.86% | 2.29 pp | 5.07 pp | Pass |
+
+- In the first run, the `peer` predictions stayed near 5% at each speedup. Now they rise with the speedup, as the real gains do. So `peer-50` and `peer-75`, the two points that separate the latency rule from the throughput rule, pass.
+- The median prediction is above the median real gain at all six points.
+- `selected-50` fails by its median and by block 2 at +13.57 points. `peer-25` fails by its median and by block 2 at +10.85 points.
+- In every block, only the `selected` experiment at 75% has negative transactions: from 7 to 14 in each block.
+Criteria 86 and 87 hold, and criterion 89 is checked after the commit.
+
+The other suites on the same tree:
+- Pipeline run `20261019T113807687-40ce0fab`, latency profile run `20261019T114214114-cd942bc0`, transition run `20261019T114316513-16ceb9b8`, prediction run `20261019T114345641-a76a3c68`, and barrier run `20261019T114508965-bf1d556a` pass.
+- Throughput run `20261019T113911746-669e1783` fails `peer-75` by one block of -10.54 points, in block 3.
+- Lock run `20261019T113602781-8f0b3de1` fails five points. `selected-50` has a median of 7.49 points, with every block below the real gain, and `selected-75` a median of 5.67 points. In block 5, the three `peer` points are at -15.19, -17.92, and -18.82 points.
+- Semaphore run `20261019T113503667-76dc9109` fails `selected-50` with a median of 5.43 points and `selected-75` with 6.21. All ten of those blocks are below the real gain.
+- Spin lock run `20261019T113703476-df6944a8` fails, because block 4 is invalid: `peer` at 75% has 95 visits. `selected-75` also fails by its median of 6.93 points.
+
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

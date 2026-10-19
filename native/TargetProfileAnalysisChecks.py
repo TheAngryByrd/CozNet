@@ -276,7 +276,11 @@ class ThroughputChecks(unittest.TestCase):
         self.assertAlmostEqual(prediction({"mode": "transaction-profile", "experiments": experiments}, "a", 50), 1 - (625 * 0.8) / 1000)
         broken = [experiments[0], {k: v for k, v in experiments[1].items() if k != "LatencyNs"}]
         self.assertIsNone(prediction({"mode": "transaction-profile", "experiments": broken}, "a", 50))
-        complete = {"experiments": [{**e, "Arrivals": e["Visits"]} for e in experiments]}
+        complete = {"experiments": [{**e, "Arrivals": e["Visits"], "VirtualLatencyNs": 1, "NegativeTransactions": 0} for e in experiments]}
+        self.assertFalse(latency_counts_complete({"experiments": [{**e, "Arrivals": e["Visits"]} for e in experiments]}, {"original": {"arrivals": 100, "visits": 100, "latencyNs": 1}}))
+        virtual = [{**e, "VirtualLatencyNs": v} for e, v in zip(experiments, (100000, 120000))]
+        self.assertAlmostEqual(prediction({"mode": "transaction-profile", "experiments": virtual}, "a", 50), 1 - (120000 / 200) / (100000 / 100))
+        self.assertIsNone(prediction({"mode": "transaction-profile", "experiments": [virtual[0], {**virtual[1], "VirtualLatencyNs": 0}]}, "a", 50))
         plain = {"original": {"arrivals": 100, "visits": 100, "latencyNs": 1}}
         self.assertTrue(latency_counts_complete(complete, {"profile": complete, **plain}))
         self.assertFalse(latency_counts_complete(complete, {"profile": complete, "original": {"arrivals": 101, "visits": 100, "latencyNs": 1}}))
