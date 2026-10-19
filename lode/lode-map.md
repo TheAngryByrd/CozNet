@@ -28,6 +28,7 @@ For the queue handoff of the transaction suite, read [target-local transaction h
 For the spin before a queue wait and the spin transaction suite, read [target-local spin queue](plans/target-local-spin-queue.md).
 For the parts of a queue handoff and the spin take count, read [target-local handoff parts](plans/target-local-handoff-parts.md).
 For the worker pinning diagnostic, read [target-local worker pinning](plans/target-local-worker-pinning.md).
+For the user decision on bounds and the matched plain warm-up, read [target-local plain warm-up](plans/target-local-plain-warmup.md).
 For the thread records of each causal experiment and the work ratio, read [target-local experiment diagnostics](plans/target-local-experiment-diagnostics.md).
 For the warm-up experiment and the first-experiment cost in a process, read [target-local warm-up](plans/target-local-warmup.md).
 For the rotated experiment order and the warm-up gate, read [target-local rotation](plans/target-local-rotation.md).

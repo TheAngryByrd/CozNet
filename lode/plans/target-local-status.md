@@ -537,7 +537,7 @@ Criterion 100 gives these medians over the five blocks of each run on the same t
 - With the spin, 96.41% of the plain takes come in a spin. The other 3.59% took a free item at once or waited past the spin, and the records do not separate the two. The plain values stay much larger than the profiled ones: 33.60 against 1.46 microseconds of enqueue time, and a signed difference of 76.67 against 4.53.
 - The spin share counts takes, not time. The records keep only the means, so the 3.59% of plain takes outside a spin can carry a large part of the mean signed difference. So the records do not exclude a slow wake as a main part of that value.
 - The plain enqueue time is 32 microseconds longer than the profiled one. When a space is free, `Enqueue` does not wait for the consumer. When the queue is full, it waits until the consumer takes an item, and the records do not count those enqueues. So the records do not show that the 32 microseconds exclude the consumer.
-- Hypothesis, not shown: the plain threads get less CPU time, for example two threads on one CPU. The records do not show where the plain threads ran.
+- Hypothesis, not shown, and not supported by the pinned runs: the plain threads get less CPU time, for example two threads on one CPU. [The plain warm-up plan](target-local-plain-warmup.md) gives a cold-start hypothesis that the records are consistent with. The records do not show where the plain threads ran.
 
 The spin transaction run fails criterion 95 at one point. All five blocks are valid. `peer-75` fails with a median of 7.29 points and one block of 14.67 points. The other five points pass.
 The transaction run fails `selected-25` with a median of 7.25 points and `selected-50` with 7.76. The other four points pass.
@@ -591,5 +591,40 @@ The other suites on the same tree:
 - Pipeline run `20261019T150749398-6a7afb49` fails `peer-25` by one block of 12.47 points and `peer-75` by one block of 10.19 points.
 - Unpinned lock run `20261019T150538269-4c383533` fails `selected-50` with a median of 9.20 points and `selected-75` with 6.47.
 - Spin lock run `20261019T150642975-999bd98a` fails, because block 2 is invalid: `peer` at 75% has 99 visits. `selected-75` also fails with a median of 8.09 points.
+
+## Capacity failures and prediction errors
+
+The user decided on 2026-10-19 to keep every bound, rule, and criterion, and to keep each failed run. WSL2 stays unqualified where its evidence fails.
+The failures of the profile suites are of two kinds, and the evidence treats them apart:
+- A capacity failure makes a block invalid: a debt failure, a handler interval of 5 ms or more, or too few visits. Their records point to late starts, delayed wakes, or a delayed child wait on this host.
+- A prediction error is a point outside its limits in valid blocks. The pinned runs have valid blocks with no debt failure and still fail points, so the host is not shown to cause the prediction errors.
+In the transaction suites, the cold profiled warm-up shows most of the long plain handoff in most runs. See [the plain warm-up plan](target-local-plain-warmup.md).
+
+## Plain warm-up
+
+[The plain warm-up plan](target-local-plain-warmup.md) runs each throughput-family plain arm once untimed, and then forces a collection, before its timed run.
+The seven changed suites ran once each on the reviewed tree. Every plain arm has a passed warm-up record, so criterion 105 holds.
+
+Criterion 106 gives these medians over the five blocks of each run:
+
+| Suite and run | Handoff, profile baseline | Handoff, plain original | Gap | Limit | Prior median gap |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `transaction` `20261019T175316141-ec3885bd` | 46.7 us | 35.9 us | -10.8 us | 51.3 us | 102.57 us |
+| `spintransaction` `20261019T175441808-251c8262` | 7.9 us | 1.7 us | -6.2 us | 51.7 us | 103.4 us |
+
+- Both gaps are below their limits, so the matched warm-up removes the plain handoff gap. The plain enqueue time falls from 45.96 to 12.72 microseconds in the `transaction` suite.
+  This supports H1 together with H4, because the warm-up and the collection come together. The records do not separate the two.
+- The earlier plain arms timed a cold run without the forced collection, and the profile baseline did not. The gap disappeared after the combined warm-up and collection change. The records are consistent with that mismatch as its cause, but they do not establish it, and they do not separate the warm-up, the collection, and variation between runs.
+- The plain handoff is now shorter than the profiled one, by 10.8 microseconds in `transaction` and 6.2 in `spintransaction`. This is consistent with a small handoff cost of the profiler, which the records do not measure.
+- The prediction errors do not go away with the gap.
+  - The `transaction` run fails all six points with 5 valid blocks each. Four median differences are now at most 4.83 points. `selected-50` has 6.37 and `peer-50` 6.50. Block 3 is above the real gain at every point, by 12.01 to 16.26 points.
+  - The `spintransaction` run passes `selected-25`, `selected-75`, and `peer-75`. `peer-25` fails with a median of 9.22 points, `selected-50` by one block of 25.47 points, and `peer-50` with a median of 6.25 points and two blocks of 15.47 and 74.27 points.
+  - In that `peer-50` block, the plain `peer` 50% arm runs 136 transactions with a mean latency of 1420 microseconds, against 170 transactions and 851 microseconds in the original arm. Its warm-up is also slow, at 1061 microseconds. The records do not show why that process ran slowly.
+
+The other changed suites:
+- Throughput run `20261019T175557605-53b30f6d`, pipeline run `20261019T175709589-cf20a6d1`, and semaphore run `20261019T180046890-a1022fcb` pass all six points.
+- Lock run `20261019T175822524-6025b0d2` fails five points, with 5 valid blocks. Block 1 is below the real gain at every point, by 5.9 to 14.9 points, and three of them exceed the 10-point block limit.
+- Spin lock run `20261019T175936455-d8d0f784` fails, because blocks 1, 2, 4, and 5 are invalid: the profile `peer` experiment at 75% has 95 to 98 visits. This is a capacity failure of the profile arm, which the change does not touch.
+The latency profile, transition, prediction, and barrier suites do not change, so they did not run again.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

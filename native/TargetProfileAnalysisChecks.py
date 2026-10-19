@@ -1,6 +1,6 @@
 import unittest
 
-from AnalyzeTargetProfile import (pinning_complete, handoff_parts, queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
+from AnalyzeTargetProfile import (plain_warmups_passed, pinning_complete, handoff_parts, queue_handoffs, queue_stats_complete, latency_counts_complete, PEER_NAME, SELECTED_NAME, SPEEDUPS, actual_gain, driver_matches, expected_args, expected_fields, failed_experiments, handoff_shares, lock_stats_complete,
                                   order_ratios,
                                   positions_balanced,
                                   prediction, profile_complete, threads_complete, timing_consistent, visits_sufficient, warmup_present, work_ratios)
@@ -325,6 +325,16 @@ class ThroughputChecks(unittest.TestCase):
         self.assertFalse(pinning_complete({**profile, "workerCpusSeen": [[0, 2]]}, plain, [0, 2]))
         same = {**profile, "workerCpus": [0, 0], "workerCpusSeen": [[0, 0], [0, 0], [-1, -1]]}
         self.assertFalse(pinning_complete(same, {"original": {"workerCpus": [0, 0], "workerCpusSeen": [[0, 0]]}}, [0, 0]))
+
+    def test_plain_warmups_must_exist_and_pass(self):
+        import tempfile, json, pathlib
+        with tempfile.TemporaryDirectory() as folder:
+            run = pathlib.Path(folder)
+            (run / "1-original.json.warmup").write_text(json.dumps({"passed": True}))
+            self.assertTrue(plain_warmups_passed(run, 1, ["profile", "original"]))
+            self.assertFalse(plain_warmups_passed(run, 1, ["profile", "original", "peer-25"]))
+            (run / "1-peer-25.json.warmup").write_text(json.dumps({"passed": False}))
+            self.assertFalse(plain_warmups_passed(run, 1, ["original", "peer-25"]))
 
     def test_latency_experiments_need_one_visit(self):
         self.assertTrue(visits_sufficient(record({(PEER_NAME, 25): {"Visits": 1}}), "latency"))

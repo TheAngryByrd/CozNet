@@ -275,6 +275,13 @@ def prediction(record, candidate, speedup):
     return 1 - (point["EffectiveNs"] / point.get("Visits", 1)) / (baseline["EffectiveNs"] / baseline.get("Visits", 1))
 
 
+WARMED = ("throughput", "pipeline", "lock", "spinlock", "semaphore", "transaction", "spintransaction")
+
+
+def plain_warmups_passed(run, block, arms):
+    return all(isinstance(w := load(run / f"{block}-{arm}.json.warmup"), dict) and w.get("passed") is True for arm in arms if arm != "profile")
+
+
 def load(path):
     return json.loads(path.read_text()) if path.exists() else None
 
@@ -291,6 +298,7 @@ def main():
         records = [r for r in manifest["runs"] if r["block"] == block]
         args = expected_args(manifest["seed"], block, workload)
         data = {arm: load(run / f"{block}-{arm}.json") for arm in args}
+        warmed = workload not in WARMED or plain_warmups_passed(run, block, args)
         reasons = [f"{arm} missing" for arm, value in data.items() if value is None]
         if sorted(r["arm"] for r in records) != sorted(args):
             reasons.append("the manifest does not hold exactly one record for each arm")
@@ -321,6 +329,8 @@ def main():
         elif workload in TRANSACTIONS and not latency_counts_complete(profile, data):
             reasons.append("a transaction record does not hold its arrivals and latency, or its arrivals differ from its departures")
         reasons += [f"{arm} not passed" for arm, value in data.items() if value is not None and not value.get("passed")]
+        if not warmed:
+            reasons.append("a plain arm has no passed warm-up record")
         reasons += [f"{arm} has fewer than {MIN_VISITS} visits" for arm, value in data.items() if value is not None and not visits_sufficient(value, workload)]
         points = {}
         for label, name in CANDIDATES.items():

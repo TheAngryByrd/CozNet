@@ -43,6 +43,7 @@ module private Pinning =
         if not (isNull requested) then cpus[index] <- sched_getcpu ()
 
     let recorded () = if isNull requested then null else lock seen (fun () -> seen.ToArray())
+    let reset () = lock seen (fun () -> seen.Clear())
 
 let private write (path: string) value =
     File.WriteAllText(path, JsonSerializer.Serialize(value, JsonSerializerOptions(WriteIndented = false)))
@@ -615,6 +616,12 @@ let private plainPipeline selectedRounds peerRounds (output: string) =
                     elapsedNs = uint64 elapsed; visits = visits; passed = visits >= 100L |}
     if visits >= 100L then 0 else 1
 
+let private warmed (arm: string -> int) (output: string) =
+    arm (output + ".warmup") |> ignore
+    Pinning.reset ()
+    GC.Collect(2, GCCollectionMode.Forced, true)
+    arm output
+
 let private plainThroughput selectedRounds peerRounds (output: string) =
     Work.selected 1UL |> ignore
     Work.peer 1UL |> ignore
@@ -749,19 +756,19 @@ let main argv =
     | [| "rejit"; output |] -> rejitCheck output
     | [| "causal-profile"; seed; rotation; output |] -> causalProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "throughput-profile"; seed; rotation; output |] -> throughputProfile (Int32.Parse seed) (Int32.Parse rotation) output
-    | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "plain-throughput"; selectedRounds; peerRounds; output |] -> warmed (plainThroughput (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
     | [| "lock-profile"; seed; rotation; output |] -> lockProfileWith "lock-profile" TimeSpan.Zero (Int32.Parse seed) (Int32.Parse rotation) output
-    | [| "plain-lock"; selectedRounds; peerRounds; output |] -> plainLockWith "plain-lock" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "plain-lock"; selectedRounds; peerRounds; output |] -> warmed (plainLockWith "plain-lock" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
     | [| "transaction-profile"; seed; rotation; output |] -> transactionProfileWith "transaction-profile" TimeSpan.Zero (Int32.Parse seed) (Int32.Parse rotation) output
-    | [| "plain-transaction"; selectedRounds; peerRounds; output |] -> plainTransactionWith "plain-transaction" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "plain-transaction"; selectedRounds; peerRounds; output |] -> warmed (plainTransactionWith "plain-transaction" TimeSpan.Zero (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
     | [| "spin-transaction-profile"; seed; rotation; output |] -> transactionProfileWith "spin-transaction-profile" transactionSpin (Int32.Parse seed) (Int32.Parse rotation) output
-    | [| "plain-spin-transaction"; selectedRounds; peerRounds; output |] -> plainTransactionWith "plain-spin-transaction" transactionSpin (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "plain-spin-transaction"; selectedRounds; peerRounds; output |] -> warmed (plainTransactionWith "plain-spin-transaction" transactionSpin (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
     | [| "semaphore-profile"; seed; rotation; output |] -> semaphoreProfile (Int32.Parse seed) (Int32.Parse rotation) output
-    | [| "plain-semaphore"; selectedRounds; peerRounds; output |] -> plainSemaphore (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "plain-semaphore"; selectedRounds; peerRounds; output |] -> warmed (plainSemaphore (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
     | [| "spin-lock-profile"; seed; rotation; output |] -> lockProfileWith "spin-lock-profile" lockSpin (Int32.Parse seed) (Int32.Parse rotation) output
-    | [| "plain-spin-lock"; selectedRounds; peerRounds; output |] -> plainLockWith "plain-spin-lock" lockSpin (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "plain-spin-lock"; selectedRounds; peerRounds; output |] -> warmed (plainLockWith "plain-spin-lock" lockSpin (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
     | [| "pipeline-profile"; seed; rotation; output |] -> pipelineProfile (Int32.Parse seed) (Int32.Parse rotation) output
-    | [| "plain-pipeline"; selectedRounds; peerRounds; output |] -> plainPipeline (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds) output
+    | [| "plain-pipeline"; selectedRounds; peerRounds; output |] -> warmed (plainPipeline (UInt64.Parse selectedRounds) (UInt64.Parse peerRounds)) output
     | [| "shutdown"; output |] -> shutdown output
     | [| "barrier-abort"; output |] -> barrierAbort output
     | [| "plain-phases"; pattern; selectedPercent; output |] -> plainPhases pattern (UInt64.Parse selectedPercent) output
