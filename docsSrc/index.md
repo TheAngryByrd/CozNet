@@ -166,6 +166,7 @@ The target-local profiler runs causal profiles of two-thread CPU-bound programs 
 - [Serial proportional-delay model](Explanations/Background.md).
 - [Native service ownership and measurement validity](Explanations/native-service-validity.md).
 - [Causal profiling research](Research/causal-profiling-dotnet.md).
+- [CLR native-to-IL mapping](Research/clr-native-to-il-mapping.md): which runtime API maps a native address of one code version to IL offsets, and its limits.
 - [Why cooperative probes need a CLR lifetime contract](Research/cooperative-clr-lifetime.md).
 - [How native ranges support bound probes](Research/bound-native-mapping.md).
 - [Cooperative payment and sample eligibility](Research/cooperative-sample-eligibility.md).
