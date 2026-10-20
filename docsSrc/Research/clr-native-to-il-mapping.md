@@ -217,6 +217,17 @@ Learn says that release optimization can optimize sequence points away. [L9]
 Learn says that optimized code has a less direct mapping to source. [L10]
 An archived .NET Framework 4.0 page says that optimizations such as inlining and code motion severely affect correct mapping. [L11]
 
+## Facts for map acquisition
+
+These facts were checked on 2026-10-20 for the acquisition design. They are in the same pinned source.
+
+- The runtime asks the profiler object for `ICorProfilerCallback2` and refuses the profiler without it. So a startup profiler must answer at least `ICorProfilerCallback2`. The callback version is separate from the info version that the profiler asks for. [30]
+- `JITCompilationFinished` fires after the native code address is set, with `fIsSafeToBlock` true. A body with a non-zero ReJIT id fires `ReJITCompilationFinished` instead, and a dynamic method fires `DynamicMethodJITCompilationFinished`. [31]
+- `GetNativeCodeStartAddresses` holds the code-versioning lock while it lists the bodies with a native address. It writes the true count, and it gives `ERROR_INSUFFICIENT_BUFFER` when the buffer is too small. [32]
+- `GetCodeInfo4` copies at most the given count, gives `S_OK`, and writes a count of 1, or 2 when the body has a cold region. A small buffer is not an error, so the caller must compare the count with its buffer. [33]
+- `GetILToNativeMapping3` gives `CORPROF_E_DEBUGGING_DISABLED` without the debugger interface. It copies at most the given count and writes the true count. It can throw, and it takes the debugger lock on first use. [34]
+- With `COR_PRF_MONITOR_JIT_COMPILATION`, the runtime calls `JITInlining` before each inline decision. An answer of `TRUE` keeps the decision. The flag sets no JIT flag of its own. The enter-leave and transition flags are the ones that change JIT flags. [35]
+
 ## Feasibility summary
 
 **Verdict:** a sampled IP can map to an IL range and then to a sequence point. The result is approximate for optimized code.
@@ -287,6 +298,13 @@ Runtime base: `https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049
 27. [`jitinterface.cpp` dynamic methods](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/jitinterface.cpp#L10687-L10692) and [debug info flag](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/jitinterface.cpp#L12950-L12969).
 28. [`compiler.cpp` `compDbgInfo`](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/jit/compiler.cpp#L2129-L2130).
 29. [`debugger.cpp` `getBoundaries`](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/debug/ee/debugger.cpp#L3252-L3300) and [boundary types](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/inc/cordebuginfo.h#L25-L48).
+
+30. [`eetoprofinterfaceimpl.cpp` `ICorProfilerCallback2` check](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/eetoprofinterfaceimpl.cpp#L350-L372).
+31. [`prestub.cpp` JIT completion notification](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/prestub.cpp#L852-L892).
+32. [`proftoeeinterfaceimpl.cpp` `GetNativeCodeStartAddresses`](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/proftoeeinterfaceimpl.cpp#L6397-L6490).
+33. [`proftoeeinterfaceimpl.cpp` `GetCodeInfoFromCodeStart`](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/proftoeeinterfaceimpl.cpp) and [`GetCodeInfo4`](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/proftoeeinterfaceimpl.cpp#L6568-L6600).
+34. [`proftoeeinterfaceimpl.cpp` `GetILToNativeMapping3`](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/proftoeeinterfaceimpl.cpp#L6504-L6550) and [`debugger.cpp` `GetILToNativeMapping`](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/debug/ee/debugger.cpp#L2820-L2935).
+35. [`jitinterface.cpp` `JITInlining` call](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/jitinterface.cpp#L7926-L7945) and [JIT flags](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/vm/jitinterface.cpp#L10645-L10649).
 
 Microsoft Learn:
 
