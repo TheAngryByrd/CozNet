@@ -166,7 +166,7 @@ After the run it verifies the binding again. A change sets `BindingError` and ma
 
 ## Candidate discovery
 
-`src/CozNet/TargetDiscovery.fs` ranks the methods that a run sampled. It is portable managed code with no native profiler calls. The source anchors read the assembly and PDB files. Its checks are deterministic, and no live run on the Linux backend has used it. See [the discovery limits](../Explanations/target-local-discovery.md).
+`src/CozNet/TargetDiscovery.fs` ranks the methods that a run sampled. It is portable managed code with no native profiler calls. The source anchors read the assembly and PDB files. Its checks are deterministic. One live functional check ran on the Linux backend, through the sample mode `discovery-check`. See [the discovery limits](../Explanations/target-local-discovery.md).
 
 ### Perf-map index
 
@@ -326,6 +326,7 @@ Only the holder writes the token, so the token is always that of the release tha
 | `profile <speedup> <selectedRounds> <peerRounds> <out>` | Elapsed, global, and effective time, thread results, replay summary, and all events |
 | `plain-phases <pattern> <selectedPercent> <out>` | Elapsed time of 10 barrier phases without the profiler, with selected work scaled to `selectedPercent` |
 | `binding <out>` | The configuration errors, the capture result, and the verify result after 100 ms of work, with the perf-map entries |
+| `discovery-check <out>` | A run at 0% with no selected method, and then candidate discovery on its live samples. The record holds the process id, the hashes of the perf map, the assemblies, and the PDBs, the run results, the sample classes, the ranked methods, their source anchors, and the design result. `<out>.perf-map` holds the perf map that the process read. The exit code is 0 only when the run passed. It is 4 on a platform other than Linux x64. |
 | `shutdown <out>` | Writes the work state to `<out>.marker` 30 ms after the work starts, then calls `Environment.Exit`. The exit code is 0 only when a worker is still working. |
 | `profile-phases <speedup> <pattern> <out>` | The profile result for 10 barrier phases. Patterns are `alternating`, `selected-dominant`, and `peer-bound`. |
 | `profile-gc <speedup> <selectedRounds> <peerRounds> <intervalMs> <out>` | The profile result, with a forced blocking gen-2 GC every `intervalMs` from the main thread |

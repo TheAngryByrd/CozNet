@@ -1,6 +1,6 @@
 # Target-local discovery check
 
-Status: approved on 2026-10-19. Plan and criteria recorded before the implementation.
+Status: approved on 2026-10-19. Plan and criteria recorded before the implementation. The one capture `20261020T015420785-8c8adf21` passed. Live collection stopped after it.
 
 ## Decision
 
@@ -72,5 +72,27 @@ These criteria are fixed before the implementation. They add to criteria 1 to 17
 184. The anchor of each fixture method is in `Work.fs`, at the first line of its body. For the hashed `Work.fs`, these are lines 7 and 17. The analyzer fails when the `Work.fs` that it reads differs from the hashed one.
 185. `TargetCausalDesign.tryCreate` gives a valid design for the ranked symbols.
 186. The outcome is `passed` only when criteria 180 to 185 hold. Otherwise it is `failed`, with each reason. A valid run without the expected samples is `failed`, and it is not a reason to run again.
+
+## Result
+
+Capture `20261020T015420785-8c8adf21` ran once from 2026-10-20T01:54:20Z to 01:55:06Z, and its outcome is `passed` with no reason.
+
+- Source: commit `a0f650f`, with the command `pwsh -NoProfile -File native/VerifyTargetLocalDiscovery.ps1` and the capture command `cd /app && timeout -k 2s 120s dotnet CozNet.TargetLocal.dll discovery-check /out/discovery.json`.
+- The 62 source hashes of the manifest equal the committed files. `inputsUnchanged` is true.
+- `treeClean` is false. Git listed `src/Directory.Build.targets` and `tests/CozNet.LinuxPerf/BoundSampleCollection.cs` as changed, but `git diff` shows no change in content, and their normalized hashes equal the committed files. So only their line endings differ.
+- Host: WSL2 Linux 5.15.153.1 with 4 CPUs. Runtime image `sha256:3db72bd242b5`, and compiler image `sha256:c27e64a12aad`.
+- Linux tests: 26 of 27 executed and passed. The locked-file check was skipped, as planned.
+- Run: passed, with close code 0, ledger failure 0, no foreign signal, no replay error, global delay 0, and an elapsed time of 1.042 s.
+  Worker 0 accepted 1038 samples in 1.042 s of CPU, and worker 1 accepted 509 in 0.513 s. Neither lost a sample or kept a debt.
+- Map: process id 8, `/tmp/perf-8.map`, 795 lines, SHA-256 `091CBD94B830094C81055EC0CEFD4B7BD7881A811A97962745912CF22C8FC1DD`. The retained file has this hash.
+- Classes: 1547 samples, all in scope. No sample was unmapped, not bindable, or out of scope, and the limit omitted nothing.
+- Ranked: `CozNet.TargetLocal.Work::selected(uint64)` with 1038 samples, all from worker 0, and `CozNet.TargetLocal.Work::peer(uint64)` with 509, all from worker 1. Their ranges equal the eligible ranges.
+- Anchors: `Work.fs` line 7, column 5, and line 17, column 5. The design was valid.
+
+Boundaries of this result:
+- Each worker ran one leaf method, so the live run reached only the in-scope class. The other classes are covered only by the deterministic checks.
+- The ranked methods are the only methods that the workload ran. The check does not show how discovery separates many methods.
+- The map was read after the run. The check cannot prove that each entry existed at each sample time. `CodeBinding.verify` showed that the eligible ranges did not move.
+- The run used the runtime image of the suites, not the image of the earlier perf-map grammar capture. The ranked labels used only forms of the verified subset.
 
 See [target-local discovery](target-local-discovery.md) and [the roadmap](roadmap.md).

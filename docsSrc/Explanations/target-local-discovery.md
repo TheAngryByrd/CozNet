@@ -36,7 +36,18 @@ A PDB next to an assembly can be from an earlier build. CozNet uses an external 
 ## What the checks show
 
 The discovery code is portable managed code with no native profiler calls. The source anchors read the assembly and PDB files. Its checks use fixed inputs: perf-map labels from a real runtime, hand-built samples, and the PDBs of the test assemblies. They run on every platform, except one check of a locked file, which runs only on Windows.
-These checks do not show that the live Linux backend gives complete samples or a perf map that matches the run. No live run has used discovery. `rank` checks that a run completed and added no delay. It cannot check that the perf map came from the same process after the run.
+These checks do not show that the live Linux backend gives complete samples or a perf map that matches the run. `rank` checks that a run completed and added no delay. It cannot check that the perf map came from the same process after the run.
+
+## What the live check shows
+
+One live check ran on WSL2 Linux 5.15.153.1. The process ranked its own samples and read its own perf map before it exited.
+- All 1547 samples were in scope, and both fixture methods were ranked: `Work.selected` with 1038 samples and `Work.peer` with 509.
+- The anchors were `Work.fs` lines 7 and 17, and the design was valid.
+
+The check shows that the live path works. It shows less than it seems:
+- Each worker ran one leaf method, so no sample was unmapped, not bindable, or out of scope. Those classes are covered only by the deterministic checks.
+- The workload had no other method to find. So the check does not show how discovery separates many methods in a larger program.
+- The run still needed a caller-supplied scope and eligible binding. It is discovery inside a scope, not automatic instrumentation of any application.
 
 Discovery does not change the profiler, the estimators, or any qualification result. The target-local profiler stays experimental. See [target-local support status](target-local-support.md).
 

@@ -1,6 +1,6 @@
 # Target-local candidate discovery
 
-Status: approved on 2026-10-19 with the contract below, and implemented in `src/CozNet/TargetDiscovery.fs`. Its 27 checks are deterministic. No live run has used it.
+Status: approved on 2026-10-19 with the contract below, and implemented in `src/CozNet/TargetDiscovery.fs`. Its 27 checks are deterministic. One live functional check, [`20261020T015420785-8c8adf21`](target-local-discovery-check.md#result), passed.
 
 ## Gap
 

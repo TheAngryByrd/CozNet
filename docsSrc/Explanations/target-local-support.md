@@ -37,7 +37,7 @@ A suite that passes in one package is not qualified. The earlier runs of every s
 - Windows, macOS, and Linux ARM64. The target-local path has no backend for them.
 - Threads that do not register, the thread pool, tasks, and async code.
 - Waits through `Monitor`, `System.Threading.Barrier`, a `SemaphoreSlim` that you call directly, I/O, or any blocking call outside the four target-local primitives.
-- Automatic selection. You must name each selected, candidate, and eligible method as a perf-map symbol. [Candidate discovery](target-local-discovery.md) can rank the methods that a run sampled, but no live run has used it. It ranks methods, not source lines.
+- Automatic selection. You must name each selected, candidate, and eligible method as a perf-map symbol. [Candidate discovery](target-local-discovery.md) can rank the methods that a run sampled. One live check on Linux passed, in a workload with two methods. It ranks methods, not source lines, and it still needs a caller-supplied scope and eligible binding.
 - Source lines, inlined callees, and samples in a callee of the selected method. Selection is by method range, with no callchain.
 
 ## Known limits of the evidence
