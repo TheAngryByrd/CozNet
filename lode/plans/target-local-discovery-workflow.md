@@ -1,6 +1,6 @@
 # Target-local discovery workflow
 
-Status: approved on 2026-10-19 with the changes below, and implemented in `src/CozNet/TargetDiscoveryWorkflow.fs`. No live run has used it.
+Status: approved on 2026-10-19 with the changes below, and implemented in `src/CozNet/TargetDiscoveryWorkflow.fs`. One live functional capture, `20261020T024455138-713a1a96`, passed. Live collection stopped after it.
 
 ## Gap
 
@@ -215,5 +215,29 @@ These criteria are fixed before the capture. They add to criteria 1 to 207 and c
 The report states these limits exactly:
 - `CapturedInProcess` shows only that the profiled process read the map. It does not show that the run and the map belong together in time, or that a range held the same code for the whole run.
 - The workload holds only two eligible methods. So the capture does not show the admission of an outside-binding candidate, a mix of sample classes, the rejection of a stale map, or a missing anchor.
+
+## Capture result
+
+Capture `20261020T024455138-713a1a96` ran once from 2026-10-20T02:44:54Z to 02:45:46Z. The analyzer selected `discovery-check/2` from the record schema, without `--contract`, and gave `passed`, `workflowEvaluated` true, and exit code 0.
+
+- Source: commit `7939130`, which changes only this plan after `ddf84fc`. `git diff --stat ddf84fc HEAD -- src samples native tests build` is empty. The 65 manifest source hashes equal the committed files, and `inputsUnchanged` is true.
+- `treeClean` is false. Git lists `src/Directory.Build.targets` and `tests/CozNet.LinuxPerf/BoundSampleCollection.cs`, which differ only in line endings. They were not changed.
+- Binaries: `CozNet.dll` `1611E6E4E78A0B5D...`, `CozNet.pdb` `0DA966ADD6EA9CEB...`, `CozNet.TargetLocal.dll` `CC76B58CDBEB7A4A...`, `CozNet.TargetLocal.pdb` `5997A62F6B987F0A...`, and `libCozNet.TargetLocal.so` `47787E99D8F01062...`. The hashes in the record, read inside the container, agree.
+- Linux tests: 41 in total, 39 executed and passed, and 2 skipped as planned: the locked-file check and the capture-unsupported check.
+- Run: passed, with close code 0, ledger failure 0, no foreign signal, no replay error, global delay 0, and an elapsed time of 1.029 s. Worker 0 accepted 1028 samples, and worker 1 accepted 508. Neither lost a sample or kept a debt.
+- Map: process id 9, `/tmp/perf-9.map`, 796 lines, 124,997 bytes with a final newline and no byte-order mark. `mapHashKind` is `FileBytesSha256`, and the SHA-256 of the retained bytes equals `5F1DA9DA2B97E0D95B5283B8915B4309F5EE364CD274E7CFC332CA3DA4AA2CAB`.
+- Classes: 1536 samples, 1535 in scope and 1 unmapped. No sample was not bindable or out of scope, and the limit omitted nothing.
+- Candidates: `Work::selected(uint64)` with 1028 samples from worker 0, and `Work::peer(uint64)` with 507 from worker 1. Both are `InEligibleBinding`, and `outsideBinding` is empty.
+- Independent comparison in the evidence review: each candidate range in the record equals one of the two `eligibleRanges`, and the bound ranges equal the candidate ranges.
+- Anchors: `Work.fs` line 7, column 5, and line 17, column 5. The catalog had no error and no unsupported method.
+- Design: valid. Its eligible list is the eligible binding, and its candidates are the two in-binding candidates. It was not run.
+- Limitations in the record: `SpeedupNotRecorded`, `RunBindingIsCallerPrecondition`, `RunMapAssociationNotProven`, `MapTimingNotProven`, `MethodLevelOnly`, and `NoCallchain`.
+- The old capture `20261020T015420785-8c8adf21` has the same SHA-256 for all 35 files before and after.
+
+What this shows, and what it does not:
+- It shows the live path from the captured snapshot through `prepare`, eligibility, anchors, and `tryDesign`, with the eligible list and the candidates kept apart, for two in-binding methods.
+- The one unmapped sample shows that a second class can occur live. It does not show the not-bindable or out-of-scope classes.
+- `CapturedInProcess` shows only that the profiled process read the map. It does not show that the run and the map belong together in time, or that a range held the same code for the whole run.
+- It does not show the admission of an outside-binding candidate, the rejection of a stale map, or a missing anchor. Those stay covered only by the deterministic checks.
 
 See [target-local discovery](target-local-discovery.md) and [the discovery check](target-local-discovery-check.md).

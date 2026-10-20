@@ -44,7 +44,7 @@ The user decided on 2026-10-19 to keep the 2 ms debt bound, measured wall-time p
 
 ## Next milestone
 
-Method-level candidate discovery is implemented with deterministic checks and one live check. See [target-local discovery](target-local-discovery.md). [The library discovery workflow](target-local-discovery-workflow.md) keeps eligible and candidate lists apart. It has deterministic checks only.
+Method-level candidate discovery is implemented with deterministic checks and one live check. See [target-local discovery](target-local-discovery.md). [The library discovery workflow](target-local-discovery-workflow.md) keeps eligible and candidate lists apart. One live capture `20261020T024455138-713a1a96` passed for two in-binding methods. Outside-binding admission, stale-map rejection, and missing anchors are covered only by deterministic checks.
 
 ## Original plan steps
 
