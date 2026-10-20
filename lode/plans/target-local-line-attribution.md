@@ -179,7 +179,9 @@ These criteria replace the proposed criteria 214 to 219, before the implementati
 
 - `src/CozNet/TargetLineAttribution.fs` holds the evidence, the errors, the limitations, the resolver, and `tryPrepare` and `resolve`.
 - `TargetSourceAnchor.tryReadMethod` is internal. It opens the PE and the matched PDB once, and it gives the MVID, the assembly name, the type and method name, the generic flag, the IL body size, and all sequence points. `tryFindIn` uses the same reader and does not change.
-- `tests/CozNet.Tests/TargetLineAttributionTests.fs` holds 10 checks. One of them, a PE file without metadata, runs only on Windows. The fixture method `LineFixture.Loop` has an IL body of 40 bytes and a hidden sequence point at IL offset 27 in the Debug test build. A Release build gives other IL offsets, so these fixture values apply to the Debug build that the test project uses.
+- `tests/CozNet.Tests/TargetLineAttributionTests.fs` holds 10 checks. One of them, a PE file without metadata, runs only on Windows. The fixture method `LineFixture.Loop` has an IL body of 40 bytes and a hidden sequence point at IL offset 27. On 2026-10-20 the test project gave these values in both Debug (`Optimize=false`) and Release (`Optimize=true`), with portable PDBs.
+  All 248 project tests passed in each configuration, with 10 line tests and 41 discovery tests in Release.
+  The F# compiler does not promise this layout. The first line test checks the IL body size and the hidden point before the other tests use them, so a layout change from a compiler or build setting fails visibly. It does not pass silently.
 - The retained runtime map belongs to another method. The check uses it only for its shape: it prepares, it tiles the body, and each IL offset resolves inside the IL body. Its lines have no meaning for the fixture.
 - Two mutations were checked by hand. An end-inclusive lookup fails 4 checks, and a resolver that ignores hidden points fails 1.
 
