@@ -194,4 +194,26 @@ A live run of the new workflow would need its own approval.
 - Discovery for an arbitrary application, which still needs a caller-supplied scope, eligible binding, and zero-delay run.
 - Sub-method attribution, callchains, and symbol forms outside the verified subset.
 
+## Capture phase
+
+The supervisor approved on 2026-10-19 exactly one Linux zero-speedup functional capture of the workflow and of the versioned evidence. Criterion 200 stays true for the implementation, which ran no capture, and criterion 207 stays true for the versioning.
+- Implementation: commit `ddf84fc`. The capture runs on a later commit that changes only plans, so `src`, `samples`, `native`, `tests`, and `build` equal those of `ddf84fc`.
+- Command: `pwsh -NoProfile -File native/VerifyTargetLocalDiscovery.ps1`. It runs the deterministic discovery tests on Linux first, and then the capture once.
+- Unchanged: the two-method workload (`Work.selected 60000UL` and `Work.peer 30000UL`), the bootstrap binding of `Work.selectedName` and `Work.peerName`, the scope `CozNet.TargetLocal.`, the limit 8, the journal capacity of 1,048,576 entries for each worker, the sample period, and all native bounds and gates.
+- The design is built and not run. No experiment with a speedup above 0 runs. No retry, no substitute warm-up, and no extra probe.
+- A build or setup failure stops before the capture, and it is reported. A failed or inconclusive capture is retained.
+
+These criteria are fixed before the capture. They add to criteria 1 to 207 and change none.
+
+208. The capture runs exactly once. Its record, its retained map bytes, its logs, and its manifest are kept, whatever the outcome.
+209. The Linux discovery tests run before the capture, with an executed count above 0 and no failure. The report gives the executed, passed, and skipped counts.
+210. The analyzer selects `discovery-check/2` from the record schema, without `--contract`, and gives `assessment` `passed`, `workflowEvaluated` true, and exit code 0.
+211. The record holds the process id and the map path, `mapHashKind` `FileBytesSha256`, and a `mapSha256` that equals the SHA-256 of the retained raw bytes.
+212. In the record, the ranges of both fixture methods equal the eligible ranges, each fixture is `InEligibleBinding`, and the design lists are the eligible list and the in-binding candidates. This comparison is done in the evidence review from the recorded ranges, in addition to the analyzer list checks.
+213. After the capture, the manifest source hashes equal the committed files, and the old capture `20261020T015420785-8c8adf21` stays unchanged.
+
+The report states these limits exactly:
+- `CapturedInProcess` shows only that the profiled process read the map. It does not show that the run and the map belong together in time, or that a range held the same code for the whole run.
+- The workload holds only two eligible methods. So the capture does not show the admission of an outside-binding candidate, a mix of sample classes, the rejection of a stale map, or a missing anchor.
+
 See [target-local discovery](target-local-discovery.md) and [the discovery check](target-local-discovery-check.md).
