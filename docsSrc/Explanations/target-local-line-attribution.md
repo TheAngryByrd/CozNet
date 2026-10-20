@@ -5,7 +5,17 @@ Line attribution maps a sampled native address inside one method to a source lin
 ## The map belongs to the runtime
 
 The perf map gives only the native range of a whole method. A `MethodInfo` gives no native addresses. The runtime keeps a native-to-IL map for each compiled body, and a profiler can read it with `GetILToNativeMapping3`.
-CozNet does not read that map yet. The resolver takes a map that the caller supplies, labeled with its source. See [the research note](../Research/clr-native-to-il-mapping.md).
+The resolver takes a map that the caller supplies, labeled with its source. See [the research note](../Research/clr-native-to-il-mapping.md).
+
+## How the map is captured
+
+A separate profiler library, `libCozNet.MapProfiler.so`, can read the map of one selected method when its compilation finishes. It is separate so that the existing native libraries stay unchanged. No CozNet run loads it yet, so every map in the checks is synthetic.
+
+The library keeps one record. The first selected compilation claims it, and the record does not change after it is complete. A later event, such as a second compilation or an unload, only adds a flag. So a flag tells the reader that the capture can be stale, and the outcome still tells what the capture found.
+
+The record keeps raw values. It does not sort, merge, or drop map entries, and it keeps a cold region and a second body. The resolver, not the capture, decides what it can use. Only a clean capture with no flag becomes evidence.
+
+The capture states the code at one time. It does not prove that the code stayed at that address, and the library cannot see a body that appears after the capture.
 
 ## How one address becomes a line
 
@@ -36,6 +46,7 @@ A part of the body that no entry covers is reported as uncovered. The resolver d
 
 - The map, the PDB, and the samples are only checked against each other. Matching addresses do not prove that the same code stayed at those addresses for the whole run.
 - IL rewriting is not excluded. The caller must know that the method was not rewritten.
-- No live run has used line attribution.
+- No live run has used line attribution or the map capture library.
+- A loaded profiler changes the process. Its effect on the timed run is not measured.
 
 See [the API reference](../Reference/target-local-api.md#line-attribution) and [candidate discovery and its limits](target-local-discovery.md).

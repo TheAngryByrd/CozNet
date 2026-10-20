@@ -262,7 +262,7 @@ A source anchor uses an embedded portable PDB first. Otherwise it uses the PDB n
 
 ## Line attribution
 
-`src/CozNet/TargetLineAttribution.fs` maps a native address inside one discovered method to a sequence point. It is portable. The native-to-IL map is supplied by the caller. No CozNet code reads it from the runtime yet. See [the limits](../Explanations/target-local-line-attribution.md).
+`src/CozNet/TargetLineAttribution.fs` maps a native address inside one discovered method to a sequence point. It is portable. The native-to-IL map is supplied by the caller, or it comes from a [map capture](#map-capture) record. No CozNet run reads it from a live runtime yet. See [the limits](../Explanations/target-local-line-attribution.md).
 
 `TargetCodeEvidence` is the raw input:
 
@@ -309,6 +309,110 @@ match TargetLineAttribution.tryPrepare outcome symbol assemblyPath evidence with
 | Ok resolver -> printfn "%A" (TargetLineAttribution.resolve resolver sampleIp)
 | Error errors -> printfn "No resolver: %A" errors
 ```
+
+## Map capture
+
+`libCozNet.MapProfiler.so` is a separate Linux CLR profiler library in `native/mapprofiler`. It captures the native-to-IL map of one selected method. No CozNet run loads it yet. `src/CozNet/TargetMapCapture.fs` is the portable parser of its records.
+
+### Selection
+
+The library reads these variables once, in `Initialize`:
+
+| Variable | Format |
+| --- | --- |
+| `COZNET_MAP_MODULE` | The module file name, 1 to 260 ASCII characters, without `/`. It matches the last path segment of the module. |
+| `COZNET_MAP_TOKEN` | A MethodDef token of exactly 10 characters: lowercase `0x`, `06`, and six hexadecimal digits, not `0x06000000`. |
+| `COZNET_MAP_MVID` | The MVID of the module, in the form `11223344-5566-7788-99AA-BBCCDDEEFF01`. |
+
+The event mask is `COR_PRF_MONITOR_JIT_COMPILATION | COR_PRF_MONITOR_MODULE_LOADS`. A missing or malformed value gives `SelectionInvalid`, and the library asks for no events.
+
+### Exports
+
+| Export | Result |
+| --- | --- |
+| `DllGetClassObject` | The class factory for CLSID `{4B1F2C70-6D3A-4E0B-9C51-7A2E8D4F6B13}`, else `CLASS_E_CLASSNOTAVAILABLE`. |
+| `int32_t coz_map_read(uint8_t* buffer, uint32_t capacity, uint32_t* required)` | 0 when it wrote the record, 1 during capture, 2 when `capacity` is below `*required`, and 3 when `required` is null. It writes no record byte for 1, 2, and 3. |
+
+### Record, version 1
+
+All fields are little-endian. The header is 704 bytes, and each copied map entry adds 12 bytes.
+
+| Offset | Size | Field |
+| ---: | ---: | --- |
+| 0 | 4 | Magic `0x504D5A43` |
+| 4 | 2 | Version 1 |
+| 6 | 2 | Header size 704 |
+| 8 | 4 | Total size |
+| 12 | 4 | State: 0 `NotSeen`, 2 `Complete` |
+| 16 | 4 | Outcome |
+| 20 | 4 | Outcome HRESULT, signed |
+| 24 | 4 | Flags: 1 `SecondNotification`, 2 `UnloadDuringCapture`, 4 `UnloadedAfterCapture`, 8 `Closed` |
+| 28 | 4 | The first map count for `MapCountChanged`, else 0 |
+| 32 | 8 | Function id |
+| 40 | 8 | Module id |
+| 48 | 16 | MVID, in `GUID` structure order |
+| 64 | 16 | Selected MVID |
+| 80 | 4 | MethodDef token |
+| 84 | 8 | Body count, reported and copied |
+| 92 | 8 | Region count, reported and copied |
+| 100 | 8 | Entry count, reported and copied |
+| 108 | 4 | Entry capacity, 4096 |
+| 112 | 16 | Two body starts |
+| 128 | 32 | Two regions: start and size |
+| 160 | 16 | Counters: function info failures, module info failures, name truncations, unsafe callbacks |
+| 176 | 8 | Module name units, reported and copied |
+| 184 | 520 | Module name, 260 UTF-16 units |
+| 704 | 12 each | Entries: raw IL offset, native start, native end |
+
+### Outcomes
+
+| Value | Outcome | HRESULT |
+| ---: | --- | --- |
+| 1 | `Captured` | 0 |
+| 2 | `InfoUnavailable` | Failed |
+| 3 | `SelectionInvalid` | `E_INVALIDARG` |
+| 4 | `EventMaskFailed` | Failed |
+| 5 | `JitFailed` | The JIT status |
+| 6 | `MetadataFailed` | Failed |
+| 7 | `MvidMismatch` | 0 |
+| 8 | `StartsFailed` | Failed, also `ERROR_INSUFFICIENT_BUFFER` for more than two bodies |
+| 9, 10 | `NoNativeBody`, `MultipleBodies` | 0 |
+| 11 | `CodeInfoFailed` | Failed |
+| 12, 13 | `NoCodeRegion`, `CodeInfoUnexpectedCount` | 0 |
+| 14 | `MapFailed` | Failed |
+| 15, 16, 17 | `MapEmpty`, `MapTooLarge`, `MapCountChanged` | 0 |
+| 18 | `InternalError` | Failed |
+
+### Parser
+
+| Function | Result |
+| --- | --- |
+| `TargetMapCapture.tryParse bytes` | `Ok record` for every valid record, also a failure record, or a `TargetMapCaptureParseError`. |
+| `TargetMapCapture.toEvidence source record` | `TargetCodeEvidence` only for `Completed Captured` with no flag, else a `TargetMapEvidenceError`. |
+| `TargetMapCaptureSource.trySynthetic label` | A synthetic source. The evidence label is `synthetic: <label>`. |
+| `TargetMapCaptureSource.tryLive processId librarySha256` | Internal to CozNet assemblies. A live source, with the evidence label `captured: pid <pid> profiler <sha256>`. |
+
+`tryParse` rejects with these errors:
+- `TooShort`, `BadMagic`, `UnsupportedVersion`, `UnexpectedHeaderSize`, `UnexpectedCapacity`, and `LengthMismatch` when the total size differs from the buffer length.
+- `UnknownState`, `UnknownOutcome`, and `UnknownFlags`. State 1 is never written, so it is `UnknownState 1u`.
+- `CountExceeded` when a copied count is above its reported count or its buffer.
+- `NonZeroReserved` for a byte after the copied starts, regions, or name units, and for capture fields in a `NotSeen` record.
+- `InconsistentRecord` for an HRESULT, a detail, a count, an MVID, a module name, or a flag that the outcome does not allow. A record without a claim, which is `NotSeen` or an `Initialize` failure, can only have the `Closed` flag.
+
+The record copies the bytes that it keeps. `record.Entries` and `record.BodyStarts` give new arrays. `toEvidence` gives `CaptureNotSeen`, `CaptureFailed outcome`, or `CaptureInvalidated flags`.
+
+```fsharp
+let source = TargetMapCaptureSource.trySynthetic "retained fixture" |> Result.defaultWith failwith
+
+match TargetMapCapture.tryParse bytes with
+| Error error -> printfn "Not a record: %A" error
+| Ok record ->
+    match TargetMapCapture.toEvidence source record with
+    | Ok evidence -> printfn "%A" (TargetLineAttribution.tryPrepare outcome symbol assemblyPath evidence)
+    | Error error -> printfn "Status %A, flags %A: %A" record.Status record.Flags error
+```
+
+See [how to verify the map capture component](../How_Tos/verify-map-capture.md).
 
 ## Shutdown
 

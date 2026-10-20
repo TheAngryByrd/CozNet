@@ -1,6 +1,6 @@
 # Target-local map acquisition
 
-Status: proposed on 2026-10-20. Design and source audit only. It needs supervisor approval before any implementation. No native code exists for it, and no profiler was started.
+Status: approved on 2026-10-20 with the contract in the Decision section. The library, the checks, and the parser are implemented, and criteria 220 to 223 pass. No profiler was started.
 
 ## Goal
 
@@ -34,6 +34,8 @@ Nothing runs in the perf signal handler. The callback copies into storage that t
 
 ## Outcomes
 
+The Decision section supersedes this section where they differ.
+
 The component keeps one record. Each failed step keeps its HRESULT and stops the capture. Nothing is retried.
 
 | Outcome | Cause |
@@ -54,6 +56,8 @@ The component does not drop, sort, or merge map entries, and it keeps every regi
 
 ## Lifecycle
 
+The Decision section supersedes this section where they differ.
+
 - JIT completion: the only capture point.
 - Unloading: `ModuleUnloadStarted` for the module of a captured record sets `UnloadedBeforeRead`. The first increment uses a module that is not collectible, so this flag is expected to stay false.
 - ReJIT and code replacement: the component cannot request ReJIT. Tiering is off. Another body would show as a body count above 1 at capture time. A body that appears after capture is not detected. The record states the time of capture and claims nothing after it.
@@ -63,9 +67,11 @@ The capture identity is the function id, the module id, the MVID, the token, the
 
 ## Evidence transfer
 
+The Decision section supersedes this section where they differ.
+
 - The component exports one C function, `coz_map_read(CozMapCapture* out, CozMapEntry* entries, uint32_t capacity, uint32_t* count)`. It copies the record and the raw entries. `CozMapCapture` starts with a layout version and its own size.
 - The sample loads the library from `CORECLR_PROFILER_PATH` with `NativeLibrary.Load`, after `runBound` returns. So the read stays out of the timed work. The selected method compiles when `bind ()` calls it once, before the run.
-- A new portable parser, `TargetMapCapture.tryParse`, turns the copied bytes into `TargetCodeEvidence`. It checks the layout version and size, and it keeps the raw `uint32` entries. Its label is `captured: <outcome> pid <pid> profiler <library sha256>`.
+- A new portable parser, `TargetMapCapture.tryParse`, turns the copied bytes into `TargetCodeEvidence`. It checks the layout version and size, and it keeps the raw `uint32` entries. Its label is `captured: pid <pid> profiler <library sha256>`.
 - The evidence then goes through `TargetLineAttribution.tryPrepare` with the discovery outcome of the same run. The existing checks compare the region with the bound perf-map range, the MVID and the token with the PE, and the map with the IL body.
 
 ## Observer effects
@@ -74,25 +80,130 @@ The capture identity is the function id, the module id, the MVID, the token, the
 - The first `GetILToNativeMapping3` call initializes the lazy data of the debugger interface under its lock.
 - A loaded profiler is present for the whole process. The source audit found no JIT flag that `COR_PRF_MONITOR_JIT_COMPILATION` sets. Other effects of a present profiler on the timed run are not measured.
 
-## Recommended implementation scope
+## Decision
 
-One increment with no profiler startup and no live run:
-1. `native/mapprofiler/MapProfiler.Linux.cpp`: the profiler object, the callbacks, the outcome record, and `coz_map_read`, in the raw-vtable style of `ReJitProbe.Linux.cpp`.
-2. `native/mapprofiler/MapCaptureChecks.Linux.cpp`: deterministic checks with a fake `ICorProfilerInfo9` that returns chosen values and HRESULTs. They cover each outcome, an insufficient buffer, a count change, a second notification and a concurrent claim, a cold region and a second body kept raw, a map with special values, zero-length entries, and gaps kept unchanged, and the unload and shutdown flags.
-3. The build of the library and the checks in the existing compiler image.
-4. `src/CozNet/TargetMapCapture.fs`: the portable parser, with checks on synthetic byte layouts, including a wrong version, a short buffer, and each outcome.
-5. Docs: the Reference section of the export and the parser, and the limits in the Explanation.
+The supervisor approved on 2026-10-20 the native acquisition component, the portable parser, and deterministic checks, with contract changes that this section records before the implementation.
+- No CLR profiler startup and no live capture. The component is a separate library, `libCozNet.MapProfiler.so`. The existing target-local native backend and the legacy profiler do not change.
 
-A later increment, with its own approval, would start the profiler once in the Linux container for the existing two-method fixture.
+## ABI
+
+- The component includes the official declarations of the pinned runtime checkout `60629d14374c56f1cb51819049ad1fa529307f8d`: `src/coreclr/pal/prebuilt/inc/corprof.h`, the MIDL output of `corprof.idl`, and `src/coreclr/inc/cor.h`. It defines no vtable slot or IID constant of its own.
+- The profiler class derives from the official `ICorProfilerCallback2`. The fake info class of the checks derives from the official `ICorProfilerInfo9`, and the fake metadata class from the official `IMetaDataImport`. The compiler then checks every slot order, parameter type, return type, and `STDMETHODCALLTYPE`.
+- The IIDs come from `src/tests/profiler/native/guids.cpp` of the same checkout and from `cor.h`. The runner checks independently that each IID it uses equals the `MIDL_INTERFACE` uuid string in `corprof.h`.
+- A generator writes the base classes from the official headers. Each generated method returns `E_NOTIMPL`, or `S_OK` for a callback. A callback with an output parameter is not left to a generated body: the profiler overrides `JITInlining`, which sets `*pfShouldInline = TRUE`, and `JITCachedFunctionSearchStarted`, which sets `*pbUseCachedFunction = TRUE`. The generator fails when a callback with a pointer output is not in that list.
+- The object answers `IUnknown`, `ICorProfilerCallback`, and `ICorProfilerCallback2`, and `E_NOINTERFACE` for every other IID. The info interface is a separate contract: `Initialize` asks for `ICorProfilerInfo9` only.
+- The class factory rejects aggregation with `CLASS_E_NOAGGREGATION`. `DllGetClassObject` gives `CLASS_E_CLASSNOTAVAILABLE` for another CLSID. Reference counts are atomic, and the object deletes itself at 0.
+- No C++ exception crosses a callback or an export. Each one catches every C++ exception and records `InternalError` when it holds the claim. A process fault is not recoverable, and the component does not claim to recover from one.
+
+## State and read consistency
+
+The state is one `std::atomic<uint32_t>`: `NotSeen`, `Capturing`, or `Complete`.
+- `Initialize` failures set `Complete` with their outcome. `Initialize` still returns `S_OK`, so the library stays loaded and its record stays readable.
+- The first selected `JITCompilationFinished` claims the record with a compare-exchange from `NotSeen` to `Capturing`. Only the claimant writes the storage. It then stores `Complete` with release order. The storage never changes after that.
+- The invalidation flags are a separate `std::atomic<uint32_t>`, set with `fetch_or` at any time: `SecondNotification`, `UnloadDuringCapture`, `UnloadedAfterCapture`, and `Closed`. A flag never changes the primary outcome or its HRESULT.
+- Every `ModuleUnloadStarted` increments an atomic counter. A callback reads the counter at entry, and the claimant compares it before it stores `Complete`. A change sets `UnloadDuringCapture` for any module, so an overlap is reported, not judged. After `Complete`, an unload of the captured module sets `UnloadedAfterCapture`.
+- `coz_map_read` loads the state with acquire order. During `Capturing`, it gives `NotReady` and copies nothing. Otherwise it serializes the storage and the current flags.
+
+## Queries and bounds
+
+Each step is checked, and its counts are kept even on `S_OK`.
+- `JITCompilationFinished` with `fIsSafeToBlock` false increments a counter and reads nothing.
+- `GetFunctionInfo2` failure, `GetModuleInfo2` failure, and a module name longer than 260 UTF-16 units each increment their own counter. The record then shows that a selection could have been missed.
+- After the claim: a failed JIT status gives `JitFailed`. A metadata or `GetScopeProps` failure gives `MetadataFailed`. An MVID other than the selected `COZNET_MAP_MVID` gives `MvidMismatch`, with the actual MVID kept.
+- `GetNativeCodeStartAddresses` with a buffer of 2 keeps the reported and the copied count. A failure, including `ERROR_INSUFFICIENT_BUFFER`, gives `StartsFailed`. A count of 0 gives `NoNativeBody`, and 2 gives `MultipleBodies` with both starts kept. The capture continues only with one reported and one copied body.
+- `GetCodeInfo4` with a buffer of 2 keeps both counts. A failure gives `CodeInfoFailed`, a count of 0 `NoCodeRegion`, and a count above 2 `CodeInfoUnexpectedCount`. A cold region is kept raw.
+- `GetILToNativeMapping3` first asks for the count. A failure gives `MapFailed`, 0 gives `MapEmpty`, and a count above 4096 gives `MapTooLarge`. The second call gives `MapCountChanged` when its count differs, with both counts kept. The entries are kept raw.
+- Each metadata pointer is released on every path. The info pointer is released when `Initialize` fails and in `Shutdown`, which the runtime sends last.
+
+## Transfer layout, version 1
+
+Little-endian. The writer stores each field at its offset in a zero-filled buffer, so no C++ padding or stale byte reaches the output.
+
+| Offset | Size | Field |
+| ---: | ---: | --- |
+| 0 | 4 | magic `CZMP` (`0x504D5A43`) |
+| 4 | 2 | version 1 |
+| 6 | 2 | header size 704 |
+| 8 | 4 | total size, header plus 12 bytes for each copied entry |
+| 12 | 4 | state |
+| 16 | 4 | outcome |
+| 20 | 4 | outcome HRESULT, signed |
+| 24 | 4 | flags |
+| 28 | 4 | detail: the first map count for `MapCountChanged`, else 0 |
+| 32 | 8 | function id |
+| 40 | 8 | module id |
+| 48 | 16 | MVID, in the byte order of the `GUID` structure |
+| 64 | 16 | selected MVID |
+| 80 | 4 | MethodDef token |
+| 84 | 8 | body count reported, copied |
+| 92 | 8 | region count reported, copied |
+| 100 | 8 | entry count reported, copied |
+| 108 | 4 | entry capacity, 4096 |
+| 112 | 16 | two body starts |
+| 128 | 32 | two regions: start and size |
+| 160 | 16 | counters: function info failures, module info failures, name truncations, unsafe callbacks |
+| 176 | 8 | name units reported, copied |
+| 184 | 520 | module name, 260 UTF-16 units |
+| 704 | 12 each | entries: raw IL offset, native start, native end |
+
+`int32_t coz_map_read(uint8_t* buffer, uint32_t capacity, uint32_t* required)` gives 0 when it wrote the record, 1 for `NotReady`, 2 when the capacity is below `*required`, and 3 when `required` is null. It writes no record byte for 1, 2, and 3. It sets `*required` to 0 for 1 and to the record size for 2.
+
+## Parser
+
+`src/CozNet/TargetMapCapture.fs`:
+- `TargetMapCapture.tryParse bytes` checks the magic, the version, the header size, the total size, the zero reserved bytes, the state and outcome values, and that each copied count is at most its reported count and its buffer. It gives a `TargetMapCaptureRecord` for every outcome, so a failure record stays a diagnostic record.
+- `TargetMapCapture.toEvidence source record` gives `TargetCodeEvidence` only for state `Complete`, outcome `Captured`, and no flag. Every other record gives its own error.
+- `source` is `SyntheticCapture label` or `LiveCapture (processId, librarySha256)`. The evidence label is `synthetic: ...` or `captured: pid ... profiler ...`. Only CozNet assemblies can construct a live source. No test gives a live label to a record.
+
+## Byte compatibility
+
+The native checks write the records of fixed scenarios to the build folder. The runner compares them byte for byte with the committed fixtures in `tests/CozNet.Tests/fixtures/map-capture`. The F# checks parse the same committed files. So the export and the parser use the same bytes, and the fixtures are labeled synthetic.
 
 ## Acceptance criteria
 
-Proposed. They would add to criteria 1 to 219 and change none.
+These criteria replace the proposed criteria 220 to 223, before the implementation. They add to criteria 1 to 219 and change none.
 
-220. The native checks cover each outcome in the table, with the HRESULT kept, and run in the compiler image with a pass count above 0.
-221. The native checks show that the component keeps raw entries, regions, and the body count unchanged, and never retries.
-222. The parser checks cover a wrong layout version, a short buffer, each outcome, and a captured record that `TargetLineAttribution.tryPrepare` accepts with a matching synthetic outcome.
-223. No profiler startup, no change of the existing native library, and no live run.
+220. The library and its checks build in the compiler image from the official pinned headers. The runner checks each used IID against the `MIDL_INTERFACE` uuid in `corprof.h`, and the generator fails for an unlisted callback with a pointer output.
+221. The native checks run in the compiler image with a pass count above 0, also under ThreadSanitizer. They cover QueryInterface, aggregation rejection, reference counts, `JITInlining` and `JITCachedFunctionSearchStarted` outputs, each `Initialize` failure with cleanup, each outcome with its HRESULT and counts, a read during capture, a second notification during and after capture, an unload during and after capture, shutdown during capture, repeated reads, a small read buffer, and raw retention of a cold region, two bodies, special values, zero-length entries, and gaps.
+222. The native checks write the records of fixed scenarios, and the runner requires them to equal the committed fixtures byte for byte. The F# checks parse those fixtures, keep every failure record, give evidence only for a complete clean capture, and pass one through `TargetLineAttribution.tryPrepare` with a matching synthetic outcome. They run in Release with a pass count above 0.
+223. No profiler startup, no change of the existing native libraries, and no live run.
+
+## Implementation
+
+```mermaid
+flowchart LR
+    H[official headers at 60629d14] --> G[GenerateBases.ps1]
+    G --> B[generated base classes]
+    B --> L[libCozNet.MapProfiler.so]
+    B --> C[MapCaptureChecks]
+    C --> F[five records]
+    F -->|byte-equal| X[tests/CozNet.Tests/fixtures/map-capture]
+    X --> P[TargetMapCapture.tryParse]
+    P --> E[toEvidence] --> R[TargetLineAttribution.tryPrepare]
+```
+
+- `native/mapprofiler` holds the library, the checks, its own `CMakeLists.txt`, the generator, and `VerifyMapProfiler.ps1`. The build target is `MapProfilerVerify`. The legacy `native/CMakeLists.txt` does not build it.
+- The generator compares the parsed method count of each interface with its declared count, and it stops on a difference. It checks the IIDs of `IUnknown`, `IClassFactory`, `ICorProfilerCallback` to `ICorProfilerCallback3`, and `ICorProfilerInfo9` against the `MIDL_INTERFACE` uuids. `IID_IMetaDataImport` is the `EXTERN_GUID` of `cor.h`, which has no uuid string.
+- The runtime include folders are `SYSTEM` includes, because `cor.h` and `corprof.h` fail `-Werror`. Standard headers come before them, because PAL macros break `<chrono>`.
+- `SetEventMask` failure gives `EventMaskFailed`, outcome 4. The other outcome values follow the order of the Decision section. The full table is in [the API reference](../../docsSrc/Reference/target-local-api.md#map-capture).
+- The compiler image has no clang TSan runtime. The `thread` variant compiles with clang 18 `-fsanitize=thread` and links the GCC `libtsan.so.2` of the same image. The runner checks that both objects reference `__tsan_` symbols, and it keeps the commands and the runtime hash in `evidence.txt`.
+- `GetModuleInfo2` gets null base, assembly, and flags outputs. At the pinned revision, a base address or an assembly that is not ready gives `CORPROF_E_DATAINCOMPLETE` even when the name is valid. A name above 260 units gives `HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)`, which counts as a name truncation.
+- The state and the unload counter share one `std::atomic<uint32_t>`: bits 0 and 1 hold the state, and the other bits count unloads. `ModuleUnloadStarted` adds 4 with `fetch_add`, so it reads the state in the same atomic step. It sets `UnloadDuringCapture` when that state is `Capturing`. The claimant stores `Complete` with a compare-exchange, and it sets `UnloadDuringCapture` before the store when the count differs from its entry count. So each unload is either before the completion and flagged, or after it and judged by module.
+- `coz_map_read` loads the state, the flags, and the state again, and it repeats until both states are equal. The state only moves forward, so the flags belong to that state. This invariant has no deterministic check: a change that removes the second state load still passes the native checks.
+- `Capture::capture`, `selected`, and `initialize` are not `noexcept`, so their callers catch a C++ exception and record `InternalError` with `E_FAIL`.
+- The generator requires that the callbacks with a MIDL `[out]` parameter are exactly `JITInlining` and `JITCachedFunctionSearchStarted`.
+- The `thread` variant also runs `MapCaptureChecks --seeded-race`. The runner requires a ThreadSanitizer data race report and exit code 66, so the mixed clang and GCC pair is shown to detect a race.
+- The native checks write 24 records, one for each reachable outcome and the flag cases. `TargetMapCapture.tryParse` checks the field shape of each outcome. `TargetMapCaptureSource.tryLive` is internal, so only CozNet assemblies can give a live label.
+- The committed fixtures have MVID `11223344-5566-7788-99AA-BBCCDDEEFF01` and token `0x06000012`. The F# check that reaches `tryPrepare` writes the test assembly MVID and the `LineFixture.Loop` token into a copy of `captured.bin`. The unchanged fixture gives `IdentityMismatch` for the MVID.
+
+## Accepted risks
+
+- The MVID check runs after the claim, in the step order of the plan. If another module with the same file name compiles the same token first, the record is `MvidMismatch` and stays so. The first increment selects one module that has a unique name. A later change can read the MVID before the claim, because that query runs only for a matching token and file name.
+- `Closed` blocks evidence. The sample reads after `runBound` returns, before `Shutdown`.
+- The counters show missed notifications, but `toEvidence` does not reject them. A live integration must decide how to use them before it trusts a capture.
+- An exception before the claim leaves no trace, because the version 1 layout has no free counter. A `NotSeen` record stays `NotSeen`. A complete clean capture stays clean, so a later compilation that throws before the claim does not set `SecondNotification`. Before a live run trusts a record, a version 2 layout needs a counter for this case.
+- The window between the unload counter check and the `Complete` store has no deterministic check. The fake cannot run a callback inside that window. The single atomic word removes the window by construction.
+- The TSan runtime path is fixed to GCC 13 in the compiler image. A new image fails the build, not the check.
 
 ## What this leaves open
 

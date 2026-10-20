@@ -455,6 +455,8 @@ let nativeLinuxBuild _ = nativeScript "BuildLinux.ps1"
 
 let nativeLinuxVerify _ = nativeScript "VerifyLinuxNative.ps1"
 
+let mapProfilerVerify _ = nativeScript "mapprofiler/VerifyMapProfiler.ps1"
+
 let serviceOwnerVerify platform _ =
     nativeScriptWithArgs "VerifyServiceOwner.ps1" [
         "-Platform"
@@ -1302,6 +1304,7 @@ let initTargets () =
     Target.create "NativeLinuxBuild" nativeLinuxBuild
     Target.create "NativeLinuxWorkload" nativeWorkload
     Target.create "NativeLinuxVerify" nativeLinuxVerify
+    Target.create "MapProfilerVerify" mapProfilerVerify
     Target.create "ServiceOwnerVerify" (serviceOwnerVerify "Host")
     Target.create "LinuxServiceOwnerVerify" (serviceOwnerVerify "LinuxContainer")
     Target.create "LinuxSignalServiceVerify" linuxSignalServiceVerify
@@ -1691,6 +1694,10 @@ let initTargets () =
     "NativeLinuxBuild"
     ==> "NativeLinuxWorkload"
     ==> "NativeLinuxVerify"
+    |> ignore
+
+    "NativeLinuxBuild"
+    ==> "MapProfilerVerify"
     |> ignore
 
     "NativeLinuxWorkload"

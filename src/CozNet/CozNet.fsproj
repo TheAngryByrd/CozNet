@@ -25,6 +25,7 @@
     <Compile Include="TargetDiscovery.fs" />
     <Compile Include="TargetDiscoveryWorkflow.fs" />
     <Compile Include="TargetLineAttribution.fs" />
+    <Compile Include="TargetMapCapture.fs" />
     <Compile Include="Experiment.fs" />
     <InternalsVisibleTo Include="CozNet.Tests" />
     <InternalsVisibleTo Include="CozNet.Instrumentation" />

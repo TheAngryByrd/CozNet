@@ -57,6 +57,7 @@ The target-local profiler runs causal profiles of two-thread CPU-bound programs 
 - [Check target-local payment under forced GC](How_Tos/verify-target-local-transitions.md).
 - [Run every target-local suite as one package](How_Tos/qualify-target-local.md).
 - [Check candidate discovery on Linux](How_Tos/check-target-local-discovery.md).
+- [Verify the map capture component](How_Tos/verify-map-capture.md).
 - [Rank candidates in your own program](How_Tos/rank-target-local-candidates.md).
 - [Profile your own fork/join program](How_Tos/profile-fork-join-program.md).
 - [Run the native sampled service experiment](How_Tos/run-native-sampled-service.md).
@@ -71,7 +72,7 @@ The target-local profiler runs causal profiles of two-thread CPU-bound programs 
 - [Native perf sample decoder](Reference/native-perf-decoder.md): record layouts, terminal errors, and the Linux ring adapter.
 - [Target sample dispatch](Reference/target-sample-dispatch.md): dispatch budgets, outcomes, epochs, and the Linux notification session.
 - [Target delay ledger](Reference/target-delay-ledger.md): native credit, publication, bounded payment, and the event journal.
-- [Target-local API](Reference/target-local-api.md): the native C ABI, the managed replay, and the sample program.
+- [Target-local API](Reference/target-local-api.md): the native C ABI, the managed replay, the sample program, and the map capture record.
 
 - [Bound sample membership](Reference/bound-sample-membership.md).
 

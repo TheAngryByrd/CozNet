@@ -34,6 +34,7 @@
     <Compile Include="TargetSemaphoreTests.fs" />
         <Compile Include="TargetDiscoveryTests.fs" />
         <Compile Include="TargetLineAttributionTests.fs" />
+        <Compile Include="TargetMapCaptureTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>
