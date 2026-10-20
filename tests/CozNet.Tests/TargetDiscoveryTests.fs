@@ -644,6 +644,17 @@ module TargetDiscoveryTests =
                     Expect.equal (PerfMapSnapshot.linesOf (Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Text.Encoding.UTF8.GetBytes "a\n"))) [| "a" |] "A byte-order mark must be removed."
                 }
 
+                test "a line hash and a byte hash differ for a final newline and a byte-order mark" {
+                    let sha (bytes: byte array) = Convert.ToHexString(Security.Cryptography.SHA256.HashData bytes)
+                    let lineHash lines = (snapshotOf "synthetic: hash" lines).Hash
+                    Expect.equal (lineHash [ "a"; "b" ]) (LineContentSha256(sha (Text.Encoding.UTF8.GetBytes "a\nb"))) "A line hash joins the lines without a final newline."
+                    Expect.notEqual (lineHash [ "a"; "b" ]) (lineHash [ "a"; "b"; "" ]) "An empty last line is part of the line content."
+                    let raw = Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Text.Encoding.UTF8.GetBytes "a\nb\n")
+                    let captured = PerfMapSnapshot.ofCapturedBytes 1 "/tmp/perf-1.map" raw
+                    Expect.equal (captured.Lines, captured.Hash) ([| "a"; "b" |], FileBytesSha256(sha raw)) "A byte hash keeps the mark and the final newline, and the lines drop them."
+                    Expect.notEqual captured.Hash (FileBytesSha256(sha (Text.Encoding.UTF8.GetBytes "a\nb"))) "The byte hash must not equal the hash of the normalized lines."
+                }
+
                 test "capture is unsupported outside Linux x64" {
                     if OperatingSystem.IsLinux() then skiptest "Capture on Linux needs a profiled process."
                     Expect.equal (PerfMapSnapshot.tryCaptureCurrentProcess ()) (Error Unsupported) "Capture must be unsupported outside Linux x64."

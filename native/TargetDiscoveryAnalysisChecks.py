@@ -2,7 +2,7 @@ import copy
 import hashlib
 import unittest
 
-from AnalyzeTargetDiscovery import WORK as WORK_PATH, analyze, body_lines, source_hash
+from AnalyzeTargetDiscovery import LEGACY_COMMIT, WORK as WORK_PATH, analyze, body_lines, source_hash
 
 WORK = "module W\n\nopen X\n\n[<A>]\nlet selected (rounds: uint64) =\n    let mutable a = 0UL\n    a\n\n[<A>]\n\nlet peer (rounds: uint64) =\n    let mutable a = 1UL\n    a\n"
 SELECTED = "CozNet.TargetLocal.Work::selected(uint64)"
@@ -16,7 +16,8 @@ def passing():
     ranked = [{"symbol": SELECTED, "start": 4096, "end": 4112, "samples": 900, "eligibility": "InEligibleBinding"},
               {"symbol": PEER, "start": 8192, "end": 8208, "samples": 450, "eligibility": "InEligibleBinding"},
               {"symbol": "CozNet.TargetLocal.Program::other()", "start": 12288, "end": 12304, "samples": 5, "eligibility": "OutsideEligibleBinding"}]
-    record = {"supported": True, "configurationErrors": [], "passed": True, "pid": 7, "mapPath": "/tmp/perf-7.map",
+    record = {"schema": "coznet.discovery-check/2", "mapHashKind": "FileBytesSha256",
+              "supported": True, "configurationErrors": [], "passed": True, "pid": 7, "mapPath": "/tmp/perf-7.map",
               "threads": [{"accepted": 950}, {"accepted": 450}], "eligible": [SELECTED, PEER],
               "mapSha256": hashlib.sha256(MAP).hexdigest().upper(),
               "discovery": {"sampleEvents": 1400, "rankError": "", "bindingError": "", "designValid": True,
@@ -30,8 +31,22 @@ def passing():
     return manifest, record
 
 
-def run(manifest, record, record_exit=0, map_bytes=MAP):
-    return analyze(manifest, record, record_exit, map_bytes, WORK)
+def run(manifest, record, record_exit=0, map_bytes=MAP, requested=None):
+    return analyze(manifest, record, record_exit, map_bytes, WORK, requested)
+
+
+def legacy():
+    """The shape of the retained unversioned record of commit a0f650f."""
+    manifest, record = passing()
+    manifest["commit"] = LEGACY_COMMIT
+    for key in ("schema", "mapHashKind"):
+        record.pop(key)
+    discovery = record["discovery"]
+    for key in ("outsideBinding", "designEligible", "designCandidates"):
+        discovery.pop(key)
+    for method in discovery["ranked"]:
+        method.pop("eligibility")
+    return manifest, record
 
 
 class DiscoveryAnalysisTests(unittest.TestCase):
@@ -113,6 +128,101 @@ class DiscoveryAnalysisTests(unittest.TestCase):
 
     def test_the_summary_keeps_the_tree_state(self):
         self.assertEqual((run(*passing())["treeClean"], run(*passing())["commit"]), (False, "abc"))
+
+
+class ContractTests(unittest.TestCase):
+    def test_a_current_record_passes_under_the_current_contract(self):
+        result = run(*passing())
+        self.assertEqual((result["assessment"], result["contract"], result["workflowEvaluated"], result["notEvaluated"]), ("passed", "discovery-check/2", True, []))
+
+    def test_a_current_record_without_a_current_field_fails_and_does_not_fall_back(self):
+        changes = {
+            "mapHashKind": lambda r: r.pop("mapHashKind"),
+            "eligibility": lambda r: r["discovery"]["ranked"][0].pop("eligibility"),
+            "outsideBinding": lambda r: r["discovery"].pop("outsideBinding"),
+            "designEligible": lambda r: r["discovery"].pop("designEligible"),
+            "designCandidates": lambda r: r["discovery"].pop("designCandidates"),
+        }
+        for name, change in changes.items():
+            manifest, record = passing()
+            manifest["commit"] = LEGACY_COMMIT
+            change(record)
+            result = run(manifest, record)
+            with self.subTest(field=name):
+                self.assertEqual((result["assessment"], result["contract"]), ("failed", "discovery-check/2"), result["reasons"])
+
+    def test_an_unknown_schema_is_unsupported(self):
+        manifest, record = passing()
+        record["schema"] = "coznet.discovery-check/9"
+        result = run(manifest, record)
+        self.assertEqual((result["assessment"], result["passed"], result["contract"]), ("unsupported", False, None))
+        self.assertEqual(result["reasons"], ["unsupported schema 'coznet.discovery-check/9'"])
+
+    def test_a_present_schema_other_than_the_current_one_is_unsupported_even_when_null(self):
+        for value in (None, "", 2):
+            manifest, record = legacy()
+            record["schema"] = value
+            with self.subTest(schema=value):
+                self.assertEqual(run(manifest, record)["assessment"], "unsupported")
+                self.assertEqual(run(manifest, record, requested="legacy-1")["assessment"], "unsupported")
+
+    def test_a_commit_that_is_not_a_string_does_not_select_the_legacy_contract(self):
+        for commit in ([LEGACY_COMMIT], {"sha": LEGACY_COMMIT}, None):
+            manifest, record = legacy()
+            manifest["commit"] = commit
+            with self.subTest(commit=commit):
+                self.assertEqual(run(manifest, record)["assessment"], "unsupported")
+
+    def test_the_current_contract_cannot_be_requested_by_name(self):
+        result = run(*passing(), requested="discovery-check/2")
+        self.assertEqual(result["assessment"], "unsupported")
+        self.assertIn("selected by the record schema", result["reasons"][0])
+
+    def test_an_unversioned_record_of_another_commit_is_unsupported(self):
+        manifest, record = legacy()
+        manifest["commit"] = "0000000000000000000000000000000000000000"
+        result = run(manifest, record)
+        self.assertEqual((result["assessment"], result["passed"]), ("unsupported", False))
+        self.assertIn("--contract legacy-1", result["reasons"][0])
+
+    def test_the_retained_shape_passes_only_under_the_legacy_contract(self):
+        result = run(*legacy())
+        self.assertEqual((result["assessment"], result["contract"], result["workflowEvaluated"]), ("passed", "legacy-1", False), result["reasons"])
+        self.assertIn("the provenance of the library workflow", result["notEvaluated"])
+        self.assertIn("pinned legacy commit", result["selection"])
+
+    def test_an_explicit_legacy_selection_applies_and_conflicts_with_a_schema(self):
+        manifest, record = legacy()
+        manifest["commit"] = "0000000000000000000000000000000000000000"
+        self.assertEqual(run(manifest, record, requested="legacy-1")["assessment"], "passed")
+        self.assertEqual(run(*passing(), requested="legacy-1")["assessment"], "unsupported")
+        self.assertEqual(run(*passing(), requested="legacy-9")["assessment"], "unsupported")
+
+    def test_the_legacy_contract_keeps_the_common_checks(self):
+        manifest, record = legacy()
+        record["discovery"]["anchors"][0]["line"] = 8
+        result = run(manifest, record)
+        self.assertEqual(result["assessment"], "failed")
+        self.assertTrue(any("anchor of" in r for r in result["reasons"]), result["reasons"])
+
+
+class HashTests(unittest.TestCase):
+    def check(self, retained, recorded):
+        manifest, record = passing()
+        record["mapSha256"] = hashlib.sha256(recorded).hexdigest().upper()
+        return run(manifest, record, map_bytes=retained)["reasons"]
+
+    def test_a_raw_byte_hash_keeps_a_final_newline_and_a_byte_order_mark(self):
+        for retained in (MAP + b"\n", b"\xef\xbb\xbf" + MAP + b"\n", MAP + b"\r\n"):
+            with self.subTest(retained=retained):
+                self.assertNotIn("the retained perf map differs from the recorded hash", self.check(retained, retained))
+                self.assertIn("the retained perf map differs from the recorded hash", self.check(retained, MAP))
+
+    def test_the_legacy_hash_is_the_hash_of_its_retained_joined_lines(self):
+        manifest, record = legacy()
+        record["mapSha256"] = hashlib.sha256(MAP).hexdigest().upper()
+        self.assertEqual(run(manifest, record, map_bytes=MAP)["assessment"], "passed")
+        self.assertIn("the retained perf map differs from the recorded hash", run(manifest, record, map_bytes=MAP + b"\n")["reasons"])
 
 
 if __name__ == "__main__":

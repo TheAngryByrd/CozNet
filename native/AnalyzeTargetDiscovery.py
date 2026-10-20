@@ -1,3 +1,4 @@
+import argparse
 import hashlib
 import json
 import pathlib
@@ -7,6 +8,38 @@ FIXTURES = {"CozNet.TargetLocal.Work::selected(uint64)": "selected", "CozNet.Tar
 CLASS_KEYS = ("unmapped", "notMethodLabel", "notOptimized", "notUnique", "outOfScope", "inScope")
 COUNT_KEYS = ("samples",) + CLASS_KEYS + ("omittedMethods", "omittedSamples")
 ELIGIBILITY = ("InEligibleBinding", "OutsideEligibleBinding")
+CURRENT = "discovery-check/2"
+CURRENT_SCHEMA = "coznet.discovery-check/2"
+LEGACY = "legacy-1"
+LEGACY_COMMIT = "a0f650f5ef37b4a665c365eb975b724ea44af6c9"
+LEGACY_NOT_EVALUATED = ["the eligibility of each ranked method", "the outside-binding list", "the design eligible and candidate lists",
+                        "the map hash kind", "the provenance of the library workflow"]
+LEGACY_EXIT = 3
+
+
+def select_contract(manifest, record, requested=None):
+    """Return (contract, selection, unsupported). The contract is chosen before any field that depends on the version is checked."""
+    versioned = isinstance(record, dict) and "schema" in record
+    schema = record.get("schema") if versioned else None
+    commit = manifest.get("commit")
+    if requested is not None and requested != LEGACY:
+        return None, f"caller selection {requested}", \
+            f"--contract accepts only {LEGACY}. The current contract is selected by the record schema {CURRENT_SCHEMA}, not by --contract"
+    if versioned and schema != CURRENT_SCHEMA:
+        return None, f"record schema {schema!r}", f"unsupported schema {schema!r}"
+    if requested == LEGACY:
+        if versioned:
+            return None, f"caller selection {LEGACY}", f"the caller selected {LEGACY}, but the record has schema {schema}"
+        return LEGACY, f"caller selection {LEGACY}", None
+    if versioned:
+        return CURRENT, "record schema " + CURRENT_SCHEMA, None
+    if isinstance(commit, str) and commit == LEGACY_COMMIT:
+        return LEGACY, "unversioned record from the pinned legacy commit " + commit, None
+    if record is None:
+        return CURRENT, "no record, so the current contract of the runner", None
+    return None, "unversioned record", f"an unversioned record from a commit that is not a known legacy source. Pass --contract {LEGACY} to apply the legacy contract"
+
+
 WORK = "samples/CozNet.TargetLocal/Work.fs"
 
 
@@ -29,7 +62,7 @@ def natural(value):
     return type(value) is int and value >= 0
 
 
-def parse_discovery(record):
+def parse_discovery(record, contract=CURRENT):
     """Return (discovery, reason). The discovery has checked counts, ranked methods, anchors, and bound ranges, or the reason names the first bad shape."""
     discovery = record.get("discovery")
     if not isinstance(discovery, dict):
@@ -38,7 +71,7 @@ def parse_discovery(record):
     if not isinstance(counts, dict) or not all(natural(counts.get(k)) for k in COUNT_KEYS):
         return None, "the class counts are missing or negative"
     ranked = discovery.get("ranked")
-    if not isinstance(ranked, list) or not all(isinstance(m, dict) and isinstance(m.get("symbol"), str) and m.get("eligibility") in ELIGIBILITY
+    if not isinstance(ranked, list) or not all(isinstance(m, dict) and isinstance(m.get("symbol"), str) and (contract == LEGACY or m.get("eligibility") in ELIGIBILITY)
                                                and all(natural(m.get(k)) for k in ("start", "end", "samples")) for m in ranked):
         return None, "a ranked method has the wrong shape"
     anchors = discovery.get("anchors")
@@ -49,7 +82,8 @@ def parse_discovery(record):
         return None, "a bound range has the wrong shape"
     if not natural(discovery.get("sampleEvents")):
         return None, "the sample event count is missing"
-    if not all(isinstance(discovery.get(k), list) and all(isinstance(v, str) for v in discovery[k]) for k in ("outsideBinding", "designEligible", "designCandidates")):
+    if contract == CURRENT and not all(isinstance(discovery.get(k), list) and all(isinstance(v, str) for v in discovery[k])
+                                       for k in ("outsideBinding", "designEligible", "designCandidates")):
         return None, "the eligibility or design lists have the wrong shape"
     return discovery, None
 
@@ -84,8 +118,10 @@ def run_reasons(manifest, record, record_exit):
     return reasons
 
 
-def map_reasons(record, map_bytes):
+def map_reasons(record, map_bytes, contract=CURRENT):
     reasons = []
+    if contract == CURRENT and record.get("mapHashKind") != "FileBytesSha256":
+        reasons.append("the map hash kind is not FileBytesSha256")
     pid = record.get("pid")
     if type(pid) is not int or record.get("mapPath") != f"/tmp/perf-{pid}.map":
         reasons.append("the map path does not name the process id")
@@ -96,7 +132,7 @@ def map_reasons(record, map_bytes):
     return reasons
 
 
-def discovery_reasons(record, discovery, work_source):
+def discovery_reasons(record, discovery, work_source, contract=CURRENT):
     counts, ranked = discovery["counts"], discovery["ranked"]
     reasons = []
     if sum(counts[k] for k in CLASS_KEYS) != counts["samples"]:
@@ -116,7 +152,7 @@ def discovery_reasons(record, discovery, work_source):
         method = next((m for m in ranked if m["symbol"] == symbol), None)
         if method is None or method["samples"] < 1:
             reasons.append(f"the fixture {symbol} is not ranked with samples")
-        elif method["eligibility"] != "InEligibleBinding":
+        elif contract == CURRENT and method["eligibility"] != "InEligibleBinding":
             reasons.append(f"the fixture {symbol} is not in the eligible binding")
     if discovery.get("bindingError") or discovery["boundRanges"] != [[m["start"], m["end"]] for m in ranked]:
         reasons.append("the ranked symbols do not bind to the ranked ranges")
@@ -127,29 +163,36 @@ def discovery_reasons(record, discovery, work_source):
             reasons.append(f"the source of {symbol} has no fixture header")
         elif not anchor or anchor.get("found") is not True or not str(anchor.get("document", "")).replace("\\", "/").endswith("/Work.fs") or anchor.get("line") != line:
             reasons.append(f"the anchor of {symbol} is not Work.fs line {line}")
-    if sorted(discovery["outsideBinding"]) != sorted(m["symbol"] for m in ranked if m["eligibility"] == "OutsideEligibleBinding"):
+    if contract == CURRENT and sorted(discovery["outsideBinding"]) != sorted(m["symbol"] for m in ranked if m["eligibility"] == "OutsideEligibleBinding"):
         reasons.append("the outside-binding list differs from the ranked eligibility")
     if discovery.get("designValid") is not True:
         reasons.append("the design is not valid")
-    elif record.get("eligible") != discovery["designEligible"]             or sorted(discovery["designCandidates"]) != sorted(m["symbol"] for m in ranked if m["eligibility"] == "InEligibleBinding"):
+    elif contract == CURRENT and (record.get("eligible") != discovery["designEligible"]
+                                  or sorted(discovery["designCandidates"]) != sorted(m["symbol"] for m in ranked if m["eligibility"] == "InEligibleBinding")):
         reasons.append("the design does not use the eligible binding and the in-binding candidates")
     return reasons
 
 
-def analyze(manifest, record, record_exit, map_bytes, work_source):
+def analyze(manifest, record, record_exit, map_bytes, work_source, requested=None):
+    contract, selection, unsupported = select_contract(manifest, record, requested)
+    common = {"contract": contract, "selection": selection, "treeClean": manifest.get("treeClean"), "commit": manifest.get("commit")}
+    if unsupported:
+        return {**common, "assessment": "unsupported", "outcome": "unsupported", "reasons": [unsupported], "passed": False,
+                "notEvaluated": ["every check"], "workflowEvaluated": False}
     reasons = run_reasons(manifest, record, record_exit)
     if (manifest.get("sources") or {}).get(WORK) != source_hash(work_source):
         reasons.append("the Work.fs used for the anchor lines differs from the hashed Work.fs")
     if isinstance(record, dict):
-        reasons += map_reasons(record, map_bytes)
-        discovery, shape = parse_discovery(record)
+        reasons += map_reasons(record, map_bytes, contract)
+        discovery, shape = parse_discovery(record, contract)
         if shape:
             if not (isinstance(record.get("discovery"), dict) and record["discovery"].get("rankError")):
                 reasons.append(shape)
         else:
-            reasons += discovery_reasons(record, discovery, work_source)
-    return {"outcome": "passed" if not reasons else "failed", "reasons": reasons, "passed": not reasons,
-            "treeClean": manifest.get("treeClean"), "commit": manifest.get("commit")}
+            reasons += discovery_reasons(record, discovery, work_source, contract)
+    assessment = "passed" if not reasons else "failed"
+    return {**common, "assessment": assessment, "outcome": assessment, "reasons": reasons, "passed": not reasons,
+            "notEvaluated": LEGACY_NOT_EVALUATED if contract == LEGACY else [], "workflowEvaluated": contract == CURRENT}
 
 
 def load(path):
@@ -160,17 +203,25 @@ def load(path):
 
 
 def main():
-    run = pathlib.Path(sys.argv[1])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("run")
+    parser.add_argument("--contract")
+    parser.add_argument("--output")
+    args = parser.parse_args()
+    run = pathlib.Path(args.run)
     root = pathlib.Path(__file__).resolve().parent.parent
     manifest = load(run / "manifest.json") or {}
     record = load(run / "discovery.json")
     map_path = run / "discovery.json.perf-map"
     map_bytes = map_path.read_bytes() if map_path.exists() else None
     capture = manifest.get("capture") or {}
-    summary = analyze(manifest, record, capture.get("exitCode"), map_bytes, (root / WORK).read_text(encoding="utf-8"))
-    (run / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    summary = analyze(manifest, record, capture.get("exitCode"), map_bytes, (root / WORK).read_text(encoding="utf-8"), args.contract)
+    output = pathlib.Path(args.output) if args.output else run / "summary.json"
+    output.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))
-    return 0 if summary["passed"] else 1
+    if not summary["passed"]:
+        return 1
+    return LEGACY_EXIT if summary["contract"] == LEGACY else 0
 
 
 if __name__ == "__main__":

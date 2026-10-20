@@ -2,6 +2,8 @@ module CozNet.TargetLocal.DiscoveryCheck
 
 open CozNet
 
+let schema = "coznet.discovery-check/2"
+let mapHashKind = "FileBytesSha256"
 let scopePrefix = "CozNet.TargetLocal."
 let rankLimit = 8
 let designSpeedup = 50u

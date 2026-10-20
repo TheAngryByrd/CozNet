@@ -844,7 +844,7 @@ let private fileHash (path: string) = if File.Exists path then sha256 (File.Read
 
 let private discoveryCheck (output: string) =
     if not (TargetLocalProfiler.isSupported ()) then
-        write output {| mode = "discovery-check"; supported = false; passed = false |}
+        write output {| schema = DiscoveryCheck.schema; mapHashKind = DiscoveryCheck.mapHashKind; mode = "discovery-check"; supported = false; passed = false |}
         4
     else
         let configuration = CodeBinding.configurationErrors ()
@@ -863,7 +863,7 @@ let private discoveryCheck (output: string) =
         match configuration, capture with
         | _ :: _, _
         | _, Error _ ->
-            write output {| mode = "discovery-check"; supported = true; configurationErrors = configuration
+            write output {| schema = DiscoveryCheck.schema; mapHashKind = DiscoveryCheck.mapHashKind; mode = "discovery-check"; supported = true; configurationErrors = configuration
                             bindError = (match capture with Error message -> message | Ok _ -> ""); passed = false |}
             1
         | [], Ok binding ->
@@ -876,7 +876,7 @@ let private discoveryCheck (output: string) =
             let result = TargetLocalProfiler.runBound binding 0u period [||] [| Work.selectedName; Work.peerName |] journalCapacity workers ignore
             match PerfMapSnapshot.tryCaptureCurrentProcess () with
             | Error error ->
-                write output {| mode = "discovery-check"; supported = true; configurationErrors = configuration; mapError = sprintf "%A" error; passed = false |}
+                write output {| schema = DiscoveryCheck.schema; mapHashKind = DiscoveryCheck.mapHashKind; mode = "discovery-check"; supported = true; configurationErrors = configuration; mapError = sprintf "%A" error; passed = false |}
                 1
             | Ok map ->
                 let pid, mapPath =
@@ -891,6 +891,8 @@ let private discoveryCheck (output: string) =
                 let evaluation = DiscoveryCheck.evaluate map binding result (match catalog with Ok supplied -> Some supplied | Error _ -> None) period
                 let closed = result.Experiment
                 write output {|
+                    schema = DiscoveryCheck.schema
+                    mapHashKind = (match map.Hash with FileBytesSha256 _ -> "FileBytesSha256" | LineContentSha256 _ -> "LineContentSha256")
                     mode = "discovery-check"
                     supported = true
                     configurationErrors = configuration
