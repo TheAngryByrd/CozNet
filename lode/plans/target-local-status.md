@@ -877,6 +877,9 @@ The prediction results:
 - In the model, with fine credit, the clipped gains of a transition case are -0.674 to -0.652 against a real gain of -0.714.
 - In the checked coarse case (p 40, c 16, K 4, s 3/4, T 160), with credit coarser than a transaction, 96 of 160 phases make no payment and 64 do. Every estimator then depends on the phase.
 - These are observations of finite model runs at a stated tick resolution, in a domain without payment overshoot. They do not establish a live mechanism or an estimator fix.
+- A publication policy compares immediate publication with publication only at the producer release. Release publication has no timer, so it is not upstream Coz.
+  In the checked phase cases (p 40, c 16, K 4, s 3/4) it removes every consumer payment, and its clipped gains are 0.25 (coarse) and 15/28 (fine) against a real gain of -5/7.
+  In the 96 coarse phases without payment under `immediate`, both policies give 0.25, so the errors are equal. In the other 64 coarse phases and in all 16 fine phases, `immediate` is closer to the real gain. See [the publication policy](target-local-latency-model.md#publication-policy).
 
 ## Boundary export
 

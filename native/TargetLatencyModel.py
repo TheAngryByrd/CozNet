@@ -9,8 +9,14 @@ Order of events at one instant t, an integer tick boundary:
  2. A fixed point of producer and consumer actions at t: the producer enqueues when its work ended and the queue has space, and begins
     the next transaction at t while t < stop. The consumer dequeues, settles, and stamps End. The loop repeats until no action changes state.
  3. A snapshot at t counts every Begin and every End with a time at or before t.
-Then one tick of work or payment runs from t to t + 1. A sample fires when the producer selected CPU reaches phase + k*T, and each of its
-credit parts is published at t + 1 + its offset.
+Then one tick of work or payment runs from t to t + 1. A sample fires when the producer selected CPU reaches phase + k*T, and it adds its
+credit to the generated credit of the producer.
+
+Publication policy:
+ - immediate: each credit part of a sample is published at t + 1 + its offset, as each CozNet dispatch publishes.
+ - release: the generated credit is published only when the producer enqueues, before it takes its token. This is a controlled policy,
+   not upstream Coz: upstream also publishes at its 10 ms timer, and the model has no timer.
+Generated credit that is not yet published is the unpublished credit. Each snapshot reports it, and a completed run has none.
 
 Domain: payments are exact, so no thread publishes above the producer, and the producer never pays. Payment overshoot is outside the model.
 """
@@ -54,7 +60,11 @@ def validate(p, c, K, s, T, phase, parts, offsets, stop, real):
     return work, credit, list(parts), list(offsets)
 
 
-def simulate(p, c, K, s="0", T=10, phase=1, parts=None, offsets=None, stop=2000, wake="token", real=False):
+def simulate(p, c, K, s="0", T=10, phase=1, parts=None, offsets=None, stop=2000, wake="token", real=False, publication="immediate"):
+    if publication not in ("immediate", "release"):
+        raise ValueError("publication must be immediate or release")
+    if publication == "release" and (parts is not None or offsets is not None):
+        raise ValueError("credit parts and offsets apply only to immediate publication")
     work, credit, parts, offsets = validate(p, c, K, s, T, phase, parts, offsets, stop, real)
     if wake not in ("token", "global"):
         raise ValueError("wake must be token or global")
@@ -62,7 +72,7 @@ def simulate(p, c, K, s="0", T=10, phase=1, parts=None, offsets=None, stop=2000,
         parts, offsets = [], []
     G, pending, publishes, snapshots = 0, [], [], []
     queue, tx, begins = [], [], [0]
-    acc = {"scheduled": 0, "published": 0, "skipped": 0, "paid": 0, "producerWork": 0, "consumerWork": 0, "samples": 0}
+    acc = {"generated": 0, "published": 0, "skipped": 0, "paid": 0, "producerWork": 0, "consumerWork": 0, "samples": 0}
     prod = {"state": "work", "left": work, "begin": 0, "cpu": 0}
     cons = {"state": "wait", "blocked": True, "local": 0, "left": 0, "item": None, "next": None}
     t = 0
@@ -77,6 +87,10 @@ def simulate(p, c, K, s="0", T=10, phase=1, parts=None, offsets=None, stop=2000,
         while changed:
             changed = False
             if prod["state"] == "enqueue" and len(queue) < K:
+                if publication == "release" and acc["generated"] > G:
+                    acc["published"] += acc["generated"] - G
+                    G = acc["generated"]
+                    publishes.append((t, G))
                 queue.append((prod["begin"], G))
                 changed = True
                 if t < stop:
@@ -100,7 +114,7 @@ def simulate(p, c, K, s="0", T=10, phase=1, parts=None, offsets=None, stop=2000,
                     tx.append((cons["item"], t))
                     cons.update(state="wait", item=None)
                 changed = True
-        snapshots.append((t, len(begins), len(tx), G))
+        snapshots.append((t, len(begins), len(tx), G, acc["generated"] - acc["published"]))
         if prod["state"] == "done" and not queue and cons["state"] == "wait":
             break
         if cons["state"] == "wait":
@@ -111,11 +125,12 @@ def simulate(p, c, K, s="0", T=10, phase=1, parts=None, offsets=None, stop=2000,
             acc["producerWork"] += 1
             if credit and prod["cpu"] >= phase and (prod["cpu"] - phase) % T == 0:
                 acc["samples"] += 1
-                acc["scheduled"] += credit
-                running = max([G] + [v for _, v in pending])
-                for part, offset in zip(parts, offsets):
-                    running += part
-                    pending.append((t + 1 + offset, running))
+                acc["generated"] += credit
+                if publication == "immediate":
+                    running = max([G] + [v for _, v in pending])
+                    for part, offset in zip(parts, offsets):
+                        running += part
+                        pending.append((t + 1 + offset, running))
             if prod["left"] == 0:
                 prod["state"] = "enqueue"
         if cons["state"] == "work":
@@ -127,7 +142,7 @@ def simulate(p, c, K, s="0", T=10, phase=1, parts=None, offsets=None, stop=2000,
             cons["local"] += 1
             acc["paid"] += 1
         t += 1
-        if t > stop + (K + 2) * (work + c) + acc["scheduled"] + max(offsets, default=0) + 1:
+        if t > stop + (K + 2) * (work + c) + acc["generated"] + max(offsets, default=0) + 1:
             raise RuntimeError("the model ran past the longest possible drain")
     for item in sorted(pending):
         if item[1] > G:
@@ -135,7 +150,8 @@ def simulate(p, c, K, s="0", T=10, phase=1, parts=None, offsets=None, stop=2000,
             G = item[1]
             publishes.append((item[0], G))
     acc["finalDebt"] = G - cons["local"]
-    if acc["scheduled"] != acc["samples"] * credit or acc["published"] != acc["scheduled"]:
+    acc["unpublished"] = acc["generated"] - acc["published"]
+    if acc["generated"] != acc["samples"] * credit or acc["unpublished"] != 0:
         raise RuntimeError(f"credit is not conserved: {acc}")
     if acc["published"] != acc["skipped"] + acc["paid"] + acc["finalDebt"]:
         raise RuntimeError(f"delay is not accounted for: {acc}")
