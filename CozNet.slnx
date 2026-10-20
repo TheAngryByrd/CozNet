@@ -3,6 +3,7 @@
     <Project Path="src/CozNet/CozNet.fsproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/CozNet.DiscoveryFixture/CozNet.DiscoveryFixture.fsproj" />
     <Project Path="tests/CozNet.Tests/CozNet.Tests.fsproj" />
   </Folder>
   <Folder Name="/samples/">

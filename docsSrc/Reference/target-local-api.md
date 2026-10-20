@@ -164,6 +164,77 @@ It raises `InvalidOperationException` when the configuration or the binding is n
 After the run it verifies the binding again. A change sets `BindingError` and makes `Passed` false.
 `TargetLocalProfiler.run` takes ranges and does not check the binding.
 
+## Candidate discovery
+
+`src/CozNet/TargetDiscovery.fs` ranks the methods that a run sampled. It is portable managed code with no native profiler calls. The source anchors read the assembly and PDB files. Its checks are deterministic, and no live run on the Linux backend has used it. See [the discovery limits](../Explanations/target-local-discovery.md).
+
+### Perf-map index
+
+| Function or member | Result |
+| --- | --- |
+| `PerfMapIndex.tryCreate lines` | `Ok index`, or `MalformedLine (lineNumber, line)` for a line without a hexadecimal start, a positive hexadecimal size, and a label. `OverlappingRanges (first, second)` when two ranges overlap. Empty lines are skipped. |
+| `index.Entries` | Each `PerfMapEntry`: `Start`, `End`, `Label`, and `Method`. |
+| `index.TryFind ip` | The entry with `Start <= ip < End`, or `None`. |
+| `PerfMapIndex.describe error` | A message for an error. |
+
+A method label has the form `[instance ]<return type> [<assembly>] <canonical symbol>[<tier>]`. `Method` is `Some { Assembly; Symbol; Tier }` for that form, and `None` for other labels, such as stubs.
+
+### Scope and limit
+
+| Function | Result |
+| --- | --- |
+| `TargetDiscoveryScope.tryCreate include exclude` | `Ok scope`, `NoInclude` for an empty include list, or `BlankPrefix`. |
+| `TargetDiscoveryScope.contains scope method` | True when the symbol starts with an include prefix and with no exclude prefix, by ordinal comparison, and its assembly is not `CozNet`. An exclude prefix wins. |
+| `TargetDiscoveryLimit.tryCreate count` | `Ok limit` for a count of at least 1, or an error message. |
+
+### Ranking
+
+| Function | Result |
+| --- | --- |
+| `TargetDiscovery.rankEventsUnchecked scope index events limit` | Ranks the `Sample` events. It does not check the run. |
+| `TargetDiscovery.rank scope index run limit` | Checks the `TargetProfileResult`, and then ranks `run.Events`. |
+
+Each sample falls in exactly one class, tested in this order:
+
+| Class | Condition |
+| --- | --- |
+| `Unmapped` | No entry holds the address. |
+| `NotBindable.NotMethodLabel` | The entry label is not a method label. |
+| `NotBindable.NotOptimized` | The tier is not `[Optimized]`. |
+| `NotBindable.NotUnique` | `CodeBinding.tryCapture` does not bind the symbol to exactly this entry. A second entry of the symbol in any tier is in this class. Two optimized entries with one symbol, and a symbol inside another optimized label, are in this class. |
+| `OutOfScope` | The entry is bindable, and the scope excludes it. |
+| `InScope` | The entry is bindable and in scope. |
+
+`TargetDiscoveryResult` holds:
+- `Counts`: `Samples`, `Unmapped`, `NotBindable`, `OutOfScope`, and `InScope`. The classes add up to `Samples`.
+- `Ranked`: `DiscoveredMethod` values with `Symbol`, `Assembly`, `Start`, `End`, `Samples`, and `WorkerSamples`, ranked by samples and then by ordinal symbol.
+- `OmittedMethods` and `OmittedSamples`: the methods and samples that the limit removes. `InScope` equals the ranked samples plus `OmittedSamples`.
+
+The errors are:
+
+| Error | Cause |
+| --- | --- |
+| `NoSamples` | No `Sample` event. |
+| `NoSamplesInScope counts` | No sample in scope. |
+| `RunIncomplete reasons` | `rank` only. `Passed` is false, `BindingError` is set, `CloseCode` is not 0, the experiment or a thread has a failure code, a thread lost samples or has a finish code that is not 0, or the replay failed. A full journal shows only as a failure code. |
+| `DelayAdded (globalNs, creditedSamples)` | `rank` only. The run added delay, or a sample has a credit. |
+
+`rank` cannot check the speedup of the run, and it cannot check that the perf-map lines came from the same process after the run. Read the perf map of the profiled process after the run.
+
+Each sample takes one journal entry. A worker also keeps 45 entries free for settlement. So the journal capacity of each worker must be above its sample count, plus 45, plus its other events. A full journal fails the run, and `rank` then gives `RunIncomplete`.
+
+### Symbols and source anchors
+
+| Function | Result |
+| --- | --- |
+| `TargetSymbol.tryFormat method` | `Ok "<declaring type full name>::<name>(<parameters>)"` for the verified subset. Otherwise `NoDeclaringType`, `GenericMethod`, `GenericType typeName`, or `UnsupportedParameter (position, typeName)`. |
+| `TargetSourceAnchor.tryFind method` | `Ok { Document; Line; Column }` for the first sequence point of the method that is not hidden. |
+| `TargetSourceAnchor.tryFindIn assemblyPath metadataToken` | The same, for a method token in an assembly file. |
+
+The verified parameter names are `bool`, `char`, `int8`, `uint8`, `int16`, `uint16`, `int32`, `uint32`, `int64`, `uint64`, `float32`, `float64`, `native int`, `native uint`, `string`, and `object`. One suffix can follow them: `[]` for a one-dimensional array, `&` for a reference, or `*` for a pointer. Instance methods and nested types are supported.
+
+A source anchor uses an embedded portable PDB first. Otherwise it uses the PDB next to the assembly, with the file name in the CodeView entry, only when the PDB id equals the CodeView id. The anchor errors are `NoAssemblyFile`, `NoDebugDirectory`, `NotPortablePdb`, `PdbNotFound searched`, `PdbMismatch path`, `PdbMalformed (path, message)`, `PdbUnreadable (path, message)`, `AssemblyMalformed (path, message)`, `AssemblyUnreadable (path, message)`, `MethodNotInPdb token`, and `OnlyHiddenSequencePoints token`. A file that cannot be read or parsed gives an error, not an exception. `tryFind` gives `NoAssemblyFile` for a method of a dynamic assembly.
+
 ## Shutdown
 
 `Environment.Exit` during a profile is a supported exit. The process exits, and the kernel releases the event, mapping, and signal state.

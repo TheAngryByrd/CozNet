@@ -137,6 +137,7 @@ The target-local profiler runs causal profiles of two-thread CPU-bound programs 
 
 - [Target-local sample processing](Explanations/target-local-sample-processing.md): upstream designs, final loss evidence, and remaining runtime contracts.
 - [Target-local support status](Explanations/target-local-support.md): what is implemented, what the evidence shows, and why nothing is qualified.
+- [Target-local candidate discovery](Explanations/target-local-discovery.md): what a ranking of sampled methods means, and its limits.
 - [Target-local latency model](Explanations/target-local-latency-model.md): a deterministic model of the latency estimators for a queue between two threads.
 - [Target-local prediction](Explanations/target-local-prediction.md): why the fork/join model has an exact answer, and the support boundary.
 

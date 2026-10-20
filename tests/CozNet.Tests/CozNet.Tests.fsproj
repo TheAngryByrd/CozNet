@@ -7,6 +7,7 @@
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/CozNet/CozNet.fsproj" />
+        <ProjectReference Include="../CozNet.DiscoveryFixture/CozNet.DiscoveryFixture.fsproj" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -31,6 +32,7 @@
         <Compile Include="TargetQueueTests.fs" />
         <Compile Include="TargetLockTests.fs" />
     <Compile Include="TargetSemaphoreTests.fs" />
+        <Compile Include="TargetDiscoveryTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>

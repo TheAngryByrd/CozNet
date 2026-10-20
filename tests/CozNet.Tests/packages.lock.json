@@ -126,6 +126,12 @@
         "dependencies": {
           "FSharp.Core": "[10.0.102, )"
         }
+      },
+      "coznet.discoveryfixture": {
+        "type": "Project",
+        "dependencies": {
+          "FSharp.Core": "[10.0.102, )"
+        }
       }
     }
   }

@@ -17,7 +17,7 @@ Run counts are all retained runs in `artifacts/target-local-<suite>`, from 2026-
 | Sample collection and dispatch | Linux x64 `perf_event` task-clock ring, one signal for each overflow, bounded dispatch. [Samples](target-local-samples.md), [dispatch](target-local-dispatch.md). | Native decoder, ring, and dispatch checks. A dispatch capture. | Used by every suite. Not qualified alone. | Linux x64 only. No callchain. | None now. |
 | Native ledger and replay | Credit, immediate publication, measured spin payment, deferral, and the 2 ms, 50 µs, and 5 ms bounds. Managed replay. [Credit](target-local-credit.md). | `TargetDelayLedgerChecks`, replay checks. A replay mismatch invalidates an experiment. | Used by every suite. | Debt failures when the host deschedules a thread. | Keep the bounds. |
 | Wait protocol | `post`, `waitBegin`, `waitEnd` with the release-token rule. [Blocking](target-local-blocking.md). | Native race and protocol checks, managed replay rules. | See the primitives below. | Intentional differences from upstream wake and publication timing. See [the latency model](target-local-latency-model.md). | None now. |
-| Code binding and lifecycle | Method ranges from the perf map. Tiered code, ReadyToRun, moved ranges, and ReJIT are rejected. [Lifecycle](target-local-lifecycle.md), [ReJIT](target-local-rejit.md). | `transitions` suite: 31 of 42 runs pass. | `transitions` passes. | The caller must name each method. Method level only. | [The next milestone](#next-milestone). |
+| Code binding and lifecycle | Method ranges from the perf map. Tiered code, ReadyToRun, moved ranges, and ReJIT are rejected. [Lifecycle](target-local-lifecycle.md), [ReJIT](target-local-rejit.md). | `transitions` suite: 31 of 42 runs pass. | `transitions` passes. | The caller must name each method. Method level only. | [Discovery](target-local-discovery.md) can rank candidates. |
 | Fork/join prediction | `TargetLocalProfiler.run` and `runBound`. [Prediction](target-local-prediction.md). | `prediction` suite: 38 of 47 runs pass. | Fails: two blocks invalid from debt failures. | Capacity failures. | Open. |
 | `TargetBarrier` | Lock-free barrier with release tokens. | `barrier` suite: 27 of 39 runs pass. | Fails: one block invalid from a debt failure. | Capacity failures. | Open. |
 | Causal profile, end-to-end points | `TargetCausalProfile.run` with the `EndToEnd` progress point. [Causal profile](target-local-causal-profile.md). | `latency` suite (`artifacts/target-local-profile`): 13 of 19 runs pass. | Passes. | None in the package. | None now. |
@@ -29,7 +29,7 @@ Run counts are all retained runs in `artifacts/target-local-<suite>`, from 2026-
 | Transaction latency | `Begin` and `End` with settlement before each stamp. [Transactions](target-local-transactions.md), [settlement](target-local-progress-settlement.md). | `transaction` suite: 0 of 13 runs pass. Diagnostics: two paired runs, a probe capture, and a boundary capture. | Fails: `selected-75` at -10.8 points in valid blocks. | Prediction error at 75%. Its cause is open, and the investigation is closed at its scope. | No more timing runs now. |
 | Spin transaction latency | `Begin` and `End` with a consumer spin. [Spin queue](target-local-spin-queue.md). | `spintransaction` suite: 0 of 6 runs pass. | Fails: `peer-50` and `peer-75` at -5.5 and -5.7 points. | Prediction errors in valid blocks. | Open. |
 | Qualification package | `native/QualifyTargetLocal.ps1` runs 11 suites on one tree. [Package](target-local-qualification-package.md). | One package. | Fails: 6 of 11 suites, and `treeClean` false. | Three capacity failures and three prediction errors. | A clean package after the open failures. |
-| Candidate discovery and source location | Absent. The caller supplies the selected and candidate symbols. | None. | Not applicable. | Absent. | [The next milestone](#next-milestone). |
+| Candidate discovery and source anchors | Method ranking from samples, perf-map index, symbol format for a verified subset, and PDB source anchors. [Discovery](target-local-discovery.md). | 27 deterministic checks. No live run. | Not in the package. | Method level only, no callchain, a bounded symbol subset, and no live check. | A live functional check needs approval. |
 | Other backends | Absent for target-local. Some portable native headers also build under MSVC. | Header checks only. | Not applicable. | Absent. | Not planned now. |
 
 Two kinds of failure stay separate. A capacity failure is an invalid block, for example from a debt failure, too few visits, or a handler interval of at least 5 ms. A prediction error is a failed point in valid blocks.
@@ -44,7 +44,7 @@ The user decided on 2026-10-19 to keep the 2 ms debt bound, measured wall-time p
 
 ## Next milestone
 
-Proposed, not approved: method-level candidate discovery from samples, with source locations. See [the discovery proposal](target-local-discovery.md).
+Method-level candidate discovery is implemented with deterministic checks. See [target-local discovery](target-local-discovery.md). The next milestone is not chosen.
 
 ## Original plan steps
 
@@ -73,7 +73,7 @@ flowchart LR
     Binding[Code binding] --> Profile[Causal profile]
     Primitives --> Profile
     Profile --> Package[Qualification package: fails]
-    Discovery[Candidate discovery: proposed] -.-> Binding
+    Discovery[Candidate discovery: deterministic checks] -.-> Binding
 ```
 
 See [current engine](../profiling/summary.md), [research](../../docsSrc/Research/causal-profiling-dotnet.md), and [the port decision](../../docsSrc/Research/coz-port-and-il-rewriting.md).
