@@ -884,6 +884,11 @@ The prediction results:
 - The export makes upstream-like ordered reads and evaluates the pinned formula with G rebuilt from the journal. It does not reproduce the upstream delay reads or the repeated counter reads, and its counters belong to one experiment, not to the process.
   Upstream also takes no common-instant snapshot, so the export does not claim one.
 - G at those times comes from the journal publishes ordered by time.
-- Deterministic tests cover the races between counts and stamps, the boundary publishes, and the undefined cases. No capture has used the export yet.
+- Deterministic tests cover the races between counts and stamps, the boundary publishes, and the undefined cases.
+- The supervisor approved one paired capture to exercise the export. Capture `20261019T235414964-e2bcd66a` ran once on implementation `156db99`, and all timing collection stopped after it.
+- All 50 arms exited with code 0, each peer has 5 valid blocks, and no boundary observation is excluded. Criterion 137 gives "congestion supported": S8 is -13.42, S2 is -4.73, and R2 is 0.053. The captures are not pooled, and this capture is not a qualification claim.
+- The stop occupancy is 1 or 2 in every observation. So one sample changes the pinned value of an experiment by a factor of 2, and the boundary values of single blocks spread from -56.59 to +86.39.
+- The race counts are 0, and G does not change between the stop clocks. The experiment span from the first stop clock to the clock after `Stop` is 658 to 2327 ns. In all warm-ups, it is 150230 to 207755 ns, and the cause is not measured.
+- These few samples cannot establish a stationary latency estimate or a causal mechanism. The plan holds the full report.
 
 See [the roadmap](roadmap.md) and [the summary](../summary.md).

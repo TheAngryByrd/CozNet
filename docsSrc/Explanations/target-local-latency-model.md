@@ -42,6 +42,8 @@ At each tick boundary:
 
 - The model does not show the cause of a measured prediction error, and it does not establish an estimator fix.
 - The producer of the model repeats its period exactly, so the phase of each sample repeats. A real producer drifts, and the model does not give the mix of phases in a real run.
-- The retained runs of the profiler do not record the counts at the stop instant, the stop time, or G at the stop. So the upstream rule cannot be applied to them.
+- The runs before the boundary export do not record the counts at the stop, the stop time, or G at the stop. So the upstream rule cannot be applied to them.
+- The boundary export records upstream-like ordered reads, not a common-instant snapshot. In its one diagnostic capture, the stop occupancy is 1 or 2 in each experiment.
+  So one stop sample can change the upstream value of an experiment by a factor of 2. A few such samples cannot establish a stationary latency estimate.
 
 See [target-local prediction](target-local-prediction.md) and the Lode plan `lode/plans/target-local-latency-model.md`.
