@@ -138,6 +138,16 @@ module TargetDiscoveryTests =
         finally
             if Directory.Exists folder then Directory.Delete(folder, true)
 
+    [<Runtime.CompilerServices.MethodImpl(Runtime.CompilerServices.MethodImplOptions.NoInlining)>]
+    let private anchorInCopy (copy: string) (prepareOne: string -> MethodInfo -> TargetDiscoveredCandidate) =
+        let context = Runtime.Loader.AssemblyLoadContext("coznet-discovery-copy", true)
+        try
+            let copied = context.LoadFromAssemblyPath(copy).GetType(typeof<DiscoveryShapes>.FullName, true).GetMethod("Selected", [| typeof<uint64> |])
+            let candidate = prepareOne (copied.Module.Assembly.GetName().Name) copied
+            WeakReference context, candidate.Anchor, candidate.Method.Samples
+        finally
+            context.Unload()
+
     [<Tests>]
     let tests =
         testList "target discovery" [
@@ -440,6 +450,203 @@ module TargetDiscoveryTests =
                     let point hidden line : TargetSourceAnchor.Point = { Hidden = hidden; Document = "a.fs"; Line = line; Column = 1 }
                     Expect.equal (TargetSourceAnchor.firstVisible [ point true 0xFEEFEE; point false 7; point false 9 ]) (Some { Document = "a.fs"; Line = 7; Column = 1 }) "A hidden sequence point must be skipped."
                     Expect.equal (TargetSourceAnchor.firstVisible [ point true 0xFEEFEE ]) None "Only hidden points give no anchor."
+                }
+            ]
+            testList "workflow" [
+                let snapshotOf label lines =
+                    match PerfMapSnapshot.trySupplied label lines with
+                    | Ok snapshot -> snapshot
+                    | Error error -> failtestf "The snapshot must build: %A" error
+                let bindingOf lines symbols =
+                    match CodeBinding.tryCapture lines symbols with
+                    | Ok binding -> binding
+                    | Error message -> failtestf "The binding must capture: %s" message
+                let eligibleSymbols = [| "PerfProbe.Shapes::Selected(uint64)"; "PerfProbe.Inst::Me(int32)" |]
+                let prepareWith snapshot binding (r: TargetProfileResult) catalog count =
+                    TargetDiscoveryWorkflow.prepare (scope [ "PerfProbe."; "CozNet." ] []) binding r snapshot catalog (limit count)
+                let outcomeOf events count =
+                    match prepareWith (snapshotOf "synthetic: discovery labels" labels) (bindingOf labels eligibleSymbols) { run () with Events = events } None count with
+                    | Ok outcome -> outcome
+                    | Error error -> failtestf "The workflow must succeed, not give %A." error
+                let design outcome eligible candidates = TargetDiscoveryWorkflow.tryDesign outcome eligible candidates 1000000UL [| 50u |] 1 0 0 EndToEnd
+
+                test "rank errors pass through unchanged" {
+                    let snapshot = snapshotOf "synthetic: discovery labels" labels
+                    let binding = bindingOf labels eligibleSymbols
+                    match prepareWith snapshot binding { run () with Passed = false } None 1 with
+                    | Error(Ranking(RunIncomplete _)) -> ()
+                    | other -> failtestf "An incomplete run must give Ranking RunIncomplete, not %A." other
+                    Expect.equal (prepareWith snapshot binding { run () with GlobalNs = 7UL } None 1) (Error(Ranking(DelayAdded(7UL, 0)))) "A run with delay must give Ranking DelayAdded."
+                }
+
+                test "the outcome keeps the counts of the ranking and the eligibility of each candidate" {
+                    let outcome = outcomeOf classEvents 10
+                    let ranked = rankOf [ "PerfProbe."; "CozNet." ] classEvents 10 |> expectOk
+                    Expect.equal outcome.Counts ranked.Counts "The workflow must keep the counts of the ranking."
+                    Expect.equal outcome.Counts.NotBindable.NotUnique 3L "The two generic code versions must stay not unique."
+                    Expect.equal (outcome.Candidates |> Array.map (fun c -> c.Method.Symbol, c.Eligibility))
+                        [| "PerfProbe.Shapes::Selected(uint64)", InEligibleBinding; "PerfProbe.Inst::Me(int32)", InEligibleBinding
+                           "CozNet.TargetLocal.Work::selected(uint64)", OutsideEligibleBinding; "PerfProbe.Box`1[System.Int32]::Get(!0)", OutsideEligibleBinding
+                           "PerfProbe.Shapes+Inner::Nested(int32)", OutsideEligibleBinding |]
+                        "Each candidate must say whether the eligible binding holds it."
+                    Expect.isTrue (outcome.Candidates |> Array.forall (fun c -> c.Anchor = NoCatalog)) "Without a catalog, each anchor must be NoCatalog."
+                }
+
+                test "a binding that disagrees with the map and a malformed map reject" {
+                    let moved = labels |> List.map (fun line -> if line.Contains "Shapes::Selected" then line.Replace("0x1000", "0x3000") else line)
+                    let bindingA = bindingOf labels eligibleSymbols
+                    match prepareWith (snapshotOf "synthetic: map B" moved) bindingA (run ()) None 1 with
+                    | Error(BindingDisagreesWithMap _) -> ()
+                    | other -> failtestf "The binding of map A against map B must reject, not give %A." other
+                    match prepareWith (snapshotOf "synthetic: malformed" [ "zz 1 x" ]) bindingA (run ()) None 1 with
+                    | Error(MapMalformed(MalformedLine(1, _))) -> ()
+                    | other -> failtestf "A malformed map must reject, not give %A." other
+                }
+
+                test "a design uses the ranges of the map of its own outcome" {
+                    let moved = labels |> List.map (fun line -> if line.Contains "Shapes::Selected" then line.Replace("0x1000", "0x3000") else line)
+                    let outcomeA = outcomeOf classEvents 10
+                    let outcomeB =
+                        match prepareWith (snapshotOf "synthetic: map B" moved) (bindingOf moved eligibleSymbols) { run () with Events = Array.ofList (samples 0 0x3000UL 2) } None 10 with
+                        | Ok outcome -> outcome
+                        | Error error -> failtestf "Map B must give an outcome, not %A." error
+                    let rangeIn outcome =
+                        match design outcome eligibleSymbols [| "PerfProbe.Shapes::Selected(uint64)" |] with
+                        | Ok value -> value.Binding.Range "PerfProbe.Shapes::Selected(uint64)"
+                        | Error errors -> failtestf "The design must build, not give %A." errors
+                    Expect.equal (rangeIn outcomeA, rangeIn outcomeB) ((0x1000UL, 0x1040UL), (0x3000UL, 0x3040UL)) "Each design must use the range of its own map."
+                }
+
+                test "caller arrays and returned arrays cannot change a snapshot or an outcome" {
+                    let lines = List.toArray labels
+                    let snapshot = snapshotOf "synthetic: mutation" lines
+                    let hash = snapshot.Hash
+                    lines[0] <- "0x9000 10 void [P] Changed::m()[Optimized]"
+                    (snapshot.Lines)[1] <- "changed"
+                    Expect.equal (snapshot.Lines, snapshot.Hash) (List.toArray labels, hash) "The snapshot must keep its own lines and hash."
+                    let events = Array.copy classEvents
+                    let outcome =
+                        match prepareWith snapshot (bindingOf labels eligibleSymbols) { run () with Events = events } None 10 with
+                        | Ok outcome -> outcome
+                        | Error error -> failtestf "%A" error
+                    let counts = outcome.Counts
+                    Array.fill events 0 events.Length (sample 0 0x1000UL)
+                    (outcome.Candidates[0].Method.WorkerSamples)[0] <- (9, 999L)
+                    Expect.equal outcome.Counts counts "A change of the event array must not change the outcome."
+                    Expect.equal outcome.Candidates[0].Method.WorkerSamples [| 0, 3L; 1, 2L |] "A returned array must be a copy."
+                }
+
+                test "an outside candidate needs an explicit eligible list, and an unknown symbol is not discovered" {
+                    let outcome = outcomeOf classEvents 10
+                    let nested = "PerfProbe.Shapes+Inner::Nested(int32)"
+                    Expect.equal (design outcome eligibleSymbols [| nested |]) (Error [ Design(UnboundCandidate nested); Design(IneligibleCandidate nested) ]) "An outside candidate must not be admitted."
+                    Expect.isOk (design outcome (Array.append eligibleSymbols [| nested |]) [| nested |]) "An outside candidate is accepted after the caller adds it to the eligible list."
+                    Expect.equal (design outcome eligibleSymbols [| "PerfProbe.Shapes::Now()" |]) (Error [ NotDiscovered "PerfProbe.Shapes::Now()" ]) "A symbol outside the outcome must be not discovered."
+                    match design outcome [| "PerfProbe.Shapes::Gen(!!0)" |] [||] with
+                    | Error [ EligibleNotBound _ ] -> ()
+                    | other -> failtestf "An eligible list that does not bind must reject, not give %A." other
+                    match design outcome eligibleSymbols [| "PerfProbe.Shapes::Selected(uint64)" |] with
+                    | Ok value -> Expect.equal (value.Eligible, value.Candidates) (eligibleSymbols, [| "PerfProbe.Shapes::Selected(uint64)" |]) "The design must keep the two lists apart."
+                    | Error errors -> failtestf "The design must build, not give %A." errors
+                }
+
+                test "the limit reports omitted methods and samples" {
+                    let outcome = outcomeOf classEvents 2
+                    Expect.equal (outcome.OmittedMethods, outcome.OmittedSamples) (3, 4L) "The limit must report what it removes."
+                    Expect.equal outcome.Counts.InScope ((outcome.Candidates |> Array.sumBy _.Method.Samples) + outcome.OmittedSamples) "In scope must equal the candidates plus the omitted samples."
+                }
+
+                test "anchor results keep every candidate and its samples" {
+                    let builder = Emit.AssemblyBuilder.DefineDynamicAssembly(AssemblyName "CozNet.DiscoveryWorkflowDynamic", Emit.AssemblyBuilderAccess.Run)
+                    let typeBuilder = builder.DefineDynamicModule("main").DefineType("WorkflowDynamic", TypeAttributes.Public)
+                    let methodBuilder = typeBuilder.DefineMethod("run", MethodAttributes.Public ||| MethodAttributes.Static, typeof<Void>, [||])
+                    methodBuilder.GetILGenerator().Emit(Emit.OpCodes.Ret)
+                    let dynamicMethod = typeBuilder.CreateType().GetMethod "run"
+                    let selected = methodOf typeof<DiscoveryShapes> "Selected" [| typeof<uint64> |]
+                    let over = methodOf typeof<DiscoveryShapes> "Over" [| typeof<int> |]
+                    let symbol (m: MethodInfo) = match TargetSymbol.tryFormat m with Ok s -> s | Error e -> failtestf "%A" e
+                    let lines = [ $"0x5000 40 uint64 [CozNet.Tests] {symbol selected}[Optimized]"
+                                  $"0x6000 40 int32 [CozNet.Tests] {symbol over}[Optimized]"
+                                  $"0x7000 40 void [CozNet.DiscoveryWorkflowDynamic] {symbol dynamicMethod}[Optimized]" ]
+                    let events = Array.ofList (samples 0 0x5000UL 3 @ samples 0 0x6000UL 2 @ samples 0 0x7000UL 1)
+                    let catalog =
+                        match TargetMethodCatalog.tryCreate [ selected; dynamicMethod; typeof<DiscoveryShapes>.GetMethod "Gen" ] with
+                        | Ok catalog -> catalog
+                        | Error error -> failtestf "The catalog must build: %A" error
+                    Expect.equal (catalog.Unsupported |> Array.map snd) [| GenericMethod |] "A method that the catalog cannot format must stay visible."
+                    let outcome =
+                        match TargetDiscoveryWorkflow.prepare (scope [ "CozNet.Tests."; "WorkflowDynamic::" ] []) (bindingOf lines [| symbol selected |])
+                                  { run () with Events = events } (snapshotOf "synthetic: anchors" lines) (Some catalog) (limit 5) with
+                        | Ok outcome -> outcome
+                        | Error error -> failtestf "%A" error
+                    let anchorOf s = (outcome.Candidates |> Array.find (fun c -> c.Method.Symbol = s)).Anchor
+                    match anchorOf (symbol selected) with
+                    | Anchored anchor -> Expect.stringEnds anchor.Document "TargetDiscoveryTests.fs" "A cataloged method with a PDB must be anchored."
+                    | other -> failtestf "The selected method must be anchored, not %A." other
+                    Expect.equal (anchorOf (symbol over)) NotInCatalog "A method outside the catalog must be NotInCatalog."
+                    Expect.equal (anchorOf (symbol dynamicMethod)) (AnchorFailed NoAssemblyFile) "A method without an assembly file must give AnchorFailed."
+                    Expect.equal (outcome.Candidates |> Array.map _.Method.Samples) [| 3L; 2L; 1L |] "Every candidate must keep its samples."
+                }
+
+                test "a catalog method of another assembly or without a PDB does not anchor a candidate" {
+                    let selected = methodOf typeof<DiscoveryShapes> "Selected" [| typeof<uint64> |]
+                    let symbol = match TargetSymbol.tryFormat selected with Ok s -> s | Error e -> failtestf "%A" e
+                    let prepareOne (assembly: string) (catalogMethod: MethodInfo) =
+                        let lines = [ $"0x5000 40 uint64 [{assembly}] {symbol}[Optimized]" ]
+                        let catalog = match TargetMethodCatalog.tryCreate [ catalogMethod ] with Ok c -> c | Error e -> failtestf "%A" e
+                        match TargetDiscoveryWorkflow.prepare (scope [ "CozNet.Tests." ] []) (bindingOf lines [| symbol |]) { run () with Events = Array.ofList (samples 0 0x5000UL 4) }
+                                  (snapshotOf "synthetic: one method" lines) (Some catalog) (limit 1) with
+                        | Ok outcome -> outcome.Candidates[0]
+                        | Error error -> failtestf "%A" error
+                    let other = prepareOne "OtherAssembly" selected
+                    Expect.equal (other.Anchor, other.Method.Samples) (CatalogAssemblyDiffers(typeof<DiscoveryShapes>.Assembly.GetName().Name), 4L) "A catalog method of another assembly must not anchor the candidate."
+                    inTemporaryFolder (fun folder ->
+                        let copy = Path.Combine(folder, Path.GetFileName typeof<DiscoveryShapes>.Assembly.Location)
+                        File.Copy(typeof<DiscoveryShapes>.Assembly.Location, copy)
+                        let context, anchor, samples = anchorInCopy copy prepareOne
+                        let mutable attempts = 0
+                        while context.IsAlive && attempts < 20 do
+                            GC.Collect()
+                            GC.WaitForPendingFinalizers()
+                            attempts <- attempts + 1
+                        match anchor with
+                        | AnchorFailed(PdbNotFound _) -> Expect.equal samples 4L "The candidate must keep its samples."
+                        | other -> failtestf "A copied assembly without its PDB must give AnchorFailed PdbNotFound, not %A." other)
+                }
+
+                test "catalog errors stay visible" {
+                    let selected = methodOf typeof<DiscoveryShapes> "Selected" [| typeof<uint64> |]
+                    match TargetMethodCatalog.tryCreate [ selected; selected ] with
+                    | Error(DuplicateSymbol(symbol, methods)) -> Expect.equal (symbol, methods.Length) ($"{typeof<DiscoveryShapes>.FullName}::Selected(uint64)", 2) "Both methods must be named."
+                    | other -> failtestf "Two methods of one symbol must reject, not give %A." other
+                    Expect.equal (TargetMethodCatalog.tryCreate []) (Error NoMethods) "An empty catalog must reject."
+                }
+
+                test "a supplied snapshot has its label, its line hash, and every limitation" {
+                    let snapshot = snapshotOf "synthetic: limitations" labels
+                    let expected = Convert.ToHexString(Security.Cryptography.SHA256.HashData(Text.Encoding.UTF8.GetBytes(String.Join("\n", labels))))
+                    Expect.equal (snapshot.Provenance, snapshot.Hash, snapshot.CopyCapturedBytes()) (Supplied "synthetic: limitations", LineContentSha256 expected, None) "A supplied snapshot must be labeled."
+                    Expect.equal (PerfMapSnapshot.trySupplied " " labels) (Error BlankLabel) "A supplied snapshot needs a label."
+                    Expect.equal (outcomeOf classEvents 1).Limitations
+                        [ SpeedupNotRecorded; RunBindingIsCallerPrecondition; RunMapAssociationNotProven; MapTimingNotProven; MapSupplied "synthetic: discovery labels"; MethodLevelOnly; NoCallchain ]
+                        "Every outcome must state its limitations."
+                }
+
+                test "captured bytes give lines and a byte hash" {
+                    let bytes = Text.Encoding.UTF8.GetBytes "a 1 x\r\nb 2 y\n"
+                    let captured = PerfMapSnapshot.ofCapturedBytes 42 "/tmp/perf-42.map" bytes
+                    Expect.equal (captured.Lines, captured.Provenance) ([| "a 1 x"; "b 2 y" |], CapturedInProcess(42, "/tmp/perf-42.map")) "The lines must come from the bytes."
+                    Expect.equal captured.Hash (FileBytesSha256(Convert.ToHexString(Security.Cryptography.SHA256.HashData bytes))) "A captured snapshot must hash its bytes."
+                    bytes[0] <- byte 'z'
+                    Expect.equal (captured.CopyCapturedBytes() |> Option.map (fun b -> b[0])) (Some(byte 'a')) "The snapshot must keep its own bytes."
+                    Expect.equal (PerfMapSnapshot.linesOf (Text.Encoding.UTF8.GetBytes "a\nb")) [| "a"; "b" |] "A last line without a newline must stay."
+                    Expect.equal (PerfMapSnapshot.linesOf (Text.Encoding.UTF8.GetBytes "a\n\n")) [| "a"; "" |] "Only one empty last line is dropped."
+                    Expect.equal (PerfMapSnapshot.linesOf (Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Text.Encoding.UTF8.GetBytes "a\n"))) [| "a" |] "A byte-order mark must be removed."
+                }
+
+                test "capture is unsupported outside Linux x64" {
+                    if OperatingSystem.IsLinux() then skiptest "Capture on Linux needs a profiled process."
+                    Expect.equal (PerfMapSnapshot.tryCaptureCurrentProcess ()) (Error Unsupported) "Capture must be unsupported outside Linux x64."
                 }
             ]
         ]

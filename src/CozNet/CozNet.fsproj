@@ -23,6 +23,7 @@
     <Compile Include="TargetLocalProfiler.fs" />
     <Compile Include="TargetCausalProfile.fs" />
     <Compile Include="TargetDiscovery.fs" />
+    <Compile Include="TargetDiscoveryWorkflow.fs" />
     <Compile Include="Experiment.fs" />
     <InternalsVisibleTo Include="CozNet.Tests" />
     <InternalsVisibleTo Include="CozNet.Instrumentation" />

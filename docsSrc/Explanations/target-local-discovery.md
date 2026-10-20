@@ -13,6 +13,21 @@ The ranking is a ranking of methods, not a source-line profile:
 - Each sample counts for the method that holds the interrupted address. CozNet records no callchain, so a sample in a callee does not count for its caller. Coz uses the callchain.
 - The source anchor of a method is the first sequence point of the method that is not hidden. It tells you where the method is. It does not tell you which line the samples hit.
 
+## The workflow and its preconditions
+
+`TargetDiscoveryWorkflow` lets a program use discovery without the sample code. It checks what its inputs can show, and it states the rest as limitations.
+
+It checks that the run completed and added no delay, and that the eligible binding agrees with the map. It cannot check that the run used speedup 0 or used that binding, because the run result records neither.
+A captured map shows only that the current process read it. It does not show that the run came from that process, or that the run came before the read. So each outcome states these points as limitations, and it has no flag that calls the result verified.
+
+An outcome keeps its own copy of the map. A design from an outcome uses the ranges of that map, so a candidate of one map cannot be bound again over another map.
+
+## Candidates and payment methods
+
+A discovered method is a candidate. A payment-eligible method is a method where the profiler can pay delay. The workflow keeps the two apart.
+A discovered method outside the eligible binding stays a description. It enters a design only when the caller adds it to the eligible list. Then the eligible list is bound again over the map.
+A later run checks its binding against its own map, by symbol and range. That check cannot show that a range still holds the same code, because the map records no code identity, and an address can be reused.
+
 ## Why some samples are not candidates
 
 A candidate must be a method that `CodeBinding` can bind to one range. So each sample is put in one of four classes, and the counts add up:
@@ -35,8 +50,8 @@ A PDB next to an assembly can be from an earlier build. CozNet uses an external 
 
 ## What the checks show
 
-The discovery code is portable managed code with no native profiler calls. The source anchors read the assembly and PDB files. Its checks use fixed inputs: perf-map labels from a real runtime, hand-built samples, and the PDBs of the test assemblies. They run on every platform, except one check of a locked file, which runs only on Windows.
-These checks do not show that the live Linux backend gives complete samples or a perf map that matches the run. `rank` checks that a run completed and added no delay. It cannot check that the perf map came from the same process after the run.
+The discovery code is portable managed code with no native profiler calls. The source anchors read the assembly and PDB files. Its checks use fixed inputs: perf-map labels from a real runtime, hand-built samples, and the PDBs of the test assemblies. They run on every platform, with two exceptions. The check of a locked file runs only on Windows, and the check that capture is unsupported is skipped on Linux.
+The workflow checks use synthetic snapshots with labels that start with `synthetic:`. These checks do not show that the live Linux backend gives complete samples or a perf map that matches the run. `rank` checks that a run completed and added no delay. It cannot check that the perf map came from the same process after the run.
 
 ## What the live check shows
 
@@ -44,7 +59,7 @@ One live check ran on WSL2 Linux 5.15.153.1. The process ranked its own samples 
 - All 1547 samples were in scope, and both fixture methods were ranked: `Work.selected` with 1038 samples and `Work.peer` with 509.
 - The anchors were `Work.fs` lines 7 and 17, and the design was valid.
 
-The check shows that the live path works. It shows less than it seems:
+The check ran the sample code before the workflow existed. So it does not validate the workflow. It shows that the live path of that sample code worked, and it shows less than it seems:
 - Each worker ran one leaf method, so no sample was unmapped, not bindable, or out of scope. Those classes are covered only by the deterministic checks.
 - The workload had no other method to find. So the check does not show how discovery separates many methods in a larger program.
 - The run still needed a caller-supplied scope and eligible binding. It is discovery inside a scope, not automatic instrumentation of any application.

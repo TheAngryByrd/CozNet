@@ -13,15 +13,17 @@ MAP = b"0x1000 10 uint64 [CozNet.TargetLocal] CozNet.TargetLocal.Work::selected(
 def passing():
     manifest = {"inputsUnchanged": True, "linuxTests": {"exitCode": 0, "executed": 27, "failed": 0}, "treeClean": False, "commit": "abc",
                 "sources": {WORK_PATH: source_hash(WORK)}}
-    ranked = [{"symbol": SELECTED, "start": 4096, "end": 4112, "samples": 900}, {"symbol": PEER, "start": 8192, "end": 8208, "samples": 450},
-              {"symbol": "CozNet.TargetLocal.Program::other()", "start": 12288, "end": 12304, "samples": 5}]
+    ranked = [{"symbol": SELECTED, "start": 4096, "end": 4112, "samples": 900, "eligibility": "InEligibleBinding"},
+              {"symbol": PEER, "start": 8192, "end": 8208, "samples": 450, "eligibility": "InEligibleBinding"},
+              {"symbol": "CozNet.TargetLocal.Program::other()", "start": 12288, "end": 12304, "samples": 5, "eligibility": "OutsideEligibleBinding"}]
     record = {"supported": True, "configurationErrors": [], "passed": True, "pid": 7, "mapPath": "/tmp/perf-7.map",
-              "threads": [{"accepted": 950}, {"accepted": 450}],
+              "threads": [{"accepted": 950}, {"accepted": 450}], "eligible": [SELECTED, PEER],
               "mapSha256": hashlib.sha256(MAP).hexdigest().upper(),
               "discovery": {"sampleEvents": 1400, "rankError": "", "bindingError": "", "designValid": True,
                             "counts": {"samples": 1400, "unmapped": 30, "notMethodLabel": 1, "notOptimized": 0, "notUnique": 2, "outOfScope": 10,
                                        "inScope": 1357, "omittedMethods": 1, "omittedSamples": 2},
                             "ranked": ranked, "boundRanges": [[m["start"], m["end"]] for m in ranked],
+                            "outsideBinding": ["CozNet.TargetLocal.Program::other()"], "designEligible": [SELECTED, PEER], "designCandidates": [SELECTED, PEER],
                             "anchors": [{"symbol": SELECTED, "found": True, "document": "C:\\repo\\samples\\CozNet.TargetLocal\\Work.fs", "line": 7},
                                         {"symbol": PEER, "found": True, "document": "/repo/samples/CozNet.TargetLocal/Work.fs", "line": 13},
                                         {"symbol": "CozNet.TargetLocal.Program::other()", "found": False, "document": "", "line": 0}]}}
@@ -70,6 +72,12 @@ class DiscoveryAnalysisTests(unittest.TestCase):
             "eligible methods did not bind": lambda m, r: r.update(bindError="no entry"),
             "differs from the hashed Work.fs": lambda m, r: m["sources"].update({WORK_PATH: "00"}),
             "no discovery record": lambda m, r: r.update(discovery=None),
+            f"fixture {PEER} is not in the eligible binding": lambda m, r: r["discovery"]["ranked"][1].update(eligibility="OutsideEligibleBinding"),
+            "perf map was not captured": lambda m, r: r.update(mapError="Unsupported"),
+            "outside-binding list differs": lambda m, r: r["discovery"].update(outsideBinding=[]),
+            "eligibility or design lists": lambda m, r: r["discovery"].pop("outsideBinding"),
+            "in-binding candidates": lambda m, r: r["discovery"].update(designCandidates=[SELECTED, PEER, "CozNet.TargetLocal.Program::other()"]),
+            "method catalog failed": lambda m, r: r.update(catalogError="DuplicateSymbol"),
         }
         for reason, change in cases.items():
             manifest, record = passing()
@@ -84,6 +92,9 @@ class DiscoveryAnalysisTests(unittest.TestCase):
         self.assertIn("the capture exited with 1", run(manifest, record, record_exit=1)["reasons"])
         self.assertIn("no capture record", run(manifest, None)["reasons"])
         self.assertIn("no retained perf map", run(manifest, record, map_bytes=None)["reasons"])
+        bogus = copy.deepcopy(record)
+        bogus["discovery"]["ranked"][0]["eligibility"] = "bogus"
+        self.assertIn("a ranked method has the wrong shape", run(manifest, bogus)["reasons"])
         incomplete = copy.deepcopy(record)
         incomplete["discovery"] = {"rankError": "RunIncomplete [\"lost\"]"}
         reasons = run(manifest, incomplete)["reasons"]
@@ -93,6 +104,7 @@ class DiscoveryAnalysisTests(unittest.TestCase):
         manifest, record = passing()
         record["discovery"]["ranked"] = [m for m in record["discovery"]["ranked"] if m["symbol"] != PEER]
         record["discovery"]["boundRanges"] = [[m["start"], m["end"]] for m in record["discovery"]["ranked"]]
+        record["discovery"]["designCandidates"] = [SELECTED]
         record["discovery"]["counts"]["inScope"] -= 450
         record["discovery"]["counts"]["outOfScope"] += 450
         result = run(manifest, record)

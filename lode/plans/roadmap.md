@@ -44,7 +44,7 @@ The user decided on 2026-10-19 to keep the 2 ms debt bound, measured wall-time p
 
 ## Next milestone
 
-Method-level candidate discovery is implemented with deterministic checks and one live check. See [target-local discovery](target-local-discovery.md). Proposed, not approved: [a library discovery workflow](target-local-discovery-workflow.md) with separate eligible and candidate lists.
+Method-level candidate discovery is implemented with deterministic checks and one live check. See [target-local discovery](target-local-discovery.md). [The library discovery workflow](target-local-discovery-workflow.md) keeps eligible and candidate lists apart. It has deterministic checks only.
 
 ## Original plan steps
 

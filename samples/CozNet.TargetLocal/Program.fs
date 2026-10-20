@@ -874,48 +874,58 @@ let private discoveryCheck (output: string) =
                 { Work = (fun () -> Work.peer 30000UL |> ignore); PaymentIp = fst peerRange }
             |]
             let result = TargetLocalProfiler.runBound binding 0u period [||] [| Work.selectedName; Work.peerName |] journalCapacity workers ignore
-            let pid = Environment.ProcessId
-            let mapPath = PerfMap.currentProcess ()
-            let lines = File.ReadAllLines mapPath
-            let mapText = String.Join("\n", lines)
-            File.WriteAllText(output + ".perf-map", mapText)
-            let sample = Reflection.Assembly.GetExecutingAssembly()
-            let library = typeof<CodeBinding>.Assembly
-            let evaluation = DiscoveryCheck.evaluate lines result (DiscoveryCheck.methodsBySymbol sample) period
-            let closed = result.Experiment
-            write output {|
-                mode = "discovery-check"
-                supported = true
-                configurationErrors = configuration
-                pid = pid
-                mapPath = mapPath
-                mapLines = lines.Length
-                mapSha256 = sha256 (Text.Encoding.UTF8.GetBytes mapText)
-                files =
-                    [| sample.Location; IO.Path.ChangeExtension(sample.Location, ".pdb"); library.Location; IO.Path.ChangeExtension(library.Location, ".pdb") |]
-                    |> Array.map (fun path -> {| path = path; sha256 = fileHash path |})
-                period = period
-                journalCapacity = journalCapacity
-                eligible = [| Work.selectedName; Work.peerName |]
-                eligibleRanges = [| [| fst selectedRange; snd selectedRange |]; [| fst peerRange; snd peerRange |] |]
-                passed = result.Passed
-                bindingError = result.BindingError
-                closeCode = result.CloseCode
-                ledgerFailure = closed.Failure
-                foreignSignals = closed.ForeignSignals
-                replayError = (match result.Replay with Error message -> message | Ok _ -> "")
-                globalNs = result.GlobalNs
-                elapsedNs = result.ElapsedNs
-                threads =
-                    result.Threads
-                    |> Array.mapi (fun worker outcome ->
-                        let r = outcome.Result
-                        {| worker = worker; finishCode = outcome.FinishCode; error = outcome.Error; failure = r.Failure; lost = r.Lost; accepted = r.Accepted
-                           complete = r.Complete; cpuNs = r.Value; maxHandlerNs = r.MaxHandlerNs; finalDebt = r.FinalDebt
-                           sampleEvents = result.Events |> Array.filter (fun e -> e.Worker = worker && e.Kind = TargetLedgerEventKind.Sample) |> Array.length |})
-                discovery = evaluation
-            |}
-            if result.Passed then 0 else 1
+            match PerfMapSnapshot.tryCaptureCurrentProcess () with
+            | Error error ->
+                write output {| mode = "discovery-check"; supported = true; configurationErrors = configuration; mapError = sprintf "%A" error; passed = false |}
+                1
+            | Ok map ->
+                let pid, mapPath =
+                    match map.Provenance with
+                    | CapturedInProcess(pid, path) -> pid, path
+                    | Supplied label -> -1, label
+                File.WriteAllBytes(output + ".perf-map", map.CopyCapturedBytes() |> Option.defaultValue [||])
+                let sample = Reflection.Assembly.GetExecutingAssembly()
+                let library = typeof<CodeBinding>.Assembly
+                let work = sample.GetType("CozNet.TargetLocal.Work", true)
+                let catalog = TargetMethodCatalog.tryCreate [ work.GetMethod "selected"; work.GetMethod "peer" ]
+                let evaluation = DiscoveryCheck.evaluate map binding result (match catalog with Ok supplied -> Some supplied | Error _ -> None) period
+                let closed = result.Experiment
+                write output {|
+                    mode = "discovery-check"
+                    supported = true
+                    configurationErrors = configuration
+                    pid = pid
+                    mapPath = mapPath
+                    mapLines = map.Lines.Length
+                    mapSha256 = (match map.Hash with FileBytesSha256 hex | LineContentSha256 hex -> hex)
+                    mapHash = sprintf "%A" map.Hash
+                    catalogError = (match catalog with Error error -> sprintf "%A" error | Ok _ -> "")
+                    catalogUnsupported = (match catalog with Ok c -> c.Unsupported |> Array.map (fun (m, e) -> sprintf "%s: %A" m.Name e) | Error _ -> [||])
+                    files =
+                        [| sample.Location; IO.Path.ChangeExtension(sample.Location, ".pdb"); library.Location; IO.Path.ChangeExtension(library.Location, ".pdb") |]
+                        |> Array.map (fun path -> {| path = path; sha256 = fileHash path |})
+                    period = period
+                    journalCapacity = journalCapacity
+                    eligible = [| Work.selectedName; Work.peerName |]
+                    eligibleRanges = [| [| fst selectedRange; snd selectedRange |]; [| fst peerRange; snd peerRange |] |]
+                    passed = result.Passed
+                    bindingError = result.BindingError
+                    closeCode = result.CloseCode
+                    ledgerFailure = closed.Failure
+                    foreignSignals = closed.ForeignSignals
+                    replayError = (match result.Replay with Error message -> message | Ok _ -> "")
+                    globalNs = result.GlobalNs
+                    elapsedNs = result.ElapsedNs
+                    threads =
+                        result.Threads
+                        |> Array.mapi (fun worker outcome ->
+                            let r = outcome.Result
+                            {| worker = worker; finishCode = outcome.FinishCode; error = outcome.Error; failure = r.Failure; lost = r.Lost; accepted = r.Accepted
+                               complete = r.Complete; cpuNs = r.Value; maxHandlerNs = r.MaxHandlerNs; finalDebt = r.FinalDebt
+                               sampleEvents = result.Events |> Array.filter (fun e -> e.Worker = worker && e.Kind = TargetLedgerEventKind.Sample) |> Array.length |})
+                    discovery = evaluation
+                |}
+                if result.Passed then 0 else 1
 
 let private shutdown (output: string) =
     let binding = bind ()

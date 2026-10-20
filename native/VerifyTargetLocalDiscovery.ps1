@@ -17,7 +17,7 @@ $sources = @('native/service/TargetLocalApi.h', 'native/service/TargetLocalApi.L
     'src/CozNet/TargetLocalReplay.fs', 'src/CozNet/TargetLocalLinux.fs', 'src/CozNet/TargetLocalProfiler.fs', 'src/CozNet/TargetCausalProfile.fs', 'src/CozNet/TargetDiscovery.fs',
     'src/CozNet/CozNet.fsproj', 'samples/CozNet.TargetLocal/Work.fs', 'samples/CozNet.TargetLocal/DiscoveryCheck.fs', 'samples/CozNet.TargetLocal/Program.fs',
     'samples/CozNet.TargetLocal/CozNet.TargetLocal.fsproj', 'tests/CozNet.Tests/TargetDiscoveryTests.fs', 'tests/CozNet.DiscoveryFixture/Embedded.fs',
-    'native/VerifyTargetLocalDiscovery.ps1', 'native/AnalyzeTargetDiscovery.py', 'lode/plans/target-local-discovery.md', 'lode/plans/target-local-discovery-check.md', 'build/build.fs',
+    'native/VerifyTargetLocalDiscovery.ps1', 'native/AnalyzeTargetDiscovery.py', 'lode/plans/target-local-discovery.md', 'lode/plans/target-local-discovery-check.md', 'lode/plans/target-local-discovery-workflow.md', 'build/build.fs',
     'global.json', 'NuGet.config', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'src/Directory.Build.props', 'src/Directory.Build.targets',
     'src/CozNet/packages.lock.json', 'samples/CozNet.TargetLocal/packages.lock.json', 'tests/Directory.Build.props', 'tests/CozNet.Tests/CozNet.Tests.fsproj', 'tests/CozNet.Tests/packages.lock.json',
     'tests/CozNet.DiscoveryFixture/CozNet.DiscoveryFixture.fsproj', 'tests/CozNet.DiscoveryFixture/packages.lock.json')

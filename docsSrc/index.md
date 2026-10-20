@@ -57,6 +57,7 @@ The target-local profiler runs causal profiles of two-thread CPU-bound programs 
 - [Check target-local payment under forced GC](How_Tos/verify-target-local-transitions.md).
 - [Run every target-local suite as one package](How_Tos/qualify-target-local.md).
 - [Check candidate discovery on Linux](How_Tos/check-target-local-discovery.md).
+- [Rank candidates in your own program](How_Tos/rank-target-local-candidates.md).
 - [Profile your own fork/join program](How_Tos/profile-fork-join-program.md).
 - [Run the native sampled service experiment](How_Tos/run-native-sampled-service.md).
 - [Check target-local timer delivery](How_Tos/run-target-lease-delivery.md).

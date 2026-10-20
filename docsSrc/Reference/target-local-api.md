@@ -223,6 +223,31 @@ The errors are:
 
 Each sample takes one journal entry. A worker also keeps 45 entries free for settlement. So the journal capacity of each worker must be above its sample count, plus 45, plus its other events. A full journal fails the run, and `rank` then gives `RunIncomplete`.
 
+### Discovery workflow
+
+`src/CozNet/TargetDiscoveryWorkflow.fs` joins the ranking, the anchors, and the design check into one boundary. Only `PerfMapSnapshot.tryCaptureCurrentProcess` uses the Linux backend.
+
+| Function or member | Result |
+| --- | --- |
+| `PerfMapSnapshot.tryCaptureCurrentProcess ()` | Reads `/tmp/perf-<pid>.map` of the current process once. `Ok` holds the lines, `CapturedInProcess (processId, path)`, and `FileBytesSha256`. `Unsupported` outside Linux x64, `Unreadable (path, message)` for a read error. |
+| `PerfMapSnapshot.trySupplied label lines` | A snapshot of lines that the caller supplies, with `Supplied label` and `LineContentSha256`. `BlankLabel` for an empty label. |
+| `snapshot.Lines`, `snapshot.CopyCapturedBytes ()` | Copies. A change of a copy does not change the snapshot. |
+| `TargetMethodCatalog.tryCreate methods` | A catalog of the given methods. `NoMethods` for an empty list, `DuplicateSymbol (symbol, methods)` when two methods format as one symbol. `catalog.Unsupported` lists the methods that it cannot format. |
+| `TargetDiscoveryWorkflow.prepare scope eligible run map catalog limit` | `Ok outcome`, or `MapMalformed`, `BindingDisagreesWithMap` when `CodeBinding.verify` of the eligible binding fails over the map, or `Ranking` with a `TargetDiscovery.rank` error. |
+| `TargetDiscoveryWorkflow.tryDesign outcome eligible candidates period speedups blocks seed rotation progress` | `Ok design` from the snapshot of the outcome, or `NotDiscovered symbol`, `EligibleNotBound message`, or `Design` with a `TargetCausalDesign` error. |
+
+`LineContentSha256` is the SHA-256 of the UTF-8 lines joined with `\n`, without a final `\n`. `FileBytesSha256` is the SHA-256 of the file bytes. A capture removes a leading byte-order mark, splits its bytes at `\n`, removes a final `\r` from each line, and drops one empty last line.
+
+An outcome is opaque. Its members are `Snapshot`, `Counts`, `Candidates`, `OmittedMethods`, `OmittedSamples`, and `Limitations`. `Candidates` returns copies of `TargetDiscoveredCandidate` records:
+- `Method`: the `DiscoveredMethod`.
+- `Eligibility`: `InEligibleBinding` when the eligible binding holds its range, otherwise `OutsideEligibleBinding`.
+- `Anchor`: `Anchored anchor`, `NoCatalog`, `NotInCatalog`, `CatalogAssemblyDiffers catalogAssembly`, or `AnchorFailed error`. An anchor result never removes a candidate.
+  `CatalogAssemblyDiffers` means that the catalog method has the symbol, but its assembly name differs from the candidate label. The check uses the simple assembly name, so the caller must supply catalog methods of the same build as the profiled code.
+
+`tryDesign` takes symbols, not candidate records. Each candidate must be a symbol of the outcome, and each candidate must also be in the eligible list, as `TargetCausalDesign.tryCreate` requires. The eligible list is bound over the snapshot of the outcome.
+
+`Limitations` always holds `SpeedupNotRecorded`, `RunBindingIsCallerPrecondition`, `RunMapAssociationNotProven`, `MapTimingNotProven`, `MethodLevelOnly`, and `NoCallchain`. A supplied snapshot adds `MapSupplied label`.
+
 ### Symbols and source anchors
 
 | Function | Result |
@@ -326,7 +351,7 @@ Only the holder writes the token, so the token is always that of the release tha
 | `profile <speedup> <selectedRounds> <peerRounds> <out>` | Elapsed, global, and effective time, thread results, replay summary, and all events |
 | `plain-phases <pattern> <selectedPercent> <out>` | Elapsed time of 10 barrier phases without the profiler, with selected work scaled to `selectedPercent` |
 | `binding <out>` | The configuration errors, the capture result, and the verify result after 100 ms of work, with the perf-map entries |
-| `discovery-check <out>` | A run at 0% with no selected method, and then candidate discovery on its live samples. The record holds the process id, the hashes of the perf map, the assemblies, and the PDBs, the run results, the sample classes, the ranked methods, their source anchors, and the design result. `<out>.perf-map` holds the perf map that the process read. The exit code is 0 only when the run passed. It is 4 on a platform other than Linux x64. |
+| `discovery-check <out>` | A run at 0% with no selected method, and then the discovery workflow on its live samples. The record holds the process id, the hashes of the perf map, the assemblies, and the PDBs, the run results, the sample classes, the ranked methods, their source anchors, and the design result. `<out>.perf-map` holds the perf map that the process read. The exit code is 0 only when the run passed. It is 4 on a platform other than Linux x64. |
 | `shutdown <out>` | Writes the work state to `<out>.marker` 30 ms after the work starts, then calls `Environment.Exit`. The exit code is 0 only when a worker is still working. |
 | `profile-phases <speedup> <pattern> <out>` | The profile result for 10 barrier phases. Patterns are `alternating`, `selected-dominant`, and `peer-bound`. |
 | `profile-gc <speedup> <selectedRounds> <peerRounds> <intervalMs> <out>` | The profile result, with a forced blocking gen-2 GC every `intervalMs` from the main thread |

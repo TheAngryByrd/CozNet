@@ -6,6 +6,7 @@ import sys
 FIXTURES = {"CozNet.TargetLocal.Work::selected(uint64)": "selected", "CozNet.TargetLocal.Work::peer(uint64)": "peer"}
 CLASS_KEYS = ("unmapped", "notMethodLabel", "notOptimized", "notUnique", "outOfScope", "inScope")
 COUNT_KEYS = ("samples",) + CLASS_KEYS + ("omittedMethods", "omittedSamples")
+ELIGIBILITY = ("InEligibleBinding", "OutsideEligibleBinding")
 WORK = "samples/CozNet.TargetLocal/Work.fs"
 
 
@@ -37,7 +38,7 @@ def parse_discovery(record):
     if not isinstance(counts, dict) or not all(natural(counts.get(k)) for k in COUNT_KEYS):
         return None, "the class counts are missing or negative"
     ranked = discovery.get("ranked")
-    if not isinstance(ranked, list) or not all(isinstance(m, dict) and isinstance(m.get("symbol"), str)
+    if not isinstance(ranked, list) or not all(isinstance(m, dict) and isinstance(m.get("symbol"), str) and m.get("eligibility") in ELIGIBILITY
                                                and all(natural(m.get(k)) for k in ("start", "end", "samples")) for m in ranked):
         return None, "a ranked method has the wrong shape"
     anchors = discovery.get("anchors")
@@ -48,6 +49,8 @@ def parse_discovery(record):
         return None, "a bound range has the wrong shape"
     if not natural(discovery.get("sampleEvents")):
         return None, "the sample event count is missing"
+    if not all(isinstance(discovery.get(k), list) and all(isinstance(v, str) for v in discovery[k]) for k in ("outsideBinding", "designEligible", "designCandidates")):
+        return None, "the eligibility or design lists have the wrong shape"
     return discovery, None
 
 
@@ -69,6 +72,10 @@ def run_reasons(manifest, record, record_exit):
         reasons.append("the configuration has errors")
     if record.get("bindError"):
         reasons.append("the eligible methods did not bind: " + str(record["bindError"]))
+    if record.get("mapError"):
+        reasons.append("the perf map was not captured: " + str(record["mapError"]))
+    if record.get("catalogError"):
+        reasons.append("the method catalog failed: " + str(record["catalogError"]))
     if record.get("passed") is not True:
         reasons.append("the run did not pass")
     discovery = record.get("discovery")
@@ -109,6 +116,8 @@ def discovery_reasons(record, discovery, work_source):
         method = next((m for m in ranked if m["symbol"] == symbol), None)
         if method is None or method["samples"] < 1:
             reasons.append(f"the fixture {symbol} is not ranked with samples")
+        elif method["eligibility"] != "InEligibleBinding":
+            reasons.append(f"the fixture {symbol} is not in the eligible binding")
     if discovery.get("bindingError") or discovery["boundRanges"] != [[m["start"], m["end"]] for m in ranked]:
         reasons.append("the ranked symbols do not bind to the ranked ranges")
     anchors = {a["symbol"]: a for a in discovery["anchors"]}
@@ -118,8 +127,12 @@ def discovery_reasons(record, discovery, work_source):
             reasons.append(f"the source of {symbol} has no fixture header")
         elif not anchor or anchor.get("found") is not True or not str(anchor.get("document", "")).replace("\\", "/").endswith("/Work.fs") or anchor.get("line") != line:
             reasons.append(f"the anchor of {symbol} is not Work.fs line {line}")
+    if sorted(discovery["outsideBinding"]) != sorted(m["symbol"] for m in ranked if m["eligibility"] == "OutsideEligibleBinding"):
+        reasons.append("the outside-binding list differs from the ranked eligibility")
     if discovery.get("designValid") is not True:
         reasons.append("the design is not valid")
+    elif record.get("eligible") != discovery["designEligible"]             or sorted(discovery["designCandidates"]) != sorted(m["symbol"] for m in ranked if m["eligibility"] == "InEligibleBinding"):
+        reasons.append("the design does not use the eligible binding and the in-binding candidates")
     return reasons
 
 
