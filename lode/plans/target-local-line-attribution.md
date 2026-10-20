@@ -1,6 +1,6 @@
 # Target-local line attribution
 
-Status: proposed on 2026-10-19. It needs supervisor approval before any implementation. No code exists for it.
+Status: approved on 2026-10-19 with the corrections in the Decision section, and implemented in `src/CozNet/TargetLineAttribution.fs`. No live run has used it.
 
 ## Question
 
@@ -43,90 +43,145 @@ Reasons:
 - The resolver rules (identity, intervals, special entries, and sequence points) can be fixed and checked now, with no runtime. The later acquisition then only has to produce evidence that the resolver accepts.
 - No IL rewriting is needed. The runtime map exists for unrewritten optimized code.
 
-## Design
+## Decision
 
-New file `src/CozNet/TargetLineAttribution.fs`, after `TargetDiscoveryWorkflow.fs`. It is portable and makes no OS call except to read a PDB file through `TargetSourceAnchor`'s reader.
+The supervisor approved on 2026-10-19 the portable resolver over supplied evidence, with five contract corrections. This revision records them before the implementation.
+- No profiler component, no native change, no IL rewriting, and no live run.
+- One preparation boundary ties the map, the method identity, the PDB, and the discovery outcome together. `resolve` takes only the prepared resolver.
+- A range or identity that does not match gives `RangeMismatch` or `IdentityMismatch`. It does not claim that the code is stale. Matching addresses do not prove the code lifetime, the existence of an entry at each sample time, or the absence of address reuse.
 
-### Code-version identity
+## Exported map shape
+
+The profiler path of `GetILToNativeMapping3` is `Debugger::GetILToNativeMapping` for a method that is not dynamic. It exports the sequence map of the `DebuggerJitInfo` of the body through `ExportILToNativeMap` ([debugger.cpp L2820-2935](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/debug/ee/debugger.cpp#L2820-L2935)).
+`DebuggerJitInfo::SetBoundaries` builds that map ([functioninfo.cpp L1095-1200](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/debug/ee/functioninfo.cpp#L1095-L1200)):
+- It keeps the JIT entries in their order. It drops an entry whose IL offset equals that of the entry before it.
+- It sets the end of each entry to the start of the next entry that is not a call instruction. It marks the end of the last entry as unknown.
+- It sorts by IL, with `PROLOG` first, then the IL offsets, then `NO_MAPPING`, and call-instruction entries last. Then it removes the call-instruction entries from the count ([debugger.h, `MapSortIL`](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/debug/ee/debugger.h)).
+- `ExportILToNativeMap` replaces an unknown end with the total code size of the body ([utils.cpp L128-150](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/debug/shared/utils.cpp#L128-L150)). That size is `getSizeOfTotalCode`, hot and cold together ([functioninfo.cpp L1254](https://github.com/dotnet/runtime/blob/60629d14374c56f1cb51819049ad1fa529307f8d/src/coreclr/debug/ee/functioninfo.cpp#L1254)).
+
+What this establishes, and what the resolver does:
+
+| Shape | Source | Resolver |
+| --- | --- | --- |
+| End is exclusive and equals the next start in native order | The end assignment above | Accepted. |
+| Last entry ends at the total code size | `ExportILToNativeMap` replaces only an end marked unknown, and only the last JIT entry has that mark. When the last JIT entry is not a call instruction, it is exported and ends at the code size. | Accepted. An end above the code size is `UnsupportedMapShape`. |
+| Zero-length entry | Two JIT entries with one native offset give it | Accepted. It never holds an address. |
+| Array sorted by IL, not by native offset | `MapSortIL` | The resolver sorts a copy by native start. |
+| One IL offset with several native ranges | IL sort of native entries | Accepted. |
+| Native range before the first entry | The first JIT entry can start above 0 | Accepted as an uncovered interval. `resolve` gives `Uncovered`, never a neighbor line. |
+| Native range of a removed call-instruction entry | The end search skips call entries, so a call entry between two other entries stays inside the earlier one. When the last JIT entries are call instructions, the search stops at the last entry, the last exported entry ends at the start of the last trailing call, and the call entries are removed. Earlier trailing calls stay inside that entry. So the range from the start of the last trailing call to the end of the code is not in the export. Review rounds 1 and 2 found this case. | That trailing range is uncovered, and `resolve` gives `Uncovered`. |
+| Overlap of two ranges with a size above 0 | The end assignment assumes that the JIT order is native order. The source does not prove that order. | `UnsupportedMapShape`, not malformed evidence. |
+| Dynamic method | That path uses instrumented boundaries | Out of scope. A dynamic method has no metadata token. |
+
+Fixture with provenance: the retained Linux maps in `reliability/features/runtime-probes/data/native-mapping/linux` came from `GetILToNativeMapping` on .NET 10.0.0. For example, `linux-perf-registered-branch.json` tiles `[0, 78)` from a `PROLOG` entry to an `EPILOG` entry. That method was rewritten, and its offsets are original offsets through a registered map. So the checks use it only as an example of the shape, labeled `retained: runtime-probes linux-perf-registered-branch`.
+
+## Identity
+
+The future acquisition can supply these values, and the evidence holds only these:
+
+| Field | Future source |
+| --- | --- |
+| `ModuleVersionId` | The MVID from the module metadata, through `GetModuleMetaData` |
+| `MethodToken` | `GetFunctionInfo2` |
+| `CodeStart` | `GetNativeCodeStartAddresses` |
+| `Regions` | `GetCodeInfo4(CodeStart)`: the hot region and any cold region |
+| `NativeBodyCount` | The count of `GetNativeCodeStartAddresses` for the function and IL version 0 |
+| `Entries` | `GetILToNativeMapping3(CodeStart)`, as raw `uint32` values |
+| `Label` | The source of the evidence, for example `synthetic: ...` or `retained: ...` |
+
+There is no native version id. A ReJIT id, a runtime-event version id, and a code start are different values. A caller value of 0 would not prove one unrewritten body.
+
+Checks at preparation:
+- `Regions` must hold exactly one region, else `ColdCodeUnsupported`. The region must start at `CodeStart`.
+- `NativeBodyCount` must be 1, else `MultipleBodiesUnsupported`.
+- The region must equal the range of the candidate in the discovery outcome, else `RangeMismatch`. `CodeStart + size` must not overflow.
+- The PE file must have the MVID, else `IdentityMismatch`. Its assembly name must equal the candidate assembly, else `IdentityMismatch`.
+- The token must be a MethodDef row of the PE, with the type name, the method name, and the parameter types of the candidate symbol, else `IdentityMismatch`. The parameter types come from the method signature in the verified subset of `TargetSymbol`. A type outside that subset, a second wrapper such as `int32[]&`, a pinned type, a type with a modifier, or a `void` or `typedref` parameter gives a signature mismatch. So an overload with the same name is rejected, and a modifier never hides a difference. Review rounds 1 and 2 added these checks.
+- A generic method or a method of a generic type gives `SharedGenericUnsupported`, from the generic parameter tables of the PE.
+- The PDB is the embedded PDB, or the sibling PDB with the id of the CodeView entry, through the existing reader.
+- The IL body size is the length of the IL code of the PE method body, without the method header. A method without a body gives `NoIlBody`. Review round 1 found that `MethodBodyBlock.Size` includes the header.
+- The PE facts are read before the PDB. A bad PE body gives `AssemblyMalformed`, and a module without an assembly manifest gives `AssemblyMalformed`, not a PDB error.
+- IL rewriting is a caller precondition: the record carries `IlRewriteNotExcluded`.
+
+## Raw map decoding
+
+- The raw IL offset is a `uint32`. `0xFFFFFFFF` is `NO_MAPPING`, `0xFFFFFFFE` is `PROLOG`, and `0xFFFFFFFD` is `EPILOG`.
+- Any other value at or above the IL body size gives `IlOffsetBeyondBody` with the value. So an unknown special value is rejected, and it never resolves to the last line.
+- A native start above its end gives `InvertedRange`.
+
+## Sequence points
+
+- The reader returns all points of the method: the IL offset, whether it is hidden, the document name, and the start and end line and column.
+- The point of an IL offset is the visible or hidden point with the greatest offset at or below it. Its IL interval ends at the next point, or at the IL body size for the last point.
+- A hidden point gives `HiddenSequencePoint`. An offset before the first point gives `NoSequencePoint`.
+- The interval rule is an inference. Each result carries `SequencePointRangeInferred`.
+
+## API
+
+`src/CozNet/TargetLineAttribution.fs`, after `TargetDiscoveryWorkflow.fs`:
 
 ```fsharp
-type TargetCodeVersion = private {
-    ModuleVersionId: Guid      // the MVID of the module
-    MethodToken: int           // a MethodDef token, 0x06xxxxxx
-    CodeStart: uint64          // the native start address of this body
-    CodeSize: uint64           // the hot size. Cold code is rejected.
-    NativeVersionId: uint64    // 0 for the default version
+type TargetCodeRegion = { Start: uint64; Size: uint64 }
+
+type TargetCodeEvidence = {
+    Label: string
+    ModuleVersionId: Guid
+    MethodToken: int
+    CodeStart: uint64
+    Regions: TargetCodeRegion list
+    NativeBodyCount: int
+    Entries: struct (uint32 * uint32 * uint32) array   // raw IL offset, native start, native end
 }
-```
 
-- The map evidence must carry all five values. A body is the pair of `CodeStart` and `CodeSize` with its method identity.
-- The resolver accepts a sample only when its IP is inside `[CodeStart, CodeStart + CodeSize)`, and when that range equals the bound perf-map range of the same symbol in the discovery outcome. Otherwise it gives `StaleCodeVersion`. This rejects a sample against a body that moved or that another body replaced, as far as the ranges show. It does not prove the code lifetime, as with discovery.
-- The PDB is matched by the MVID and the PDB id of the module, through the existing reader. A different MVID gives `ModuleMismatch`.
-
-### Map representation
-
-```fsharp
-type TargetNativeMapEntry = { IlOffset: TargetIlOffset; NativeStart: uint32; NativeEnd: uint32 }
-and TargetIlOffset = Il of uint32 | Prolog | Epilog | NoMapping
-
-type TargetNativeMap = private { Version: TargetCodeVersion; Entries: TargetNativeMapEntry array }  // sorted by NativeStart
-
-module TargetNativeMap =
-    val tryCreate: version: TargetCodeVersion -> entries: TargetNativeMapEntry seq -> Result<TargetNativeMap, TargetNativeMapError>
-```
-
-`tryCreate` copies and sorts the entries by native start, and it rejects:
-- `EmptyMap`, `InvertedRange` (`NativeEnd <= NativeStart`), `OutsideBody` (`NativeEnd > CodeSize`), and `UnknownSpecialOffset`.
-- `Overlap`: two native ranges that share an address.
-- `Gap`: a native address in `[0, CodeSize)` that no entry holds. The runtime gives a complete tiling of the hot body, so a gap means a wrong or truncated map, for example a capped event.
-- One IL offset with several native ranges is accepted, because the runtime gives that form.
-
-### Resolution
-
-```fsharp
-type TargetLineResult =
-    | Line of document: string * line: int * column: int * ilRange: (uint32 * uint32 option)
-    | InProlog | InEpilog | Unmapped
-    | HiddenSequencePoint of ilOffset: uint32
-    | NoSequencePoint of ilOffset: uint32
+type TargetLineResolver   // opaque: Label, Symbol, Limitations, Uncovered (copies)
 
 module TargetLineAttribution =
-    val resolve: map: TargetNativeMap -> points: TargetSequencePoints -> ip: uint64 -> Result<TargetLineResult, TargetLineError>
+    val tryPrepare: outcome: TargetDiscoveryOutcome -> symbol: string -> assemblyPath: string -> evidence: TargetCodeEvidence
+                    -> Result<TargetLineResolver, TargetLinePrepareError list>
+    val resolve: resolver: TargetLineResolver -> ip: uint64 -> TargetLineResult
+
+type TargetLineResult =
+    | Line of TargetLineLocation   // document, start and end line and column, IL start, IL end
+    | InProlog | InEpilog | Unmapped | Uncovered
+    | HiddenSequencePoint of ilOffset: uint32
+    | NoSequencePoint of ilOffset: uint32
+    | OutsideBody
 ```
 
-- The resolver finds the one entry with `NativeStart <= ip - CodeStart < NativeEnd`.
-- `Prolog`, `Epilog`, and `NoMapping` give `InProlog`, `InEpilog`, and `Unmapped`. They never give a line.
-- An IL offset selects the sequence point with the greatest IL offset at or below it. A hidden point gives `HiddenSequencePoint`, and the resolver does not move to a neighbor point. No point at or below the offset gives `NoSequencePoint`.
-- `Line` keeps the IL range of the point, from its offset to the next point, or open at the end. So a caller can see that the result is a range, not one instruction.
-- `TargetSequencePoints` is a parsed, immutable copy of the points of one method from the matched PDB. The existing reader gets a function that returns all points, not only the first visible point.
+The limitations of each resolver: `SuppliedEvidence label`, `OptimizedBoundariesAreCoarse`, `SequencePointRangeInferred`, `InlineesAttributedToCallSite`, `IlRewriteNotExcluded`, `MapEntryTimingNotProven`, `CodeLifetimeNotProven`, and `NoCallchainAttribution`. `InlineesAttributedToCallSite` is always present, because no supplied field can prove that no callee was inlined.
 
-### Cases that the resolver rejects
+`TargetSourceAnchor` gets an internal function that opens the PE and the matched PDB once and returns the MVID, the assembly name, the method row, the IL body size, and all sequence points. Its public behavior does not change.
 
-- Inlining: an inlinee shows as the call-site IL offset of the caller. The resolver cannot tell inlined code from the call. Each result of a method that has inlined callees carries the limitation `InlineesAttributedToCallSite`. The evidence must state whether the JIT inlined into the method. When it does not state it, the limitation is always present.
-- Shared generics: a `__Canon` body and its token map are not confirmed. The resolver rejects a generic method or a method of a generic type with `SharedGenericUnsupported`, as `TargetSymbol` does.
-- Several code versions: with tiering and ReadyToRun off, a method has one default body. A non-zero `NativeVersionId`, a second body for one method in the evidence, or cold code gives `MultipleCodeVersionsUnsupported`.
-- Rewritten IL: the target-local path does not rewrite IL. If evidence comes from a rewritten method, it must say so, and the resolver rejects it with `RewrittenIlUnsupported`. The legacy profiler gets original offsets through `SetILInstrumentedCodeMap`, but this milestone does not take that path.
+## Usage
 
-### Ownership and lifetime
-
-- The caller owns the evidence, and the resolver copies it. A map is valid only for its `TargetCodeVersion`.
-- Every result carries the limitations `OptimizedBoundariesAreCoarse`, `SequencePointRangeIsInferred`, `MapTimingNotProven`, and `NoCallchain`. Optimized code has only stack-empty and call-site boundaries, so a line can cover several source statements.
-
-### Platform
-
-- The resolver and its checks are portable.
-- Live acquisition is a later milestone. It needs a profiler component that answers `ICorProfilerCallback9` or uses a profiler thread, calls `GetNativeCodeStartAddresses` and `GetILToNativeMapping3` after `JITCompilationFinished`, and exports the evidence. `ReJitProbe.Linux.cpp` shows that such a profiler loads in the Linux container. The capture path then stays Linux x64 only.
+```fsharp
+// The evidence is supplied. No live acquisition exists yet.
+let evidence = { Label = "synthetic: two-entry map"; ModuleVersionId = mvid; MethodToken = token; CodeStart = start
+                 Regions = [ { Start = start; Size = size } ]; NativeBodyCount = 1
+                 Entries = [| struct (0xFFFFFFFEu, 0u, 8u); struct (0u, 8u, uint32 size) |] }
+match TargetLineAttribution.tryPrepare outcome symbol assemblyPath evidence with
+| Ok resolver -> TargetLineAttribution.resolve resolver sampleIp
+| Error errors -> ...
+```
 
 ## Acceptance criteria
 
-Proposed. They would add to criteria 1 to 213 and change none.
+These criteria replace the proposed criteria 214 to 219, before the implementation. They add to criteria 1 to 213 and change none.
 
-214. `TargetNativeMap.tryCreate` checks cover each error case, an unsorted input that it sorts, one IL offset with two native ranges, and a copy that later input changes cannot alter.
-215. `resolve` checks cover the first and the last address of a range, the end address, an address before the body and at the body end, each special entry, and a body whose start differs from the bound range (`StaleCodeVersion`).
-216. Sequence point checks use the PDB of the test assembly and hand-built points: an exact offset, an offset between points, an offset after the last point, an offset before the first point, and a hidden point, which gives `HiddenSequencePoint` and not a neighbor line.
-217. A PDB of another MVID gives `ModuleMismatch`. A generic method, a non-zero native version, a second body, cold code, and rewritten IL each give their error.
-218. Every result carries the four limitations, and `InlineesAttributedToCallSite` when the evidence does not exclude inlining.
-219. All evidence in the checks is labeled synthetic. No profiler, native change, or live run is part of this milestone.
+214. `tryPrepare` checks cover `CandidateNotDiscovered`, `RangeMismatch`, `ColdCodeUnsupported`, `MultipleBodiesUnsupported`, an overflow of the code range, `IdentityMismatch` for the MVID, the assembly, and the method name, `SharedGenericUnsupported`, and the PDB errors.
+215. Decoding checks cover the three special `uint32` values, an IL offset at the IL body size, an unknown special value, an inverted range, an end above the code size, an overlap, a zero-length entry, an uncovered start, one IL offset with two native ranges, and an unsorted input.
+216. `resolve` checks cover the first and the last address of an entry, the end address, an address before and after the body, `Uncovered`, and each special entry.
+217. Sequence-point checks use the PDB of the test assembly: an exact offset, an offset between points, the last interval bounded by the IL body size, an offset before the first point, and a hidden point that does not fall to a neighbor line.
+218. A retained runtime map, labeled with its source, prepares with a matching synthetic identity and resolves each of its entries. Caller arrays changed after `tryPrepare` do not change the resolver, and its accessors return copies.
+219. Every resolver carries the eight limitations. The case names differ from the discovery cases with similar meaning, so that an unqualified name is not ambiguous. All evidence in the checks is synthetic or retained, and labeled. No profiler, native change, or live run is part of this milestone.
+
+## Implementation
+
+- `src/CozNet/TargetLineAttribution.fs` holds the evidence, the errors, the limitations, the resolver, and `tryPrepare` and `resolve`.
+- `TargetSourceAnchor.tryReadMethod` is internal. It opens the PE and the matched PDB once, and it gives the MVID, the assembly name, the type and method name, the generic flag, the IL body size, and all sequence points. `tryFindIn` uses the same reader and does not change.
+- `tests/CozNet.Tests/TargetLineAttributionTests.fs` holds 10 checks. One of them, a PE file without metadata, runs only on Windows. The fixture method `LineFixture.Loop` has an IL body of 40 bytes and a hidden sequence point at IL offset 27 in the Debug test build. A Release build gives other IL offsets, so these fixture values apply to the Debug build that the test project uses.
+- The retained runtime map belongs to another method. The check uses it only for its shape: it prepares, it tiles the body, and each IL offset resolves inside the IL body. Its lines have no meaning for the fixture.
+- Two mutations were checked by hand. An end-inclusive lookup fails 4 checks, and a resolver that ignores hidden points fails 1.
 
 ## What this leaves open
 

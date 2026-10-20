@@ -362,10 +362,73 @@ type TargetSourceAnchorError =
 [<RequireQualifiedAccess>]
 module TargetSourceAnchor =
     type internal Point = {
+        Offset: int
         Hidden: bool
         Document: string
         Line: int
         Column: int
+        EndLine: int
+        EndColumn: int
+    }
+
+    type internal MethodRecord = {
+        ModuleVersionId: Guid
+        AssemblyName: string
+        TypeName: string
+        MethodName: string
+        Parameters: string
+        Generic: bool
+        IlBodySize: int option
+        Points: Point array
+    }
+
+    let internal unsupportedType = "?"
+
+    let private baseNames =
+        set [ "bool"; "char"; "int8"; "uint8"; "int16"; "uint16"; "int32"; "uint32"; "int64"; "uint64"; "float32"; "float64"
+              "native int"; "native uint"; "string"; "object" ]
+
+    let private wrap (element: string) (suffix: string) = if baseNames.Contains element then element + suffix else unsupportedType
+
+    let internal primitiveName (code: PrimitiveTypeCode) =
+        match code with
+        | PrimitiveTypeCode.Boolean -> "bool"
+        | PrimitiveTypeCode.Char -> "char"
+        | PrimitiveTypeCode.SByte -> "int8"
+        | PrimitiveTypeCode.Byte -> "uint8"
+        | PrimitiveTypeCode.Int16 -> "int16"
+        | PrimitiveTypeCode.UInt16 -> "uint16"
+        | PrimitiveTypeCode.Int32 -> "int32"
+        | PrimitiveTypeCode.UInt32 -> "uint32"
+        | PrimitiveTypeCode.Int64 -> "int64"
+        | PrimitiveTypeCode.UInt64 -> "uint64"
+        | PrimitiveTypeCode.Single -> "float32"
+        | PrimitiveTypeCode.Double -> "float64"
+        | PrimitiveTypeCode.IntPtr -> "native int"
+        | PrimitiveTypeCode.UIntPtr -> "native uint"
+        | PrimitiveTypeCode.String -> "string"
+        | PrimitiveTypeCode.Object -> "object"
+        | _ -> unsupportedType
+
+    type private SignatureNames() =
+        interface ISignatureTypeProvider<string, obj> with
+            member _.GetPrimitiveType code = primitiveName code
+            member _.GetSZArrayType element = wrap element "[]"
+            member _.GetByReferenceType element = wrap element "&"
+            member _.GetPointerType element = wrap element "*"
+            member _.GetArrayType(_, _) = unsupportedType
+            member _.GetFunctionPointerType _ = unsupportedType
+            member _.GetGenericInstantiation(_, _) = unsupportedType
+            member _.GetGenericMethodParameter(_, _) = unsupportedType
+            member _.GetGenericTypeParameter(_, _) = unsupportedType
+            member _.GetModifiedType(_, _, _) = unsupportedType
+            member _.GetPinnedType _ = unsupportedType
+            member _.GetTypeFromDefinition(_, _, _) = unsupportedType
+            member _.GetTypeFromReference(_, _, _) = unsupportedType
+            member _.GetTypeFromSpecification(_, _, _, _) = unsupportedType
+
+    type private PeFacts = {
+        Facts: MethodRecord
     }
 
     let internal firstVisible (points: Point seq) : TargetSourceAnchor option =
@@ -373,15 +436,15 @@ module TargetSourceAnchor =
         |> Seq.tryFind (fun point -> not point.Hidden)
         |> Option.map (fun point -> { TargetSourceAnchor.Document = point.Document; Line = point.Line; Column = point.Column })
 
-    let private anchor (reader: MetadataReader) (metadataToken: int) =
-        let handle =
-            try
-                let handle = MetadataTokens.MethodDefinitionHandle(metadataToken &&& 0x00FFFFFF)
-                let row = MetadataTokens.GetRowNumber handle
-                if (metadataToken >>> 24) = 0x06 && row >= 1 && row <= reader.MethodDebugInformation.Count then Some handle else None
-            with :? ArgumentException -> None
+    let private methodHandle (rows: int) (metadataToken: int) =
+        try
+            let handle = MetadataTokens.MethodDefinitionHandle(metadataToken &&& 0x00FFFFFF)
+            let row = MetadataTokens.GetRowNumber handle
+            if (metadataToken >>> 24) = 0x06 && row >= 1 && row <= rows then Some handle else None
+        with :? ArgumentException -> None
 
-        match handle with
+    let private pointsOf (reader: MetadataReader) (metadataToken: int) =
+        match methodHandle reader.MethodDebugInformation.Count metadataToken with
         | None -> Error(MethodNotInPdb metadataToken)
         | Some handle ->
             let information = reader.GetMethodDebugInformation(handle.ToDebugInformationHandle())
@@ -389,30 +452,83 @@ module TargetSourceAnchor =
             if information.SequencePointsBlob.IsNil then
                 Error(MethodNotInPdb metadataToken)
             else
-                let points =
-                    information.GetSequencePoints()
-                    |> Seq.map (fun point ->
-                        { Hidden = point.IsHidden
-                          Document = (if point.IsHidden || point.Document.IsNil then "" else reader.GetString(reader.GetDocument(point.Document).Name))
-                          Line = point.StartLine
-                          Column = point.StartColumn })
-                    |> Seq.toArray
+                information.GetSequencePoints()
+                |> Seq.map (fun point ->
+                    { Offset = point.Offset
+                      Hidden = point.IsHidden
+                      Document = (if point.IsHidden || point.Document.IsNil then "" else reader.GetString(reader.GetDocument(point.Document).Name))
+                      Line = point.StartLine
+                      Column = point.StartColumn
+                      EndLine = point.EndLine
+                      EndColumn = point.EndColumn })
+                |> Seq.toArray
+                |> Ok
 
-                match firstVisible points with
-                | Some found -> Ok found
-                | None when points.Length = 0 -> Error(MethodNotInPdb metadataToken)
-                | None -> Error(OnlyHiddenSequencePoints metadataToken)
+    let private anchor () (reader: MetadataReader) (metadataToken: int) =
+        match pointsOf reader metadataToken with
+        | Error error -> Error error
+        | Ok points ->
+            match firstVisible points with
+            | Some found -> Ok found
+            | None when points.Length = 0 -> Error(MethodNotInPdb metadataToken)
+            | None -> Error(OnlyHiddenSequencePoints metadataToken)
 
-    let private read (assemblyPath: string) (metadataToken: int) =
+    let private noFacts (_: string) (_: PEReader) (_: int) : Result<unit, TargetSourceAnchorError> = Ok()
+
+    let private peFacts (assemblyPath: string) (pe: PEReader) (metadataToken: int) =
+        if not pe.HasMetadata then
+            Error(AssemblyMalformed(assemblyPath, "The file has no metadata."))
+        else
+        let metadata = pe.GetMetadataReader()
+
+        if not metadata.IsAssembly then
+            Error(AssemblyMalformed(assemblyPath, "The module has no assembly manifest."))
+        else
+            match methodHandle metadata.MethodDefinitions.Count metadataToken with
+            | None -> Error(MethodNotInPdb metadataToken)
+            | Some handle ->
+                let definition = metadata.GetMethodDefinition handle
+                let rec typeName (typeHandle: TypeDefinitionHandle) =
+                    let t = metadata.GetTypeDefinition typeHandle
+                    let name = metadata.GetString t.Name
+                    if t.GetDeclaringType().IsNil then
+                        let ns = metadata.GetString t.Namespace
+                        (if ns = "" then name else ns + "." + name), t.GetGenericParameters().Count > 0
+                    else
+                        let outer, generic = typeName (t.GetDeclaringType())
+                        outer + "+" + name, generic || t.GetGenericParameters().Count > 0
+                let declaring, genericType = typeName (definition.GetDeclaringType())
+                let signature = definition.DecodeSignature(SignatureNames(), null)
+                let size = if definition.RelativeVirtualAddress = 0 then None else Some((pe.GetMethodBody definition.RelativeVirtualAddress).GetILContent().Length)
+                Ok { Facts =
+                        { ModuleVersionId = metadata.GetGuid(metadata.GetModuleDefinition().Mvid)
+                          AssemblyName = metadata.GetString(metadata.GetAssemblyDefinition().Name)
+                          TypeName = declaring
+                          MethodName = metadata.GetString definition.Name
+                          Parameters = String.Join(",", signature.ParameterTypes)
+                          Generic = genericType || definition.GetGenericParameters().Count > 0
+                          IlBodySize = size
+                          Points = [||] } }
+
+    let private methodRecord (facts: PeFacts) (pdb: MetadataReader) (metadataToken: int) =
+        match pointsOf pdb metadataToken with
+        | Error error -> Error error
+        | Ok points -> Ok { facts.Facts with Points = points }
+
+    let private read (assemblyPath: string) (metadataToken: int) (prepare: string -> PEReader -> int -> Result<'p, TargetSourceAnchorError>)
+        (select: 'p -> MetadataReader -> int -> Result<'a, TargetSourceAnchorError>) =
             use stream = File.OpenRead assemblyPath
             use pe = new PEReader(stream)
+            match prepare assemblyPath pe metadataToken with
+            | Error error -> Error error
+            | Ok prepared ->
             let entries = pe.ReadDebugDirectory()
 
             match entries |> Seq.tryFind (fun e -> e.Type = DebugDirectoryEntryType.EmbeddedPortablePdb) with
             | Some embedded ->
                 try
                     use provider = pe.ReadEmbeddedPortablePdbDebugDirectoryData embedded
-                    anchor (provider.GetMetadataReader()) metadataToken
+                    select prepared (provider.GetMetadataReader()) metadataToken
                 with :? BadImageFormatException as e -> Error(PdbMalformed(assemblyPath, e.Message))
             | None ->
                 match entries |> Seq.tryFind (fun e -> e.Type = DebugDirectoryEntryType.CodeView) with
@@ -436,7 +552,7 @@ module TargetSourceAnchor =
                                 use provider = MetadataReaderProvider.FromPortablePdbStream(pdb, MetadataStreamOptions.PrefetchMetadata)
                                 let reader = provider.GetMetadataReader()
 
-                                if BlobContentId(reader.DebugMetadataHeader.Id) = expected then anchor reader metadataToken
+                                if BlobContentId(reader.DebugMetadataHeader.Id) = expected then select prepared reader metadataToken
                                 else search (Some path) rest
                             with
                             | :? BadImageFormatException as e -> Error(PdbMalformed(path, e.Message))
@@ -444,16 +560,20 @@ module TargetSourceAnchor =
                             | :? UnauthorizedAccessException as e -> Error(PdbUnreadable(path, e.Message))
                     search None candidates
 
-    let tryFindIn (assemblyPath: string) (metadataToken: int) =
+    let private open' (assemblyPath: string) (metadataToken: int) prepare (select: 'p -> MetadataReader -> int -> Result<'a, TargetSourceAnchorError>) =
         if String.IsNullOrEmpty assemblyPath || not (File.Exists assemblyPath) then
             Error NoAssemblyFile
         else
             try
-                read assemblyPath metadataToken
+                read assemblyPath metadataToken prepare select
             with
             | :? BadImageFormatException as e -> Error(AssemblyMalformed(assemblyPath, e.Message))
             | :? IOException
             | :? UnauthorizedAccessException as e -> Error(AssemblyUnreadable(assemblyPath, e.Message))
+
+    let tryFindIn (assemblyPath: string) (metadataToken: int) = open' assemblyPath metadataToken noFacts anchor
+
+    let internal tryReadMethod (assemblyPath: string) (metadataToken: int) = open' assemblyPath metadataToken peFacts methodRecord
 
     let tryFind (method: MethodBase) =
         if method :? Emit.DynamicMethod || method.Module.Assembly.IsDynamic then Error NoAssemblyFile

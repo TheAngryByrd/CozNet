@@ -66,22 +66,22 @@ module TargetDiscoveryTests =
         | Ok index -> index
         | Error error -> failtestf "The labels must index: %s" (PerfMapIndex.describe error)
 
-    let private scope includes excludes =
+    let internal scope includes excludes =
         match TargetDiscoveryScope.tryCreate includes excludes with
         | Ok scope -> scope
         | Error error -> failtestf "The scope must parse: %A" error
 
-    let private limit count =
+    let internal limit count =
         match TargetDiscoveryLimit.tryCreate count with
         | Ok limit -> limit
         | Error message -> failtest message
 
-    let private event kind worker ip amount : TargetLedgerEvent =
+    let internal event kind worker ip amount : TargetLedgerEvent =
         { Worker = worker; Sequence = 0UL; Kind = kind; ObservedGlobal = 0UL; LocalBefore = 0UL; Amount = amount; Requested = 0UL; Ip = ip; Detail = 0u; Time = 0UL }
 
-    let private sample worker ip = event TargetLedgerEventKind.Sample worker ip 0UL
+    let internal sample worker ip = event TargetLedgerEventKind.Sample worker ip 0UL
 
-    let private samples worker ip count = List.replicate count (sample worker ip)
+    let internal samples worker ip count = List.replicate count (sample worker ip)
 
     let private classEvents =
         [ yield! samples 0 0x1000UL 3
@@ -115,13 +115,13 @@ module TargetDiscoveryTests =
         | null -> failtestf "The test method %s.%s must exist." t.FullName name
         | method -> method
 
-    let private lineOf (path: string) (text: string) =
+    let internal lineOf (path: string) (text: string) =
         let lines = File.ReadAllLines path
         match lines |> Array.tryFindIndex (fun line -> line.Contains(text, StringComparison.Ordinal)) with
         | Some index -> index + 1
         | None -> failtestf "The source %s must hold %s." path text
 
-    let private run () : TargetProfileResult =
+    let internal run () : TargetProfileResult =
         { ElapsedNs = 1UL; GlobalNs = 0UL; EffectiveNs = 1UL; Experiment = TargetExperimentResult(); CloseCode = 0
           Threads = [| { RunDelayNs = 0L; StartRunDelayNs = 0L; StartTrace = [||]; WaitRunDelayNs = [||]; WaitRunDelaysDropped = 0
                          Result = TargetThreadResult(); FinishCode = 0; Error = null; StartedTicks = 0L; FinishedTicks = 0L } |]
@@ -130,7 +130,7 @@ module TargetDiscoveryTests =
                         Deferred = 0; Failures = 0; MaxObservedDebt = 0UL; Blocks = 0; DependencyWakes = 0; SkippedDelay = 0UL }
           BindingError = None; Passed = true }
 
-    let private inTemporaryFolder (action: string -> unit) =
+    let internal inTemporaryFolder (action: string -> unit) =
         let folder = Path.Combine(Path.GetTempPath(), "coznet-discovery-" + Guid.NewGuid().ToString("N"))
         try
             Directory.CreateDirectory folder |> ignore
@@ -447,7 +447,7 @@ module TargetDiscoveryTests =
                     Expect.equal (TargetSourceAnchor.tryFindIn "" 0x06000001) (Error NoAssemblyFile) "An empty path must reject."
                     Expect.equal (TargetSourceAnchor.tryFindIn typeof<DiscoveryShapes>.Assembly.Location 0x02000001) (Error(MethodNotInPdb 0x02000001)) "A token that is not a method must reject."
                     Expect.equal (TargetSourceAnchor.tryFindIn typeof<DiscoveryShapes>.Assembly.Location 0x06000000) (Error(MethodNotInPdb 0x06000000)) "A method token with row 0 must reject."
-                    let point hidden line : TargetSourceAnchor.Point = { Hidden = hidden; Document = "a.fs"; Line = line; Column = 1 }
+                    let point hidden line : TargetSourceAnchor.Point = { Offset = 0; Hidden = hidden; Document = "a.fs"; Line = line; Column = 1; EndLine = line; EndColumn = 2 }
                     Expect.equal (TargetSourceAnchor.firstVisible [ point true 0xFEEFEE; point false 7; point false 9 ]) (Some { Document = "a.fs"; Line = 7; Column = 1 }) "A hidden sequence point must be skipped."
                     Expect.equal (TargetSourceAnchor.firstVisible [ point true 0xFEEFEE ]) None "Only hidden points give no anchor."
                 }

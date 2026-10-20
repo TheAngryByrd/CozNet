@@ -33,6 +33,7 @@
         <Compile Include="TargetLockTests.fs" />
     <Compile Include="TargetSemaphoreTests.fs" />
         <Compile Include="TargetDiscoveryTests.fs" />
+        <Compile Include="TargetLineAttributionTests.fs" />
         <Compile Include="Main.fs" />
     </ItemGroup>
 </Project>

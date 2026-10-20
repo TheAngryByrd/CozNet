@@ -260,6 +260,56 @@ The verified parameter names are `bool`, `char`, `int8`, `uint8`, `int16`, `uint
 
 A source anchor uses an embedded portable PDB first. Otherwise it uses the PDB next to the assembly, with the file name in the CodeView entry, only when the PDB id equals the CodeView id. The anchor errors are `NoAssemblyFile`, `NoDebugDirectory`, `NotPortablePdb`, `PdbNotFound searched`, `PdbMismatch path`, `PdbMalformed (path, message)`, `PdbUnreadable (path, message)`, `AssemblyMalformed (path, message)`, `AssemblyUnreadable (path, message)`, `MethodNotInPdb token`, and `OnlyHiddenSequencePoints token`. A file that cannot be read or parsed gives an error, not an exception. `tryFind` gives `NoAssemblyFile` for a method of a dynamic assembly.
 
+## Line attribution
+
+`src/CozNet/TargetLineAttribution.fs` maps a native address inside one discovered method to a sequence point. It is portable. The native-to-IL map is supplied by the caller. No CozNet code reads it from the runtime yet. See [the limits](../Explanations/target-local-line-attribution.md).
+
+`TargetCodeEvidence` is the raw input:
+
+| Field | Meaning |
+| --- | --- |
+| `Label` | The source of the evidence, for example `synthetic: ...` or `retained: ...`. It must not be blank. |
+| `ModuleVersionId` | The MVID of the module. |
+| `MethodToken` | The MethodDef token of the method. |
+| `CodeStart` | The native start address of the body. |
+| `Regions` | The code regions of the body. Exactly one region is supported. |
+| `NativeBodyCount` | The number of native bodies of the method. It must be 1. |
+| `Entries` | Raw map entries: the IL offset as `uint32`, the native start, and the native end, relative to `CodeStart`. |
+
+| Function | Result |
+| --- | --- |
+| `TargetLineAttribution.tryPrepare outcome symbol assemblyPath evidence` | `Ok resolver`, or a list of `TargetLinePrepareError`. |
+| `TargetLineAttribution.resolve resolver ip` | A `TargetLineResult`. |
+
+`tryPrepare` checks, in this order:
+- The symbol is a candidate of the outcome, else `CandidateNotDiscovered`.
+- The evidence: `EvidenceLabelBlank`, `MultipleBodiesUnsupported`, `ColdCodeUnsupported`, `RangeOverflow`, and `RangeMismatch` when the region differs from the candidate range.
+- The PE and its matched PDB, through the source anchor reader: `SourceError`.
+- The identity: `IdentityMismatch` for the MVID, the assembly name, the type and method name, or the parameter types of the token, `SharedGenericUnsupported`, and `NoIlBody`. The IL body size is the length of the IL code, without the method header.
+- The map: `EmptyMap`, `IlOffsetBeyondBody`, `InvertedRange`, and `UnsupportedMapShape` for an end above the code size or an overlap.
+
+The IL offset values `0xFFFFFFFF`, `0xFFFFFFFE`, and `0xFFFFFFFD` are no mapping, prolog, and epilog. A zero-length entry is accepted and holds no address. A part of the body that no entry covers is in `resolver.Uncovered`.
+
+`resolve` gives:
+- `Line location`: the document, the start and end line and column, and the IL range of the sequence point. The IL range of the last point ends at the IL body size.
+- `InProlog`, `InEpilog`, `Unmapped`, or `Uncovered`.
+- `HiddenSequencePoint ilOffset` or `NoSequencePoint ilOffset`.
+- `OutsideBody` for an address outside the code region.
+
+`resolver.Limitations` always holds `SuppliedEvidence label`, `OptimizedBoundariesAreCoarse`, `SequencePointRangeInferred`, `InlineesAttributedToCallSite`, `IlRewriteNotExcluded`, `MapEntryTimingNotProven`, `CodeLifetimeNotProven`, and `NoCallchainAttribution`.
+
+```fsharp
+// The evidence is supplied. No live acquisition exists yet.
+let evidence =
+    { Label = "synthetic: two-entry map"; ModuleVersionId = mvid; MethodToken = token; CodeStart = start
+      Regions = [ { Start = start; Size = size } ]; NativeBodyCount = 1
+      Entries = [| struct (0xFFFFFFFEu, 0u, 8u); struct (0u, 8u, uint32 size) |] }
+
+match TargetLineAttribution.tryPrepare outcome symbol assemblyPath evidence with
+| Ok resolver -> printfn "%A" (TargetLineAttribution.resolve resolver sampleIp)
+| Error errors -> printfn "No resolver: %A" errors
+```
+
 ## Shutdown
 
 `Environment.Exit` during a profile is a supported exit. The process exits, and the kernel releases the event, mapping, and signal state.
