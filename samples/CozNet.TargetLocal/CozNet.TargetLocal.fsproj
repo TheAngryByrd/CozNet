@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/CozNet/CozNet.fsproj" />
     <Compile Include="Work.fs" />
+    <Compile Include="DiscoveryCheck.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 </Project>

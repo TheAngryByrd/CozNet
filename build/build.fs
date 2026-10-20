@@ -537,9 +537,10 @@ let targetLocalTransactionVerify _ = nativeScriptWithArgs "VerifyTargetLocalProf
 let targetLocalSpinTransactionVerify _ = nativeScriptWithArgs "VerifyTargetLocalProfile.ps1" [ "-Workload"; "spintransaction" ]
 let targetLocalQualify _ = nativeScript "QualifyTargetLocal.ps1"
 let targetLocalBottleneckVerify _ = nativeScript "VerifyTargetLocalBottleneck.ps1"
+let targetLocalDiscoveryVerify _ = nativeScript "VerifyTargetLocalDiscovery.ps1"
 
 let targetPredictionAnalysisChecks _ =
-    for script in [ "native/TargetPredictionAnalysisChecks.py"; "native/TargetGcAnalysisChecks.py"; "native/TargetProfileAnalysisChecks.py"; "native/TargetLocalPackageChecks.py"; "native/TargetBottleneckAnalysisChecks.py"; "native/TargetProbeAnalysisChecks.py"; "native/TargetLatencyModelChecks.py" ] do
+    for script in [ "native/TargetPredictionAnalysisChecks.py"; "native/TargetGcAnalysisChecks.py"; "native/TargetProfileAnalysisChecks.py"; "native/TargetLocalPackageChecks.py"; "native/TargetBottleneckAnalysisChecks.py"; "native/TargetProbeAnalysisChecks.py"; "native/TargetLatencyModelChecks.py"; "native/TargetDiscoveryAnalysisChecks.py" ] do
         CreateProcess.fromRawCommand (Environment.environVarOrDefault "COZNET_PYTHON" "python") [
             rootDirectory
             </> script
@@ -1334,6 +1335,7 @@ let initTargets () =
     Target.create "TargetLocalSpinTransactionVerify" targetLocalSpinTransactionVerify
     Target.create "TargetLocalQualify" targetLocalQualify
     Target.create "TargetLocalBottleneckVerify" targetLocalBottleneckVerify
+    Target.create "TargetLocalDiscoveryVerify" targetLocalDiscoveryVerify
     Target.create "TargetPredictionAnalysisChecks" targetPredictionAnalysisChecks
     Target.create "LinuxTimerInterop" linuxTimerInterop
     Target.create "LinuxTimerManaged" linuxTimerManaged

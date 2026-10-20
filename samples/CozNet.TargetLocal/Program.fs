@@ -838,6 +838,85 @@ let private bindingCheck (output: string) =
                     passed = passed |}
     if passed then 0 else 1
 
+let private sha256 (bytes: byte array) = Convert.ToHexString(Security.Cryptography.SHA256.HashData bytes)
+
+let private fileHash (path: string) = if File.Exists path then sha256 (File.ReadAllBytes path) else ""
+
+let private discoveryCheck (output: string) =
+    if not (TargetLocalProfiler.isSupported ()) then
+        write output {| mode = "discovery-check"; supported = false; passed = false |}
+        4
+    else
+        let configuration = CodeBinding.configurationErrors ()
+        Work.selected 1UL |> ignore
+        Work.peer 1UL |> ignore
+        let capture =
+            if not configuration.IsEmpty then
+                Error "The binding was not tried, because the configuration has errors."
+            else
+                try
+                    CodeBinding.tryCapture (File.ReadAllLines(PerfMap.currentProcess ())) [| Work.selectedName; Work.peerName |]
+                with
+                | :? IOException
+                | :? UnauthorizedAccessException as error -> Error $"The perf map could not be read: {error.Message}"
+
+        match configuration, capture with
+        | _ :: _, _
+        | _, Error _ ->
+            write output {| mode = "discovery-check"; supported = true; configurationErrors = configuration
+                            bindError = (match capture with Error message -> message | Ok _ -> ""); passed = false |}
+            1
+        | [], Ok binding ->
+            let selectedRange = binding.Range Work.selectedName
+            let peerRange = binding.Range Work.peerName
+            let workers = [|
+                { Work = (fun () -> Work.selected 60000UL |> ignore); PaymentIp = fst selectedRange }
+                { Work = (fun () -> Work.peer 30000UL |> ignore); PaymentIp = fst peerRange }
+            |]
+            let result = TargetLocalProfiler.runBound binding 0u period [||] [| Work.selectedName; Work.peerName |] journalCapacity workers ignore
+            let pid = Environment.ProcessId
+            let mapPath = PerfMap.currentProcess ()
+            let lines = File.ReadAllLines mapPath
+            let mapText = String.Join("\n", lines)
+            File.WriteAllText(output + ".perf-map", mapText)
+            let sample = Reflection.Assembly.GetExecutingAssembly()
+            let library = typeof<CodeBinding>.Assembly
+            let evaluation = DiscoveryCheck.evaluate lines result (DiscoveryCheck.methodsBySymbol sample) period
+            let closed = result.Experiment
+            write output {|
+                mode = "discovery-check"
+                supported = true
+                configurationErrors = configuration
+                pid = pid
+                mapPath = mapPath
+                mapLines = lines.Length
+                mapSha256 = sha256 (Text.Encoding.UTF8.GetBytes mapText)
+                files =
+                    [| sample.Location; IO.Path.ChangeExtension(sample.Location, ".pdb"); library.Location; IO.Path.ChangeExtension(library.Location, ".pdb") |]
+                    |> Array.map (fun path -> {| path = path; sha256 = fileHash path |})
+                period = period
+                journalCapacity = journalCapacity
+                eligible = [| Work.selectedName; Work.peerName |]
+                eligibleRanges = [| [| fst selectedRange; snd selectedRange |]; [| fst peerRange; snd peerRange |] |]
+                passed = result.Passed
+                bindingError = result.BindingError
+                closeCode = result.CloseCode
+                ledgerFailure = closed.Failure
+                foreignSignals = closed.ForeignSignals
+                replayError = (match result.Replay with Error message -> message | Ok _ -> "")
+                globalNs = result.GlobalNs
+                elapsedNs = result.ElapsedNs
+                threads =
+                    result.Threads
+                    |> Array.mapi (fun worker outcome ->
+                        let r = outcome.Result
+                        {| worker = worker; finishCode = outcome.FinishCode; error = outcome.Error; failure = r.Failure; lost = r.Lost; accepted = r.Accepted
+                           complete = r.Complete; cpuNs = r.Value; maxHandlerNs = r.MaxHandlerNs; finalDebt = r.FinalDebt
+                           sampleEvents = result.Events |> Array.filter (fun e -> e.Worker = worker && e.Kind = TargetLedgerEventKind.Sample) |> Array.length |})
+                discovery = evaluation
+            |}
+            if result.Passed then 0 else 1
+
 let private shutdown (output: string) =
     let binding = bind ()
     let selectedRange = binding.Range Work.selectedName
@@ -889,6 +968,7 @@ let main argv =
     | [| "probe"; output |] -> probe output
     | [| "cleanup"; output |] -> cleanup output
     | [| "binding"; output |] -> bindingCheck output
+    | [| "discovery-check"; output |] -> discoveryCheck output
     | [| "rejit"; output |] -> rejitCheck output
     | [| "causal-profile"; seed; rotation; output |] -> causalProfile (Int32.Parse seed) (Int32.Parse rotation) output
     | [| "throughput-profile"; seed; rotation; output |] -> throughputProfile (Int32.Parse seed) (Int32.Parse rotation) output
