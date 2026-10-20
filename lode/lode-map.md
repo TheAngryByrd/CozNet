@@ -6,7 +6,7 @@ For the native ledger, target-local payment, and journal replay, read [target-lo
 For the CLR fork/join workload, acceptance criteria, and qualification, read [target-local prediction](plans/target-local-prediction.md).
 For the wait protocol, `TargetBarrier`, and the release-token wake rule, read [target-local blocking](plans/target-local-blocking.md).
 For the current state of each capability, read [the roadmap table](plans/roadmap.md#current-state). For the verification chronology and open failures, read [target-local status](plans/target-local-status.md).
-For the proposed candidate discovery, read [target-local discovery](plans/target-local-discovery.md). For the earlier roadmap text, read [the roadmap history](plans/roadmap-history.md).
+For candidate discovery, read [target-local discovery](plans/target-local-discovery.md), [the discovery check](plans/target-local-discovery-check.md), and the proposed [discovery workflow](plans/target-local-discovery-workflow.md). For the earlier roadmap text, read [the roadmap history](plans/roadmap-history.md).
 For code binding, tiering rejection, shutdown, and failure diagnostics, read [target-local lifecycle](plans/target-local-lifecycle.md).
 For the per-wait run-queue delay, the debt rule for a thread that waits for a CPU, and source hashing, read [target-local wait delay](plans/target-local-wait-delay.md).
 For the start run-queue delay and the placement of a debt failure before the first wake, read [target-local start delay](plans/target-local-start-delay.md).
