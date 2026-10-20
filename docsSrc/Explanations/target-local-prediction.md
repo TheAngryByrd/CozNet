@@ -1,5 +1,7 @@
 # Target-local prediction and its support boundary
 
+The run descriptions on this page are a chronology. Each one gives the runs that existed when it was written. For the current support status and the package results, see [target-local support status](target-local-support.md).
+
 ## Why the fork/join model gives an exact answer
 
 Coz does not speed up the selected code. When the selected code runs, every other thread waits instead.
@@ -51,13 +53,13 @@ A mismatch rejects the run. The replay never changes credit. This gives one owne
 
 ## Support boundary
 
-The qualified model is narrow. It is a model of what CozNet can predict today, not a general .NET profiler.
+The verified model is narrow. It is a model of what CozNet can predict today, not a general .NET profiler. No qualification package has passed, so this is a verified scope, not a qualified one. See [the support status](target-local-support.md).
 
 | Supported | Not supported |
 | --- | --- |
 | Linux x64, kernel with `PERF_FORMAT_LOST` | Windows, macOS, Linux ARM64 |
 | CPU-bound managed threads that register through the CozNet ABI | Threads that do not register, the thread pool, tasks, and async |
-| No waits before the final join, or waits through `TargetBarrier` | Locks, `Monitor`, `System.Threading.Barrier`, I/O, and any other blocking |
+| No waits before the final join. Waits through `TargetBarrier`, `TargetQueue`, `TargetLock`, or `TargetSemaphore` are experimental, and their suites are not qualified. See [the support status](target-local-support.md). | `Monitor`, `System.Threading.Barrier`, I/O, and any other blocking |
 | Tiered compilation and ReadyToRun disabled, checked by `CodeBinding` | Tiered code replacement, OSR, and ReadyToRun images, which `runBound` rejects. ReJIT, which `runBound` detects and fails. A test profiler shows this. |
 | Selected code as named method ranges from the perf map | Source lines, inlined callees, and code that the JIT moves |
 | Workloads with little allocation | GC-heavy workloads. Eight current-design forced-GC checks each broke the 2 ms debt bound in 1 of 10 runs. |
@@ -100,7 +102,7 @@ and [the callback-reuse comparison](https://github.com/TheAngryByrd/CozNet/blob/
 | Coverage | Probe sites inside rewritten methods | Any sampled instruction. Payment needs an eligible address. |
 | Profile-zero overhead | Not isolated. Probe cost was the largest measured stage. | Handler share about 0.1% of elapsed time. Elapsed ratio medians from about 0.96 to 1.04. |
 | Runtime safety | Managed controller with native requests. Controller preemption broke the debt bound. | Native handler at managed addresses. Eight current-design forced-GC checks each fail 1 of 10 runs. One barrier run without forced GC also broke the debt bound. |
-| Prediction error | About 10 to 30 points of shortfall | Median absolute difference about 1 to 3 points in the qualified model |
+| Prediction error | About 10 to 30 points of shortfall | Median absolute difference about 1 to 3 points in the fork/join runs that pass |
 
 The comparison does not use the same workload. The target-local path removes the managed controller from each sample and payment.
 The earlier comparisons left component attribution unresolved, so this comparison does not show which change reduced the error.

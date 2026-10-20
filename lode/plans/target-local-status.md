@@ -1,11 +1,15 @@
 # Target-local verification status
 
-The qualification runners hash [the prediction plan](target-local-prediction.md), [the transition plan](target-local-transitions.md),
-and [the blocking plan](target-local-blocking.md). Those files change only before a run. This file holds the state after the latest runs.
+The current state of each capability, with its evidence, package result, and blocker, is in [the roadmap table](roadmap.md#current-state). No target-local qualification package has passed.
+
+This file is a chronology of verification, in the order of the work. A section describes the state when it was written. A later section can supersede it, and the failed runs and criteria in it stay as recorded.
+
+The qualification runners hash the suite plans, for example [the prediction plan](target-local-prediction.md), [the transition plan](target-local-transitions.md),
+and [the blocking plan](target-local-blocking.md). Those files change only before a run.
 
 ## Wait protocol
 
-The wait protocol is implemented. `TargetBarrier` is the only primitive that uses it.
+The wait protocol is implemented. `TargetBarrier` was the first primitive that used it. `TargetQueue`, `TargetSemaphore`, and `TargetLock` use it too, through the module `TargetWait` in `src/CozNet/TargetLocalProfiler.fs`.
 
 - `ThreadDelayAccount` has `catchUp`, `post`, `beginBlock`, and `endBlock`. `settle` returns `blocked` while blocked.
 - `LinuxTargetSession` has `suspendNotifications`, `resumeNotifications`, and `drainNow` for explicit calls on the session thread.
@@ -24,13 +28,13 @@ let work () = for phase in phases do runPhase phase; barrier.SignalAndWait()
 
 Deterministic checks cover dependency, timeout, cancellation, and spurious wakes, debt at block, the post race, and each protocol violation.
 A mutation that skips to the wake-time global delay fails the native race check.
-The latest [barrier qualification](../../reliability/features/target-local/barrier.md) fails by a 2 ms debt-bound failure at the start of one profiled arm. Five of the eleven barrier runs fail. Of the four earlier failures, one has measured run-queue delay, one has an SMT hypothesis that a diagnostic run is consistent with, one predates the diagnostics, and one followed a diagnostic read inside the timed window that raised overhead.
+At the time of this section, the latest [barrier qualification](../../reliability/features/target-local/barrier.md) failed by a 2 ms debt-bound failure at the start of one profiled arm, and five of the first eleven barrier runs failed. The roadmap table has the current counts. Of the four earlier failures, one has measured run-queue delay, one has an SMT hypothesis that a diagnostic run is consistent with, one predates the diagnostics, and one followed a diagnostic read inside the timed window that raised overhead.
 
 ```mermaid
 flowchart LR
     Ledger[Native wait protocol] --> Replay[Managed replay rules]
     Replay --> Barrier[TargetBarrier]
-    Barrier --> Qualification[Barrier qualification: latest fail, five failures in eleven runs]
+    Barrier --> Qualification[Barrier suite: 27 of 39 runs pass, package fails]
 ```
 
 ## Runtime lifecycle

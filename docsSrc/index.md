@@ -3,7 +3,7 @@
 See [why direct receipt readiness remains experimental](Explanations/receipt-readiness.md) for the latest polling comparison.
 
 The public engine supports serial, synchronous CPU regions. Native service and sampled profiling remain experimental.
-The target-local profiler predicts optimizations in two-thread CPU-bound fork/join and barrier programs on Linux x64. Host scheduling delay can break a qualification run. See [the tutorial](Tutorials/Target_Local_Prediction.md).
+The target-local profiler runs causal profiles of two-thread CPU-bound programs on Linux x64. It is implemented and experimental, and it is not qualified: its qualification package fails 6 of 11 suites. See [the support status](Explanations/target-local-support.md) and [the tutorial](Tutorials/Target_Local_Prediction.md).
 
 ## Tutorials
 
@@ -136,6 +136,7 @@ The target-local profiler predicts optimizations in two-thread CPU-bound fork/jo
 ## Explanation
 
 - [Target-local sample processing](Explanations/target-local-sample-processing.md): upstream designs, final loss evidence, and remaining runtime contracts.
+- [Target-local support status](Explanations/target-local-support.md): what is implemented, what the evidence shows, and why nothing is qualified.
 - [Target-local latency model](Explanations/target-local-latency-model.md): a deterministic model of the latency estimators for a queue between two threads.
 - [Target-local prediction](Explanations/target-local-prediction.md): why the fork/join model has an exact answer, and the support boundary.
 
